@@ -1,0 +1,99 @@
+{
+  "app": {
+    "name": "Clinic Platform",
+    "demoBanner": "Demo version — all patient data is fake",
+    "language": "العربية",
+    "languageLabel": "Change language"
+  },
+  "login": {
+    "title": "Staff sign in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "invalid": "Wrong email or password, or you don't have access to this clinic.",
+    "emailInvalid": "Enter a valid email",
+    "passwordRequired": "Enter your password",
+    "demoAccounts": "Demo accounts"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "services": "Services",
+    "clinicalNotes": "Clinical notes",
+    "platform": "Platform",
+    "logout": "Sign out",
+    "branch": "Branch",
+    "allBranches": "All branches",
+    "menu": "Menu"
+  },
+  "roles": {
+    "platform_owner": "Platform owner",
+    "clinic_admin": "Clinic admin",
+    "practitioner": "Practitioner",
+    "receptionist": "Receptionist"
+  },
+  "dashboard": {
+    "welcome": "Welcome, {name}",
+    "today": "Today",
+    "patients": "Patients",
+    "services": "Services",
+    "staff": "Staff",
+    "rooms": "Rooms",
+    "devices": "Devices",
+    "departments": "Departments",
+    "inBranch": "in {branch}",
+    "active": "Active",
+    "inactive": "Not active yet"
+  },
+  "patients": {
+    "title": "Patients",
+    "count": "{count} patients",
+    "fileNumber": "File no.",
+    "name": "Name",
+    "phone": "Mobile",
+    "gender": "Gender",
+    "dateOfBirth": "Date of birth",
+    "male": "Male",
+    "female": "Female",
+    "empty": "No patients yet"
+  },
+  "services": {
+    "title": "Services",
+    "count": "{count} services",
+    "name": "Service",
+    "department": "Department",
+    "duration": "Duration",
+    "buffer": "Buffer",
+    "price": "Price",
+    "device": "Required device",
+    "minutes": "{count} min",
+    "none": "—",
+    "demoPrices": "Prices and durations are demo estimates only"
+  },
+  "clinicalNotes": {
+    "title": "Clinical notes",
+    "placeholder": "Clinical notes arrive in Phase 2. This page is protected: receptionists can't see it."
+  },
+  "platform": {
+    "title": "Clinics on the platform",
+    "subdomain": "Subdomain",
+    "noPatientAccess": "The platform owner cannot view patient data in any clinic."
+  },
+  "errors": {
+    "forbiddenTitle": "Not allowed",
+    "forbidden": "You don't have permission to view this page.",
+    "clinicNotFoundTitle": "Clinic not found",
+    "clinicNotFound": "We couldn't find a clinic at this address.",
+    "backHome": "Back to dashboard"
+  },
+  "deviceTypes": {
+    "hair_removal_laser": "Hair removal laser",
+    "fractional_laser": "Fractional laser",
+    "morpheus8": "Morpheus8",
+    "ultherapy": "Ultherapy",
+    "scarlet_rf": "Scarlet RF",
+    "vascular_laser": "Vascular laser",
+    "pico_laser": "Pico laser"
+  }
+}

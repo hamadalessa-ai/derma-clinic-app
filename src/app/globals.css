@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* Theme tokens (shadcn/ui convention). --brand is overridden per clinic at runtime. */
+:root {
+  --brand: #28817a;
+  --brand-foreground: #ffffff;
+  --background: #f7f8f8;
+  --foreground: #1a1f1e;
+  --card: #ffffff;
+  --card-foreground: #1a1f1e;
+  --muted: #eef1f0;
+  --muted-foreground: #5f6b69;
+  --border: #e1e6e5;
+  --input: #d5dcdb;
+  --ring: var(--brand);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --secondary: #eef1f0;
+  --secondary-foreground: #1a1f1e;
+  --accent: color-mix(in srgb, var(--brand) 10%, white);
+  --accent-foreground: #1a1f1e;
+  --destructive: #c0362c;
+  --destructive-foreground: #ffffff;
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-brand: var(--brand);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+}
