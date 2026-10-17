@@ -281,7 +281,14 @@ begin
   if not exists (select from pg_roles where rolname = 'clinic_app') then
     execute format('create role clinic_app login password %L nosuperuser nocreatedb nocreaterole nobypassrls noinherit', pw);
   else
-    execute format('alter role clinic_app login password %L nosuperuser nocreatedb nocreaterole nobypassrls noinherit', pw);
+    -- Supabase's postgres user is not a superuser, so it may only change the password here.
+    execute format('alter role clinic_app login password %L', pw);
+  end if;
+  if exists (
+    select from pg_roles where rolname = 'clinic_app'
+      and (rolsuper or rolbypassrls or rolcreaterole or rolcreatedb)
+  ) then
+    raise exception 'clinic_app has too many privileges (superuser/bypassrls/createrole/createdb). Stop and ask for help.';
   end if;
 end $$;
 

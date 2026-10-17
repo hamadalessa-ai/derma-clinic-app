@@ -9,10 +9,11 @@ drop table if exists public.audit_logs, public.patients, public.staff_schedules,
   public.departments, public.branches, public.tenants cascade;
 drop type if exists public.member_role, public.gender;
 drop function if exists public.app_current_tenant();
+-- The clinic_app login itself is kept; setup.sql just sets its new password.
 do $$
 begin
   if exists (select from pg_roles where rolname = 'clinic_app') then
-    execute 'drop owned by clinic_app';
+    execute 'revoke all on schema public from clinic_app';
   end if;
 end $$;
 commit;
