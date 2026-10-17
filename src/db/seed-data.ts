@@ -21,7 +21,7 @@ export interface SeedStaff {
   email: string;
   nameAr: string;
   nameEn: string;
-  role: Role;
+  roles: Role[];
   branch: string | null; // branch key; null = all branches
   titleAr: string;
   titleEn: string;
@@ -252,7 +252,7 @@ const doctor = (
   email,
   nameAr,
   nameEn,
-  role: "practitioner",
+  roles: ["practitioner"],
   branch,
   titleAr: "طبيب جلدية وتجميل",
   titleEn: "Dermatologist",
@@ -269,7 +269,7 @@ const reception = (
   email,
   nameAr,
   nameEn,
-  role: "receptionist",
+  roles: ["receptionist"],
   branch,
   titleAr: "موظف استقبال",
   titleEn: "Receptionist",
@@ -367,7 +367,7 @@ export const DERMA: SeedTenant = {
       email: "admin@derma.demo",
       nameAr: "نوال القحطاني",
       nameEn: "Nawal Al-Qahtani",
-      role: "clinic_admin",
+      roles: ["clinic_admin"],
       branch: null,
       titleAr: "مديرة العيادات",
       titleEn: "Clinic Manager",
@@ -453,7 +453,7 @@ export const LAMSA: SeedTenant = {
       email: "admin@lamsa.demo",
       nameAr: "خالد العنزي",
       nameEn: "Khaled Al-Anazi",
-      role: "clinic_admin",
+      roles: ["clinic_admin"],
       branch: null,
       titleAr: "مدير العيادة",
       titleEn: "Clinic Manager",

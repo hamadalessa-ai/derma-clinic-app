@@ -190,13 +190,14 @@ CREATE TABLE "tenant_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"user_id" text NOT NULL,
-	"role" "member_role" NOT NULL,
+	"roles" "member_role"[] NOT NULL,
 	"branch_id" uuid,
 	"title_ar" text,
 	"title_en" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "tenant_members_tenant_id_id_key" UNIQUE("tenant_id","id"),
-	CONSTRAINT "tenant_members_tenant_user_key" UNIQUE("tenant_id","user_id")
+	CONSTRAINT "tenant_members_tenant_user_key" UNIQUE("tenant_id","user_id"),
+	CONSTRAINT "tenant_members_roles_not_empty" CHECK (cardinality("tenant_members"."roles") > 0)
 );
 
 CREATE TABLE "tenants" (
@@ -316,16 +317,16 @@ insert into public.accounts (id, account_id, provider_id, user_id, password) val
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-rec-jed', 'أمل الزهراني', 'Amal Al-Zahrani', 'reception.jeddah@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-rec-jed', 'usr_derma-rec-jed', 'credential', 'usr_derma-rec-jed', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.tenant_members (id, tenant_id, user_id, role, branch_id, title_ar, title_en) values
-  ('05dd31e9-3b1f-510b-bbd7-ff228f34ef99', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-admin', 'clinic_admin', null, 'مديرة العيادات', 'Clinic Manager'),
-  ('56811db4-8b1a-522c-9015-7dce6ade7d82', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-sara', 'practitioner', '476edfa8-32de-5660-8aad-64aef84f81c4', 'طبيب جلدية وتجميل', 'Dermatologist'),
-  ('356e5967-34b6-564e-a086-32c2e4a387d1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-faisal', 'practitioner', '476edfa8-32de-5660-8aad-64aef84f81c4', 'طبيب جلدية وتجميل', 'Dermatologist'),
-  ('e20f9e2f-edec-5542-a7ee-b67d174a130b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-reem', 'practitioner', '476edfa8-32de-5660-8aad-64aef84f81c4', 'طبيب جلدية وتجميل', 'Dermatologist'),
-  ('f17eb715-8314-58e7-8a8f-4b63b1be7918', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-ruh1', 'receptionist', '476edfa8-32de-5660-8aad-64aef84f81c4', 'موظف استقبال', 'Receptionist'),
-  ('761952ff-7913-554c-a169-f8844548a4cd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-ruh2', 'receptionist', '476edfa8-32de-5660-8aad-64aef84f81c4', 'موظف استقبال', 'Receptionist'),
-  ('5c4057f8-d074-56b7-8d43-0c8d82b720b5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-lina', 'practitioner', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist'),
-  ('92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-majed', 'practitioner', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist'),
-  ('3973e5f5-1994-5c66-8033-04c749bad229', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-jed', 'receptionist', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'موظف استقبال', 'Receptionist');
+insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, title_ar, title_en) values
+  ('05dd31e9-3b1f-510b-bbd7-ff228f34ef99', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-admin', '{clinic_admin}', null, 'مديرة العيادات', 'Clinic Manager'),
+  ('56811db4-8b1a-522c-9015-7dce6ade7d82', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-sara', '{practitioner}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'طبيب جلدية وتجميل', 'Dermatologist'),
+  ('356e5967-34b6-564e-a086-32c2e4a387d1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-faisal', '{practitioner}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'طبيب جلدية وتجميل', 'Dermatologist'),
+  ('e20f9e2f-edec-5542-a7ee-b67d174a130b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-reem', '{practitioner}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'طبيب جلدية وتجميل', 'Dermatologist'),
+  ('f17eb715-8314-58e7-8a8f-4b63b1be7918', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-ruh1', '{receptionist}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'موظف استقبال', 'Receptionist'),
+  ('761952ff-7913-554c-a169-f8844548a4cd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-ruh2', '{receptionist}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'موظف استقبال', 'Receptionist'),
+  ('5c4057f8-d074-56b7-8d43-0c8d82b720b5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-lina', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist'),
+  ('92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-majed', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist'),
+  ('3973e5f5-1994-5c66-8033-04c749bad229', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-jed', '{receptionist}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'موظف استقبال', 'Receptionist');
 
 insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
@@ -460,10 +461,10 @@ insert into public.accounts (id, account_id, provider_id, user_id, password) val
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_lamsa-rec', 'سعد الشمري', 'Saad Al-Shammari', 'reception@lamsa.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_lamsa-rec', 'usr_lamsa-rec', 'credential', 'usr_lamsa-rec', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.tenant_members (id, tenant_id, user_id, role, branch_id, title_ar, title_en) values
-  ('40beeb7c-ed87-5385-a2ba-1f0c7644674c', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', 'clinic_admin', null, 'مدير العيادة', 'Clinic Manager'),
-  ('2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-dr-mona', 'practitioner', '582af1ea-4eca-5c50-bef7-54515ca85695', 'طبيب جلدية وتجميل', 'Dermatologist'),
-  ('09432151-a569-5185-b3af-b3ce36532332', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-rec', 'receptionist', '582af1ea-4eca-5c50-bef7-54515ca85695', 'موظف استقبال', 'Receptionist');
+insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, title_ar, title_en) values
+  ('40beeb7c-ed87-5385-a2ba-1f0c7644674c', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', '{clinic_admin}', null, 'مدير العيادة', 'Clinic Manager'),
+  ('2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-dr-mona', '{practitioner}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'طبيب جلدية وتجميل', 'Dermatologist'),
+  ('09432151-a569-5185-b3af-b3ce36532332', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-rec', '{receptionist}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'موظف استقبال', 'Receptionist');
 
 insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '19:00'),

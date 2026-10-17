@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const t = await getTranslations("dashboard");
   const tDevices = await getTranslations("deviceTypes");
   const branchId = ctx.activeBranch?.id;
-  const showClinicData = can(ctx.role, "patients:read");
+  const showClinicData = can(ctx.roles, "patients:read");
 
   const data = await withTenant(ctx.tenant.id, async (tx) => {
     const [patientCount] = showClinicData

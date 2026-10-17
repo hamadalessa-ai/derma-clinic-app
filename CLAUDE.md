@@ -46,7 +46,8 @@ draft-only AI scribe. Multi-tenant: many clinics, strictly separated.
 
 `platform_owner` (on `users`), and per clinic in `tenant_members`: `clinic_admin`, `practitioner`,
 `receptionist`. Permissions live in `src/lib/auth/permissions.ts`; pages call `requirePermission()`.
-Receptionists can never see clinical notes.
+Receptionists can never see clinical notes. A member can hold several roles (`tenant_members.roles`, at least one);
+any role that allows something grants it. Clinical notes need the `practitioner` role (admins alone are blocked).
 
 ## Database changes
 

@@ -11,16 +11,26 @@ export const PERMISSIONS = {
   "dashboard:view": ["platform_owner", ...ALL_CLINIC_STAFF],
   "patients:read": ALL_CLINIC_STAFF,
   "services:read": ALL_CLINIC_STAFF,
-  // Clinical notes: never receptionists, never the platform owner.
-  "clinical_notes:read": ["clinic_admin", "practitioner"],
+  // Clinical notes: practitioners only. Not admins (unless they are also a practitioner),
+  // never receptionists, never the platform owner.
+  "clinical_notes:read": ["practitioner"],
   "platform:read": ["platform_owner"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
 
-export function can(role: Role | null | undefined, permission: Permission): boolean {
-  if (!role) return false;
-  return (PERMISSIONS[permission] as readonly Role[]).includes(role);
+/**
+ * A person can hold several roles in one clinic (e.g. admin AND practitioner).
+ * They may do something if ANY of their roles allows it.
+ */
+export function can(
+  roles: Role | readonly Role[] | null | undefined,
+  permission: Permission,
+): boolean {
+  if (!roles) return false;
+  const list: readonly Role[] = typeof roles === "string" ? [roles] : roles;
+  const allowed = PERMISSIONS[permission] as readonly Role[];
+  return list.some((r) => allowed.includes(r));
 }
 
 /** Sidebar pages and the permission each one needs. */

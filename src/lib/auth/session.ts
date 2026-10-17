@@ -58,6 +58,6 @@ export async function requireStaff(): Promise<StaffContext> {
 /** Use at the top of a page that needs a specific permission. */
 export async function requirePermission(permission: Permission): Promise<StaffContext> {
   const ctx = await requireStaff();
-  if (!can(ctx.role, permission)) redirect("/forbidden");
+  if (!can(ctx.roles, permission)) redirect("/forbidden");
   return ctx;
 }

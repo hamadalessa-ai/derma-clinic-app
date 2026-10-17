@@ -44,7 +44,7 @@ const ROLES = [
     email: "admin@derma.demo",
     nameAr: "نوال",
     role: "مدير العيادة",
-    notes: true,
+    notes: false, // admins only see notes if they are also a practitioner
     patients: true,
     platform: false,
   },

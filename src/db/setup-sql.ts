@@ -126,7 +126,7 @@ function tenantSql(t: SeedTenant): string {
         id: ref("member", s.key),
         tenant_id: tid,
         user_id: `usr_${s.key}`,
-        role: s.role,
+        roles: `{${s.roles.join(",")}}`,
         branch_id: s.branch ? ref("branch", s.branch) : null,
         title_ar: s.titleAr,
         title_en: s.titleEn,

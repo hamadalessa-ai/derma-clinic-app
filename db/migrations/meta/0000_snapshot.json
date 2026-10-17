@@ -1,5 +1,5 @@
 {
-  "id": "1d12c86e-c86d-4104-b26c-1c266d2707b1",
+  "id": "a4f5ca4e-595c-47dc-be98-3ad4406bbb89",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1099,9 +1099,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "role": {
-          "name": "role",
-          "type": "member_role",
+        "roles": {
+          "name": "roles",
+          "type": "member_role[]",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
@@ -1212,7 +1212,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "tenant_members_roles_not_empty": {
+          "name": "tenant_members_roles_not_empty",
+          "value": "cardinality(\"tenant_members\".\"roles\") > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.tenants": {

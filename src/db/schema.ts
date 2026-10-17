@@ -10,6 +10,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   foreignKey,
   index,
@@ -154,7 +155,7 @@ export const tenantMembers = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    role: memberRole("role").notNull(),
+    roles: memberRole("roles").array().notNull(), // one or more, e.g. {clinic_admin,practitioner}
     branchId: uuid("branch_id"), // null = all branches
     titleAr: text("title_ar"),
     titleEn: text("title_en"),
@@ -163,6 +164,7 @@ export const tenantMembers = pgTable(
   (t) => [
     unique("tenant_members_tenant_id_id_key").on(t.tenantId, t.id),
     unique("tenant_members_tenant_user_key").on(t.tenantId, t.userId),
+    check("tenant_members_roles_not_empty", sql`cardinality(${t.roles}) > 0`),
     index("tenant_members_user_id_idx").on(t.userId),
     foreignKey({
       name: "tenant_members_branch_fk",

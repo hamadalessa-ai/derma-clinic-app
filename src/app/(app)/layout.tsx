@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const t = await getTranslations("nav");
   const tRoles = await getTranslations("roles");
 
-  const items = NAV_ITEMS.filter((i) => can(ctx.role, i.permission)).map((i) => ({
+  const items = NAV_ITEMS.filter((i) => can(ctx.roles, i.permission)).map((i) => ({
     href: i.href,
     key: i.key,
     label: t(i.key),
@@ -37,7 +37,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <div className="leading-tight">
               <div className="text-brand font-semibold">{clinicName}</div>
               <div className="text-muted-foreground text-xs">
-                {pick(locale, ctx.user.name, ctx.user.nameEn)} · {tRoles(ctx.role)}
+                {pick(locale, ctx.user.name, ctx.user.nameEn)} ·{" "}
+                {ctx.roles.map((r) => tRoles(r)).join(" + ")}
               </div>
             </div>
           </div>

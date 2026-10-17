@@ -32,8 +32,8 @@ describe("seed data matches the brief", () => {
     expect(DERMA.departments.filter((d) => d.isActive).map((d) => d.code)).toEqual(["dermatology"]);
     expect(DERMA.departments).toHaveLength(4);
     const at = (branch: string, role: string) =>
-      DERMA.staff.filter((s) => s.branch === branch && s.role === role).length;
-    expect(DERMA.staff.filter((s) => s.role === "clinic_admin")).toHaveLength(1);
+      DERMA.staff.filter((s) => s.branch === branch && s.roles.includes(role as never)).length;
+    expect(DERMA.staff.filter((s) => s.roles.includes("clinic_admin"))).toHaveLength(1);
     expect([at("riyadh", "practitioner"), at("riyadh", "receptionist")]).toEqual([3, 2]);
     expect([at("jeddah", "practitioner"), at("jeddah", "receptionist")]).toEqual([2, 1]);
     expect(DERMA.rooms.filter((r) => r.branch === "riyadh")).toHaveLength(4);

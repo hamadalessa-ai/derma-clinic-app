@@ -23,7 +23,7 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
   },
   "clinical_notes:read": {
     platform_owner: false,
-    clinic_admin: true,
+    clinic_admin: false,
     practitioner: true,
     receptionist: false,
   },
@@ -53,9 +53,26 @@ describe("role permissions", () => {
     expect(can("platform_owner", "clinical_notes:read")).toBe(false);
   });
 
+  it("clinic admins cannot see clinical notes on their own", () => {
+    expect(can("clinic_admin", "clinical_notes:read")).toBe(false);
+    expect(can(["clinic_admin"], "clinical_notes:read")).toBe(false);
+  });
+
+  it("someone who is both admin and practitioner gets both sets of permissions", () => {
+    const both = ["clinic_admin", "practitioner"] as const;
+    expect(can(both, "clinical_notes:read")).toBe(true);
+    expect(can(both, "patients:read")).toBe(true);
+    expect(can(both, "platform:read")).toBe(false);
+  });
+
+  it("admin + receptionist still cannot see clinical notes", () => {
+    expect(can(["clinic_admin", "receptionist"], "clinical_notes:read")).toBe(false);
+  });
+
   it("no role means no access", () => {
     expect(can(null, "dashboard:view")).toBe(false);
     expect(can(undefined, "patients:read")).toBe(false);
+    expect(can([], "dashboard:view")).toBe(false);
   });
 
   it("every sidebar page is guarded by a known permission", () => {

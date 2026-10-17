@@ -135,13 +135,14 @@ CREATE TABLE "tenant_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"user_id" text NOT NULL,
-	"role" "member_role" NOT NULL,
+	"roles" "member_role"[] NOT NULL,
 	"branch_id" uuid,
 	"title_ar" text,
 	"title_en" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "tenant_members_tenant_id_id_key" UNIQUE("tenant_id","id"),
-	CONSTRAINT "tenant_members_tenant_user_key" UNIQUE("tenant_id","user_id")
+	CONSTRAINT "tenant_members_tenant_user_key" UNIQUE("tenant_id","user_id"),
+	CONSTRAINT "tenant_members_roles_not_empty" CHECK (cardinality("tenant_members"."roles") > 0)
 );
 --> statement-breakpoint
 CREATE TABLE "tenants" (

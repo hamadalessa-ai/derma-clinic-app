@@ -1,5 +1,8 @@
-import { afterAll, describe, expect, it } from "vitest";
-import { closeDb } from "@/db/client";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { closeDb, getDb } from "@/db/client";
+import { withTenant } from "@/db/tenant";
+import { tenantMembers, users } from "@/db/schema";
 import { demoId } from "@/db/seed-data";
 import { canSignInToClinic, getStaffAccess } from "@/lib/auth/access";
 import { can } from "@/lib/auth/permissions";
@@ -37,7 +40,7 @@ describe("roles and branches inside Derma Clinics", () => {
     ["usr_derma-dr-lina", "practitioner", 1],
   ] as const)("%s is %s and sees %i branch(es)", async (userId, role, branchCount) => {
     const access = await getStaffAccess(DERMA, { id: userId });
-    expect(access?.role).toBe(role);
+    expect(access?.roles).toEqual([role]);
     expect(access?.branches).toHaveLength(branchCount);
   });
 
@@ -49,14 +52,64 @@ describe("roles and branches inside Derma Clinics", () => {
   it("the receptionist is blocked from clinical notes; the doctor is not", async () => {
     const rec = await getStaffAccess(DERMA, { id: "usr_derma-rec-ruh1" });
     const doc = await getStaffAccess(DERMA, { id: "usr_derma-dr-sara" });
-    expect(can(rec?.role, "clinical_notes:read")).toBe(false);
-    expect(can(doc?.role, "clinical_notes:read")).toBe(true);
+    expect(can(rec?.roles, "clinical_notes:read")).toBe(false);
+    expect(can(doc?.roles, "clinical_notes:read")).toBe(true);
   });
 
   it("the platform owner enters as platform_owner, with no patient access", async () => {
     expect(await canSignInToClinic(DERMA, "owner@platform.demo")).toBe(true);
     const access = await getStaffAccess(DERMA, { id: "usr_platform-owner", isPlatformOwner: true });
-    expect(access?.role).toBe("platform_owner");
-    expect(can(access?.role, "patients:read")).toBe(false);
+    expect(access?.roles).toEqual(["platform_owner"]);
+    expect(can(access?.roles, "patients:read")).toBe(false);
+  });
+});
+
+describe("someone with two roles in one clinic", () => {
+  const userId = "usr_test-admin-doctor";
+
+  beforeAll(async () => {
+    await getDb()
+      .insert(users)
+      .values({ id: userId, name: "د. اختبار", email: "admin-doctor@derma.test" })
+      .onConflictDoNothing();
+    await withTenant(DERMA, (tx) =>
+      tx
+        .insert(tenantMembers)
+        .values({
+          tenantId: DERMA,
+          userId,
+          roles: ["clinic_admin", "practitioner"],
+          branchId: null,
+        })
+        .onConflictDoNothing(),
+    );
+  });
+
+  afterAll(async () => {
+    await withTenant(DERMA, (tx) =>
+      tx.delete(tenantMembers).where(eq(tenantMembers.userId, userId)),
+    );
+    await getDb().delete(users).where(eq(users.id, userId));
+  });
+
+  it("keeps both roles and unlocks clinical notes through the practitioner role", async () => {
+    const access = await getStaffAccess(DERMA, { id: userId });
+    expect(access?.roles).toEqual(["clinic_admin", "practitioner"]);
+    expect(can(access?.roles, "clinical_notes:read")).toBe(true);
+    expect(access?.branches).toHaveLength(2);
+  });
+
+  it("the plain Derma admin (admin role only) is blocked from clinical notes", async () => {
+    const admin = await getStaffAccess(DERMA, { id: "usr_derma-admin" });
+    expect(admin?.roles).toEqual(["clinic_admin"]);
+    expect(can(admin?.roles, "clinical_notes:read")).toBe(false);
+  });
+
+  it("the database refuses a staff member with no role at all", async () => {
+    await expect(
+      withTenant(DERMA, (tx) =>
+        tx.update(tenantMembers).set({ roles: [] }).where(eq(tenantMembers.userId, userId)),
+      ),
+    ).rejects.toThrow();
   });
 });

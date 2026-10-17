@@ -7,7 +7,8 @@ import type { Role } from "./permissions";
 export type Branch = typeof branches.$inferSelect;
 
 export interface StaffAccess {
-  role: Role;
+  /** All roles in this clinic (at least one). */
+  roles: Role[];
   memberId: string | null;
   /** Branches this person may switch between (all, or only their own). */
   branches: Branch[];
@@ -39,7 +40,7 @@ export async function getStaffAccess(
     const visible = member?.branchId ? all.filter((b) => b.id === member.branchId) : all;
 
     return {
-      role: member ? member.role : "platform_owner",
+      roles: member ? member.roles : ["platform_owner"],
       memberId: member?.id ?? null,
       branches: visible,
       titleAr: member?.titleAr ?? null,
