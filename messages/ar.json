@@ -1,0 +1,96 @@
+{
+  "app": {
+    "name": "منصة العيادات",
+    "demoBanner": "نسخة تجريبية — جميع بيانات المرضى وهمية",
+    "language": "English",
+    "languageLabel": "تغيير اللغة"
+  },
+  "login": {
+    "title": "تسجيل دخول الموظفين",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "دخول",
+    "submitting": "جارٍ الدخول…",
+    "invalid": "البريد الإلكتروني أو كلمة المرور غير صحيحة، أو ليس لديك صلاحية على هذه العيادة.",
+    "emailInvalid": "أدخل بريدًا إلكترونيًا صحيحًا",
+    "passwordRequired": "أدخل كلمة المرور",
+    "demoAccounts": "حسابات تجريبية"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "patients": "المرضى",
+    "services": "الخدمات",
+    "clinicalNotes": "الملاحظات السريرية",
+    "platform": "إدارة المنصة",
+    "logout": "تسجيل الخروج",
+    "branch": "الفرع",
+    "allBranches": "كل الفروع",
+    "menu": "القائمة"
+  },
+  "roles": {
+    "platform_owner": "مالك المنصة",
+    "clinic_admin": "مدير العيادة",
+    "practitioner": "طبيب",
+    "receptionist": "موظف استقبال"
+  },
+  "dashboard": {
+    "welcome": "مرحبًا، {name}",
+    "today": "اليوم",
+    "patients": "المرضى",
+    "services": "الخدمات",
+    "staff": "الطاقم",
+    "rooms": "الغرف",
+    "devices": "الأجهزة",
+    "departments": "الأقسام",
+    "inBranch": "في {branch}",
+    "active": "مفعّل",
+    "inactive": "غير مفعّل بعد"
+  },
+  "patients": {
+    "title": "المرضى",
+    "count": "{count} مريض",
+    "fileNumber": "رقم الملف",
+    "name": "الاسم",
+    "phone": "الجوال",
+    "gender": "الجنس",
+    "dateOfBirth": "تاريخ الميلاد",
+    "male": "ذكر",
+    "female": "أنثى",
+    "empty": "لا يوجد مرضى بعد"
+  },
+  "services": {
+    "title": "الخدمات",
+    "count": "{count} خدمة",
+    "name": "الخدمة",
+    "department": "القسم",
+    "duration": "المدة",
+    "buffer": "وقت التجهيز",
+    "price": "السعر",
+    "device": "الجهاز المطلوب",
+    "minutes": "{count} دقيقة",
+    "none": "—",
+    "demoPrices": "الأسعار والمدد تقديرية لأغراض العرض التجريبي فقط"
+  },
+  "clinicalNotes": {
+    "title": "الملاحظات السريرية",
+    "placeholder": "ستتوفر الملاحظات السريرية في المرحلة الثانية. هذه الصفحة محمية: لا يراها موظفو الاستقبال."
+  },
+  "platform": {
+    "title": "العيادات على المنصة",
+    "subdomain": "النطاق الفرعي",
+    "noPatientAccess": "مالك المنصة لا يستطيع الاطلاع على بيانات المرضى في أي عيادة."
+  },
+  "errors": {
+    "forbiddenTitle": "غير مصرح",
+    "forbidden": "ليس لديك صلاحية لعرض هذه الصفحة.",
+    "clinicNotFoundTitle": "العيادة غير موجودة",
+    "clinicNotFound": "لم نجد عيادة بهذا العنوان.",
+    "backHome": "العودة إلى لوحة التحكم"
+  },
+  "deviceTypes": {
+    "hair_removal_laser": "ليزر إزالة الشعر",
+    "fractional_laser": "الليزر التجزيئي",
+    "morpheus8": "مورفيس 8",
+    "ultherapy": "ألثيرابي"
+  }
+}
