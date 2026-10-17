@@ -91,6 +91,9 @@
     "hair_removal_laser": "Hair removal laser",
     "fractional_laser": "Fractional laser",
     "morpheus8": "Morpheus8",
-    "ultherapy": "Ultherapy"
+    "ultherapy": "Ultherapy",
+    "scarlet_rf": "Scarlet RF",
+    "vascular_laser": "Vascular laser",
+    "pico_laser": "Pico laser"
   }
 }

@@ -288,6 +288,9 @@ insert into public.devices (id, tenant_id, branch_id, room_id, device_type, name
   ('80fe641a-1e18-5a33-8b8a-eed174677889', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'fractional_laser', 'جهاز الليزر التجزيئي', 'Fractional Laser'),
   ('255381e0-91b1-5f18-ae4a-cd5047b8df1b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'morpheus8', 'جهاز مورفيس 8', 'Morpheus8'),
   ('adb71670-7e6f-5e59-8e14-851cbbee537a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'ultherapy', 'جهاز ألثيرابي', 'Ultherapy'),
+  ('5c26fa4d-3528-5731-8fa1-4f3175201abd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'scarlet_rf', 'جهاز سكارليت RF', 'Scarlet RF'),
+  ('ef66add5-556f-57e7-80c8-0a6c91b0eef2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'vascular_laser', 'جهاز ليزر الأوعية الدموية', 'Vascular Laser'),
+  ('d69a9e84-ecf6-5326-aea0-0849da32e918', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'pico_laser', 'جهاز بيكو ليزر', 'Pico Laser'),
   ('57df96a6-f28e-56c2-afd9-959c7f7e90b9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', 'hair_removal_laser', 'جهاز ليزر إزالة الشعر', 'Laser Hair Removal');
 
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-admin', 'نوال القحطاني', 'Nawal Al-Qahtani', 'admin@derma.demo', true, false);
@@ -385,10 +388,10 @@ insert into public.services (id, tenant_id, department_id, code, name_ar, name_e
   ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, true, 11),
   ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', true, 12),
   ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', true, 13),
-  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, null, true, 14),
-  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, null, true, 15),
-  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, null, true, 16),
-  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, null, true, 17),
+  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', true, 14),
+  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', true, 15),
+  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', true, 16),
+  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', true, 17),
   ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', true, 18),
   ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', true, 19),
   ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, true, 20),
