@@ -15,7 +15,8 @@
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "db:generate": "drizzle-kit generate",
     "db:build-setup": "tsx scripts/build-setup-sql.ts",
-    "db:local": "tsx scripts/db-local.ts"
+    "db:local": "tsx scripts/db-local.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.2",
