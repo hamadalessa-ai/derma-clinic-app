@@ -53,11 +53,19 @@ Receptionists can never see clinical notes.
 - Edit `src/db/schema.ts` → `pnpm db:generate` (Drizzle SQL) → `pnpm db:build-setup` regenerates
   `db/setup.sql` (schema + seed + RLS + roles in one transaction). A test fails if it is stale.
 - Supabase is set up by pasting `db/setup.sql` into the Supabase SQL Editor (no admin password leaves Supabase).
-  Later phases add numbered `db/upgrades/NNNN_*.sql` files to paste in order.
+  Later phases add numbered `db/upgrades/NNNN_*.sql` files to paste in order. Founder guide: `docs/DEPLOY.md`.
+- Supabase's `postgres` user is NOT a superuser. SQL we ship must work without superuser rights
+  (e.g. never `ALTER ROLE ... NOBYPASSRLS`, never `DROP OWNED BY clinic_app`). Local databases are
+  built by the non-superuser `local_admin` to catch this.
+- Hosting: Vercel functions run in `bom1` (Mumbai, `vercel.json`) next to the database.
+  Use Supabase's **transaction pooler** (port 6543) with user `clinic_app.<project-ref>`.
 - Every change to records must call `audit()` (`src/lib/audit.ts`).
 
 ## Commands
 
 - `pnpm db:local` — rebuild local database `derma_dev` from `db/setup.sql`
 - `pnpm dev` — then open http://derma.localhost:3000
-- `pnpm check` — lint, format, typecheck, tests (tests need local Postgres; see `tests/`)
+- `pnpm check` — lint, format, typecheck, tests (tests build a fresh `derma_test` DB from `db/setup.sql`;
+  local Postgres must be running: `service postgresql start`)
+- `pnpm e2e` — browser tests per role against a running `pnpm dev`
+  (in the cloud workspace: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm e2e`)
