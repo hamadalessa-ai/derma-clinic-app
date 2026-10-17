@@ -1,5 +1,5 @@
 {
-  "id": "a22c7870-6c22-4f50-877e-4eb3ca43c104",
+  "id": "1d12c86e-c86d-4104-b26c-1c266d2707b1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -274,6 +274,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -354,6 +361,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -792,6 +806,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -1276,6 +1297,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "name_en": {
+          "name": "name_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "email": {
           "name": "email",

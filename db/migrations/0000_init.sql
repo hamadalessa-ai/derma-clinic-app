@@ -35,6 +35,7 @@ CREATE TABLE "branches" (
 	"name_en" text NOT NULL,
 	"city_ar" text NOT NULL,
 	"city_en" text NOT NULL,
+	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "branches_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
@@ -46,6 +47,7 @@ CREATE TABLE "departments" (
 	"name_ar" text NOT NULL,
 	"name_en" text NOT NULL,
 	"is_active" boolean DEFAULT false NOT NULL,
+	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "departments_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "departments_tenant_code_key" UNIQUE("tenant_id","code")
@@ -101,6 +103,7 @@ CREATE TABLE "services" (
 	"required_device_type" text,
 	"is_demo_value" boolean DEFAULT true NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "services_tenant_code_key" UNIQUE("tenant_id","code")
 );
@@ -155,6 +158,7 @@ CREATE TABLE "tenants" (
 CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
+	"name_en" text,
 	"email" text NOT NULL,
 	"email_verified" boolean DEFAULT false NOT NULL,
 	"image" text,

@@ -58,6 +58,7 @@ export const branches = pgTable(
     nameEn: text("name_en").notNull(),
     cityAr: text("city_ar").notNull(),
     cityEn: text("city_en").notNull(),
+    sortOrder: smallint("sort_order").notNull().default(0),
     createdAt: createdAt(),
   },
   (t) => [unique("branches_tenant_id_id_key").on(t.tenantId, t.id)],
@@ -72,6 +73,7 @@ export const departments = pgTable(
     nameAr: text("name_ar").notNull(),
     nameEn: text("name_en").notNull(),
     isActive: boolean("is_active").notNull().default(false),
+    sortOrder: smallint("sort_order").notNull().default(0),
     createdAt: createdAt(),
   },
   (t) => [
@@ -84,7 +86,8 @@ export const departments = pgTable(
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
-  name: text("name").notNull(),
+  name: text("name").notNull(), // Arabic (main) name
+  nameEn: text("name_en"),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
@@ -234,6 +237,7 @@ export const services = pgTable(
     requiredDeviceType: text("required_device_type"),
     isDemoValue: boolean("is_demo_value").notNull().default(true),
     isActive: boolean("is_active").notNull().default(true),
+    sortOrder: smallint("sort_order").notNull().default(0),
     createdAt: createdAt(),
   },
   (t) => [

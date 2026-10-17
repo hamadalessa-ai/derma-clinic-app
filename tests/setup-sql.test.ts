@@ -46,7 +46,7 @@ describe("seed data matches the brief", () => {
 
   it("patients look fake and are unique", () => {
     for (const p of [...DERMA.patients, ...LAMSA.patients]) {
-      expect(p.phone).toMatch(/^05000[12]\d{3}$/);
+      expect(p.phone).toMatch(/^05000[12]\d{4}$/);
       expect(p.fullNameAr).toMatch(/[؀-ۿ]/);
     }
     const phones = new Set([...DERMA.patients, ...LAMSA.patients].map((p) => p.phone));

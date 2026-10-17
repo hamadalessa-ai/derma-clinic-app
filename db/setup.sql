@@ -90,6 +90,7 @@ CREATE TABLE "branches" (
 	"name_en" text NOT NULL,
 	"city_ar" text NOT NULL,
 	"city_en" text NOT NULL,
+	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "branches_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
@@ -101,6 +102,7 @@ CREATE TABLE "departments" (
 	"name_ar" text NOT NULL,
 	"name_en" text NOT NULL,
 	"is_active" boolean DEFAULT false NOT NULL,
+	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "departments_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "departments_tenant_code_key" UNIQUE("tenant_id","code")
@@ -156,6 +158,7 @@ CREATE TABLE "services" (
 	"required_device_type" text,
 	"is_demo_value" boolean DEFAULT true NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "services_tenant_code_key" UNIQUE("tenant_id","code")
 );
@@ -210,6 +213,7 @@ CREATE TABLE "tenants" (
 CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
+	"name_en" text,
 	"email" text NOT NULL,
 	"email_verified" boolean DEFAULT false NOT NULL,
 	"image" text,
@@ -253,22 +257,22 @@ CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");
 CREATE INDEX "tenant_members_user_id_idx" ON "tenant_members" USING btree ("user_id");
 
 -- ─── STEP 3: DEMO DATA (FAKE) ───────────────────────────────────────────────
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_platform-owner', 'Platform Owner', 'owner@platform.demo', true, true);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_platform-owner', 'مالك المنصة', 'Platform Owner', 'owner@platform.demo', true, true);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_platform-owner', 'usr_platform-owner', 'credential', 'usr_platform-owner', (select demo_password_hash from pg_temp.setup_params));
 
 -- ── Derma Clinics (derma) ──
 insert into public.tenants (id, slug, name_ar, name_en, brand_color) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'derma', 'عيادات ديرما', 'Derma Clinics', '#28817a');
 
-insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en) values
-  ('476edfa8-32de-5660-8aad-64aef84f81c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع الرياض', 'Riyadh Branch', 'الرياض', 'Riyadh'),
-  ('bf17d28d-ae19-50a1-ab69-44a15687a64e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع جدة', 'Jeddah Branch', 'جدة', 'Jeddah');
+insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, sort_order) values
+  ('476edfa8-32de-5660-8aad-64aef84f81c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع الرياض', 'Riyadh Branch', 'الرياض', 'Riyadh', 0),
+  ('bf17d28d-ae19-50a1-ab69-44a15687a64e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع جدة', 'Jeddah Branch', 'جدة', 'Jeddah', 1);
 
-insert into public.departments (id, tenant_id, code, name_ar, name_en, is_active) values
-  ('62531e32-6cf4-5dd1-9fba-5f64761380b7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'dermatology', 'الجلدية والتجميل', 'Dermatology & Aesthetics', true),
-  ('5b09f909-8be9-5dc7-8190-e6f1511f61f7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'dental', 'الأسنان', 'Dental', false),
-  ('53375ab8-34a0-5b1e-841f-e15209a6c309', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'plastic_surgery', 'الجراحة التجميلية', 'Plastic Surgery', false),
-  ('8fb26bea-a720-5a39-be8c-348679dd8aa2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'hair_restoration', 'زراعة الشعر', 'Hair Restoration', false);
+insert into public.departments (id, tenant_id, code, name_ar, name_en, is_active, sort_order) values
+  ('62531e32-6cf4-5dd1-9fba-5f64761380b7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'dermatology', 'الجلدية والتجميل', 'Dermatology & Aesthetics', true, 0),
+  ('5b09f909-8be9-5dc7-8190-e6f1511f61f7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'dental', 'الأسنان', 'Dental', false, 1),
+  ('53375ab8-34a0-5b1e-841f-e15209a6c309', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'plastic_surgery', 'الجراحة التجميلية', 'Plastic Surgery', false, 2),
+  ('8fb26bea-a720-5a39-be8c-348679dd8aa2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'hair_restoration', 'زراعة الشعر', 'Hair Restoration', false, 3);
 
 insert into public.rooms (id, tenant_id, branch_id, name_ar, name_en) values
   ('d2f98f40-e6fd-5674-9e55-82c0a2994d83', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'غرفة الكشف 1', 'Consultation Room 1'),
@@ -285,31 +289,31 @@ insert into public.devices (id, tenant_id, branch_id, room_id, device_type, name
   ('adb71670-7e6f-5e59-8e14-851cbbee537a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'ultherapy', 'جهاز ألثيرابي', 'Ultherapy'),
   ('57df96a6-f28e-56c2-afd9-959c7f7e90b9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', 'hair_removal_laser', 'جهاز ليزر إزالة الشعر', 'Laser Hair Removal');
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-admin', 'Nawal Al-Qahtani', 'admin@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-admin', 'نوال القحطاني', 'Nawal Al-Qahtani', 'admin@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-admin', 'usr_derma-admin', 'credential', 'usr_derma-admin', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-dr-sara', 'Dr. Sarah Al-Otaibi', 'dr.sara@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-dr-sara', 'د. سارة العتيبي', 'Dr. Sarah Al-Otaibi', 'dr.sara@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-dr-sara', 'usr_derma-dr-sara', 'credential', 'usr_derma-dr-sara', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-dr-faisal', 'Dr. Faisal Al-Dosari', 'dr.faisal@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-dr-faisal', 'د. فيصل الدوسري', 'Dr. Faisal Al-Dosari', 'dr.faisal@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-dr-faisal', 'usr_derma-dr-faisal', 'credential', 'usr_derma-dr-faisal', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-dr-reem', 'Dr. Reem Al-Shehri', 'dr.reem@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-dr-reem', 'د. ريم الشهري', 'Dr. Reem Al-Shehri', 'dr.reem@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-dr-reem', 'usr_derma-dr-reem', 'credential', 'usr_derma-dr-reem', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-rec-ruh1', 'Hind Al-Mutairi', 'reception.riyadh1@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-rec-ruh1', 'هند المطيري', 'Hind Al-Mutairi', 'reception.riyadh1@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-rec-ruh1', 'usr_derma-rec-ruh1', 'credential', 'usr_derma-rec-ruh1', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-rec-ruh2', 'Abdullah Al-Harbi', 'reception.riyadh2@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-rec-ruh2', 'عبدالله الحربي', 'Abdullah Al-Harbi', 'reception.riyadh2@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-rec-ruh2', 'usr_derma-rec-ruh2', 'credential', 'usr_derma-rec-ruh2', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-dr-lina', 'Dr. Lina Banaja', 'dr.lina@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-dr-lina', 'د. لينا باناجة', 'Dr. Lina Banaja', 'dr.lina@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-dr-lina', 'usr_derma-dr-lina', 'credential', 'usr_derma-dr-lina', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-dr-majed', 'Dr. Majed Al-Ghamdi', 'dr.majed@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-dr-majed', 'د. ماجد الغامدي', 'Dr. Majed Al-Ghamdi', 'dr.majed@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-dr-majed', 'usr_derma-dr-majed', 'credential', 'usr_derma-dr-majed', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_derma-rec-jed', 'Amal Al-Zahrani', 'reception.jeddah@derma.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-rec-jed', 'أمل الزهراني', 'Amal Al-Zahrani', 'reception.jeddah@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-rec-jed', 'usr_derma-rec-jed', 'credential', 'usr_derma-rec-jed', (select demo_password_hash from pg_temp.setup_params));
 
 insert into public.tenant_members (id, tenant_id, user_id, role, branch_id, title_ar, title_en) values
@@ -365,71 +369,71 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '19:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '19:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value) values
-  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true),
-  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true),
-  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true),
-  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, true),
-  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, true),
-  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, true),
-  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true),
-  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, true),
-  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, true),
-  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, true),
-  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, true),
-  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, true),
-  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', true),
-  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', true),
-  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, null, true),
-  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, null, true),
-  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, null, true),
-  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, null, true),
-  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', true),
-  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', true),
-  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, true),
-  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, true);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
+  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
+  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true, 1),
+  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true, 2),
+  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, true, 3),
+  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, true, 4),
+  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, true, 5),
+  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true, 6),
+  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, true, 7),
+  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, true, 8),
+  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, true, 9),
+  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, true, 10),
+  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, true, 11),
+  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', true, 12),
+  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', true, 13),
+  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, null, true, 14),
+  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, null, true, 15),
+  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, null, true, 16),
+  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, null, true, 17),
+  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', true, 18),
+  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', true, 19),
+  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, true, 20),
+  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, true, 21);
 
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, is_fake) values
-  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '050001001', 'female', '1970-01-01', true),
-  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '050001002', 'female', '1983-06-12', true),
-  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '050001003', 'female', '1996-11-23', true),
-  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '050001004', 'female', '1973-04-06', true),
-  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '050001005', 'female', '1986-09-17', true),
-  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '050001006', 'female', '1999-02-28', true),
-  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '050001007', 'female', '1976-07-11', true),
-  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '050001008', 'male', '1989-12-22', true),
-  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '050001009', 'male', '2002-05-05', true),
-  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '050001010', 'male', '1979-10-16', true),
-  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '050001011', 'female', '1992-03-27', true),
-  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '050001012', 'female', '2005-08-10', true),
-  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '050001013', 'female', '1982-01-21', true),
-  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '050001014', 'female', '1995-06-04', true),
-  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '050001015', 'female', '1972-11-15', true),
-  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '050001016', 'female', '1985-04-26', true),
-  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '050001017', 'female', '1998-09-09', true),
-  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '050001018', 'male', '1975-02-20', true),
-  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '050001019', 'male', '1988-07-03', true),
-  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '050001020', 'male', '2001-12-14', true),
-  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '050001021', 'female', '1978-05-25', true),
-  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '050001022', 'female', '1991-10-08', true),
-  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '050001023', 'female', '2004-03-19', true),
-  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '050001024', 'female', '1981-08-02', true),
-  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '050001025', 'female', '1994-01-13', true),
-  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '050001026', 'female', '1971-06-24', true),
-  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '050001027', 'female', '1984-11-07', true),
-  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '050001028', 'male', '1997-04-18', true),
-  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '050001029', 'male', '1974-09-01', true),
-  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '050001030', 'male', '1987-02-12', true),
-  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '050001031', 'female', '2000-07-23', true),
-  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '050001032', 'female', '1977-12-06', true),
-  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '050001033', 'female', '1990-05-17', true),
-  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '050001034', 'female', '2003-10-28', true),
-  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '050001035', 'female', '1980-03-11', true),
-  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '050001036', 'female', '1993-08-22', true),
-  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '050001037', 'female', '1970-01-05', true),
-  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '050001038', 'male', '1983-06-16', true),
-  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ناصر سليمان البقمي', 'Nasser Sulaiman Al-Buqami', '050001039', 'male', '1996-11-27', true),
-  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'بندر حمد الشهري', 'Bandar Hamad Al-Shehri', '050001040', 'male', '1973-04-10', true);
+  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', true),
+  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', true),
+  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '0500010003', 'female', '1996-11-23', true),
+  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '0500010004', 'female', '1973-04-06', true),
+  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '0500010005', 'female', '1986-09-17', true),
+  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '0500010006', 'female', '1999-02-28', true),
+  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '0500010007', 'female', '1976-07-11', true),
+  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '0500010008', 'male', '1989-12-22', true),
+  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '0500010009', 'male', '2002-05-05', true),
+  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '0500010010', 'male', '1979-10-16', true),
+  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '0500010011', 'female', '1992-03-27', true),
+  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '0500010012', 'female', '2005-08-10', true),
+  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '0500010013', 'female', '1982-01-21', true),
+  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '0500010014', 'female', '1995-06-04', true),
+  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '0500010015', 'female', '1972-11-15', true),
+  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '0500010016', 'female', '1985-04-26', true),
+  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '0500010017', 'female', '1998-09-09', true),
+  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500010018', 'male', '1975-02-20', true),
+  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500010019', 'male', '1988-07-03', true),
+  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500010020', 'male', '2001-12-14', true),
+  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500010021', 'female', '1978-05-25', true),
+  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500010022', 'female', '1991-10-08', true),
+  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500010023', 'female', '2004-03-19', true),
+  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500010024', 'female', '1981-08-02', true),
+  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500010025', 'female', '1994-01-13', true),
+  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '0500010026', 'female', '1971-06-24', true),
+  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '0500010027', 'female', '1984-11-07', true),
+  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '0500010028', 'male', '1997-04-18', true),
+  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '0500010029', 'male', '1974-09-01', true),
+  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '0500010030', 'male', '1987-02-12', true),
+  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '0500010031', 'female', '2000-07-23', true),
+  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '0500010032', 'female', '1977-12-06', true),
+  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '0500010033', 'female', '1990-05-17', true),
+  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '0500010034', 'female', '2003-10-28', true),
+  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '0500010035', 'female', '1980-03-11', true),
+  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '0500010036', 'female', '1993-08-22', true),
+  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '0500010037', 'female', '1970-01-05', true),
+  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '0500010038', 'male', '1983-06-16', true),
+  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ناصر سليمان البقمي', 'Nasser Sulaiman Al-Buqami', '0500010039', 'male', '1996-11-27', true),
+  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'بندر حمد الشهري', 'Bandar Hamad Al-Shehri', '0500010040', 'male', '1973-04-10', true);
 
 insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, 'tenant.seed', 'tenant', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602');
@@ -438,22 +442,22 @@ insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, en
 insert into public.tenants (id, slug, name_ar, name_en, brand_color) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'lamsa', 'عيادة لمسة', 'Lamsa Clinic', '#8a4f9e');
 
-insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en) values
-  ('582af1ea-4eca-5c50-bef7-54515ca85695', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'فرع الدمام', 'Dammam Branch', 'الدمام', 'Dammam');
+insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, sort_order) values
+  ('582af1ea-4eca-5c50-bef7-54515ca85695', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'فرع الدمام', 'Dammam Branch', 'الدمام', 'Dammam', 0);
 
-insert into public.departments (id, tenant_id, code, name_ar, name_en, is_active) values
-  ('a7669099-a791-51b7-a6c3-8c0137a796dd', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dermatology', 'الجلدية والتجميل', 'Dermatology & Aesthetics', true);
+insert into public.departments (id, tenant_id, code, name_ar, name_en, is_active, sort_order) values
+  ('a7669099-a791-51b7-a6c3-8c0137a796dd', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dermatology', 'الجلدية والتجميل', 'Dermatology & Aesthetics', true, 0);
 
 insert into public.rooms (id, tenant_id, branch_id, name_ar, name_en) values
   ('e12bccd6-9e21-52ec-bbcf-1b1727158b14', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', 'غرفة الكشف', 'Consultation Room');
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_lamsa-admin', 'Khaled Al-Anazi', 'admin@lamsa.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_lamsa-admin', 'خالد العنزي', 'Khaled Al-Anazi', 'admin@lamsa.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_lamsa-admin', 'usr_lamsa-admin', 'credential', 'usr_lamsa-admin', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_lamsa-dr-mona', 'Dr. Mona Al-Subaie', 'dr.mona@lamsa.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_lamsa-dr-mona', 'د. منى السبيعي', 'Dr. Mona Al-Subaie', 'dr.mona@lamsa.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_lamsa-dr-mona', 'usr_lamsa-dr-mona', 'credential', 'usr_lamsa-dr-mona', (select demo_password_hash from pg_temp.setup_params));
 
-insert into public.users (id, name, email, email_verified, is_platform_owner) values ('usr_lamsa-rec', 'Saad Al-Shammari', 'reception@lamsa.demo', true, false);
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_lamsa-rec', 'سعد الشمري', 'Saad Al-Shammari', 'reception@lamsa.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_lamsa-rec', 'usr_lamsa-rec', 'credential', 'usr_lamsa-rec', (select demo_password_hash from pg_temp.setup_params));
 
 insert into public.tenant_members (id, tenant_id, user_id, role, branch_id, title_ar, title_en) values
@@ -473,21 +477,21 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '19:00'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '19:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value) values
-  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true),
-  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true),
-  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true),
-  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
+  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
+  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true, 1),
+  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true, 2),
+  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true, 3);
 
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, is_fake) values
-  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '050002001', 'male', '1975-02-20', true),
-  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '050002002', 'male', '1988-07-03', true),
-  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '050002003', 'male', '2001-12-14', true),
-  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '050002004', 'female', '1978-05-25', true),
-  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '050002005', 'female', '1991-10-08', true),
-  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '050002006', 'female', '2004-03-19', true),
-  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '050002007', 'female', '1981-08-02', true),
-  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '050002008', 'female', '1994-01-13', true);
+  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', true),
+  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500020002', 'male', '1988-07-03', true),
+  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500020003', 'male', '2001-12-14', true),
+  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500020004', 'female', '1978-05-25', true),
+  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500020005', 'female', '1991-10-08', true),
+  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', true),
+  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', true),
+  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', true);
 
 insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, 'tenant.seed', 'tenant', '55d937e8-cf0c-583b-871e-f90fbc8af348');

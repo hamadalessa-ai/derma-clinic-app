@@ -210,7 +210,7 @@ const FAMILIES = [
 ] as const;
 
 /**
- * Builds fake patients. Phone numbers follow the obviously-fake pattern 0500 0PP NNN
+ * Builds fake patients. Phone numbers follow the obviously-fake pattern 0500 PP NNNN (10 digits)
  * (PP = clinic prefix), dates of birth are spread over 1970–2005.
  */
 export function makeFakePatients(
@@ -232,7 +232,7 @@ export function makeFakePatients(
       fileNumber: `${filePrefix}-${String(i + 1).padStart(4, "0")}`,
       fullNameAr: `${firstAr} ${fatherAr} ${familyAr}`,
       fullNameEn: `${firstEn} ${fatherEn} ${familyEn}`,
-      phone: `0500${phonePrefix}${String(i + 1).padStart(3, "0")}`,
+      phone: `0500${phonePrefix}${String(i + 1).padStart(4, "0")}`,
       gender: isFemale ? "female" : "male",
       dateOfBirth: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
     };

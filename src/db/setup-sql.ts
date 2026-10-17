@@ -37,10 +37,16 @@ function insert(table: string, rows: Record<string, string | number | boolean | 
 /** Password hash computed once inside Postgres with pgcrypto bcrypt (verified by bcryptjs). */
 const PASSWORD_HASH = "(select demo_password_hash from pg_temp.setup_params)";
 
-function userInsert(id: string, email: string, name: string, isPlatformOwner = false) {
+function userInsert(
+  id: string,
+  email: string,
+  nameAr: string,
+  nameEn: string,
+  isPlatformOwner = false,
+) {
   return (
-    `insert into public.users (id, name, email, email_verified, is_platform_owner) values ` +
-    `(${lit(id)}, ${lit(name)}, ${lit(email)}, true, ${isPlatformOwner});\n` +
+    `insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ` +
+    `(${lit(id)}, ${lit(nameAr)}, ${lit(nameEn)}, ${lit(email)}, true, ${isPlatformOwner});\n` +
     `insert into public.accounts (id, account_id, provider_id, user_id, password) values ` +
     `(${lit(`acc_${id}`)}, ${lit(id)}, 'credential', ${lit(id)}, ${PASSWORD_HASH});\n`
   );
@@ -59,26 +65,28 @@ function tenantSql(t: SeedTenant): string {
   out.push(
     insert(
       "branches",
-      t.branches.map((b) => ({
+      t.branches.map((b, i) => ({
         id: ref("branch", b.key),
         tenant_id: tid,
         name_ar: b.nameAr,
         name_en: b.nameEn,
         city_ar: b.cityAr,
         city_en: b.cityEn,
+        sort_order: i,
       })),
     ),
   );
   out.push(
     insert(
       "departments",
-      t.departments.map((d) => ({
+      t.departments.map((d, i) => ({
         id: ref("department", d.code),
         tenant_id: tid,
         code: d.code,
         name_ar: d.nameAr,
         name_en: d.nameEn,
         is_active: d.isActive,
+        sort_order: i,
       })),
     ),
   );
@@ -109,7 +117,7 @@ function tenantSql(t: SeedTenant): string {
     ),
   );
   for (const s of t.staff) {
-    out.push(userInsert(`usr_${s.key}`, s.email, s.nameEn));
+    out.push(userInsert(`usr_${s.key}`, s.email, s.nameAr, s.nameEn));
   }
   out.push(
     insert(
@@ -145,7 +153,7 @@ function tenantSql(t: SeedTenant): string {
   out.push(
     insert(
       "services",
-      t.services.map((s) => ({
+      t.services.map((s, i) => ({
         id: ref("service", s.code),
         tenant_id: tid,
         department_id: ref("department", "dermatology"),
@@ -157,6 +165,7 @@ function tenantSql(t: SeedTenant): string {
         price_halalas: Math.round(s.priceSar * 100),
         required_device_type: s.requiredDeviceType,
         is_demo_value: true,
+        sort_order: i,
       })),
     ),
   );
@@ -261,7 +270,7 @@ update pg_temp.setup_params
 ${migrationsSql()}
 
 -- ─── STEP 3: DEMO DATA (FAKE) ───────────────────────────────────────────────
-${userInsert(`usr_${PLATFORM_OWNER.key}`, PLATFORM_OWNER.email, PLATFORM_OWNER.nameEn, true)}
+${userInsert(`usr_${PLATFORM_OWNER.key}`, PLATFORM_OWNER.email, PLATFORM_OWNER.nameAr, PLATFORM_OWNER.nameEn, true)}
 ${SEED_TENANTS.map(tenantSql).join("\n")}
 
 -- ─── STEP 4: RESTRICTED APP LOGIN (clinic_app) ──────────────────────────────
