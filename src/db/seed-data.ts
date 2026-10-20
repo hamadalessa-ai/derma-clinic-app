@@ -588,3 +588,148 @@ export const HOLIDAYS = [
   { day: "2026-09-23", nameAr: "اليوم الوطني السعودي", nameEn: "Saudi National Day" },
   { day: "2027-02-22", nameAr: "يوم التأسيس", nameEn: "Founding Day" },
 ];
+
+// ════════════════════════════════════════════════════════════════════════════
+// PHASE 1 demo data
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Which consent each service needs (service code → consent template code). */
+export const SERVICE_CONSENTS: Record<string, string> = {
+  laser_hair_removal: "laser_hair_removal",
+  botox: "injectables",
+  fillers: "injectables",
+  chemical_peeling: "chemical_peel",
+};
+
+const DEMO_NOTICE_AR = "⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.";
+const DEMO_NOTICE_EN = "⚠️ Demo wording for demonstration only — NOT legal text.";
+
+export interface SeedConsentTemplate {
+  code: string;
+  titleAr: string;
+  titleEn: string;
+  bodyAr: string;
+  bodyEn: string;
+}
+
+export const CONSENT_TEMPLATES: SeedConsentTemplate[] = [
+  {
+    code: "laser_hair_removal",
+    titleAr: "نموذج موافقة على جلسات ليزر إزالة الشعر",
+    titleEn: "Consent for Laser Hair Removal sessions",
+    bodyAr: [
+      DEMO_NOTICE_AR,
+      "أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.",
+      "أعلم أن الآثار الجانبية الشائعة تشمل الاحمرار والتورم المؤقت، ونادرًا: الحروق أو تغيّر لون الجلد.",
+      "أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.",
+      "أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.",
+    ].join("\n\n"),
+    bodyEn: [
+      DEMO_NOTICE_EN,
+      "I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.",
+      "I understand common side effects include temporary redness and swelling, and rarely burns or pigment change.",
+      "I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.",
+      "I consent to the session and will follow the aftercare instructions.",
+    ].join("\n\n"),
+  },
+  {
+    code: "injectables",
+    titleAr: "نموذج موافقة على حقن البوتوكس والفيلر",
+    titleEn: "Consent for Botox and Filler injections",
+    bodyAr: [
+      DEMO_NOTICE_AR,
+      "أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.",
+      "أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.",
+      "أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.",
+      "أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.",
+    ].join("\n\n"),
+    bodyEn: [
+      DEMO_NOTICE_EN,
+      "I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.",
+      "I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.",
+      "I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.",
+      "I consent to the procedure and to before/after medical photos for my file only.",
+    ].join("\n\n"),
+  },
+  {
+    code: "chemical_peel",
+    titleAr: "نموذج موافقة على التقشير الكيميائي",
+    titleEn: "Consent for Chemical Peeling",
+    bodyAr: [
+      DEMO_NOTICE_AR,
+      "أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.",
+      "أعلم أن البشرة قد تحمرّ وتتقشر لعدة أيام، وأن التعرض للشمس بعد الجلسة قد يسبب تصبغات.",
+      "أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.",
+      "أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.",
+    ].join("\n\n"),
+    bodyEn: [
+      DEMO_NOTICE_EN,
+      "I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.",
+      "I understand my skin may be red and peel for several days, and sun exposure may cause pigmentation.",
+      "I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.",
+      "I consent to the procedure and will use SPF 50 sunscreen daily.",
+    ].join("\n\n"),
+  },
+];
+
+export interface SeedPackageTemplate {
+  key: string;
+  serviceCode: string;
+  nameAr: string;
+  nameEn: string;
+  sessions: number;
+  priceSar: number;
+  validityDays: number;
+}
+
+export const PACKAGE_TEMPLATES: Record<string, SeedPackageTemplate[]> = {
+  derma: [
+    {
+      key: "lhr6",
+      serviceCode: "laser_hair_removal",
+      nameAr: "باقة ليزر إزالة الشعر — 6 جلسات",
+      nameEn: "Laser Hair Removal — 6 sessions",
+      sessions: 6,
+      priceSar: 3600,
+      validityDays: 365,
+    },
+    {
+      key: "peel4",
+      serviceCode: "chemical_peeling",
+      nameAr: "باقة التقشير الكيميائي — 4 جلسات",
+      nameEn: "Chemical Peeling — 4 sessions",
+      sessions: 4,
+      priceSar: 2000,
+      validityDays: 180,
+    },
+    {
+      key: "boost3",
+      serviceCode: "skin_boosters",
+      nameAr: "باقة محفزات البشرة — 3 جلسات",
+      nameEn: "Skin Boosters — 3 sessions",
+      sessions: 3,
+      priceSar: 3900,
+      validityDays: 180,
+    },
+    {
+      key: "facial5",
+      serviceCode: "facial_treatment",
+      nameAr: "باقة تنظيف البشرة — 5 جلسات",
+      nameEn: "Facial Treatment — 5 sessions",
+      sessions: 5,
+      priceSar: 1900,
+      validityDays: 180,
+    },
+  ],
+  lamsa: [
+    {
+      key: "facial5",
+      serviceCode: "facial_treatment",
+      nameAr: "باقة تنظيف البشرة — 5 جلسات",
+      nameEn: "Facial Treatment — 5 sessions",
+      sessions: 5,
+      priceSar: 1800,
+      validityDays: 180,
+    },
+  ],
+};

@@ -832,29 +832,29 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
-  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
-  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true, 1),
-  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true, 2),
-  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, true, 3),
-  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, true, 4),
-  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, true, 5),
-  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true, 6),
-  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, true, 7),
-  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, true, 8),
-  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, true, 9),
-  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, true, 10),
-  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, true, 11),
-  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', true, 12),
-  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', true, 13),
-  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', true, 14),
-  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', true, 15),
-  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', true, 16),
-  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', true, 17),
-  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', true, 18),
-  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', true, 19),
-  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, true, 20),
-  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, true, 21);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, sort_order) values
+  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, 0),
+  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, 1),
+  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, 2),
+  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, null, true, 3),
+  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, null, true, 4),
+  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, 'chemical_peel', true, 5),
+  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, 6),
+  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, null, true, 7),
+  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, null, true, 8),
+  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, null, true, 9),
+  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, null, true, 10),
+  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, null, true, 11),
+  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', null, true, 12),
+  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', null, true, 13),
+  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', null, true, 14),
+  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', null, true, 15),
+  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', null, true, 16),
+  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', null, true, 17),
+  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', null, true, 18),
+  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', 'laser_hair_removal', true, 19),
+  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, null, true, 20),
+  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, null, true, 21);
 
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
   ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', 'national_id', '1000000101', null, null, null, true),
@@ -907,6 +907,65 @@ insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, no
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', 'allergy', 'اللاتكس · Latex', null),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '8f896380-cce7-5b07-8a3c-83368787969f', 'medication', 'مميعات الدم (وارفارين) · Warfarin', null);
 
+insert into public.consent_templates (id, tenant_id, code, version, is_current, title_ar, title_en, body_ar, body_en) values
+  ('3edebd96-da81-580f-8bed-223be231bdf7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
+
+أعلم أن الآثار الجانبية الشائعة تشمل الاحمرار والتورم المؤقت، ونادرًا: الحروق أو تغيّر لون الجلد.
+
+أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
+
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', '⚠️ Demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
+
+I understand common side effects include temporary redness and swelling, and rarely burns or pigment change.
+
+I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
+
+I consent to the session and will follow the aftercare instructions.'),
+  ('6ce721bf-f6ac-5c3b-94e6-31fc56aaab00', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
+
+أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.
+
+أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
+
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', '⚠️ Demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
+
+I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.
+
+I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
+
+I consent to the procedure and to before/after medical photos for my file only.'),
+  ('b020a4a7-5411-58e7-9ae3-b3c4a0084017', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
+
+أعلم أن البشرة قد تحمرّ وتتقشر لعدة أيام، وأن التعرض للشمس بعد الجلسة قد يسبب تصبغات.
+
+أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
+
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', '⚠️ Demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
+
+I understand my skin may be red and peel for several days, and sun exposure may cause pigmentation.
+
+I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
+
+I consent to the procedure and will use SPF 50 sunscreen daily.');
+
+insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
+  ('e3f5912c-34e3-5c06-ad82-859640083596', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '901925ea-47ec-5bdd-bc69-bab97d91b50b', 'باقة ليزر إزالة الشعر — 6 جلسات', 'Laser Hair Removal — 6 sessions', 6, 360000, 365),
+  ('2ba9840c-7b0b-5c2d-aa4f-a45beb511d57', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', 'باقة التقشير الكيميائي — 4 جلسات', 'Chemical Peeling — 4 sessions', 4, 200000, 180),
+  ('d3475e8c-f332-5206-92b7-789d4e7e838d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', 'باقة محفزات البشرة — 3 جلسات', 'Skin Boosters — 3 sessions', 3, 390000, 180),
+  ('8eb6d02a-4e51-5c37-8c65-a971dd40b976', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '238646ad-fa4b-5239-a04f-c948716feebd', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 190000, 180);
+
 insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false);
 
@@ -956,11 +1015,11 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
-  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
-  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true, 1),
-  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true, 2),
-  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true, 3);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, sort_order) values
+  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, 0),
+  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, 1),
+  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, 2),
+  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, 3);
 
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
   ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', 'national_id', '1000000201', null, null, null, true),
@@ -974,6 +1033,62 @@ insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name
 
 insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, note) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '47976cc3-ac45-5a95-a2c5-056e158e9ee2', 'allergy', 'الأسبرين · Aspirin', null);
+
+insert into public.consent_templates (id, tenant_id, code, version, is_current, title_ar, title_en, body_ar, body_en) values
+  ('06e6419e-1104-54c8-87ba-5637bc095f9b', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
+
+أعلم أن الآثار الجانبية الشائعة تشمل الاحمرار والتورم المؤقت، ونادرًا: الحروق أو تغيّر لون الجلد.
+
+أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
+
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', '⚠️ Demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
+
+I understand common side effects include temporary redness and swelling, and rarely burns or pigment change.
+
+I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
+
+I consent to the session and will follow the aftercare instructions.'),
+  ('37c21ec2-2835-5df9-aaa4-65939e8fb70e', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
+
+أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.
+
+أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
+
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', '⚠️ Demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
+
+I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.
+
+I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
+
+I consent to the procedure and to before/after medical photos for my file only.'),
+  ('0c10ddb0-6a59-5ed2-87a5-ecf94b1d9854', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
+
+أعلم أن البشرة قد تحمرّ وتتقشر لعدة أيام، وأن التعرض للشمس بعد الجلسة قد يسبب تصبغات.
+
+أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
+
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', '⚠️ Demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
+
+I understand my skin may be red and peel for several days, and sun exposure may cause pigmentation.
+
+I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
+
+I consent to the procedure and will use SPF 50 sunscreen daily.');
+
+insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
+  ('baa4e36f-c509-587a-ab60-06c22bf3188a', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, 180);
 
 insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', true);

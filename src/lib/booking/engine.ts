@@ -23,6 +23,7 @@ import {
 } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
+import { can } from "@/lib/auth/permissions";
 import { canTransition, MOVABLE_STATUSES, type AppointmentStatus } from "./status";
 import { addMinutes, atRiyadh, minutesOf, overlaps, riyadhDay, weekdayOf } from "./time";
 
@@ -227,6 +228,33 @@ async function pickRoomAndDevice(
   return { roomId: room.id, deviceId };
 }
 
+// ─── Who may do what ────────────────────────────────────────────────────────
+
+const DOCTOR_STATUS_STEPS: readonly AppointmentStatus[] = ["confirmed", "in_session", "completed"];
+
+function isOwn(actor: Actor, appt: { practitionerId: string }) {
+  return !!actor.memberId && appt.practitionerId === actor.memberId;
+}
+
+function assertMayChangeStatus(actor: Actor, appt: Appointment, to: AppointmentStatus) {
+  if (can(actor.roles, "appointments:manage")) return;
+  if (
+    can(actor.roles, "appointments:own") &&
+    isOwn(actor, appt) &&
+    DOCTOR_STATUS_STEPS.includes(to)
+  )
+    return;
+  throw new BookingError("not_allowed");
+}
+
+async function assertMayMove(tx: TenantTx, actor: Actor, appt: Appointment) {
+  if (can(actor.roles, "appointments:manage")) return;
+  if (can(actor.roles, "appointments:own") && isOwn(actor, appt)) {
+    if ((await getSettings(tx)).doctorsManageOwnSchedule) return;
+  }
+  throw new BookingError("not_allowed");
+}
+
 // ─── Booking ────────────────────────────────────────────────────────────────
 
 export interface BookInput {
@@ -243,6 +271,7 @@ export interface BookInput {
 }
 
 export async function bookAppointment(tx: TenantTx, actor: Actor, input: BookInput) {
+  if (!can(actor.roles, "appointments:manage")) throw new BookingError("not_allowed");
   const service = await getService(tx, input.serviceId);
   await getPractitioner(tx, input.practitionerId, input.branchId);
   const [patient] = await tx
@@ -322,6 +351,7 @@ export interface MoveInput {
 /** Reschedule. Keeps the same doctor unless another is chosen; picks a free room/device again if needed. */
 export async function moveAppointment(tx: TenantTx, actor: Actor, id: string, input: MoveInput) {
   const appt = await getAppointment(tx, id, true);
+  await assertMayMove(tx, actor, appt);
   if (!MOVABLE_STATUSES.includes(appt.status)) throw new BookingError("bad_status");
   const service = await getService(tx, appt.serviceId);
   const practitionerId = input.practitionerId ?? appt.practitionerId;
@@ -400,6 +430,7 @@ export async function changeStatus(
   opts: { reason?: string; viaCheckIn?: boolean } = {},
 ) {
   const appt = await getAppointment(tx, id, true);
+  assertMayChangeStatus(actor, appt, to);
   if (appt.status === to) return appt; // idempotent: double taps do nothing
   if (to === "arrived" && !opts.viaCheckIn) throw new BookingError("not_allowed");
   if (!canTransition(appt.status, to)) throw new BookingError("bad_status");
@@ -427,6 +458,8 @@ export async function blockTime(
   input: { branchId: string; memberId: string; startsAt: Date; endsAt: Date; reason?: string },
 ) {
   if (input.endsAt <= input.startsAt) throw new BookingError("outside_hours");
+  const ownTime = can(actor.roles, "appointments:own") && input.memberId === actor.memberId;
+  if (!can(actor.roles, "appointments:manage") && !ownTime) throw new BookingError("not_allowed");
   const [block] = await attempt(tx, (sp) =>
     sp
       .insert(timeBlocks)
@@ -456,6 +489,10 @@ export async function blockTime(
 }
 
 export async function removeTimeBlock(tx: TenantTx, actor: Actor, id: string) {
+  const [existing] = await tx.select().from(timeBlocks).where(eq(timeBlocks.id, id)).limit(1);
+  if (!existing) throw new BookingError("not_found");
+  const ownTime = can(actor.roles, "appointments:own") && existing.memberId === actor.memberId;
+  if (!can(actor.roles, "appointments:manage") && !ownTime) throw new BookingError("not_allowed");
   const [block] = await tx.delete(timeBlocks).where(eq(timeBlocks.id, id)).returning();
   if (!block) throw new BookingError("not_found");
   await audit(tx, {

@@ -11,7 +11,10 @@ import {
   demoId,
   PLATFORM_OWNER,
   SEED_TENANTS,
+  CONSENT_TEMPLATES,
   DERMA_MEDICAL_FLAGS,
+  PACKAGE_TEMPLATES,
+  SERVICE_CONSENTS,
   DOCTORS_MANAGE_OWN_SCHEDULE,
   LAMSA_MEDICAL_FLAGS,
   HOLIDAYS,
@@ -170,6 +173,7 @@ function tenantSql(t: SeedTenant): string {
         buffer_minutes: s.bufferMinutes,
         price_halalas: Math.round(s.priceSar * 100),
         required_device_type: s.requiredDeviceType,
+        consent_code: SERVICE_CONSENTS[s.code] ?? null,
         is_demo_value: true,
         sort_order: i,
       })),
@@ -205,6 +209,37 @@ function tenantSql(t: SeedTenant): string {
         kind: f.kind,
         label: f.label,
         note: f.note ?? null,
+      })),
+    ),
+  );
+  out.push(
+    insert(
+      "consent_templates",
+      CONSENT_TEMPLATES.map((c) => ({
+        id: ref("consent_template", `${c.code}:v1`),
+        tenant_id: tid,
+        code: c.code,
+        version: 1,
+        is_current: true,
+        title_ar: c.titleAr,
+        title_en: c.titleEn,
+        body_ar: c.bodyAr,
+        body_en: c.bodyEn,
+      })),
+    ),
+  );
+  out.push(
+    insert(
+      "package_templates",
+      (PACKAGE_TEMPLATES[t.slug] ?? []).map((p) => ({
+        id: ref("package_template", p.key),
+        tenant_id: tid,
+        service_id: ref("service", p.serviceCode),
+        name_ar: p.nameAr,
+        name_en: p.nameEn,
+        sessions_count: p.sessions,
+        price_halalas: p.priceSar * 100,
+        validity_days: p.validityDays,
       })),
     ),
   );
