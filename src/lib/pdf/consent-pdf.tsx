@@ -56,6 +56,13 @@ const styles = StyleSheet.create({
   small: { fontSize: 8 },
 });
 
+/** Leaves out characters the font can't draw (e.g. emoji), instead of printing empty boxes. */
+export function drawable(text: string, font: FontkitFont) {
+  return [...text]
+    .filter((ch) => /\s/.test(ch) || font.hasGlyphForCodePoint(ch.codePointAt(0)!))
+    .join("");
+}
+
 /** Draws one paragraph line by line, each line already in visual order. */
 function Paragraph({
   text,
@@ -71,9 +78,10 @@ function Paragraph({
   gap?: number;
 }) {
   const f = measureFonts();
-  const m = fontMeasurer(bold ? f.bold : f.regular, size);
+  const font = bold ? f.bold : f.regular;
+  const m = fontMeasurer(font, size);
   const spaceWidth = m.width(" ");
-  const lines: Line[] = text
+  const lines: Line[] = drawable(text, font)
     .split(/\n+/)
     .flatMap((p) => (p.trim() ? layoutParagraph(p.trim(), CONTENT_WIDTH, m, dir) : []));
   return (

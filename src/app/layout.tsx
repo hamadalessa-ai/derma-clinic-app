@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { directionOf, type Locale } from "@/i18n/config";
+import { RegisterServiceWorker } from "@/components/register-sw";
+import { THEME } from "./theme";
 import "./globals.css";
 
 const plexArabic = IBM_Plex_Sans_Arabic({
@@ -16,7 +18,11 @@ export const metadata: Metadata = {
   title: "منصة العيادات | Clinic Platform (Demo)",
   description: "Demo — fake data only",
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, title: "العيادة", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
+
+export const viewport: Viewport = { themeColor: THEME.brand };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = (await getLocale()) as Locale;
@@ -28,6 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <RegisterServiceWorker />
       </body>
     </html>
   );

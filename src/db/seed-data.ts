@@ -611,8 +611,8 @@ export const SERVICE_CONSENTS: Record<string, string> = {
   chemical_peeling: "chemical_peel",
 };
 
-const DEMO_NOTICE_AR = "⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.";
-const DEMO_NOTICE_EN = "⚠️ Demo wording for demonstration only — NOT legal text.";
+const DEMO_NOTICE_AR = "تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.";
+const DEMO_NOTICE_EN = "Notice: demo wording for demonstration only — NOT legal text.";
 
 export interface SeedConsentTemplate {
   code: string;

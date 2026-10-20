@@ -6,7 +6,7 @@
 import { createHash } from "node:crypto";
 import { contentFingerprint } from "../lib/consents/fingerprint";
 import { DEMO_SIGNATURE_PNG_BASE64, DEMO_TIME_BLOCKS, generateDemoWeek } from "./demo-week";
-import { CONSENT_TEMPLATES, demoId, PACKAGE_TEMPLATES } from "./seed-data";
+import { CONSENT_TEMPLATES, DERMA, demoId, PACKAGE_TEMPLATES } from "./seed-data";
 import { insert, raw } from "./sql-render";
 
 const ANCHOR = "(select demo_anchor from pg_temp.setup_params)";
@@ -70,26 +70,28 @@ export const DEMO_PACKAGES: DemoPackage[] = [
   },
 ];
 
+const signerOf = (file: string) => DERMA.patients.find((p) => p.fileNumber === file)!.fullNameAr;
+
 export const DEMO_CONSENTS = [
   {
     key: "d0011-lhr",
     patientFile: "D-0011",
     code: "laser_hair_removal",
-    signer: "شهد صالح الحربي",
+    signer: signerOf("D-0011"),
     daysAgo: 90,
   },
   {
     key: "d0015-peel",
     patientFile: "D-0015",
     code: "chemical_peel",
-    signer: "مها سليمان القحطاني",
+    signer: signerOf("D-0015"),
     daysAgo: 30,
   },
   {
     key: "d0004-inj",
     patientFile: "D-0004",
     code: "injectables",
-    signer: "لمى إبراهيم المطيري",
+    signer: signerOf("D-0004"),
     daysAgo: 40,
   },
 ];

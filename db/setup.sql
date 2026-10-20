@@ -943,7 +943,7 @@ insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, no
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '8f896380-cce7-5b07-8a3c-83368787969f', 'medication', 'مميعات الدم (وارفارين) · Warfarin', null);
 
 insert into public.consent_templates (id, tenant_id, code, version, is_current, title_ar, title_en, body_ar, body_en) values
-  ('3edebd96-da81-580f-8bed-223be231bdf7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('3edebd96-da81-580f-8bed-223be231bdf7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
 
@@ -951,7 +951,7 @@ insert into public.consent_templates (id, tenant_id, code, version, is_current, 
 
 أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
 
-أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
 
@@ -960,7 +960,7 @@ I understand common side effects include temporary redness and swelling, and rar
 I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
 
 I consent to the session and will follow the aftercare instructions.'),
-  ('6ce721bf-f6ac-5c3b-94e6-31fc56aaab00', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('6ce721bf-f6ac-5c3b-94e6-31fc56aaab00', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
 
@@ -968,7 +968,7 @@ I consent to the session and will follow the aftercare instructions.'),
 
 أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
 
-أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
 
@@ -977,7 +977,7 @@ I understand possible risks: bruising, swelling, temporary asymmetry, and rarely
 I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
 
 I consent to the procedure and to before/after medical photos for my file only.'),
-  ('b020a4a7-5411-58e7-9ae3-b3c4a0084017', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('b020a4a7-5411-58e7-9ae3-b3c4a0084017', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
 
@@ -985,7 +985,7 @@ I consent to the procedure and to before/after medical photos for my file only.'
 
 أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
 
-أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
 
@@ -1075,7 +1075,7 @@ insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, no
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '47976cc3-ac45-5a95-a2c5-056e158e9ee2', 'allergy', 'الأسبرين · Aspirin', null);
 
 insert into public.consent_templates (id, tenant_id, code, version, is_current, title_ar, title_en, body_ar, body_en) values
-  ('06e6419e-1104-54c8-87ba-5637bc095f9b', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('06e6419e-1104-54c8-87ba-5637bc095f9b', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
 
@@ -1083,7 +1083,7 @@ insert into public.consent_templates (id, tenant_id, code, version, is_current, 
 
 أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
 
-أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
 
@@ -1092,7 +1092,7 @@ I understand common side effects include temporary redness and swelling, and rar
 I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
 
 I consent to the session and will follow the aftercare instructions.'),
-  ('37c21ec2-2835-5df9-aaa4-65939e8fb70e', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('37c21ec2-2835-5df9-aaa4-65939e8fb70e', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
 
@@ -1100,7 +1100,7 @@ I consent to the session and will follow the aftercare instructions.'),
 
 أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
 
-أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
 
@@ -1109,7 +1109,7 @@ I understand possible risks: bruising, swelling, temporary asymmetry, and rarely
 I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
 
 I consent to the procedure and to before/after medical photos for my file only.'),
-  ('0c10ddb0-6a59-5ed2-87a5-ecf94b1d9854', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('0c10ddb0-6a59-5ed2-87a5-ecf94b1d9854', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
 
@@ -1117,7 +1117,7 @@ I consent to the procedure and to before/after medical photos for my file only.'
 
 أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
 
-أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
 
@@ -1401,7 +1401,7 @@ insert into public.files (id, tenant_id, kind, mime_type, size_bytes, sha256, da
   ('8cb41498-0f3a-5429-ae03-3760b0f41d78', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'signature', 'image/png', 2631, '0ba6adb9337cbaecc825683d717b370491e13b99262b313300d831bfa9531198', decode('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', 'base64'), 'usr_derma-rec-ruh1');
 
 insert into public.patient_consents (id, tenant_id, patient_id, template_id, template_code, template_version, title_ar, title_en, body_ar, body_en, content_sha256, signer_name, signer_relation, signature_file_id, witness_user_id, signed_at) values
-  ('f8aa4428-7078-523b-b394-95248cdd1a72', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '3edebd96-da81-580f-8bed-223be231bdf7', 'laser_hair_removal', 1, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('f8aa4428-7078-523b-b394-95248cdd1a72', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '3edebd96-da81-580f-8bed-223be231bdf7', 'laser_hair_removal', 1, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
 
@@ -1409,7 +1409,7 @@ insert into public.patient_consents (id, tenant_id, patient_id, template_id, tem
 
 أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
 
-أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
 
@@ -1417,8 +1417,8 @@ I understand common side effects include temporary redness and swelling, and rar
 
 I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
 
-I consent to the session and will follow the aftercare instructions.', 'd8a4ced2bf9b3aa76ccd1622551e3ef4999867b04d334e9290b70d7697f16c3e', 'شهد صالح الحربي', 'self', '3c056d0a-e6fb-5597-ad27-af8aa49cbbc1', 'usr_derma-rec-ruh1', now() - interval '90 days'),
-  ('d9a62288-5402-54d6-8057-bab03c53fe8b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'b020a4a7-5411-58e7-9ae3-b3c4a0084017', 'chemical_peel', 1, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+I consent to the session and will follow the aftercare instructions.', '7632119da4e88d6349aa1cd333da3c7df707cb2134ade66a63946d341c69821e', 'غادة صالح السبيعي', 'self', '3c056d0a-e6fb-5597-ad27-af8aa49cbbc1', 'usr_derma-rec-ruh1', now() - interval '90 days'),
+  ('d9a62288-5402-54d6-8057-bab03c53fe8b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'b020a4a7-5411-58e7-9ae3-b3c4a0084017', 'chemical_peel', 1, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
 
@@ -1426,7 +1426,7 @@ I consent to the session and will follow the aftercare instructions.', 'd8a4ced2
 
 أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
 
-أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
 
@@ -1434,8 +1434,8 @@ I understand my skin may be red and peel for several days, and sun exposure may 
 
 I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
 
-I consent to the procedure and will use SPF 50 sunscreen daily.', '291351eead8e6ce37bcc4454765a45336c778d6963e2f6540a6cad198c977dc4', 'مها سليمان القحطاني', 'self', 'f711cf9c-6268-5554-aea0-97bc2c76f023', 'usr_derma-rec-ruh1', now() - interval '30 days'),
-  ('4b1bb48c-237b-5f87-b5d8-c6ef9c6b6d19', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'df796466-c642-5bad-a390-ce372c145876', '6ce721bf-f6ac-5c3b-94e6-31fc56aaab00', 'injectables', 1, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+I consent to the procedure and will use SPF 50 sunscreen daily.', 'ef49f32ba9a4da417330e5f78d0251094df1dc022d35bb17fc77bba28bec15cf', 'مها سليمان العنزي', 'self', 'f711cf9c-6268-5554-aea0-97bc2c76f023', 'usr_derma-rec-ruh1', now() - interval '30 days'),
+  ('4b1bb48c-237b-5f87-b5d8-c6ef9c6b6d19', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'df796466-c642-5bad-a390-ce372c145876', '6ce721bf-f6ac-5c3b-94e6-31fc56aaab00', 'injectables', 1, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
 
@@ -1443,7 +1443,7 @@ I consent to the procedure and will use SPF 50 sunscreen daily.', '291351eead8e6
 
 أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
 
-أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
 
@@ -1451,7 +1451,7 @@ I understand possible risks: bruising, swelling, temporary asymmetry, and rarely
 
 I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
 
-I consent to the procedure and to before/after medical photos for my file only.', '86b5173615b20c6ef3f717832d97afa1fee58a54e3543049162858e694c7055e', 'لمى إبراهيم المطيري', 'self', '8cb41498-0f3a-5429-ae03-3760b0f41d78', 'usr_derma-rec-ruh1', now() - interval '40 days');
+I consent to the procedure and to before/after medical photos for my file only.', '3d783b527caf14d792befa3823b8b6998e32f122cd65c10ca21fd798fa555f51', 'لمى إبراهيم المطيري', 'self', '8cb41498-0f3a-5429-ae03-3760b0f41d78', 'usr_derma-rec-ruh1', now() - interval '40 days');
 
 insert into public.clinical_notes (id, tenant_id, patient_id, author_user_id, author_name, body, status, signed_at, created_at) values
   ('78bbdd3e-1e01-5d27-aa22-2df7e5556425', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'usr_derma-dr-sara', 'د. سارة العتيبي', 'الشكوى: خطوط تعبيرية بين الحاجبين.
@@ -1482,7 +1482,7 @@ insert into public.files (id, tenant_id, kind, mime_type, size_bytes, sha256, da
   ('46f6205f-1cf7-524b-a6d3-fec4b799926e', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'signature', 'image/png', 2631, '0ba6adb9337cbaecc825683d717b370491e13b99262b313300d831bfa9531198', decode('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', 'base64'), 'usr_lamsa-rec');
 
 insert into public.patient_consents (id, tenant_id, patient_id, template_id, template_code, template_version, title_ar, title_en, body_ar, body_en, content_sha256, signer_name, signer_relation, signature_file_id, witness_user_id, signed_at) values
-  ('6eaf2bde-5823-5b61-abf2-3e2755bb0e12', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '37c21ec2-2835-5df9-aaa4-65939e8fb70e', 'injectables', 1, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', '⚠️ صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+  ('6eaf2bde-5823-5b61-abf2-3e2755bb0e12', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '37c21ec2-2835-5df9-aaa4-65939e8fb70e', 'injectables', 1, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
 
@@ -1490,7 +1490,7 @@ insert into public.patient_consents (id, tenant_id, patient_id, template_id, tem
 
 أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
 
-أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', '⚠️ Demo wording for demonstration only — NOT legal text.
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
 
 I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
 
@@ -1498,7 +1498,7 @@ I understand possible risks: bruising, swelling, temporary asymmetry, and rarely
 
 I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
 
-I consent to the procedure and to before/after medical photos for my file only.', '86b5173615b20c6ef3f717832d97afa1fee58a54e3543049162858e694c7055e', 'مريضة لمسة', 'self', '46f6205f-1cf7-524b-a6d3-fec4b799926e', 'usr_lamsa-rec', now() - interval '20 days');
+I consent to the procedure and to before/after medical photos for my file only.', '3d783b527caf14d792befa3823b8b6998e32f122cd65c10ca21fd798fa555f51', 'مريضة لمسة', 'self', '46f6205f-1cf7-524b-a6d3-fec4b799926e', 'usr_lamsa-rec', now() - interval '20 days');
 
 insert into public.clinical_notes (id, tenant_id, patient_id, author_user_id, author_name, body, status, signed_at, created_at) values
   ('f719f56d-0af0-55d3-85c6-904f3694f067', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'usr_lamsa-dr-mona', 'د. منى السبيعي', 'ملاحظة لمسة السرية.', 'signed', now() - interval '10 days', now() - interval '10 days');

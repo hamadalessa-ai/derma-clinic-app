@@ -1,0 +1,258 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  CalendarCheck,
+  CheckCircle2,
+  DoorOpen,
+  FileText,
+  Play,
+  Trash2,
+  UserRound,
+} from "lucide-react";
+import { blockTimeAction, removeBlockAction, statusAction } from "@/app/actions/clinic";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { ApptView, BlockView } from "@/lib/views/schedule";
+import { AlertBadge, BalanceBadge, StatusBadge } from "./badges";
+import { AppointmentDialog } from "./appointment-dialog";
+import type { PickOption } from "./booking-dialog";
+import { FormError, FormSuccess } from "./form-message";
+import { riyadhParts } from "./time";
+import { useAction } from "./use-action";
+
+export function MyDayList({
+  appointments,
+  blocks,
+  rooms,
+  doctors,
+  memberId,
+  branchId,
+  day,
+  doctorsManageOwnSchedule,
+}: {
+  appointments: ApptView[];
+  blocks: BlockView[];
+  rooms: Record<string, { nameAr: string; nameEn: string }>;
+  doctors: PickOption[];
+  memberId: string;
+  branchId: string;
+  day: string;
+  doctorsManageOwnSchedule: boolean;
+}) {
+  const t = useTranslations("myDay");
+  const tc = useTranslations("calendar");
+  const ts = useTranslations("statuses");
+  const tcom = useTranslations("common");
+  const locale = useLocale();
+  const name = (o: { nameAr: string; nameEn: string | null }) =>
+    locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = appointments.find((a) => a.id === openId) ?? null;
+  const { run, pending, error } = useAction();
+  const block = useAction();
+  const [from, setFrom] = useState("13:00");
+  const [to, setTo] = useState("14:00");
+  const [reason, setReason] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const next = (a: ApptView) =>
+    a.status === "booked"
+      ? { to: "confirmed", label: t("confirm"), icon: CalendarCheck }
+      : a.status === "arrived"
+        ? { to: "in_session", label: t("start"), icon: Play }
+        : a.status === "in_session"
+          ? { to: "completed", label: t("complete"), icon: CheckCircle2 }
+          : null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <FormError message={error} />
+      {appointments.length === 0 && (
+        <p className="text-muted-foreground py-8 text-center">{t("empty")}</p>
+      )}
+      {appointments.map((a) => {
+        const n = next(a);
+        const start = riyadhParts(a.startsAt).time;
+        const end = riyadhParts(a.endsAt).time;
+        const room = rooms[a.roomId];
+        return (
+          <Card
+            key={a.id}
+            data-testid="my-day-card"
+            data-status={a.status}
+            data-patient={a.patient.fileNumber}
+            className={a.status === "arrived" ? "ring-brand ring-2" : ""}
+          >
+            <CardContent className="flex flex-col gap-2 pt-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-lg font-bold" dir="ltr">
+                  {start}–{end}
+                </span>
+                <StatusBadge status={a.status} label={ts(a.status)} />
+              </div>
+              <button
+                type="button"
+                className="flex flex-wrap items-center gap-2 text-start"
+                onClick={() => setOpenId(a.id)}
+              >
+                <span className="text-base font-semibold">{name(a.patient)}</span>
+                <AlertBadge alerts={a.alerts} label={tc("allergy")} />
+                {a.balance && (
+                  <BalanceBadge
+                    remaining={a.balance.remaining}
+                    total={a.balance.total}
+                    label={tc("balance")}
+                  />
+                )}
+              </button>
+              <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <span>{locale === "en" ? a.serviceNameEn : a.serviceNameAr}</span>
+                {room && (
+                  <span className="inline-flex items-center gap-1">
+                    <DoorOpen className="size-4" />
+                    {locale === "en" ? room.nameEn : room.nameAr}
+                  </span>
+                )}
+                {a.pendingRequest && (
+                  <span className="text-warning-foreground">{t("pendingRequest")}</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {n && (
+                  <Button
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => run(() => statusAction({ appointmentId: a.id, to: n.to }))}
+                  >
+                    <n.icon />
+                    {n.label}
+                  </Button>
+                )}
+                <Link
+                  href={`/patients/${a.patient.id}?tab=notes&appointment=${a.id}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  <FileText />
+                  {t("writeNote")}
+                </Link>
+                <Link
+                  href={`/patients/${a.patient.id}`}
+                  className={buttonVariants({ variant: "ghost", size: "sm" })}
+                >
+                  <UserRound />
+                  {tc("openProfile")}
+                </Link>
+                {(a.status === "booked" || a.status === "confirmed") && (
+                  <Button size="sm" variant="ghost" onClick={() => setOpenId(a.id)}>
+                    {t("reschedule")}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      <Card>
+        <CardContent className="flex flex-col gap-3 pt-4">
+          <h2 className="font-semibold">{t("blockTime")}</h2>
+          {blocks.length > 0 && (
+            <ul className="flex flex-col gap-1 text-sm">
+              {blocks.map((b) => (
+                <li
+                  key={b.id}
+                  className="bg-muted flex items-center justify-between rounded-md px-3 py-1.5"
+                >
+                  <span>
+                    <span dir="ltr">
+                      {riyadhParts(b.startsAt).time}–{riyadhParts(b.endsAt).time}
+                    </span>
+                    {b.reason ? ` · ${b.reason}` : ""}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label={t("removeBlock")}
+                    onClick={() => block.run(() => removeBlockAction(b.id))}
+                  >
+                    <Trash2 />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="block-from">{t("blockFrom")}</Label>
+              <Input
+                id="block-from"
+                type="time"
+                step={900}
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="block-to">{t("blockTo")}</Label>
+              <Input
+                id="block-to"
+                type="time"
+                step={900}
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+            <div className="col-span-2 flex flex-col gap-1">
+              <Label htmlFor="block-reason">{t("blockReason")}</Label>
+              <Input id="block-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+            </div>
+          </div>
+          <FormError message={block.error} />
+          <FormSuccess message={msg} />
+          <Button
+            className="self-end"
+            disabled={block.pending}
+            onClick={() =>
+              block.run(
+                () =>
+                  blockTimeAction({
+                    branchId,
+                    memberId,
+                    day,
+                    from,
+                    to,
+                    reason: reason || undefined,
+                  }),
+                () => {
+                  setMsg(t("blockedOk"));
+                  setReason("");
+                },
+              )
+            }
+          >
+            {tcom("save")}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <AppointmentDialog
+        key={openId ?? "none"}
+        appt={open}
+        onClose={() => setOpenId(null)}
+        doctors={doctors}
+        perms={{
+          manage: false,
+          own: !!open && open.practitionerId === memberId,
+          doctorsManageOwnSchedule,
+        }}
+      />
+    </div>
+  );
+}

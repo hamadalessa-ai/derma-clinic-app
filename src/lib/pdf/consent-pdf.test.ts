@@ -86,3 +86,14 @@ describe("consent PDF", () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe("characters the font can't draw", () => {
+  it("are left out instead of printed as empty boxes", async () => {
+    const { drawable } = await import("./consent-pdf");
+    const fontkit = await import("fontkit");
+    const font = fontkit.openSync(
+      path.resolve(__dirname, "fonts/IBMPlexSansArabic-400.ttf"),
+    ) as import("fontkit").Font;
+    expect(drawable("⚠️ تنبيه: Notice 1,250 ر.س", font)).toBe(" تنبيه: Notice 1,250 ر.س");
+  });
+});
