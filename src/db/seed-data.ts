@@ -44,6 +44,17 @@ export interface SeedPatient {
   phone: string;
   gender: "male" | "female";
   dateOfBirth: string;
+  idType: "national_id" | "iqama";
+  /** FAKE: 10 digits, national IDs start with 1, Iqamas with 2. */
+  idNumber: string;
+  guardian?: { fileNumber: string; relationAr: string; relationEn: string };
+}
+
+export interface SeedMedicalFlag {
+  fileNumber: string;
+  kind: "allergy" | "contraindication" | "medication";
+  label: string;
+  note?: string;
 }
 
 export interface SeedTenant {
@@ -236,6 +247,7 @@ export function makeFakePatients(
     const year = 1970 + ((n * 13) % 36);
     const month = ((n * 5) % 12) + 1;
     const day = ((n * 11) % 28) + 1;
+    const isIqama = n % 9 === 4; // a few residents
     return {
       fileNumber: `${filePrefix}-${String(i + 1).padStart(4, "0")}`,
       fullNameAr: `${firstAr} ${fatherAr} ${familyAr}`,
@@ -243,9 +255,67 @@ export function makeFakePatients(
       phone: `0500${phonePrefix}${String(i + 1).padStart(4, "0")}`,
       gender: isFemale ? "female" : "male",
       dateOfBirth: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+      idType: isIqama ? "iqama" : "national_id",
+      idNumber: `${isIqama ? 2 : 1}00000${phonePrefix}${String(i + 1).padStart(2, "0")}`,
     };
   });
 }
+
+/** A family: D-0008 (Bandar Al-Ghamdi) is the guardian of his two children. */
+function withFamily(patients: SeedPatient[]): SeedPatient[] {
+  const child = (
+    fileNumber: string,
+    c: Partial<SeedPatient>,
+    relationAr: string,
+    relationEn: string,
+  ) => {
+    const p = patients.find((x) => x.fileNumber === fileNumber)!;
+    Object.assign(p, c, { guardian: { fileNumber: "D-0008", relationAr, relationEn } });
+  };
+  child(
+    "D-0039",
+    {
+      fullNameAr: "ليان بندر الغامدي",
+      fullNameEn: "Layan Bandar Al-Ghamdi",
+      gender: "female",
+      dateOfBirth: "2014-03-09",
+    },
+    "ابنة",
+    "Daughter",
+  );
+  child(
+    "D-0040",
+    {
+      fullNameAr: "سلمان بندر الغامدي",
+      fullNameEn: "Salman Bandar Al-Ghamdi",
+      gender: "male",
+      dateOfBirth: "2011-11-20",
+    },
+    "ابن",
+    "Son",
+  );
+  return patients;
+}
+
+/** Allergies, contraindications and medications (shown as warning badges). */
+export const DERMA_MEDICAL_FLAGS: SeedMedicalFlag[] = [
+  {
+    fileNumber: "D-0001",
+    kind: "allergy",
+    label: "ليدوكايين (مخدر موضعي) · Lidocaine",
+    note: "طفح جلدي سابق",
+  },
+  { fileNumber: "D-0003", kind: "allergy", label: "البنسلين · Penicillin" },
+  { fileNumber: "D-0006", kind: "contraindication", label: "حمل · Pregnancy" },
+  { fileNumber: "D-0010", kind: "medication", label: "إيزوتريتينوين (روكتان) · Isotretinoin" },
+  {
+    fileNumber: "D-0010",
+    kind: "contraindication",
+    label: "لا ليزر ولا تقشير أثناء الروكتان · No laser/peel on isotretinoin",
+  },
+  { fileNumber: "D-0014", kind: "allergy", label: "اللاتكس · Latex" },
+  { fileNumber: "D-0021", kind: "medication", label: "مميعات الدم (وارفارين) · Warfarin" },
+];
 
 // ─── Clinic A: Derma Clinics ────────────────────────────────────────────────
 
@@ -451,7 +521,7 @@ export const DERMA: SeedTenant = {
     ),
   ],
   services: DERMA_SERVICES,
-  patients: makeFakePatients(40, "D", "01"),
+  patients: withFamily(makeFakePatients(40, "D", "01")),
 };
 
 // ─── Clinic B: Lamsa Clinic (small, exists to prove isolation) ──────────────
@@ -499,6 +569,10 @@ export const LAMSA: SeedTenant = {
   ),
   patients: makeFakePatients(8, "L", "02", 17),
 };
+
+export const LAMSA_MEDICAL_FLAGS: SeedMedicalFlag[] = [
+  { fileNumber: "L-0001", kind: "allergy", label: "الأسبرين · Aspirin" },
+];
 
 export const SEED_TENANTS = [DERMA, LAMSA];
 

@@ -856,47 +856,56 @@ insert into public.services (id, tenant_id, department_id, code, name_ar, name_e
   ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, true, 20),
   ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, true, 21);
 
-insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, is_fake) values
-  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', true),
-  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', true),
-  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '0500010003', 'female', '1996-11-23', true),
-  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '0500010004', 'female', '1973-04-06', true),
-  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '0500010005', 'female', '1986-09-17', true),
-  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '0500010006', 'female', '1999-02-28', true),
-  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '0500010007', 'female', '1976-07-11', true),
-  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '0500010008', 'male', '1989-12-22', true),
-  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '0500010009', 'male', '2002-05-05', true),
-  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '0500010010', 'male', '1979-10-16', true),
-  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '0500010011', 'female', '1992-03-27', true),
-  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '0500010012', 'female', '2005-08-10', true),
-  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '0500010013', 'female', '1982-01-21', true),
-  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '0500010014', 'female', '1995-06-04', true),
-  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '0500010015', 'female', '1972-11-15', true),
-  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '0500010016', 'female', '1985-04-26', true),
-  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '0500010017', 'female', '1998-09-09', true),
-  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500010018', 'male', '1975-02-20', true),
-  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500010019', 'male', '1988-07-03', true),
-  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500010020', 'male', '2001-12-14', true),
-  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500010021', 'female', '1978-05-25', true),
-  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500010022', 'female', '1991-10-08', true),
-  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500010023', 'female', '2004-03-19', true),
-  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500010024', 'female', '1981-08-02', true),
-  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500010025', 'female', '1994-01-13', true),
-  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '0500010026', 'female', '1971-06-24', true),
-  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '0500010027', 'female', '1984-11-07', true),
-  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '0500010028', 'male', '1997-04-18', true),
-  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '0500010029', 'male', '1974-09-01', true),
-  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '0500010030', 'male', '1987-02-12', true),
-  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '0500010031', 'female', '2000-07-23', true),
-  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '0500010032', 'female', '1977-12-06', true),
-  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '0500010033', 'female', '1990-05-17', true),
-  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '0500010034', 'female', '2003-10-28', true),
-  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '0500010035', 'female', '1980-03-11', true),
-  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '0500010036', 'female', '1993-08-22', true),
-  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '0500010037', 'female', '1970-01-05', true),
-  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '0500010038', 'male', '1983-06-16', true),
-  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ناصر سليمان البقمي', 'Nasser Sulaiman Al-Buqami', '0500010039', 'male', '1996-11-27', true),
-  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'بندر حمد الشهري', 'Bandar Hamad Al-Shehri', '0500010040', 'male', '1973-04-10', true);
+insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
+  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', 'national_id', '1000000101', null, null, null, true),
+  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', 'national_id', '1000000102', null, null, null, true),
+  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '0500010003', 'female', '1996-11-23', 'national_id', '1000000103', null, null, null, true),
+  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '0500010004', 'female', '1973-04-06', 'national_id', '1000000104', null, null, null, true),
+  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '0500010005', 'female', '1986-09-17', 'iqama', '2000000105', null, null, null, true),
+  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '0500010006', 'female', '1999-02-28', 'national_id', '1000000106', null, null, null, true),
+  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '0500010007', 'female', '1976-07-11', 'national_id', '1000000107', null, null, null, true),
+  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '0500010008', 'male', '1989-12-22', 'national_id', '1000000108', null, null, null, true),
+  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '0500010009', 'male', '2002-05-05', 'national_id', '1000000109', null, null, null, true),
+  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '0500010010', 'male', '1979-10-16', 'national_id', '1000000110', null, null, null, true),
+  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '0500010011', 'female', '1992-03-27', 'national_id', '1000000111', null, null, null, true),
+  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '0500010012', 'female', '2005-08-10', 'national_id', '1000000112', null, null, null, true),
+  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '0500010013', 'female', '1982-01-21', 'national_id', '1000000113', null, null, null, true),
+  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '0500010014', 'female', '1995-06-04', 'iqama', '2000000114', null, null, null, true),
+  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '0500010015', 'female', '1972-11-15', 'national_id', '1000000115', null, null, null, true),
+  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '0500010016', 'female', '1985-04-26', 'national_id', '1000000116', null, null, null, true),
+  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '0500010017', 'female', '1998-09-09', 'national_id', '1000000117', null, null, null, true),
+  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500010018', 'male', '1975-02-20', 'national_id', '1000000118', null, null, null, true),
+  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500010019', 'male', '1988-07-03', 'national_id', '1000000119', null, null, null, true),
+  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500010020', 'male', '2001-12-14', 'national_id', '1000000120', null, null, null, true),
+  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500010021', 'female', '1978-05-25', 'national_id', '1000000121', null, null, null, true),
+  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500010022', 'female', '1991-10-08', 'national_id', '1000000122', null, null, null, true),
+  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500010023', 'female', '2004-03-19', 'iqama', '2000000123', null, null, null, true),
+  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500010024', 'female', '1981-08-02', 'national_id', '1000000124', null, null, null, true),
+  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500010025', 'female', '1994-01-13', 'national_id', '1000000125', null, null, null, true),
+  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '0500010026', 'female', '1971-06-24', 'national_id', '1000000126', null, null, null, true),
+  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '0500010027', 'female', '1984-11-07', 'national_id', '1000000127', null, null, null, true),
+  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '0500010028', 'male', '1997-04-18', 'national_id', '1000000128', null, null, null, true),
+  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '0500010029', 'male', '1974-09-01', 'national_id', '1000000129', null, null, null, true),
+  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '0500010030', 'male', '1987-02-12', 'national_id', '1000000130', null, null, null, true),
+  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '0500010031', 'female', '2000-07-23', 'national_id', '1000000131', null, null, null, true),
+  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '0500010032', 'female', '1977-12-06', 'iqama', '2000000132', null, null, null, true),
+  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '0500010033', 'female', '1990-05-17', 'national_id', '1000000133', null, null, null, true),
+  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '0500010034', 'female', '2003-10-28', 'national_id', '1000000134', null, null, null, true),
+  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '0500010035', 'female', '1980-03-11', 'national_id', '1000000135', null, null, null, true),
+  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '0500010036', 'female', '1993-08-22', 'national_id', '1000000136', null, null, null, true),
+  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '0500010037', 'female', '1970-01-05', 'national_id', '1000000137', null, null, null, true),
+  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '0500010038', 'male', '1983-06-16', 'national_id', '1000000138', null, null, null, true),
+  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ليان بندر الغامدي', 'Layan Bandar Al-Ghamdi', '0500010039', 'female', '2014-03-09', 'national_id', '1000000139', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابنة', 'Daughter', true),
+  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'سلمان بندر الغامدي', 'Salman Bandar Al-Ghamdi', '0500010040', 'male', '2011-11-20', 'national_id', '1000000140', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابن', 'Son', true);
+
+insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, note) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'allergy', 'ليدوكايين (مخدر موضعي) · Lidocaine', 'طفح جلدي سابق'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'allergy', 'البنسلين · Penicillin', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e5a6936e-d013-5b42-a13a-2f69f172f7a2', 'contraindication', 'حمل · Pregnancy', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'medication', 'إيزوتريتينوين (روكتان) · Isotretinoin', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'contraindication', 'لا ليزر ولا تقشير أثناء الروكتان · No laser/peel on isotretinoin', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', 'allergy', 'اللاتكس · Latex', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '8f896380-cce7-5b07-8a3c-83368787969f', 'medication', 'مميعات الدم (وارفارين) · Warfarin', null);
 
 insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false);
@@ -953,15 +962,18 @@ insert into public.services (id, tenant_id, department_id, code, name_ar, name_e
   ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true, 2),
   ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true, 3);
 
-insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, is_fake) values
-  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', true),
-  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500020002', 'male', '1988-07-03', true),
-  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500020003', 'male', '2001-12-14', true),
-  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500020004', 'female', '1978-05-25', true),
-  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500020005', 'female', '1991-10-08', true),
-  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', true),
-  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', true),
-  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', true);
+insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
+  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', 'national_id', '1000000201', null, null, null, true),
+  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500020002', 'male', '1988-07-03', 'national_id', '1000000202', null, null, null, true),
+  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500020003', 'male', '2001-12-14', 'national_id', '1000000203', null, null, null, true),
+  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500020004', 'female', '1978-05-25', 'national_id', '1000000204', null, null, null, true),
+  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500020005', 'female', '1991-10-08', 'national_id', '1000000205', null, null, null, true),
+  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', 'iqama', '2000000206', null, null, null, true),
+  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', 'national_id', '1000000207', null, null, null, true),
+  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', 'national_id', '1000000208', null, null, null, true);
+
+insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, note) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '47976cc3-ac45-5a95-a2c5-056e158e9ee2', 'allergy', 'الأسبرين · Aspirin', null);
 
 insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', true);

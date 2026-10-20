@@ -11,7 +11,9 @@ import {
   demoId,
   PLATFORM_OWNER,
   SEED_TENANTS,
+  DERMA_MEDICAL_FLAGS,
   DOCTORS_MANAGE_OWN_SCHEDULE,
+  LAMSA_MEDICAL_FLAGS,
   HOLIDAYS,
   WORK_HOURS,
   WORK_WEEK,
@@ -185,7 +187,24 @@ function tenantSql(t: SeedTenant): string {
         phone: p.phone,
         gender: p.gender,
         date_of_birth: p.dateOfBirth,
+        id_type: p.idType,
+        id_number: p.idNumber,
+        guardian_id: p.guardian ? ref("patient", p.guardian.fileNumber) : null,
+        guardian_relation_ar: p.guardian?.relationAr ?? null,
+        guardian_relation_en: p.guardian?.relationEn ?? null,
         is_fake: true,
+      })),
+    ),
+  );
+  out.push(
+    insert(
+      "patient_medical_flags",
+      (t.slug === "derma" ? DERMA_MEDICAL_FLAGS : LAMSA_MEDICAL_FLAGS).map((f) => ({
+        tenant_id: tid,
+        patient_id: ref("patient", f.fileNumber),
+        kind: f.kind,
+        label: f.label,
+        note: f.note ?? null,
       })),
     ),
   );
