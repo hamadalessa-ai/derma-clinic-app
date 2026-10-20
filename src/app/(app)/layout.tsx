@@ -31,7 +31,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <header className="bg-card sticky top-0 z-10 border-b">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="bg-brand flex size-9 items-center justify-center rounded-full font-bold text-white">
+            <div className="bg-brand text-brand-foreground flex size-9 items-center justify-center rounded-full font-bold">
               {clinicName.charAt(0)}
             </div>
             <div className="leading-tight">

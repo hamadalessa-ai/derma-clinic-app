@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
-/* Theme tokens (shadcn/ui convention). --brand is overridden per clinic at runtime. */
+/*
+ * THE THEME. Every colour, font, radius and shadow in the app comes from here.
+ * Screens must only use these tokens (a test fails on hard-coded colours).
+ * --brand is overridden per clinic at runtime (src/lib/brand.ts).
+ */
 :root {
   --brand: #28817a;
   --brand-foreground: #ffffff;
@@ -21,7 +25,35 @@
   --accent-foreground: #1a1f1e;
   --destructive: #c0362c;
   --destructive-foreground: #ffffff;
+  --warning: #fdf3d7;
+  --warning-foreground: #7a4b00;
+  --success: #e3f4ea;
+  --success-foreground: #1d6b3d;
+  --info: #e4eefb;
+  --info-foreground: #1f4f8f;
+  --danger: #fbe6e4;
+  --danger-foreground: #9b2a20;
+
+  /* Appointment statuses (calendar blocks, badges). */
+  --status-booked: #e4eefb;
+  --status-booked-foreground: #1f4f8f;
+  --status-confirmed: #dcefe9;
+  --status-confirmed-foreground: #1b6457;
+  --status-arrived: #fdf0cf;
+  --status-arrived-foreground: #7a4b00;
+  --status-in-session: #ece3fb;
+  --status-in-session-foreground: #5b2fa0;
+  --status-completed: #e6e9e8;
+  --status-completed-foreground: #3d4846;
+  --status-no-show: #fbe6e4;
+  --status-no-show-foreground: #9b2a20;
+  --status-cancelled: #f3f4f4;
+  --status-cancelled-foreground: #8a9492;
+  --status-blocked: #eceeee;
+  --status-blocked-foreground: #5f6b69;
+
   --radius: 0.625rem;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05);
 }
 
 @theme inline {
@@ -43,6 +75,32 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-status-booked: var(--status-booked);
+  --color-status-booked-foreground: var(--status-booked-foreground);
+  --color-status-confirmed: var(--status-confirmed);
+  --color-status-confirmed-foreground: var(--status-confirmed-foreground);
+  --color-status-arrived: var(--status-arrived);
+  --color-status-arrived-foreground: var(--status-arrived-foreground);
+  --color-status-in-session: var(--status-in-session);
+  --color-status-in-session-foreground: var(--status-in-session-foreground);
+  --color-status-completed: var(--status-completed);
+  --color-status-completed-foreground: var(--status-completed-foreground);
+  --color-status-no-show: var(--status-no-show);
+  --color-status-no-show-foreground: var(--status-no-show-foreground);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-status-cancelled-foreground: var(--status-cancelled-foreground);
+  --color-status-blocked: var(--status-blocked);
+  --color-status-blocked-foreground: var(--status-blocked-foreground);
+  --shadow-card: var(--shadow-card);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

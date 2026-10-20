@@ -38,7 +38,7 @@ export function NavLinks({
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
-              active ? "bg-brand text-white" : "text-foreground hover:bg-accent",
+              active ? "bg-brand text-brand-foreground" : "text-foreground hover:bg-accent",
             )}
           >
             <Icon className="size-4 shrink-0" />

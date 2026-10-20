@@ -42,7 +42,7 @@ export default async function LoginPage() {
       <main className="flex flex-1 items-start justify-center px-4 pb-10 sm:items-center">
         <Card className="w-full max-w-sm">
           <CardHeader className="items-center text-center">
-            <div className="bg-brand mb-2 flex size-12 items-center justify-center rounded-full text-xl font-bold text-white">
+            <div className="bg-brand text-brand-foreground mb-2 flex size-12 items-center justify-center rounded-full text-xl font-bold">
               {pick(locale, tenant.nameAr, tenant.nameEn).charAt(0)}
             </div>
             <CardTitle className="text-brand text-xl">
