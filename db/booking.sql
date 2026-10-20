@@ -9,6 +9,8 @@ create extension if not exists btree_gist with schema extensions;
 -- ─── No double-booking ──────────────────────────────────────────────────────
 -- Two reservations for the same doctor, room or device may never overlap in time.
 -- The database checks this itself, so two simultaneous bookings can't both succeed.
+-- DEFERRABLE INITIALLY IMMEDIATE: still checked at the end of every statement (so races are
+-- refused), but "Refresh demo week" can move a whole week in one go without false clashes.
 alter table public.reservations
   add constraint reservations_no_overlap
   exclude using gist (
@@ -16,7 +18,7 @@ alter table public.reservations
     resource_kind with =,
     resource_id with =,
     during with &&
-  );
+  ) deferrable initially immediate;
 
 create index reservations_lookup_idx on public.reservations
   using gist (tenant_id, resource_kind, resource_id, during);
@@ -167,3 +169,23 @@ as $$
     translate(lower(coalesce(t, '')), 'أإآٱىةؤئ٠١٢٣٤٥٦٧٨٩', 'اااايهوي0123456789'),
     '[ً-ٰٟـ]', '', 'g')
 $$;
+
+-- ─── Demo week ──────────────────────────────────────────────────────────────
+-- The k-th working day (Friday off) counted from `anchor`. Day 0 is the anchor itself,
+-- or the next Saturday when the anchor is a Friday. Used by the demo seed and by
+-- "Refresh demo week", so demo appointments always surround today.
+create or replace function public.demo_workday(anchor date, k integer) returns date
+  language plpgsql immutable
+  set search_path = ''
+as $$
+declare
+  d date := anchor;
+  steps integer := abs(k);
+begin
+  while extract(dow from d) = 5 loop d := d + 1; end loop;
+  while steps > 0 loop
+    d := d + sign(k)::integer;
+    if extract(dow from d) <> 5 then steps := steps - 1; end if;
+  end loop;
+  return d;
+end $$;

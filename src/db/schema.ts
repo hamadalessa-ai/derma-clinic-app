@@ -416,6 +416,8 @@ export const tenantSettings = pgTable("tenant_settings", {
   /** ON: doctors move their own appointments. OFF: doctors send requests reception approves. */
   doctorsManageOwnSchedule: boolean("doctors_manage_own_schedule").notNull().default(false),
   slotMinutes: smallint("slot_minutes").notNull().default(15),
+  /** Demo clinics: the day the demo week is centred on ("Refresh demo week" moves it to today). */
+  demoAnchorDay: date("demo_anchor_day"),
   updatedAt: updatedAt(),
 });
 
@@ -483,6 +485,8 @@ export const appointments = pgTable(
     blockedUntil: timestamp("blocked_until", { withTimezone: true }).notNull(),
     status: appointmentStatus("status").notNull().default("booked"),
     receptionNote: text("reception_note"),
+    /** Demo data only: working-day number relative to tenant_settings.demo_anchor_day. */
+    demoDayIndex: smallint("demo_day_index"),
     cancelReason: text("cancel_reason"),
     createdBy: text("created_by"),
     createdAt: createdAt(),
@@ -543,6 +547,7 @@ export const timeBlocks = pgTable(
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     reason: text("reason"),
+    demoDayIndex: smallint("demo_day_index"),
     createdBy: text("created_by"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

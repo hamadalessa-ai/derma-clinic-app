@@ -549,7 +549,16 @@ export const LAMSA: SeedTenant = {
     },
   ],
   rooms: [{ key: "dmm-1", branch: "dammam", nameAr: "غرفة الكشف", nameEn: "Consultation Room" }],
-  devices: [],
+  devices: [
+    {
+      key: "dmm-lhr",
+      branch: "dammam",
+      room: "dmm-1",
+      deviceType: "hair_removal_laser",
+      nameAr: "جهاز ليزر إزالة الشعر",
+      nameEn: "Laser Hair Removal",
+    },
+  ],
   staff: [
     {
       key: "lamsa-admin",
@@ -577,7 +586,8 @@ export const LAMSA_MEDICAL_FLAGS: SeedMedicalFlag[] = [
 export const SEED_TENANTS = [DERMA, LAMSA];
 
 /** Working hours for practitioners and receptionists: Sunday–Thursday 10:00–19:00. */
-export const WORK_WEEK = [0, 1, 2, 3, 4];
+/** Saturday–Thursday (Friday off), common for Saudi aesthetic clinics. 0 = Sunday … 6 = Saturday. */
+export const WORK_WEEK = [6, 0, 1, 2, 3, 4];
 export const WORK_HOURS = { start: "10:00", end: "20:00", breakStart: "14:00", breakEnd: "15:00" };
 
 /** Clinic setting: do doctors move their own appointments (true) or send requests (false)? */

@@ -1,5 +1,5 @@
 {
-  "id": "1faad2a5-d9f4-4168-9c36-fe7e7ef5493f",
+  "id": "4a57317b-a8be-4db3-8141-65b40024797a",
   "prevId": "a4f5ca4e-595c-47dc-be98-3ad4406bbb89",
   "version": "7",
   "dialect": "postgresql",
@@ -209,6 +209,12 @@
         "reception_note": {
           "name": "reception_note",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "demo_day_index": {
+          "name": "demo_day_index",
+          "type": "smallint",
           "primaryKey": false,
           "notNull": false
         },
@@ -3426,6 +3432,12 @@
           "notNull": true,
           "default": 15
         },
+        "demo_anchor_day": {
+          "name": "demo_anchor_day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp with time zone",
@@ -3579,6 +3591,12 @@
         "reason": {
           "name": "reason",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "demo_day_index": {
+          "name": "demo_day_index",
+          "type": "smallint",
           "primaryKey": false,
           "notNull": false
         },

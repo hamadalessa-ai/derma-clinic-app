@@ -7,6 +7,8 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { insert, lit, raw } from "./sql-render";
+import { demoSql } from "./demo-sql";
 import {
   demoId,
   PLATFORM_OWNER,
@@ -27,19 +29,6 @@ export const APP_PASSWORD_PLACEHOLDER = "CHANGE_ME_APP_DB_PASSWORD";
 export const DEMO_PASSWORD_PLACEHOLDER = "CHANGE_ME_DEMO_PASSWORD";
 
 const ROOT = path.resolve(__dirname, "../..");
-
-function lit(value: string | number | boolean | null): string {
-  if (value === null) return "null";
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return `'${value.replace(/'/g, "''")}'`;
-}
-
-function insert(table: string, rows: Record<string, string | number | boolean | null>[]) {
-  if (rows.length === 0) return "";
-  const cols = Object.keys(rows[0]);
-  const values = rows.map((r) => `  (${cols.map((c) => lit(r[c])).join(", ")})`).join(",\n");
-  return `insert into public.${table} (${cols.join(", ")}) values\n${values};\n`;
-}
 
 /** Password hash computed once inside Postgres with pgcrypto bcrypt (verified by bcryptjs). */
 const PASSWORD_HASH = "(select demo_password_hash from pg_temp.setup_params)";
@@ -245,7 +234,11 @@ function tenantSql(t: SeedTenant): string {
   );
   out.push(
     insert("tenant_settings", [
-      { tenant_id: tid, doctors_manage_own_schedule: DOCTORS_MANAGE_OWN_SCHEDULE[t.slug] ?? false },
+      {
+        tenant_id: tid,
+        doctors_manage_own_schedule: DOCTORS_MANAGE_OWN_SCHEDULE[t.slug] ?? false,
+        demo_anchor_day: raw("(select demo_anchor from pg_temp.setup_params)"),
+      },
     ]),
   );
   out.push(
@@ -322,7 +315,9 @@ begin;
 create temp table setup_params (
   app_db_password text,   -- password for the restricted "clinic_app" database login (goes into Vercel's DATABASE_URL)
   demo_password text,     -- password that every demo staff account uses to sign in to the app
-  demo_password_hash text
+  demo_password_hash text,
+  -- the demo week is centred on today (Riyadh)
+  demo_anchor date default (now() at time zone 'Asia/Riyadh')::date
 ) on commit drop;
 
 insert into pg_temp.setup_params (app_db_password, demo_password) values (
@@ -367,6 +362,9 @@ ${booking}
 -- ─── STEP 3: DEMO DATA (FAKE) ───────────────────────────────────────────────
 ${userInsert(`usr_${PLATFORM_OWNER.key}`, PLATFORM_OWNER.email, PLATFORM_OWNER.nameAr, PLATFORM_OWNER.nameEn, true)}
 ${SEED_TENANTS.map(tenantSql).join("\n")}
+
+-- ─── STEP 3b: DEMO WEEK, PACKAGES, CONSENTS, NOTES (FAKE) ───────────────────
+${demoSql()}
 
 -- ─── STEP 4: RESTRICTED APP LOGIN (clinic_app) ──────────────────────────────
 do $$

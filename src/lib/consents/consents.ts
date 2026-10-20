@@ -4,7 +4,6 @@
  * that text, the signature image, the signer, the witnessing staff member and the time.
  * PDFs and print pages are just views of this record.
  */
-import { createHash } from "node:crypto";
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { TenantTx } from "@/db/tenant";
 import { consentTemplates, patientConsents, services } from "@/db/schema";
@@ -12,6 +11,9 @@ import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
 import { getFileStore } from "@/lib/files/store";
+import { contentFingerprint } from "./fingerprint";
+
+export { contentFingerprint };
 
 export type ConsentTemplate = typeof consentTemplates.$inferSelect;
 export type PatientConsent = typeof patientConsents.$inferSelect;
@@ -23,17 +25,6 @@ export class ConsentError extends Error {
     super(code);
     this.name = "ConsentError";
   }
-}
-
-export function contentFingerprint(t: {
-  titleAr: string;
-  titleEn: string;
-  bodyAr: string;
-  bodyEn: string;
-}) {
-  return createHash("sha256")
-    .update(JSON.stringify([t.titleAr, t.titleEn, t.bodyAr, t.bodyEn]))
-    .digest("hex");
 }
 
 export async function currentTemplates(tx: TenantTx) {

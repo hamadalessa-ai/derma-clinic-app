@@ -37,7 +37,8 @@ $$;
 -- ─── Privileges ─────────────────────────────────────────────────────────────
 grant usage on schema public to clinic_app;
 grant execute on function public.app_current_tenant(), public.app_current_user(),
-  public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text)
+  public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
+  public.demo_workday(date, integer)
   to clinic_app;
 
 -- Clinic directory: read-only (needed to resolve the subdomain before login).

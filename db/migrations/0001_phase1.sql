@@ -19,6 +19,7 @@ CREATE TABLE "appointments" (
 	"blocked_until" timestamp with time zone NOT NULL,
 	"status" "appointment_status" DEFAULT 'booked' NOT NULL,
 	"reception_note" text,
+	"demo_day_index" smallint,
 	"cancel_reason" text,
 	"created_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -221,6 +222,7 @@ CREATE TABLE "tenant_settings" (
 	"tenant_id" uuid PRIMARY KEY NOT NULL,
 	"doctors_manage_own_schedule" boolean DEFAULT false NOT NULL,
 	"slot_minutes" smallint DEFAULT 15 NOT NULL,
+	"demo_anchor_day" date,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -234,6 +236,7 @@ CREATE TABLE "time_blocks" (
 	"starts_at" timestamp with time zone NOT NULL,
 	"ends_at" timestamp with time zone NOT NULL,
 	"reason" text,
+	"demo_day_index" smallint,
 	"created_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,

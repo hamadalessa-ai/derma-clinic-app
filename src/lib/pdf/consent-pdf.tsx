@@ -149,6 +149,7 @@ export function ConsentDocument({ d }: { d: ConsentPdfData }) {
           style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}
         >
           <View>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf images have no alt text */}
             <Image src={{ data: d.signaturePng, format: "png" }} style={styles.signature} />
             <Paragraph text={`Signer: ${d.signerName}`} dir="ltr" size={9} />
           </View>
