@@ -18,6 +18,7 @@ import {
 } from "@react-pdf/renderer";
 import * as fontkit from "fontkit";
 import type { Font as FontkitFont } from "fontkit";
+import { THEME } from "@/app/theme";
 import { fontMeasurer, layoutParagraph, type Line } from "./bidi-layout";
 
 const FONT_DIR = path.join(process.cwd(), "src/lib/pdf/fonts");
@@ -41,8 +42,8 @@ function measureFonts() {
   return fonts;
 }
 
-// PDF is a fixed print medium; these are print measurements, not screen theme colours.
-const INK = "black";
+// Print colour comes from the central theme.
+const INK = THEME.ink;
 const PAGE = { width: 595, padding: 40 }; // A4 in points
 const CONTENT_WIDTH = PAGE.width - PAGE.padding * 2;
 

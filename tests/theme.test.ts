@@ -25,13 +25,14 @@ const RAW_COLOUR = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/;
 
 describe("theme", () => {
   const all = files(ROOT);
-  const globals = path.join(ROOT, "app/globals.css");
+  // The theme itself: CSS tokens + the few values needed outside CSS.
+  const themeFiles = new Set([path.join(ROOT, "app/globals.css"), path.join(ROOT, "app/theme.ts")]);
 
   it("finds the source files", () => {
     expect(all.length).toBeGreaterThan(20);
   });
 
-  it.each(all.filter((f) => f !== globals).map((f) => [path.relative(ROOT, f), f]))(
+  it.each(all.filter((f) => !themeFiles.has(f)).map((f) => [path.relative(ROOT, f), f]))(
     "%s uses theme tokens only",
     (_name, file) => {
       const lines = readFileSync(file, "utf8").split("\n");

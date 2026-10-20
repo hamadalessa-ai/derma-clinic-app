@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileLock2, LayoutDashboard, Shield, Sparkles, Users } from "lucide-react";
+import {
+  CalendarDays,
+  FileLock2,
+  Inbox,
+  LayoutDashboard,
+  Settings,
+  Shield,
+  Sparkles,
+  Stethoscope,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ICONS = {
@@ -11,6 +21,10 @@ const ICONS = {
   services: Sparkles,
   clinicalNotes: FileLock2,
   platform: Shield,
+  myDay: Stethoscope,
+  calendar: CalendarDays,
+  requests: Inbox,
+  settings: Settings,
 } as const;
 
 export function NavLinks({

@@ -65,8 +65,12 @@ export function assertCan(roles: readonly Role[] | null | undefined, permission:
 /** Sidebar pages and the permission each one needs. */
 export const NAV_ITEMS = [
   { href: "/", key: "dashboard", permission: "dashboard:view" },
+  { href: "/my-day", key: "myDay", permission: "my_day:view" },
+  { href: "/calendar", key: "calendar", permission: "calendar:view" },
   { href: "/patients", key: "patients", permission: "patients:read" },
-  { href: "/services", key: "services", permission: "services:read" },
+  { href: "/requests", key: "requests", permission: "requests:decide" },
   { href: "/clinical-notes", key: "clinicalNotes", permission: "clinical_notes:read" },
+  { href: "/services", key: "services", permission: "services:read" },
+  { href: "/settings", key: "settings", permission: "settings:manage" },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly { href: string; key: string; permission: Permission }[];
