@@ -70,7 +70,6 @@ CREATE TABLE "accounts" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "audit_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -82,7 +81,6 @@ CREATE TABLE "audit_logs" (
 	"ip_address" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "branches" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -94,7 +92,6 @@ CREATE TABLE "branches" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "branches_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
-
 CREATE TABLE "departments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -107,7 +104,6 @@ CREATE TABLE "departments" (
 	CONSTRAINT "departments_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "departments_tenant_code_key" UNIQUE("tenant_id","code")
 );
-
 CREATE TABLE "devices" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -118,7 +114,6 @@ CREATE TABLE "devices" (
 	"name_en" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "patients" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -134,7 +129,6 @@ CREATE TABLE "patients" (
 	CONSTRAINT "patients_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "patients_tenant_file_key" UNIQUE("tenant_id","file_number")
 );
-
 CREATE TABLE "rooms" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -144,7 +138,6 @@ CREATE TABLE "rooms" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "rooms_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
-
 CREATE TABLE "services" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -162,7 +155,6 @@ CREATE TABLE "services" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "services_tenant_code_key" UNIQUE("tenant_id","code")
 );
-
 CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
@@ -174,7 +166,6 @@ CREATE TABLE "sessions" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "sessions_token_unique" UNIQUE("token")
 );
-
 CREATE TABLE "staff_schedules" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -185,7 +176,6 @@ CREATE TABLE "staff_schedules" (
 	"end_time" time NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "tenant_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -199,7 +189,6 @@ CREATE TABLE "tenant_members" (
 	CONSTRAINT "tenant_members_tenant_user_key" UNIQUE("tenant_id","user_id"),
 	CONSTRAINT "tenant_members_roles_not_empty" CHECK (cardinality("tenant_members"."roles") > 0)
 );
-
 CREATE TABLE "tenants" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"slug" text NOT NULL,
@@ -210,7 +199,6 @@ CREATE TABLE "tenants" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "tenants_slug_unique" UNIQUE("slug")
 );
-
 CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
@@ -223,7 +211,6 @@ CREATE TABLE "users" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
-
 CREATE TABLE "verifications" (
 	"id" text PRIMARY KEY NOT NULL,
 	"identifier" text NOT NULL,
@@ -232,7 +219,6 @@ CREATE TABLE "verifications" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "branches" ADD CONSTRAINT "branches_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
@@ -256,6 +242,479 @@ CREATE INDEX "accounts_user_id_idx" ON "accounts" USING btree ("user_id");
 CREATE INDEX "audit_logs_tenant_created_idx" ON "audit_logs" USING btree ("tenant_id","created_at");
 CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");
 CREATE INDEX "tenant_members_user_id_idx" ON "tenant_members" USING btree ("user_id");
+-- 0001_phase1.sql
+CREATE TYPE "public"."appointment_status" AS ENUM('booked', 'confirmed', 'arrived', 'in_session', 'completed', 'no_show', 'cancelled');
+CREATE TYPE "public"."id_type" AS ENUM('national_id', 'iqama', 'passport');
+CREATE TYPE "public"."medical_flag_kind" AS ENUM('allergy', 'contraindication', 'medication');
+CREATE TYPE "public"."note_status" AS ENUM('draft', 'signed');
+CREATE TYPE "public"."payment_method" AS ENUM('cash', 'card', 'transfer');
+CREATE TYPE "public"."request_status" AS ENUM('pending', 'approved', 'rejected');
+CREATE TYPE "public"."session_event_kind" AS ENUM('deduction', 'override');
+CREATE TABLE "appointments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"service_id" uuid NOT NULL,
+	"practitioner_id" uuid NOT NULL,
+	"room_id" uuid NOT NULL,
+	"device_id" uuid,
+	"starts_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone NOT NULL,
+	"blocked_until" timestamp with time zone NOT NULL,
+	"status" "appointment_status" DEFAULT 'booked' NOT NULL,
+	"reception_note" text,
+	"cancel_reason" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "appointments_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "appointments_times" CHECK ("appointments"."starts_at" < "appointments"."ends_at" and "appointments"."ends_at" <= "appointments"."blocked_until")
+);
+CREATE TABLE "branch_holidays" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid,
+	"day" date NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "clinical_note_addenda" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"note_id" uuid NOT NULL,
+	"author_user_id" text NOT NULL,
+	"author_name" text NOT NULL,
+	"body" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "clinical_note_addenda_body" CHECK (length(btrim("clinical_note_addenda"."body")) > 0)
+);
+CREATE TABLE "clinical_notes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"appointment_id" uuid,
+	"author_user_id" text NOT NULL,
+	"author_name" text NOT NULL,
+	"body" text DEFAULT '' NOT NULL,
+	"status" "note_status" DEFAULT 'draft' NOT NULL,
+	"signed_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "clinical_notes_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "clinical_notes_signed" CHECK (("clinical_notes"."status" = 'signed') = ("clinical_notes"."signed_at" is not null))
+);
+CREATE TABLE "consent_templates" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"code" text NOT NULL,
+	"version" integer NOT NULL,
+	"is_current" boolean DEFAULT true NOT NULL,
+	"title_ar" text NOT NULL,
+	"title_en" text NOT NULL,
+	"body_ar" text NOT NULL,
+	"body_en" text NOT NULL,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "consent_templates_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "consent_templates_version_key" UNIQUE("tenant_id","code","version")
+);
+CREATE TABLE "files" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"mime_type" text NOT NULL,
+	"size_bytes" integer NOT NULL,
+	"sha256" text NOT NULL,
+	"data" "bytea" NOT NULL,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "files_tenant_id_id_key" UNIQUE("tenant_id","id")
+);
+CREATE TABLE "package_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_package_id" uuid NOT NULL,
+	"amount_halalas" integer NOT NULL,
+	"method" "payment_method" NOT NULL,
+	"paid_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"recorded_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "package_payments_positive" CHECK ("package_payments"."amount_halalas" > 0)
+);
+CREATE TABLE "package_session_events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_package_id" uuid NOT NULL,
+	"appointment_id" uuid,
+	"kind" "session_event_kind" NOT NULL,
+	"delta" smallint NOT NULL,
+	"reason" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "package_session_events_delta" CHECK ("package_session_events"."delta" <> 0),
+	CONSTRAINT "package_session_events_rules" CHECK (("package_session_events"."kind" = 'deduction' and "package_session_events"."delta" = 1 and "package_session_events"."appointment_id" is not null) or ("package_session_events"."kind" = 'override' and length(btrim(coalesce("package_session_events"."reason", ''))) >= 3))
+);
+CREATE TABLE "package_templates" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"service_id" uuid NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"sessions_count" smallint NOT NULL,
+	"price_halalas" integer NOT NULL,
+	"validity_days" smallint NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "package_templates_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "package_templates_values" CHECK ("package_templates"."sessions_count" > 0 and "package_templates"."price_halalas" >= 0 and "package_templates"."validity_days" > 0)
+);
+CREATE TABLE "patient_consents" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"template_id" uuid NOT NULL,
+	"template_code" text NOT NULL,
+	"template_version" integer NOT NULL,
+	"title_ar" text NOT NULL,
+	"title_en" text NOT NULL,
+	"body_ar" text NOT NULL,
+	"body_en" text NOT NULL,
+	"content_sha256" text NOT NULL,
+	"signer_name" text NOT NULL,
+	"signer_relation" text DEFAULT 'self' NOT NULL,
+	"signature_file_id" uuid NOT NULL,
+	"witness_user_id" text NOT NULL,
+	"appointment_id" uuid,
+	"signed_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"user_agent" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "patient_medical_flags" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"kind" "medical_flag_kind" NOT NULL,
+	"label" text NOT NULL,
+	"note" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "patient_packages" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"template_id" uuid NOT NULL,
+	"service_id" uuid NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"sessions_total" smallint NOT NULL,
+	"sessions_used" smallint DEFAULT 0 NOT NULL,
+	"price_halalas" integer NOT NULL,
+	"purchased_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"sold_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "patient_packages_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "patient_packages_balance" CHECK ("patient_packages"."sessions_used" >= 0 and "patient_packages"."sessions_used" <= "patient_packages"."sessions_total"),
+	CONSTRAINT "patient_packages_price" CHECK ("patient_packages"."price_halalas" >= 0 and "patient_packages"."sessions_total" > 0)
+);
+CREATE TABLE "reschedule_requests" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"requested_by" text NOT NULL,
+	"proposed_starts_at" timestamp with time zone NOT NULL,
+	"reason" text,
+	"status" "request_status" DEFAULT 'pending' NOT NULL,
+	"decided_by" text,
+	"decided_at" timestamp with time zone,
+	"decision_note" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "reservations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"resource_kind" text NOT NULL,
+	"resource_id" uuid NOT NULL,
+	"during" "tstzrange" NOT NULL,
+	"appointment_id" uuid,
+	"time_block_id" uuid,
+	CONSTRAINT "reservations_kind" CHECK ("reservations"."resource_kind" in ('practitioner', 'room', 'device')),
+	CONSTRAINT "reservations_source" CHECK (num_nonnulls("reservations"."appointment_id", "reservations"."time_block_id") = 1)
+);
+CREATE TABLE "tenant_settings" (
+	"tenant_id" uuid PRIMARY KEY NOT NULL,
+	"doctors_manage_own_schedule" boolean DEFAULT false NOT NULL,
+	"slot_minutes" smallint DEFAULT 15 NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "time_blocks" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"member_id" uuid,
+	"room_id" uuid,
+	"device_id" uuid,
+	"starts_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone NOT NULL,
+	"reason" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "time_blocks_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "time_blocks_times" CHECK ("time_blocks"."starts_at" < "time_blocks"."ends_at"),
+	CONSTRAINT "time_blocks_one_resource" CHECK (num_nonnulls("time_blocks"."member_id", "time_blocks"."room_id", "time_blocks"."device_id") = 1)
+);
+ALTER TABLE "devices" ADD CONSTRAINT "devices_tenant_id_id_key" UNIQUE("tenant_id","id");
+ALTER TABLE "devices" ADD CONSTRAINT "devices_tenant_branch_id_key" UNIQUE("tenant_id","branch_id","id");
+ALTER TABLE "rooms" ADD CONSTRAINT "rooms_tenant_branch_id_key" UNIQUE("tenant_id","branch_id","id");
+ALTER TABLE "services" ADD CONSTRAINT "services_tenant_id_id_key" UNIQUE("tenant_id","id");
+ALTER TABLE "patients" ADD COLUMN "id_type" "id_type";
+ALTER TABLE "patients" ADD COLUMN "id_number" text;
+ALTER TABLE "patients" ADD COLUMN "email" text;
+ALTER TABLE "patients" ADD COLUMN "guardian_id" uuid;
+ALTER TABLE "patients" ADD COLUMN "guardian_relation_ar" text;
+ALTER TABLE "patients" ADD COLUMN "guardian_relation_en" text;
+ALTER TABLE "services" ADD COLUMN "consent_code" text;
+ALTER TABLE "staff_schedules" ADD COLUMN "break_start" time;
+ALTER TABLE "staff_schedules" ADD COLUMN "break_end" time;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_practitioner_fk" FOREIGN KEY ("tenant_id","practitioner_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_room_fk" FOREIGN KEY ("tenant_id","branch_id","room_id") REFERENCES "public"."rooms"("tenant_id","branch_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_device_fk" FOREIGN KEY ("tenant_id","branch_id","device_id") REFERENCES "public"."devices"("tenant_id","branch_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "branch_holidays" ADD CONSTRAINT "branch_holidays_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "branch_holidays" ADD CONSTRAINT "branch_holidays_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "clinical_note_addenda" ADD CONSTRAINT "clinical_note_addenda_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "clinical_note_addenda" ADD CONSTRAINT "clinical_note_addenda_note_fk" FOREIGN KEY ("tenant_id","note_id") REFERENCES "public"."clinical_notes"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "consent_templates" ADD CONSTRAINT "consent_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "files" ADD CONSTRAINT "files_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_package_fk" FOREIGN KEY ("tenant_id","patient_package_id") REFERENCES "public"."patient_packages"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_package_fk" FOREIGN KEY ("tenant_id","patient_package_id") REFERENCES "public"."patient_packages"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "package_templates" ADD CONSTRAINT "package_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_templates" ADD CONSTRAINT "package_templates_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_template_fk" FOREIGN KEY ("tenant_id","template_id") REFERENCES "public"."consent_templates"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_signature_fk" FOREIGN KEY ("tenant_id","signature_file_id") REFERENCES "public"."files"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_medical_flags" ADD CONSTRAINT "patient_medical_flags_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_medical_flags" ADD CONSTRAINT "patient_medical_flags_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_template_fk" FOREIGN KEY ("tenant_id","template_id") REFERENCES "public"."package_templates"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "reschedule_requests" ADD CONSTRAINT "reschedule_requests_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reschedule_requests" ADD CONSTRAINT "reschedule_requests_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reschedule_requests" ADD CONSTRAINT "reschedule_requests_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_time_block_fk" FOREIGN KEY ("tenant_id","time_block_id") REFERENCES "public"."time_blocks"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "tenant_settings" ADD CONSTRAINT "tenant_settings_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_member_fk" FOREIGN KEY ("tenant_id","member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_room_fk" FOREIGN KEY ("tenant_id","branch_id","room_id") REFERENCES "public"."rooms"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_device_fk" FOREIGN KEY ("tenant_id","branch_id","device_id") REFERENCES "public"."devices"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "appointments_branch_start_idx" ON "appointments" USING btree ("tenant_id","branch_id","starts_at");
+CREATE INDEX "appointments_practitioner_start_idx" ON "appointments" USING btree ("tenant_id","practitioner_id","starts_at");
+CREATE INDEX "appointments_patient_idx" ON "appointments" USING btree ("tenant_id","patient_id");
+CREATE INDEX "clinical_notes_patient_idx" ON "clinical_notes" USING btree ("tenant_id","patient_id");
+CREATE UNIQUE INDEX "consent_templates_one_current" ON "consent_templates" USING btree ("tenant_id","code") WHERE "consent_templates"."is_current";
+CREATE UNIQUE INDEX "package_session_events_one_deduction" ON "package_session_events" USING btree ("tenant_id","appointment_id") WHERE "package_session_events"."kind" = 'deduction';
+CREATE INDEX "patient_consents_patient_idx" ON "patient_consents" USING btree ("tenant_id","patient_id","template_code");
+CREATE INDEX "patient_medical_flags_patient_idx" ON "patient_medical_flags" USING btree ("tenant_id","patient_id");
+CREATE INDEX "patient_packages_patient_idx" ON "patient_packages" USING btree ("tenant_id","patient_id");
+ALTER TABLE "patients" ADD CONSTRAINT "patients_guardian_fk" FOREIGN KEY ("tenant_id","guardian_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patients" ADD CONSTRAINT "patients_not_own_guardian" CHECK ("patients"."guardian_id" is null or "patients"."guardian_id" <> "patients"."id");
+ALTER TABLE "staff_schedules" ADD CONSTRAINT "staff_schedules_hours" CHECK ("staff_schedules"."start_time" < "staff_schedules"."end_time");
+ALTER TABLE "staff_schedules" ADD CONSTRAINT "staff_schedules_break" CHECK (("staff_schedules"."break_start" is null and "staff_schedules"."break_end" is null) or ("staff_schedules"."break_start" < "staff_schedules"."break_end" and "staff_schedules"."break_start" >= "staff_schedules"."start_time" and "staff_schedules"."break_end" <= "staff_schedules"."end_time"));
+
+-- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
+-- ════════════════════════════════════════════════════════════════════════════
+-- Phase 1 database rules that Drizzle cannot express. Runs after the tables exist
+-- and before RLS (db/rls.sql). Everything here works WITHOUT superuser rights.
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- Needed so an exclusion constraint can combine "=" on ids with "&&" (overlap) on time ranges.
+create extension if not exists btree_gist with schema extensions;
+
+-- ─── No double-booking ──────────────────────────────────────────────────────
+-- Two reservations for the same doctor, room or device may never overlap in time.
+-- The database checks this itself, so two simultaneous bookings can't both succeed.
+alter table public.reservations
+  add constraint reservations_no_overlap
+  exclude using gist (
+    tenant_id with =,
+    resource_kind with =,
+    resource_id with =,
+    during with &&
+  );
+
+create index reservations_lookup_idx on public.reservations
+  using gist (tenant_id, resource_kind, resource_id, during);
+
+-- Appointments reserve their doctor, room and device from start until end + buffer.
+-- Cancelled and no-show appointments free their slot.
+create or replace function public.sync_appointment_reservations() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+declare
+  slot tstzrange;
+begin
+  if tg_op = 'UPDATE' then
+    delete from public.reservations
+      where tenant_id = old.tenant_id and appointment_id = old.id;
+  end if;
+  if new.status not in ('cancelled', 'no_show') then
+    slot := tstzrange(new.starts_at, new.blocked_until, '[)');
+    insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
+      values (new.tenant_id, new.branch_id, 'practitioner', new.practitioner_id, slot, new.id),
+             (new.tenant_id, new.branch_id, 'room', new.room_id, slot, new.id);
+    if new.device_id is not null then
+      insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
+        values (new.tenant_id, new.branch_id, 'device', new.device_id, slot, new.id);
+    end if;
+  end if;
+  return null;
+end $$;
+
+create trigger appointments_reservations
+  after insert or update of branch_id, practitioner_id, room_id, device_id, starts_at, blocked_until, status
+  on public.appointments
+  for each row execute function public.sync_appointment_reservations();
+
+-- Blocked time (doctor's own block, leave, room/device maintenance) reserves its resource too,
+-- so nobody can book over it, and it can't be placed over an existing booking.
+create or replace function public.sync_time_block_reservations() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' then
+    delete from public.reservations
+      where tenant_id = old.tenant_id and time_block_id = old.id;
+  end if;
+  insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, time_block_id)
+    values (
+      new.tenant_id, new.branch_id,
+      case when new.member_id is not null then 'practitioner'
+           when new.room_id is not null then 'room' else 'device' end,
+      coalesce(new.member_id, new.room_id, new.device_id),
+      tstzrange(new.starts_at, new.ends_at, '[)'),
+      new.id);
+  return null;
+end $$;
+
+create trigger time_blocks_reservations
+  after insert or update on public.time_blocks
+  for each row execute function public.sync_time_block_reservations();
+
+-- ─── Package balances ───────────────────────────────────────────────────────
+-- The balance changes ONLY by recording an event. The CHECK on patient_packages
+-- (0 <= used <= total) then rejects anything that would go below zero.
+create or replace function public.apply_package_session_event() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  perform set_config('app.package_event', 'on', true);
+  update public.patient_packages
+    set sessions_used = sessions_used + new.delta, updated_at = now()
+    where tenant_id = new.tenant_id and id = new.patient_package_id;
+  if not found then
+    raise exception 'package % not found', new.patient_package_id;
+  end if;
+  perform set_config('app.package_event', 'off', true);
+  return null;
+end $$;
+
+create trigger package_session_events_apply
+  after insert on public.package_session_events
+  for each row execute function public.apply_package_session_event();
+
+create or replace function public.guard_package_balance() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if new.sessions_used is distinct from old.sessions_used
+     and coalesce(current_setting('app.package_event', true), 'off') <> 'on' then
+    raise exception 'package balance can only change through package_session_events';
+  end if;
+  return new;
+end $$;
+
+create trigger patient_packages_guard_balance
+  before update on public.patient_packages
+  for each row execute function public.guard_package_balance();
+
+-- ─── Clinical notes: signed notes are final ─────────────────────────────────
+create or replace function public.guard_clinical_note() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if old.status = 'signed' then
+    raise exception 'signed notes cannot be changed; add an addendum instead';
+  end if;
+  if new.author_user_id is distinct from old.author_user_id
+     or new.patient_id is distinct from old.patient_id
+     or new.appointment_id is distinct from old.appointment_id then
+    raise exception 'note author, patient and visit cannot be changed';
+  end if;
+  return new;
+end $$;
+
+create trigger clinical_notes_guard
+  before update on public.clinical_notes
+  for each row execute function public.guard_clinical_note();
+
+create or replace function public.guard_note_addendum() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1 from public.clinical_notes
+    where tenant_id = new.tenant_id and id = new.note_id and status = 'signed'
+  ) then
+    raise exception 'addenda can only be added to signed notes';
+  end if;
+  return new;
+end $$;
+
+create trigger clinical_note_addenda_guard
+  before insert on public.clinical_note_addenda
+  for each row execute function public.guard_note_addendum();
+
+-- ─── Search: Arabic-aware normalisation ─────────────────────────────────────
+-- "أحمد" = "احمد" = "إحمد", "فاطمة" = "فاطمه", "مصطفى" = "مصطفي", Arabic digits → 0-9,
+-- diacritics and tatweel removed, lower-case for English.
+create or replace function public.normalize_search(t text) returns text
+  language sql immutable parallel safe
+  set search_path = ''
+as $$
+  select regexp_replace(
+    translate(lower(coalesce(t, '')), 'أإآٱىةؤئ٠١٢٣٤٥٦٧٨٩', 'اااايهوي0123456789'),
+    '[ً-ٰٟـ]', '', 'g')
+$$;
+
 
 -- ─── STEP 3: DEMO DATA (FAKE) ───────────────────────────────────────────────
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_platform-owner', 'مالك المنصة', 'Platform Owner', 'owner@platform.demo', true, true);
@@ -331,47 +790,47 @@ insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, tit
   ('92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-majed', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist'),
   ('3973e5f5-1994-5c66-8033-04c749bad229', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-jed', '{receptionist}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'موظف استقبال', 'Receptionist');
 
-insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '19:00');
+insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time, break_start, break_end) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00');
 
 insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
   ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
@@ -439,6 +898,13 @@ insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name
   ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ناصر سليمان البقمي', 'Nasser Sulaiman Al-Buqami', '0500010039', 'male', '1996-11-27', true),
   ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'بندر حمد الشهري', 'Bandar Hamad Al-Shehri', '0500010040', 'male', '1973-04-10', true);
 
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false);
+
+insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, '2026-09-23', 'اليوم الوطني السعودي', 'Saudi National Day'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, '2027-02-22', 'يوم التأسيس', 'Founding Day');
+
 insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, 'tenant.seed', 'tenant', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602');
 
@@ -469,17 +935,17 @@ insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, tit
   ('2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-dr-mona', '{practitioner}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'طبيب جلدية وتجميل', 'Dermatologist'),
   ('09432151-a569-5185-b3af-b3ce36532332', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-rec', '{receptionist}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'موظف استقبال', 'Receptionist');
 
-insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '19:00');
+insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time, break_start, break_end) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00');
 
 insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
   ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
@@ -496,6 +962,13 @@ insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name
   ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', true),
   ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', true),
   ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', true);
+
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', true);
+
+insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, '2026-09-23', 'اليوم الوطني السعودي', 'Saudi National Day'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, '2027-02-22', 'يوم التأسيس', 'Founding Day');
 
 insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, 'tenant.seed', 'tenant', '55d937e8-cf0c-583b-871e-f90fbc8af348');
@@ -524,6 +997,12 @@ end $$;
 -- ════════════════════════════════════════════════════════════════════════════
 -- Tenant isolation: restricted app role + Row-Level Security.
 -- The app ALWAYS connects as clinic_app. It cannot bypass RLS and does not own any table.
+--
+-- withTenant() (src/db/tenant.ts) sets, for one transaction only:
+--   app.tenant_id   the clinic                       (unset → zero rows everywhere)
+--   app.user_id     the signed-in staff user
+--   app.roles       e.g. "clinic_admin,practitioner"
+--   app.branch_ids  "*" for all branches, or a comma-separated list (unset → no branch rows)
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- Current clinic for this transaction. NULL when unset → every policy below matches zero rows.
@@ -532,9 +1011,30 @@ create or replace function public.app_current_tenant() returns uuid
   set search_path = ''
 as $$ select nullif(current_setting('app.tenant_id', true), '')::uuid $$;
 
+create or replace function public.app_current_user() returns text
+  language sql stable
+  set search_path = ''
+as $$ select nullif(current_setting('app.user_id', true), '') $$;
+
+create or replace function public.app_has_role(role_name text) returns boolean
+  language sql stable
+  set search_path = ''
+as $$ select role_name = any(string_to_array(coalesce(current_setting('app.roles', true), ''), ',')) $$;
+
+-- Branch-restricted staff (e.g. a Jeddah-only doctor) only see their branch. Fails closed.
+create or replace function public.app_branch_allowed(branch uuid) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select coalesce(current_setting('app.branch_ids', true), '') = '*'
+      or branch::text = any(string_to_array(coalesce(current_setting('app.branch_ids', true), ''), ','))
+$$;
+
 -- ─── Privileges ─────────────────────────────────────────────────────────────
 grant usage on schema public to clinic_app;
-grant execute on function public.app_current_tenant() to clinic_app;
+grant execute on function public.app_current_tenant(), public.app_current_user(),
+  public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text)
+  to clinic_app;
 
 -- Clinic directory: read-only (needed to resolve the subdomain before login).
 grant select on public.tenants to clinic_app;
@@ -546,10 +1046,24 @@ grant select, insert, update, delete on public.users, public.sessions, public.ac
 -- Clinic data.
 grant select, insert, update, delete on public.branches, public.departments,
   public.tenant_members, public.rooms, public.devices, public.services,
-  public.staff_schedules, public.patients to clinic_app;
-
--- Audit log is append-only for the app: no update, no delete.
-grant select, insert on public.audit_logs to clinic_app;
+  public.staff_schedules, public.patients, public.branch_holidays,
+  public.patient_medical_flags, public.time_blocks, public.package_templates
+  to clinic_app;
+grant select, update on public.tenant_settings to clinic_app;
+-- Appointments are never deleted: they are cancelled (status), which keeps the history.
+grant select, insert, update on public.appointments, public.reschedule_requests,
+  public.patient_packages to clinic_app;
+-- Reservations are written by the booking triggers, which run as clinic_app.
+grant select, insert, delete on public.reservations to clinic_app;
+-- Append-only records: payments, balance changes, files, signed consents, audit log.
+grant select, insert on public.package_payments, public.package_session_events,
+  public.files, public.patient_consents, public.audit_logs to clinic_app;
+-- Consent template versions are immutable: only the "current" flag may change.
+grant select, insert on public.consent_templates to clinic_app;
+grant update (is_current) on public.consent_templates to clinic_app;
+-- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
+grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
+grant update (body, status, signed_at, updated_at) on public.clinical_notes to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -567,7 +1081,11 @@ declare
 begin
   foreach t in array array[
     'branches', 'departments', 'tenant_members', 'rooms', 'devices', 'services',
-    'staff_schedules', 'patients', 'audit_logs'
+    'staff_schedules', 'patients', 'audit_logs',
+    'tenant_settings', 'branch_holidays', 'patient_medical_flags', 'appointments',
+    'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
+    'patient_packages', 'package_payments', 'package_session_events', 'files',
+    'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -578,6 +1096,42 @@ begin
       t || '_tenant_isolation', t);
   end loop;
 end $$;
+
+-- Branch-scoped tables: ALSO limited to the user's allowed branches ("restrictive" = AND).
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['appointments', 'time_blocks', 'reservations', 'reschedule_requests'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using (public.app_branch_allowed(branch_id))
+         with check (public.app_branch_allowed(branch_id))',
+      t || '_branch_scope', t);
+  end loop;
+end $$;
+
+-- Clinical notes: ONLY the practitioner role, enforced by the database itself.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['clinical_notes', 'clinical_note_addenda'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using (public.app_has_role(''practitioner''))
+         with check (public.app_has_role(''practitioner''))',
+      t || '_practitioners_only', t);
+  end loop;
+end $$;
+
+-- Notes and addenda are written in the author's own name; only the author edits a draft.
+create policy clinical_notes_author_insert on public.clinical_notes as restrictive
+  for insert to clinic_app with check (author_user_id = public.app_current_user());
+create policy clinical_notes_author_update on public.clinical_notes as restrictive
+  for update to clinic_app using (author_user_id = public.app_current_user());
+create policy clinical_note_addenda_author_insert on public.clinical_note_addenda as restrictive
+  for insert to clinic_app with check (author_user_id = public.app_current_user());
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;

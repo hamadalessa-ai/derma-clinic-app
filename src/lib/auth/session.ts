@@ -6,6 +6,7 @@ import { getCurrentTenant, type Tenant } from "@/lib/tenant/current";
 import { getAuth } from "./auth";
 import { getStaffAccess, type Branch, type StaffAccess } from "./access";
 import { can, type Permission } from "./permissions";
+import type { Actor } from "./db";
 
 export const BRANCH_COOKIE = "branch_id";
 
@@ -19,6 +20,18 @@ export interface StaffContext extends StaffAccess {
     isPlatformOwner: boolean;
   };
   activeBranch: Branch | null;
+}
+
+/** What database calls need to know about this staff member (see withActor). */
+export function actorOf(ctx: StaffContext): Actor {
+  return {
+    tenantId: ctx.tenant.id,
+    userId: ctx.user.id,
+    roles: ctx.roles,
+    memberId: ctx.memberId,
+    restrictedBranchId: ctx.restrictedBranchId,
+    name: ctx.user.name,
+  };
 }
 
 /** The signed-in staff member for this clinic, or null. Cached for one request. */

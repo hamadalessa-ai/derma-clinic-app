@@ -504,4 +504,13 @@ export const SEED_TENANTS = [DERMA, LAMSA];
 
 /** Working hours for practitioners and receptionists: Sunday–Thursday 10:00–19:00. */
 export const WORK_WEEK = [0, 1, 2, 3, 4];
-export const WORK_HOURS = { start: "10:00", end: "19:00" };
+export const WORK_HOURS = { start: "10:00", end: "20:00", breakStart: "14:00", breakEnd: "15:00" };
+
+/** Clinic setting: do doctors move their own appointments (true) or send requests (false)? */
+export const DOCTORS_MANAGE_OWN_SCHEDULE: Record<string, boolean> = { derma: false, lamsa: true };
+
+/** Clinic-wide closed days (demo). */
+export const HOLIDAYS = [
+  { day: "2026-09-23", nameAr: "اليوم الوطني السعودي", nameEn: "Saudi National Day" },
+  { day: "2027-02-22", nameAr: "يوم التأسيس", nameEn: "Founding Day" },
+];
