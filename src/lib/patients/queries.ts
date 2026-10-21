@@ -106,3 +106,57 @@ export async function getFamily(tx: TenantTx, patient: Patient) {
     siblings: patient.guardianId ? rows.filter((r) => r.guardianId === patient.guardianId) : [],
   };
 }
+
+/**
+ * Next file number for this clinic, e.g. D-0041. A transaction lock makes two new patients at the
+ * same moment (reception + online) get different numbers; the unique key is the final guard.
+ */
+export async function nextFileNumber(tx: TenantTx, prefix: string): Promise<string> {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(public.app_current_tenant()::text || ':file-number', 0))`,
+  );
+  const [{ max }] = await tx
+    .select({
+      max: sql<number>`coalesce(max(substring(${patients.fileNumber} from '[0-9]+$')::int), 0)`,
+    })
+    .from(patients)
+    .where(sql`${patients.fileNumber} ~ ${`^${prefix}-[0-9]+$`}`);
+  return `${prefix}-${String(Number(max) + 1).padStart(4, "0")}`;
+}
+
+/**
+ * Online booking (after the mobile number was verified with a code): the patient with this mobile,
+ * or a new one marked "booked online — needs completion" for reception to finish later.
+ * When a family shares one mobile, the adult (no guardian) is chosen.
+ */
+export async function findOrCreateOnlinePatient(
+  tx: TenantTx,
+  input: {
+    tenantId: string;
+    filePrefix: string;
+    phone: string;
+    fullName: string;
+    gender: "male" | "female";
+  },
+): Promise<{ patient: Patient; created: boolean }> {
+  const matches = await tx
+    .select()
+    .from(patients)
+    .where(eq(patients.phone, input.phone))
+    .orderBy(sql`${patients.guardianId} is not null`, asc(patients.createdAt));
+  if (matches.length) return { patient: matches[0], created: false };
+  const [patient] = await tx
+    .insert(patients)
+    .values({
+      tenantId: input.tenantId,
+      fileNumber: await nextFileNumber(tx, input.filePrefix),
+      fullNameAr: input.fullName.trim(),
+      phone: input.phone,
+      gender: input.gender,
+      isFake: true,
+      createdVia: "online",
+      needsCompletion: true,
+    })
+    .returning();
+  return { patient, created: true };
+}

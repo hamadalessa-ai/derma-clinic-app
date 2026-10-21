@@ -119,6 +119,18 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "account:manage": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: true,
+    receptionist: true,
+  },
+  "platform:keys": {
+    platform_owner: true,
+    clinic_admin: false,
+    practitioner: false,
+    receptionist: false,
+  },
 };
 
 describe("role permissions", () => {
@@ -178,7 +190,7 @@ describe("phone navigation", () => {
 
   it.each([
     [["practitioner"], ["myDay", "calendar", "patients", "clinicalNotes"]],
-    [["receptionist"], ["calendar", "patients", "requests", "dashboard", "services"]],
+    [["receptionist"], ["calendar", "patients", "requests", "dashboard"]],
     [["clinic_admin"], ["calendar", "patients", "requests", "dashboard"]],
     [["platform_owner"], ["dashboard", "platform"]],
   ] as [Role[], string[]][])("%s: the bottom bar shows the most-used pages", (roles, expected) => {

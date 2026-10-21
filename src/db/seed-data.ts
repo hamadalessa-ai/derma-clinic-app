@@ -743,3 +743,39 @@ export const PACKAGE_TEMPLATES: Record<string, SeedPackageTemplate[]> = {
     },
   ],
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// PHASE 2a demo data (online booking, patient page, push)
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Doctors' gender, for the "female / male doctor" choice on the online booking page. */
+export const STAFF_GENDER: Record<string, "male" | "female"> = {
+  "derma-dr-sara": "female",
+  "derma-dr-faisal": "male",
+  "derma-dr-reem": "female",
+  "derma-dr-lina": "female",
+  "derma-dr-majed": "male",
+  "lamsa-dr-mona": "female",
+};
+
+/** Online booking settings per clinic (defaults approved for Derma). */
+export const ONLINE_SETTINGS: Record<
+  string,
+  { enabled: boolean; requiresApproval: boolean; showPrices: boolean }
+> = {
+  derma: { enabled: true, requiresApproval: false, showPrices: true },
+  lamsa: { enabled: true, requiresApproval: true, showPrices: false },
+};
+
+/** Services patients can book online (service codes). */
+export const ONLINE_SERVICES: Record<string, string[]> = {
+  derma: [
+    "consultation",
+    "laser_hair_removal",
+    "botox",
+    "fillers",
+    "facial_treatment",
+    "chemical_peeling",
+  ],
+  lamsa: ["consultation", "facial_treatment"],
+};

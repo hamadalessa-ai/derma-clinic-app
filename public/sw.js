@@ -6,16 +6,23 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
-// Phase 2: the server will send push messages (e.g. "Patient arrived"). Shown as notifications.
+// Staff push messages (src/lib/push). They carry ONLY initials + service + time (lock-screen safe).
 self.addEventListener("push", (event) => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
   event.waitUntil(
     self.registration.showNotification(data.title || "العيادة", {
       body: data.body || "",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
-      dir: "rtl",
+      dir: "auto",
       lang: "ar",
+      tag: data.tag || undefined,
+      renotify: !!data.tag,
       data: { url: data.url || "/my-day" },
     }),
   );

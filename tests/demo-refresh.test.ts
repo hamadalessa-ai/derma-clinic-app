@@ -41,6 +41,9 @@ describe("refresh demo week", () => {
     const before = await withActor(lamsaAdmin, (tx) =>
       tx.select().from(appointments).where(eq(appointments.id, appt)),
     );
+    const [reqBefore] = await withActor(lamsaAdmin, (tx) =>
+      tx.select().from(rescheduleRequests).where(eq(rescheduleRequests.appointmentId, appt)),
+    );
     const r = await withActor(lamsaAdmin, (tx) => refreshDemoWeek(tx, lamsaAdmin, "2030-03-10"));
     expect(r.moved).toBe(1);
     const [after] = await withActor(lamsaAdmin, (tx) =>
@@ -54,7 +57,11 @@ describe("refresh demo week", () => {
     const [req] = await withActor(lamsaAdmin, (tx) =>
       tx.select().from(rescheduleRequests).where(eq(rescheduleRequests.appointmentId, appt)),
     );
-    expect(riyadhDay(req.proposedStartsAt)).toBe("2030-03-11"); // one working day later, as seeded
+    // The proposed time moves with the appointment (same gap as seeded: one working day, which is
+    // two calendar days when the demo was set up on a Thursday).
+    expect(req.proposedStartsAt.getTime() - after.startsAt.getTime()).toBe(
+      reqBefore.proposedStartsAt.getTime() - before[0].startsAt.getTime(),
+    );
     const [block] = await withActor(lamsaAdmin, (tx) => tx.select().from(timeBlocks));
     expect(riyadhDay(block.startsAt)).toBe("2030-03-10");
     const [settings] = await withActor(lamsaAdmin, (tx) => tx.select().from(tenantSettings));

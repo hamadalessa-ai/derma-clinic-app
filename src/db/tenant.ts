@@ -16,6 +16,8 @@ export interface DbContext {
   roles?: readonly string[];
   /** Allowed branches; null/undefined = all branches of the clinic. */
   branchIds?: readonly string[] | null;
+  /** Signed-in patient (patient page). Requires roles ["patient"]. */
+  patientId?: string | null;
 }
 
 /**
@@ -38,6 +40,11 @@ export async function withTenant<T>(
   const roles = ctx.roles ?? [];
   if (!roles.every((r) => ROLE_RE.test(r))) throw new Error("withTenant: bad role");
   const branches = ctx.branchIds ?? null;
+  if (ctx.patientId != null && !UUID_RE.test(ctx.patientId))
+    throw new Error("withTenant: bad patientId");
+  if ((ctx.patientId != null) !== roles.includes("patient")) {
+    throw new Error("withTenant: patientId and the patient role go together");
+  }
   if (branches && !branches.every((b) => UUID_RE.test(b))) {
     throw new Error("withTenant: branchIds must be UUIDs");
   }
@@ -47,7 +54,8 @@ export async function withTenant<T>(
       set_config('app.tenant_id', ${ctx.tenantId}, true),
       set_config('app.user_id', ${ctx.userId ?? ""}, true),
       set_config('app.roles', ${roles.join(",")}, true),
-      set_config('app.branch_ids', ${branches ? branches.join(",") : "*"}, true)`);
+      set_config('app.branch_ids', ${branches ? branches.join(",") : "*"}, true),
+      set_config('app.patient_id', ${ctx.patientId ?? ""}, true)`);
     return fn(tx);
   });
 }

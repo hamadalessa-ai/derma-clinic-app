@@ -32,6 +32,12 @@ export const PERMISSIONS = {
   "notes:write": ["practitioner"],
   "settings:manage": ["clinic_admin"],
   "demo:refresh": ["clinic_admin"],
+
+  // ── Phase 2a ──
+  /** Own account: phone notifications on/off and which types. */
+  "account:manage": ALL_CLINIC_STAFF,
+  /** Create the push (VAPID) keys for the platform. Never patient data. */
+  "platform:keys": ["platform_owner"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -72,6 +78,7 @@ export const NAV_ITEMS = [
   { href: "/clinical-notes", key: "clinicalNotes", permission: "clinical_notes:read" },
   { href: "/services", key: "services", permission: "services:read" },
   { href: "/settings", key: "settings", permission: "settings:manage" },
+  { href: "/account", key: "account", permission: "account:manage" },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly { href: string; key: string; permission: Permission }[];
 
@@ -86,6 +93,7 @@ export const MOBILE_PRIORITY = [
   "platform",
   "services",
   "settings",
+  "account",
 ] as const;
 
 /**

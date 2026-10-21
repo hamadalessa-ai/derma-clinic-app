@@ -2,6 +2,7 @@ import type { AppointmentStatus } from "@/lib/booking/status";
 
 /** Status → theme token classes (colours live in globals.css). */
 export const STATUS_CLASSES: Record<AppointmentStatus, string> = {
+  pending: "bg-status-pending text-status-pending-foreground border-dashed",
   booked: "bg-status-booked text-status-booked-foreground",
   confirmed: "bg-status-confirmed text-status-confirmed-foreground",
   arrived: "bg-status-arrived text-status-arrived-foreground",

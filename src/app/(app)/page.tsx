@@ -22,6 +22,8 @@ import { APPOINTMENT_STATUSES } from "@/lib/booking/status";
 import { dayRange, riyadhDay } from "@/lib/booking/time";
 import { pendingRequests } from "@/lib/visits/reschedule";
 import { pick } from "@/lib/brand";
+import { mainAppUrl } from "@/lib/app-url";
+import { Notice } from "@/components/ui/notice";
 import { formatGregorian, formatHijri } from "@/lib/format";
 import type { Locale } from "@/i18n/config";
 
@@ -104,6 +106,7 @@ export default async function DashboardPage() {
         })
       : null;
   const ts = await getTranslations("statuses");
+  const mainUrl = await mainAppUrl();
   const tn = await getTranslations("nav");
   const tc = await getTranslations("calendar");
 
@@ -117,6 +120,16 @@ export default async function DashboardPage() {
           {t("today")}: {formatGregorian(now, locale, "full")} · {formatHijri(now, locale)}
         </p>
       </div>
+
+      {(can(ctx.roles, "settings:manage") || can(ctx.roles, "platform:read")) && (
+        <Notice tone="info" data-testid="main-link">
+          <span className="font-semibold">{t("mainLink")}:</span>{" "}
+          <a href={mainUrl} className="underline" dir="ltr">
+            {mainUrl}
+          </a>{" "}
+          — {t("mainLinkHint")}
+        </Notice>
+      )}
 
       {today && (
         <Card data-testid="today-card">

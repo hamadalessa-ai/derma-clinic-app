@@ -7,6 +7,7 @@ import {
   FileLock2,
   Inbox,
   LayoutDashboard,
+  BellRing,
   Settings,
   Shield,
   Sparkles,
@@ -25,6 +26,7 @@ export const NAV_ICONS = {
   calendar: CalendarDays,
   requests: Inbox,
   settings: Settings,
+  account: BellRing,
 } as const;
 
 export function NavLinks({

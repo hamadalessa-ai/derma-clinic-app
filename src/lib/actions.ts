@@ -6,6 +6,8 @@ import { PackageError } from "@/lib/packages/packages";
 import { can, PermissionError, type Permission } from "@/lib/auth/permissions";
 import { actorOf, getStaffContext, type StaffContext } from "@/lib/auth/session";
 import type { Actor } from "@/lib/auth/db";
+import { getCurrentTenant, type Tenant } from "@/lib/tenant/current";
+import { VerifyError } from "@/lib/verify/codes";
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -50,4 +52,35 @@ export function parse<T>(
   const r = schema.safeParse(value);
   if (!r.success) throw new ValidationError("invalid input");
   return r.data;
+}
+
+/**
+ * Actions on the PUBLIC pages (online booking /book, patient page /my): no staff login.
+ * The clinic comes from the address; known problems become error codes the page translates.
+ * What the visitor may do is decided inside each action (verified code, patient session).
+ */
+export async function publicAction<T>(
+  fn: (tenant: Tenant) => Promise<T>,
+): Promise<ActionResult<T>> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) return { ok: false, error: "not_found" };
+  try {
+    return { ok: true, data: await fn(tenant) };
+  } catch (err) {
+    if (err instanceof BookingError || err instanceof VerifyError || err instanceof ConsentError) {
+      return { ok: false, error: err.code };
+    }
+    if (err instanceof PublicError) return { ok: false, error: err.code };
+    if (err instanceof ValidationError) return { ok: false, error: "invalid" };
+    console.error("public action failed", err);
+    return { ok: false, error: "unexpected" };
+  }
+}
+
+/** A refusal on a public page with a translated message (e.g. "patient_signed_out"). */
+export class PublicError extends Error {
+  constructor(public code: string) {
+    super(code);
+    this.name = "PublicError";
+  }
 }

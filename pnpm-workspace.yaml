@@ -1,3 +1,9 @@
+# Packages whose install scripts we deliberately don't run. They ship ready-made binaries
+# for each platform (or have a pure-JS fallback), so nothing is lost — and the build log
+# stays free of "Ignored build scripts" warnings.
 ignoredBuiltDependencies:
+  - "@parcel/watcher"
+  - "@swc/core"
+  - esbuild
   - sharp
   - unrs-resolver

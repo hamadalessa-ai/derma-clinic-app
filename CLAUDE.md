@@ -64,6 +64,10 @@ any role that allows something grants it. Clinical notes need the `practitioner`
 - Screens use theme tokens (`src/app/globals.css`, `src/app/theme.ts`) and shared components only;
   `tests/theme.test.ts` fails on hard-coded colours.
 - Server actions live in `src/app/actions/clinic.ts`, validate with Zod and run through `staffAction()`.
+  Public pages (`/book`, `/my`) use `src/app/actions/patient.ts` + `publicAction()`: a verified mobile code
+  or a patient session (`src/lib/portal/session.ts`) decides what the visitor may do; patient reads run with
+  role `patient` + `app.patient_id` (RLS patient walls: own + family rows only, never notes, no writes).
+- Codes are shown on screen ONLY for `is_demo` clinics with `MESSAGE_DEMO_MODE=on` (`src/lib/messaging/sender.ts`).
 - Business logic also checks permissions (`assertCan`), not only the screens.
 
 ## Database changes

@@ -1,4 +1,4 @@
-import { AlertTriangle, Layers } from "lucide-react";
+import { AlertTriangle, Globe, Layers, MessageCircle } from "lucide-react";
 import type { AppointmentStatus } from "@/lib/booking/status";
 import { cn } from "@/lib/utils";
 import { STATUS_CLASSES } from "./status";
@@ -60,6 +60,32 @@ export function AlertBadge({
     >
       <AlertTriangle className="size-3.5" />
       {!compact && <span className="max-w-48 truncate">{items[0] ?? alerts.medications[0]}</span>}
+    </span>
+  );
+}
+
+/** Where a booking came from. Reception bookings show nothing (the usual case). */
+export function SourceBadge({
+  source,
+  label,
+  compact = false,
+}: {
+  source: "reception" | "online" | "whatsapp";
+  label: string;
+  compact?: boolean;
+}) {
+  if (source === "reception") return null;
+  const Icon = source === "online" ? Globe : MessageCircle;
+  return (
+    <span
+      data-testid="source-badge"
+      data-source={source}
+      title={label}
+      aria-label={label}
+      className="bg-brand text-brand-foreground inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold"
+    >
+      <Icon className="size-3.5" />
+      {!compact && <span>{label}</span>}
     </span>
   );
 }

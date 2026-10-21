@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { patientMedicalFlags, patients } from "@/db/schema";
 import { audit } from "@/lib/audit";
+import { withTenant } from "@/db/tenant";
 import { withActor } from "@/lib/auth/db";
 import {
   blockTime,
@@ -21,8 +22,10 @@ import { saveTemplateVersion, signConsent } from "@/lib/consents/consents";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
-import { searchPatients } from "@/lib/patients/queries";
-import { updateSettings } from "@/lib/settings";
+import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
+import { notifyLater, sendTestPush } from "@/lib/push/notify";
+import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
+import { setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
 import { parse, staffAction, ValidationError } from "@/lib/actions";
@@ -78,13 +81,7 @@ export async function createPatientAction(input: z.input<typeof newPatient>) {
     const v = parse(newPatient, input);
     const prefix = ctx.tenant.slug.charAt(0).toUpperCase();
     return withActor(actor, async (tx) => {
-      // Next file number for this clinic, e.g. D-0041 (the unique key stops duplicates).
-      const [{ max }] = await tx
-        .select({
-          max: sql<number>`coalesce(max(substring(${patients.fileNumber} from '[0-9]+$')::int), 0)`,
-        })
-        .from(patients)
-        .where(sql`${patients.fileNumber} ~ ${`^${prefix}-[0-9]+$`}`);
+      const fileNumber = await nextFileNumber(tx, prefix);
       let guardianId: string | null = null;
       if (v.guardianFile) {
         const [g] = await tx
@@ -98,7 +95,7 @@ export async function createPatientAction(input: z.input<typeof newPatient>) {
         .insert(patients)
         .values({
           tenantId: actor.tenantId,
-          fileNumber: `${prefix}-${String(Number(max) + 1).padStart(4, "0")}`,
+          fileNumber,
           fullNameAr: v.fullNameAr,
           fullNameEn: v.fullNameEn || null,
           phone: v.phone,
@@ -204,6 +201,9 @@ export async function bookAction(input: z.input<typeof booking>) {
       }),
     );
     refreshScreens();
+    notifyLater(actor.tenantId, [
+      { type: "new_booking", appointmentId: a.id, actorUserId: actor.userId },
+    ]);
     return { id: a.id };
   });
 }
@@ -261,6 +261,9 @@ export async function moveAction(input: {
       }),
     );
     refreshScreens();
+    notifyLater(actor.tenantId, [
+      { type: "rescheduled", appointmentId: v.appointmentId, actorUserId: actor.userId },
+    ]);
     return null;
   });
 }
@@ -279,6 +282,11 @@ export async function statusAction(input: { appointmentId: string; to: string; r
       changeStatus(tx, actor, v.appointmentId, v.to, { reason: v.reason }),
     );
     refreshScreens();
+    if (v.to === "cancelled") {
+      notifyLater(actor.tenantId, [
+        { type: "cancelled", appointmentId: v.appointmentId, actorUserId: actor.userId },
+      ]);
+    }
     return null;
   });
 }
@@ -288,6 +296,11 @@ export async function checkInAction(appointmentId: string) {
     const id = parse(uuid, appointmentId);
     const r = await withActor(actor, (tx) => checkIn(tx, actor, id));
     refreshScreens();
+    if (r.status === "checked_in") {
+      notifyLater(actor.tenantId, [
+        { type: "checked_in", appointmentId: id, actorUserId: actor.userId },
+      ]);
+    }
     if (r.status === "consent_required") {
       const t = r.template;
       return {
@@ -368,6 +381,11 @@ export async function doctorRescheduleAction(input: {
       }),
     );
     refreshScreens();
+    if (r.mode === "requested") {
+      notifyLater(actor.tenantId, [
+        { type: "reschedule_request", appointmentId: v.appointmentId, actorUserId: actor.userId },
+      ]);
+    }
     return { mode: r.mode };
   });
 }
@@ -382,8 +400,15 @@ export async function decideRequestAction(input: {
       z.object({ requestId: uuid, approve: z.boolean(), note: text(300).optional() }),
       input,
     );
-    await withActor(actor, (tx) => decideRequest(tx, actor, v));
+    const decided = await withActor(actor, (tx) => decideRequest(tx, actor, v));
     refreshScreens();
+    notifyLater(actor.tenantId, [
+      {
+        type: "request_answered",
+        appointmentId: decided.appointmentId,
+        actorUserId: actor.userId,
+      },
+    ]);
     return null;
   });
 }
@@ -591,10 +616,52 @@ export async function addAddendumAction(input: {
 
 // ─── Settings ───────────────────────────────────────────────────────────────
 
-export async function updateSettingsAction(input: { doctorsManageOwnSchedule: boolean }) {
+const settingsInput = z.object({
+  doctorsManageOwnSchedule: z.boolean().optional(),
+  onlineBookingEnabled: z.boolean().optional(),
+  onlineHorizonDays: z.number().int().min(1).max(180).optional(),
+  onlineMinNoticeMinutes: z
+    .number()
+    .int()
+    .min(0)
+    .max(7 * 24 * 60)
+    .optional(),
+  cancellationWindowHours: z
+    .number()
+    .int()
+    .min(0)
+    .max(14 * 24)
+    .optional(),
+  onlineRequiresApproval: z.boolean().optional(),
+  showPricesOnline: z.boolean().optional(),
+});
+
+export async function updateSettingsAction(input: z.input<typeof settingsInput>) {
   return staffAction("settings:manage", async (_ctx, actor) => {
-    const v = parse(z.object({ doctorsManageOwnSchedule: z.boolean() }), input);
+    const v = parse(settingsInput, input);
     await withActor(actor, (tx) => updateSettings(tx, actor, v));
+    revalidatePath("/settings");
+    return null;
+  });
+}
+
+export async function setServiceOnlineAction(input: { serviceId: string; online: boolean }) {
+  return staffAction("settings:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ serviceId: uuid, online: z.boolean() }), input);
+    const row = await withActor(actor, (tx) => setServiceOnline(tx, actor, v.serviceId, v.online));
+    if (!row) throw new ValidationError("service not found");
+    revalidatePath("/settings");
+    return null;
+  });
+}
+
+export async function setMemberGenderAction(input: { memberId: string; gender: string }) {
+  return staffAction("settings:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ memberId: uuid, gender: z.enum(["male", "female", ""]) }), input);
+    const row = await withActor(actor, (tx) =>
+      setMemberGender(tx, actor, v.memberId, v.gender || null),
+    );
+    if (!row) throw new ValidationError("member not found");
     revalidatePath("/settings");
     return null;
   });
@@ -606,4 +673,56 @@ export async function refreshDemoAction() {
     refreshScreens();
     return r;
   });
+}
+
+// ─── My account: phone notifications ────────────────────────────────────────
+
+const subscription = z.object({
+  endpoint: z.string().url().max(1000).startsWith("https://"),
+  p256dh: z.string().min(20).max(200),
+  auth: z.string().min(8).max(100),
+  userAgent: z.string().max(300).nullish(),
+});
+
+export async function savePushSubscriptionAction(input: z.input<typeof subscription>) {
+  return staffAction("account:manage", async (_ctx, actor) => {
+    const sub = parse(subscription, input);
+    // System context: a shared device may still be registered to the previous user.
+    await withTenant(actor.tenantId, (tx) =>
+      saveSubscription(tx, { tenantId: actor.tenantId, userId: actor.userId, sub }),
+    );
+    return null;
+  });
+}
+
+export async function removePushSubscriptionAction(input: { endpoint: string }) {
+  return staffAction("account:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ endpoint: z.string().max(1000) }), input);
+    await withActor(actor, (tx) => removeSubscription(tx, actor.userId, v.endpoint));
+    revalidatePath("/account");
+    return null;
+  });
+}
+
+export async function saveNotificationPrefsAction(input: {
+  enabled: boolean;
+  mutedTypes: string[];
+}) {
+  return staffAction("account:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ enabled: z.boolean(), mutedTypes: z.array(z.string().max(40)).max(20) }),
+      input,
+    );
+    await withActor(actor, (tx) =>
+      savePrefs(tx, { tenantId: actor.tenantId, userId: actor.userId, ...v }),
+    );
+    revalidatePath("/account");
+    return null;
+  });
+}
+
+export async function testPushAction() {
+  return staffAction("account:manage", async (_ctx, actor) =>
+    sendTestPush(actor.tenantId, actor.userId),
+  );
 }

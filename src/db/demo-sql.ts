@@ -6,7 +6,8 @@
 import { createHash } from "node:crypto";
 import { contentFingerprint } from "../lib/consents/fingerprint";
 import { DEMO_SIGNATURE_PNG_BASE64, DEMO_TIME_BLOCKS, generateDemoWeek } from "./demo-week";
-import { CONSENT_TEMPLATES, DERMA, demoId, PACKAGE_TEMPLATES } from "./seed-data";
+import { CONSENT_TEMPLATES, DERMA, demoId, LAMSA, PACKAGE_TEMPLATES } from "./seed-data";
+import { DEMO_PUSH_HOST } from "../lib/push/payload";
 import { insert, raw } from "./sql-render";
 
 const ANCHOR = "(select demo_anchor from pg_temp.setup_params)";
@@ -16,6 +17,7 @@ const at = (dayIndex: number, time: string, plusMinutes = 0) =>
       (plusMinutes ? ` + interval '${plusMinutes} minutes'` : ""),
   );
 const daysAgo = (n: number) => raw(`now() - interval '${n} days'`);
+const hoursAgo = (n: number) => raw(`now() - interval '${n} hours'`);
 
 interface DemoPackage {
   key: string;
@@ -142,7 +144,8 @@ export function demoSql(): string {
         reception_note: a.note ?? null,
         cancel_reason: a.status === "cancelled" ? "طلب المريض" : null,
         demo_day_index: a.dayIndex,
-        created_by: "usr_derma-rec-ruh1",
+        source: a.source ?? "reception",
+        created_by: a.source === "online" ? null : "usr_derma-rec-ruh1",
       })),
     ),
   );
@@ -483,5 +486,77 @@ export function demoSql(): string {
       },
     ]),
   );
+  out.push(phase2aRows());
   return out.filter(Boolean).join("\n");
+}
+
+/**
+ * Phase 2a rows in BOTH clinics (old, used-up codes and sessions, a logged demo message,
+ * notification choices and a demo push device), so the isolation tests cover every new table.
+ */
+function phase2aRows(): string {
+  const out: string[] = [];
+  for (const [slug, patientFile, adminKey] of [
+    ["derma", "D-0007", "derma-admin"],
+    ["lamsa", "L-0002", "lamsa-admin"],
+  ] as const) {
+    const tenant = demoId(`tenant:${slug}`);
+    const patient = demoId(`${slug}:patient:${patientFile}`);
+    const phone = (slug === "derma" ? DERMA : LAMSA).patients.find(
+      (p) => p.fileNumber === patientFile,
+    )!.phone;
+    out.push(
+      insert("verification_codes", [
+        {
+          tenant_id: tenant,
+          phone,
+          purpose: "portal",
+          // Not a real code: a fixed placeholder hash, long expired and used.
+          code_hash: createHash("sha256").update(`demo-used-code:${slug}`).digest("hex"),
+          expires_at: hoursAgo(12),
+          attempts: 1,
+          consumed_at: hoursAgo(12),
+          created_at: hoursAgo(12),
+        },
+      ]),
+      insert("rate_limit_hits", [
+        { tenant_id: tenant, bucket: `otp:phone:${phone}`, created_at: hoursAgo(12) },
+      ]),
+      insert("patient_sessions", [
+        {
+          tenant_id: tenant,
+          patient_id: patient,
+          token_hash: createHash("sha256").update(`demo-old-session:${slug}`).digest("hex"),
+          expires_at: hoursAgo(12),
+          revoked_at: hoursAgo(12),
+          created_at: hoursAgo(12),
+        },
+      ]),
+      insert("outbound_messages", [
+        {
+          tenant_id: tenant,
+          channel: "demo",
+          to_phone: phone,
+          template: "portal_code",
+          body: "رمز الدخول (تجريبي): ******",
+          status: "demo_logged",
+          created_at: hoursAgo(12),
+        },
+      ]),
+      insert("notification_prefs", [
+        { tenant_id: tenant, user_id: `usr_${adminKey}`, enabled: true },
+      ]),
+      insert("push_subscriptions", [
+        {
+          tenant_id: tenant,
+          user_id: `usr_${adminKey}`,
+          endpoint: `https://${DEMO_PUSH_HOST}/demo-device/${slug}`,
+          p256dh: "demo",
+          auth: "demo",
+          user_agent: "Demo device (never receives anything)",
+        },
+      ]),
+    );
+  }
+  return out.join("\n");
 }

@@ -41,6 +41,7 @@ export const memberRole = pgEnum("member_role", ["clinic_admin", "practitioner",
 export const gender = pgEnum("gender", ["male", "female"]);
 export const idType = pgEnum("id_type", ["national_id", "iqama", "passport"]);
 export const appointmentStatus = pgEnum("appointment_status", [
+  "pending", // online booking waiting for reception approval (still holds the slot)
   "booked",
   "confirmed",
   "arrived",
@@ -60,6 +61,8 @@ export const sessionEventKind = pgEnum("session_event_kind", [
   "override", // staff correction, reason required
 ]);
 export const noteStatus = pgEnum("note_status", ["draft", "signed"]);
+/** Where an appointment was created. */
+export const bookingSource = pgEnum("booking_source", ["reception", "online", "whatsapp"]);
 export const requestStatus = pgEnum("request_status", ["pending", "approved", "rejected"]);
 
 /** Postgres timestamp range, e.g. [10:00, 10:45). Used to forbid overlapping bookings. */
@@ -185,6 +188,8 @@ export const tenantMembers = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     roles: memberRole("roles").array().notNull(), // one or more, e.g. {clinic_admin,practitioner}
     branchId: uuid("branch_id"), // null = all branches
+    /** Doctors: used by "female / male doctor" preference on online booking. */
+    gender: gender("gender"),
     titleAr: text("title_ar"),
     titleEn: text("title_en"),
     createdAt: createdAt(),
@@ -269,6 +274,7 @@ export const services = pgTable(
     priceHalalas: integer("price_halalas").notNull(), // 1 SAR = 100 halalas
     requiredDeviceType: text("required_device_type"),
     consentCode: text("consent_code"), // which consent template the patient must sign, if any
+    onlineBookable: boolean("online_bookable").notNull().default(false),
     isDemoValue: boolean("is_demo_value").notNull().default(true),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: smallint("sort_order").notNull().default(0),
@@ -340,11 +346,15 @@ export const patients = pgTable(
     guardianRelationAr: text("guardian_relation_ar"),
     guardianRelationEn: text("guardian_relation_en"),
     isFake: boolean("is_fake").notNull().default(true),
+    /** "online" = created by the patient on /book; reception completes the details later. */
+    createdVia: bookingSource("created_via").notNull().default("reception"),
+    needsCompletion: boolean("needs_completion").notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     unique("patients_tenant_id_id_key").on(t.tenantId, t.id),
+    index("patients_phone_idx").on(t.tenantId, t.phone),
     unique("patients_tenant_file_key").on(t.tenantId, t.fileNumber),
     check("patients_not_own_guardian", sql`${t.guardianId} is null or ${t.guardianId} <> ${t.id}`),
     foreignKey({
@@ -402,6 +412,12 @@ export const TENANT_TABLES = [
   "patient_consents",
   "clinical_notes",
   "clinical_note_addenda",
+  "verification_codes",
+  "rate_limit_hits",
+  "patient_sessions",
+  "outbound_messages",
+  "push_subscriptions",
+  "notification_prefs",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -418,6 +434,18 @@ export const tenantSettings = pgTable("tenant_settings", {
   slotMinutes: smallint("slot_minutes").notNull().default(15),
   /** Demo clinics: the day the demo week is centred on ("Refresh demo week" moves it to today). */
   demoAnchorDay: date("demo_anchor_day"),
+
+  // ── Online booking (/book) and patient page (/my) ──
+  onlineBookingEnabled: boolean("online_booking_enabled").notNull().default(false),
+  /** How far ahead patients may book online. */
+  onlineHorizonDays: smallint("online_horizon_days").notNull().default(30),
+  /** Minimum notice for an online booking, in minutes. */
+  onlineMinNoticeMinutes: smallint("online_min_notice_minutes").notNull().default(120),
+  /** Patients may cancel/reschedule online until this many hours before the visit. */
+  cancellationWindowHours: smallint("cancellation_window_hours").notNull().default(24),
+  /** ON: online bookings start as "pending" until reception approves. */
+  onlineRequiresApproval: boolean("online_requires_approval").notNull().default(false),
+  showPricesOnline: boolean("show_prices_online").notNull().default(true),
   updatedAt: updatedAt(),
 });
 
@@ -485,6 +513,7 @@ export const appointments = pgTable(
     blockedUntil: timestamp("blocked_until", { withTimezone: true }).notNull(),
     status: appointmentStatus("status").notNull().default("booked"),
     receptionNote: text("reception_note"),
+    source: bookingSource("source").notNull().default("reception"),
     /** Demo data only: working-day number relative to tenant_settings.demo_anchor_day. */
     demoDayIndex: smallint("demo_day_index"),
     cancelReason: text("cancel_reason"),
@@ -493,6 +522,10 @@ export const appointments = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [
+    // Anti-spam: one pending (online) booking per patient per slot.
+    uniqueIndex("appointments_one_pending_per_slot")
+      .on(t.tenantId, t.patientId, t.startsAt)
+      .where(sql`${t.status} = 'pending'`),
     unique("appointments_tenant_id_id_key").on(t.tenantId, t.id),
     index("appointments_branch_start_idx").on(t.tenantId, t.branchId, t.startsAt),
     index("appointments_practitioner_start_idx").on(t.tenantId, t.practitionerId, t.startsAt),
@@ -849,13 +882,19 @@ export const patientConsents = pgTable(
     signerName: text("signer_name").notNull(),
     signerRelation: text("signer_relation").notNull().default("self"), // self | guardian
     signatureFileId: uuid("signature_file_id").notNull(),
-    witnessUserId: text("witness_user_id").notNull(),
+    /** Staff witness when signed at the clinic; null when the patient signed on the patient page. */
+    witnessUserId: text("witness_user_id"),
+    signedVia: text("signed_via").notNull().default("clinic"), // clinic | patient_portal
     appointmentId: uuid("appointment_id"),
     signedAt: timestamp("signed_at", { withTimezone: true }).notNull().defaultNow(),
     userAgent: text("user_agent"),
     createdAt: createdAt(),
   },
   (t) => [
+    check(
+      "patient_consents_witness",
+      sql`(${t.signedVia} = 'clinic' and ${t.witnessUserId} is not null) or ${t.signedVia} = 'patient_portal'`,
+    ),
     index("patient_consents_patient_idx").on(t.tenantId, t.patientId, t.templateCode),
     foreignKey({
       name: "patient_consents_patient_fk",
@@ -934,6 +973,134 @@ export const clinicalNoteAddenda = pgTable(
     }),
   ],
 );
+
+// ════════════════════════════════════════════════════════════════════════════
+// PHASE 2a — online booking, patient page, push notifications
+// ════════════════════════════════════════════════════════════════════════════
+
+/** One-time verification codes (sent through MessageSender). Only a hash is stored. */
+export const verificationCodes = pgTable(
+  "verification_codes",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    phone: text("phone").notNull(),
+    purpose: text("purpose").notNull(), // "booking" | "portal"
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    attempts: smallint("attempts").notNull().default(0),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    ip: text("ip"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("verification_codes_phone_idx").on(t.tenantId, t.phone, t.createdAt),
+    check("verification_codes_purpose", sql`${t.purpose} in ('booking', 'portal')`),
+  ],
+);
+
+/** Rate limiting that works across all Vercel instances: one row per attempt, counted per window. */
+export const rateLimitHits = pgTable(
+  "rate_limit_hits",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    bucket: text("bucket").notNull(), // e.g. "otp:phone:0500010001", "otp:ip:1.2.3.4"
+    createdAt: createdAt(),
+  },
+  (t) => [index("rate_limit_hits_bucket_idx").on(t.tenantId, t.bucket, t.createdAt)],
+);
+
+/** Patient sessions for /my — separate from staff logins, short-lived. Only a hash of the token is stored. */
+export const patientSessions = pgTable(
+  "patient_sessions",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    ip: text("ip"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({
+      name: "patient_sessions_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+  ],
+);
+
+/** Every message to a patient (codes, confirmations). DEMO mode only logs here. */
+export const outboundMessages = pgTable(
+  "outbound_messages",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    channel: text("channel").notNull(), // "demo" | "whatsapp" | "sms"
+    toPhone: text("to_phone").notNull(),
+    template: text("template").notNull(),
+    body: text("body").notNull(),
+    status: text("status").notNull().default("sent"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("outbound_messages_created_idx").on(t.tenantId, t.createdAt)],
+);
+
+/** Web Push subscriptions (one per staff device). */
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: createdAt(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [unique("push_subscriptions_endpoint_key").on(t.tenantId, t.endpoint)],
+);
+
+/** Each staff member's notification choices (per clinic). */
+export const notificationPrefs = pgTable(
+  "notification_prefs",
+  {
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(true),
+    /** Notification types switched OFF (everything else is on). */
+    mutedTypes: text("muted_types")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    updatedAt: updatedAt(),
+  },
+  (t) => [unique("notification_prefs_user_key").on(t.tenantId, t.userId)],
+);
+
+/** Tables a signed-in PATIENT may read (only their own / family rows). Everything else is hidden. */
+export const PATIENT_READABLE_TABLES = [
+  "patients",
+  "appointments",
+  "patient_packages",
+  "patient_consents",
+  "branches",
+  "departments",
+  "services",
+  "rooms",
+  "tenant_members",
+  "consent_templates",
+  "tenant_settings",
+] as const;
 
 /** Tables with appointment-like rows that belong to one branch: hidden from staff of other branches. */
 export const BRANCH_SCOPED_TABLES = [

@@ -26,7 +26,7 @@ import { Select } from "@/components/ui/select";
 import type { ApptView } from "@/lib/views/schedule";
 import { formatDualDate } from "@/lib/format";
 import type { Locale } from "@/i18n/config";
-import { AlertBadge, BalanceBadge, StatusBadge } from "./badges";
+import { AlertBadge, BalanceBadge, SourceBadge, StatusBadge } from "./badges";
 import { ConsentSignDialog, type ConsentTemplateView } from "./consent-sign-dialog";
 import { FormError, FormSuccess } from "./form-message";
 import { riyadhParts, timeOptions } from "./time";
@@ -53,6 +53,7 @@ export function AppointmentDialog({
   const t = useTranslations("calendar");
   const tc = useTranslations("common");
   const ts = useTranslations("statuses");
+  const tsrc = useTranslations("sources");
   const tm = useTranslations("myDay");
   const locale = useLocale() as Locale;
   const name = (o: { nameAr: string; nameEn: string | null }) =>
@@ -125,6 +126,7 @@ export function AppointmentDialog({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={s} label={ts(s)} />
+            <SourceBadge source={appt.source} label={tsrc(appt.source)} />
             <span>{locale === "en" ? appt.serviceNameEn : appt.serviceNameAr}</span>
             {appt.balance && (
               <BalanceBadge
@@ -145,6 +147,31 @@ export function AppointmentDialog({
             {appt.deviceNameAr &&
               ` · ${tc("device")}: ${locale === "en" ? appt.deviceNameEn : appt.deviceNameAr}`}
           </div>
+          {appt.consent && (
+            <div
+              className={
+                appt.consent.signed
+                  ? "bg-success text-success-foreground rounded-md px-3 py-2"
+                  : "bg-warning text-warning-foreground rounded-md px-3 py-2"
+              }
+              data-testid="consent-status"
+              data-signed={appt.consent.signed}
+            >
+              {appt.consent.signed
+                ? appt.consent.viaPatientPage
+                  ? t("consentSignedOnline")
+                  : t("consentSigned")
+                : t("consentNeeded")}
+            </div>
+          )}
+          {appt.needsCompletion && (
+            <div
+              className="bg-info text-info-foreground rounded-md px-3 py-2"
+              data-testid="needs-completion"
+            >
+              {t("needsCompletion")}
+            </div>
+          )}
           {appt.note && <div className="bg-muted rounded-md px-3 py-2">{appt.note}</div>}
           {appt.pendingRequest && (
             <div className="bg-warning text-warning-foreground rounded-md px-3 py-2">
@@ -161,6 +188,27 @@ export function AppointmentDialog({
         <FormError message={error} />
 
         <div className="flex flex-wrap gap-2">
+          {perms.manage && s === "pending" && (
+            <>
+              <Button
+                onClick={() => setStatus("confirmed")}
+                disabled={pending}
+                data-testid="approve"
+              >
+                <CalendarCheck />
+                {t("approve")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setStatus("cancelled", { reason: t("rejectedReason") })}
+                disabled={pending}
+                data-testid="reject"
+              >
+                <XCircle />
+                {t("reject")}
+              </Button>
+            </>
+          )}
           {perms.manage && (s === "booked" || s === "confirmed") && (
             <Button onClick={doCheckIn} disabled={pending} data-testid="check-in">
               <LogIn />

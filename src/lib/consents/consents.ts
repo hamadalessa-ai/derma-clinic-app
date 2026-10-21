@@ -4,9 +4,9 @@
  * that text, the signature image, the signer, the witnessing staff member and the time.
  * PDFs and print pages are just views of this record.
  */
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
 import type { TenantTx } from "@/db/tenant";
-import { consentTemplates, patientConsents, services } from "@/db/schema";
+import { consentTemplates, patientConsents, patients, services } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
@@ -114,25 +114,60 @@ export async function missingConsent(tx: TenantTx, patientId: string, serviceId:
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
 
-export async function signConsent(
-  tx: TenantTx,
-  actor: Actor,
-  input: {
-    patientId: string;
-    templateId: string;
-    signerName: string;
-    signerRelation: "self" | "guardian";
-    signaturePng: Buffer;
-    appointmentId?: string | null;
-    userAgent?: string | null;
-  },
-) {
+interface SignInput {
+  patientId: string;
+  templateId: string;
+  signerName: string;
+  signerRelation: "self" | "guardian";
+  signaturePng: Buffer;
+  appointmentId?: string | null;
+  userAgent?: string | null;
+}
+
+/** At the clinic: signed on the reception tablet, witnessed by the staff member. */
+export async function signConsent(tx: TenantTx, actor: Actor, input: SignInput) {
   assertCan(actor.roles, "consents:collect");
+  return storeSignedConsent(tx, actor.tenantId, { witnessUserId: actor.userId }, input);
+}
+
+/**
+ * On the patient page (/my), before the visit: the signed-in patient signs for themselves or a
+ * child they are guardian of. No clinic witness; the record says "signed on the patient page".
+ * Runs in a clinic transaction without a staff user (patients can't write directly).
+ */
+export async function signConsentByPatient(
+  tx: TenantTx,
+  input: Omit<SignInput, "signerRelation"> & { tenantId: string; sessionPatientId: string },
+) {
+  const family = await tx
+    .select({ id: patients.id })
+    .from(patients)
+    .where(
+      or(eq(patients.id, input.sessionPatientId), eq(patients.guardianId, input.sessionPatientId)),
+    );
+  if (!family.some((p) => p.id === input.patientId)) throw new ConsentError("not_found");
+  return storeSignedConsent(
+    tx,
+    input.tenantId,
+    { witnessUserId: null, viaPatient: input.sessionPatientId },
+    {
+      ...input,
+      signerRelation: input.patientId === input.sessionPatientId ? "self" : "guardian",
+    },
+  );
+}
+
+const PNG_MAGIC_CHECK = (png: Buffer) => png.length >= 100 && png.subarray(0, 4).equals(PNG_MAGIC);
+
+async function storeSignedConsent(
+  tx: TenantTx,
+  tenantId: string,
+  by: { witnessUserId: string | null; viaPatient?: string },
+  input: SignInput,
+) {
   const signerName = input.signerName.trim();
   if (signerName.length < 2) throw new ConsentError("signer_required");
-  if (input.signaturePng.length < 100 || !input.signaturePng.subarray(0, 4).equals(PNG_MAGIC)) {
-    throw new ConsentError("bad_signature");
-  }
+  if (!PNG_MAGIC_CHECK(input.signaturePng)) throw new ConsentError("bad_signature");
   const [tpl] = await tx
     .select()
     .from(consentTemplates)
@@ -142,13 +177,13 @@ export async function signConsent(
   if (!tpl.isCurrent) throw new ConsentError("not_current");
 
   const file = await getFileStore().put(
-    { tx, tenantId: actor.tenantId, userId: actor.userId },
+    { tx, tenantId, userId: by.witnessUserId },
     { kind: "signature", mimeType: "image/png", data: input.signaturePng },
   );
   const [consent] = await tx
     .insert(patientConsents)
     .values({
-      tenantId: actor.tenantId,
+      tenantId,
       patientId: input.patientId,
       templateId: tpl.id,
       templateCode: tpl.code,
@@ -161,13 +196,14 @@ export async function signConsent(
       signerName,
       signerRelation: input.signerRelation,
       signatureFileId: file.id,
-      witnessUserId: actor.userId,
+      witnessUserId: by.witnessUserId,
+      signedVia: by.viaPatient ? "patient_portal" : "clinic",
       appointmentId: input.appointmentId ?? null,
       userAgent: input.userAgent?.slice(0, 300) ?? null,
     })
     .returning();
   await audit(tx, {
-    actorUserId: actor.userId,
+    actorUserId: by.witnessUserId,
     action: "consent.sign",
     entityType: "patient_consent",
     entityId: consent.id,
@@ -176,9 +212,61 @@ export async function signConsent(
       code: tpl.code,
       version: tpl.version,
       appointmentId: input.appointmentId ?? null,
+      ...(by.viaPatient ? { via: "patient_page", signedInPatientId: by.viaPatient } : {}),
     },
   });
   return consent;
+}
+
+/** For each appointment: which consent its service needs and whether it is already signed. */
+export async function consentStatusFor(
+  tx: TenantTx,
+  appts: { id: string; patientId: string; serviceId: string }[],
+) {
+  const out = new Map<
+    string,
+    { templateId: string; code: string; signed: boolean; signedVia: string | null }
+  >();
+  if (!appts.length) return out;
+  const svc = await tx
+    .select({ id: services.id, consentCode: services.consentCode })
+    .from(services)
+    .where(inArray(services.id, [...new Set(appts.map((a) => a.serviceId))]));
+  const codes = [...new Set(svc.map((s) => s.consentCode).filter((c): c is string => !!c))];
+  if (!codes.length) return out;
+  const tpls = await tx
+    .select()
+    .from(consentTemplates)
+    .where(and(eq(consentTemplates.isCurrent, true), inArray(consentTemplates.code, codes)));
+  const signed = await tx
+    .select({
+      patientId: patientConsents.patientId,
+      templateId: patientConsents.templateId,
+      signedVia: patientConsents.signedVia,
+    })
+    .from(patientConsents)
+    .where(
+      and(
+        inArray(patientConsents.patientId, [...new Set(appts.map((a) => a.patientId))]),
+        inArray(
+          patientConsents.templateId,
+          tpls.map((t) => t.id),
+        ),
+      ),
+    );
+  for (const a of appts) {
+    const code = svc.find((s) => s.id === a.serviceId)?.consentCode;
+    const tpl = code ? tpls.find((t) => t.code === code) : undefined;
+    if (!tpl) continue;
+    const hit = signed.find((x) => x.patientId === a.patientId && x.templateId === tpl.id);
+    out.set(a.id, {
+      templateId: tpl.id,
+      code: tpl.code,
+      signed: !!hit,
+      signedVia: hit?.signedVia ?? null,
+    });
+  }
+  return out;
 }
 
 export async function consentsForPatient(tx: TenantTx, patientId: string) {

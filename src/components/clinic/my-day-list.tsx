@@ -18,7 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ApptView, BlockView } from "@/lib/views/schedule";
-import { AlertBadge, BalanceBadge, StatusBadge } from "./badges";
+import { AlertBadge, BalanceBadge, SourceBadge, StatusBadge } from "./badges";
 import { AppointmentDialog } from "./appointment-dialog";
 import type { PickOption } from "./booking-dialog";
 import { FormError, FormSuccess } from "./form-message";
@@ -47,6 +47,7 @@ export function MyDayList({
   const t = useTranslations("myDay");
   const tc = useTranslations("calendar");
   const ts = useTranslations("statuses");
+  const tsrc = useTranslations("sources");
   const tcom = useTranslations("common");
   const locale = useLocale();
   const name = (o: { nameAr: string; nameEn: string | null }) =>
@@ -85,6 +86,7 @@ export function MyDayList({
             key={a.id}
             data-testid="my-day-card"
             data-status={a.status}
+            data-source={a.source}
             data-patient={a.patient.fileNumber}
             className={a.status === "arrived" ? "ring-brand ring-2" : ""}
           >
@@ -93,7 +95,10 @@ export function MyDayList({
                 <span className="text-lg font-bold" dir="ltr">
                   {start}–{end}
                 </span>
-                <StatusBadge status={a.status} label={ts(a.status)} />
+                <span className="flex items-center gap-1.5">
+                  <SourceBadge source={a.source} label={tsrc(a.source)} />
+                  <StatusBadge status={a.status} label={ts(a.status)} />
+                </span>
               </div>
               <button
                 type="button"

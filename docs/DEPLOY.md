@@ -147,6 +147,83 @@ Dr. Sara at 17:00 without a signed laser consent — check her in to see the con
 
 ---
 
+## Part D — Updating the live demo to Phase 2a (online booking, patient page, phone notifications)
+
+About 15 minutes, all in the browser. Everything is fake demo data, so we **reset and set up again** like Part C.
+
+### D1. Merge and reset the database (5 minutes)
+
+1. On GitHub, merge the Phase 2a pull request (**Merge pull request → Confirm merge**).
+2. Supabase → **SQL Editor** → **+ New query** → paste **`db/reset.sql`** (from `main`) → **Run** → confirm.
+   Expected: _"Reset complete. Now run db/setup.sql."_
+3. **+ New query** → paste **`db/setup.sql`** (from `main`). In **STEP 1** put the **same app database password
+   as before** and your demo staff password → **Run**. Expected: _"Setup complete…"_
+4. Close both tabs **without saving**.
+
+### D2. New Vercel settings (5 minutes)
+
+Vercel → your project → **Settings → Environment Variables** → add:
+
+| Name                | Value                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `MESSAGE_DEMO_MODE` | `on` — codes are shown on screen instead of being sent (only for demo clinics; no messages are sent)  |
+| `CRON_SECRET`       | a **new** random string from <https://generate-secret.vercel.app/32> (protects the daily cleanup job) |
+
+Then the **phone notification keys** (no terminal, nothing pasted in a chat):
+
+1. Open the live link, sign in as `owner@platform.demo` → **Platform** → **Push notification keys** →
+   **Create new keys**. The keys are made inside your browser; the private key is never sent anywhere.
+2. Copy each of the three values into Vercel as a new variable: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`
+   and `VAPID_SUBJECT` (write your email as `mailto:you@example.com`).
+3. **Deployments** → the latest one → **⋯ → Redeploy**. Settings only apply after a redeploy.
+4. Back on the **Push notification keys** page you should now see _"Push keys are set on the server ✓"_.
+
+The daily cleanup job (`/api/cron/daily`) is registered by `vercel.json` and runs once a day (the free plan
+allows one run per day). You can see it under Vercel → your project → **Settings → Cron Jobs**.
+
+> Changing the VAPID keys later disconnects all registered phones; everyone then taps "Turn on" again.
+
+### D3. Install the app on Dr. Sara's phone and turn on notifications (3 minutes)
+
+- **iPhone:** open the link in **Safari** → Share button → **Add to Home Screen** → **Add**. Open the app
+  **from the Home Screen icon** (notifications only work there) → sign in as `dr.sara@derma.demo` →
+  **My account** (in "More") → **Turn on for this device** → **Allow**. Then **Send a test notification**.
+- **Android:** open the link in Chrome → sign in → **My account** → **Turn on for this device** → **Allow**.
+
+The lock screen only shows the patient's **initials**, the **service** and the **time**: never the name,
+phone number or anything medical. Each person can switch types off under "What do you want to get?".
+
+### D4. Try it (the "done when" check)
+
+1. **Your phone (as a patient):** open `…vercel.app/book`. You see the blue _"Demo mode"_ label.
+   Choose **Riyadh** → **Botox** → **Dr. Sarah Al-Otaibi** (or "Female doctor") → a day → a time →
+   your name, a fake mobile like `0598000123` → **Send verification code** → the code appears on screen →
+   type it → **Confirm booking**.
+2. **Dr. Sara's phone** gets a notification: _"New booking · ع. س. · بوتوكس · 25/10 11:00"_.
+3. **Laptop (reception):** `reception.riyadh1@derma.demo` → **Calendar** → that day: the booking has the
+   🌐 **Online** badge.
+4. **Your phone:** tap **Open my page** (or open `/my` and sign in with the same mobile + a new code). You see
+   the appointment and _"Consents needed before your visit"_ → **Sign now** → sign with your finger → tick
+   "I have read…" → **Confirm signature**.
+5. **Laptop:** open the appointment → it says _"Consent already signed on the patient page ✓"_ → **Check in**
+   goes straight through (no consent screen).
+
+Ready-made: patient **D-0007** (mobile `0500010007`) has an online Botox booking and an unsigned consent;
+**D-0012** has an online consultation today with Dr. Sara.
+
+### Online booking settings
+
+Sign in as `admin@derma.demo` → **Settings** → **Online booking**: the booking link with **Copy** and
+**Download QR code** (print it for reception), on/off, how far ahead, minimum notice, cancellation window,
+"needs approval" (bookings then wait under **Requests** for Approve / Reject) and "show prices".
+Below: which services are bookable online, and each doctor's gender (for "female / male doctor").
+
+**Safety rule:** codes are shown on screen only when the clinic is a demo clinic **and** `MESSAGE_DEMO_MODE=on`.
+A real clinic never shows codes; without a real WhatsApp/SMS sender (Phase 2b) its booking page says it
+can't send a code and asks the patient to contact the clinic.
+
+---
+
 ## Demo accounts (Derma Clinics)
 
 All use your demo staff password.

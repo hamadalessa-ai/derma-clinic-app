@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { decideRequestAction } from "@/app/actions/clinic";
+import { decideRequestAction, statusAction } from "@/app/actions/clinic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormError } from "./form-message";
@@ -35,6 +35,36 @@ export function RequestActions({ requestId }: { requestId: string }) {
           disabled={pending}
           onClick={() =>
             run(() => decideRequestAction({ requestId, approve: false, note: note || undefined }))
+          }
+        >
+          {t("reject")}
+        </Button>
+      </div>
+      <FormError message={error} />
+    </div>
+  );
+}
+
+/** Approve or reject an online booking that awaits approval ("pending"). */
+export function PendingBookingActions({ appointmentId }: { appointmentId: string }) {
+  const t = useTranslations("calendar");
+  const { run, pending, error } = useAction();
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          disabled={pending}
+          data-testid="approve"
+          onClick={() => run(() => statusAction({ appointmentId, to: "confirmed" }))}
+        >
+          {t("approve")}
+        </Button>
+        <Button
+          variant="outline"
+          disabled={pending}
+          data-testid="reject"
+          onClick={() =>
+            run(() => statusAction({ appointmentId, to: "cancelled", reason: t("rejectedReason") }))
           }
         >
           {t("reject")}

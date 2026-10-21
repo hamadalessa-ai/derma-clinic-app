@@ -96,11 +96,12 @@ for (const r of ROLES) {
     await expect(page.getByText(r.role).first()).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(r.nameAr);
 
-    // Patients: Derma's 40 fake patients only, never Lamsa's (file numbers L-xxxx).
+    // Patients: Derma's 40 fake patients (plus any booked online by other tests), never Lamsa's.
     await page.goto("/patients");
     if (r.patients) {
       await expect(page.getByRole("heading", { name: "المرضى" })).toBeVisible();
-      await expect(page.locator("tbody tr")).toHaveCount(40);
+      await expect(page.getByText("D-0040")).toBeVisible();
+      expect(await page.locator("tbody tr").count()).toBeGreaterThanOrEqual(40);
       await expect(page.getByText("D-0001")).toBeVisible();
       await expect(page.getByText(/^L-\d{4}$/)).toHaveCount(0);
     } else {
