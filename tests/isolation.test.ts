@@ -280,13 +280,16 @@ describe("withTenant()", () => {
 });
 
 describe("every table, with real data in both clinics (full staff context)", () => {
-  /** Like rawAs, but also tells Postgres the user may see all branches and has all roles. */
+  /**
+   * Like rawAs, but also tells Postgres the user may see all branches and has all roles.
+   * The user is the clinic's admin (push devices and notification choices are visible to their owner only).
+   */
   async function staffAs<T>(tenantId: string, fn: (tx: postgres.TransactionSql) => Promise<T>) {
     return raw.begin(async (tx) => {
       await tx`select set_config('app.tenant_id', ${tenantId}, true),
                       set_config('app.branch_ids', '*', true),
                       set_config('app.roles', 'clinic_admin,practitioner,receptionist', true),
-                      set_config('app.user_id', 'usr_test', true)`;
+                      set_config('app.user_id', ${tenantId === A ? "usr_derma-admin" : "usr_lamsa-admin"}, true)`;
       return fn(tx);
     }) as Promise<T>;
   }

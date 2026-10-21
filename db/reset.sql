@@ -17,13 +17,18 @@ drop table if exists
   public.departments,
   public.devices,
   public.files,
+  public.notification_prefs,
+  public.outbound_messages,
   public.package_payments,
   public.package_session_events,
   public.package_templates,
   public.patient_consents,
   public.patient_medical_flags,
   public.patient_packages,
+  public.patient_sessions,
   public.patients,
+  public.push_subscriptions,
+  public.rate_limit_hits,
   public.reschedule_requests,
   public.reservations,
   public.rooms,
@@ -35,13 +40,17 @@ drop table if exists
   public.tenants,
   public.time_blocks,
   public.users,
+  public.verification_codes,
   public.verifications
   cascade;
-drop type if exists public.appointment_status, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.request_status, public.session_event_kind;
+drop type if exists public.appointment_status, public.booking_source, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.request_status, public.session_event_kind;
 drop function if exists public.app_branch_allowed;
 drop function if exists public.app_current_tenant;
 drop function if exists public.app_current_user;
 drop function if exists public.app_has_role;
+drop function if exists public.app_is_patient;
+drop function if exists public.app_patient;
+drop function if exists public.app_patient_scope;
 drop function if exists public.apply_package_session_event;
 drop function if exists public.demo_workday;
 drop function if exists public.guard_clinical_note;

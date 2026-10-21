@@ -3,7 +3,7 @@
  * working days relative to an anchor day (setup day, or "Refresh demo week" = today).
  * ALL FAKE. dayIndex: -3 … +4 working days (Fridays skipped by public.demo_workday()).
  */
-import { DERMA, DERMA_SERVICES, WORK_HOURS } from "./seed-data";
+import { DERMA, DERMA_SERVICES, ONLINE_SERVICES, WORK_HOURS } from "./seed-data";
 
 export interface DemoAppointment {
   key: string;
@@ -19,6 +19,7 @@ export interface DemoAppointment {
   durationMinutes: number;
   bufferMinutes: number;
   note?: string;
+  source?: "reception" | "online";
 }
 
 export interface DemoTimeBlock {
@@ -91,7 +92,21 @@ const FIXED: Omit<
     status: "confirmed",
     note: "مع وليّ الأمر",
   },
+  // Booked online for Botox, injectables consent NOT signed yet: the patient can sign it on /my.
+  {
+    dayIndex: 1,
+    time: "11:00",
+    doctorKey: "derma-dr-sara",
+    branchKey: "riyadh",
+    patientFile: "D-0007",
+    serviceCode: "botox",
+    status: "booked",
+    source: "online",
+  },
 ];
+
+/** Services patients may book online at Derma (generated online bookings use only these). */
+const ONLINE_CODES = new Set(ONLINE_SERVICES.derma);
 
 const ROTATION: Record<string, string[]> = {
   "derma-dr-sara": [
@@ -230,6 +245,11 @@ export function generateDemoWeek(): DemoAppointment[] {
             patientFile: pool[(n * 7 + d * 3) % pool.length],
             serviceCode,
             status: statusFor(dayIndex, order, n),
+            // About one in four upcoming bookings came from the online booking page.
+            source:
+              dayIndex >= 0 && n % 4 === 1 && ONLINE_CODES.has(serviceCode)
+                ? "online"
+                : "reception",
           },
           cursor,
         );

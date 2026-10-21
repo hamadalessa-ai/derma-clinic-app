@@ -16,13 +16,17 @@ export async function loadConsentRecord(id: string) {
     const consent = await getConsent(tx, id);
     if (!consent) return null;
     const [patient] = await tx.select().from(patients).where(eq(patients.id, consent.patientId));
-    const [witness] = await tx.select().from(users).where(eq(users.id, consent.witnessUserId));
+    // Signed by the patient on the patient page: there is no clinic witness.
+    const [witness] = consent.witnessUserId
+      ? await tx.select().from(users).where(eq(users.id, consent.witnessUserId))
+      : [];
     const signature = await getFileStore().get({ tx }, consent.signatureFileId);
     return {
       tenant: ctx.tenant,
       consent,
       patient,
       witnessName: witness?.name ?? consent.witnessUserId,
+      signedVia: consent.signedVia,
       signature,
       intact: isIntact(consent),
       signedAtAr: `${formatDualDate(consent.signedAt, "ar")} · ${formatTime(consent.signedAt, "ar")}`,
