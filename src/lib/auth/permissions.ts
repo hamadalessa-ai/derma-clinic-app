@@ -74,3 +74,31 @@ export const NAV_ITEMS = [
   { href: "/settings", key: "settings", permission: "settings:manage" },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly { href: string; key: string; permission: Permission }[];
+
+/** Pages that matter most on a phone, in order. The first ones a role may see go in the bottom bar. */
+export const MOBILE_PRIORITY = [
+  "myDay",
+  "calendar",
+  "patients",
+  "requests",
+  "clinicalNotes",
+  "dashboard",
+  "platform",
+  "services",
+  "settings",
+] as const;
+
+/**
+ * Splits the SAME allowed navigation items as the desktop sidebar into the phone's bottom bar
+ * (at most `max`) and the "More" menu. Nothing is dropped: every item ends up in one of the two.
+ */
+export function splitForMobile<T extends { key: string }>(items: readonly T[], max = 4) {
+  const rank = (k: string) => {
+    const i = (MOBILE_PRIORITY as readonly string[]).indexOf(k);
+    return i === -1 ? MOBILE_PRIORITY.length : i;
+  };
+  const sorted = [...items].sort((a, b) => rank(a.key) - rank(b.key));
+  // With max+1 items or fewer, show them all in the bar (no "More" needed).
+  if (sorted.length <= max + 1) return { bar: sorted, more: [] as T[] };
+  return { bar: sorted.slice(0, max), more: sorted.slice(max) };
+}

@@ -29,7 +29,9 @@
     "calendar": "التقويم",
     "myDay": "يومي",
     "requests": "طلبات التعديل",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "more": "المزيد",
+    "mainMenu": "القائمة الرئيسية"
   },
   "roles": {
     "platform_owner": "مالك المنصة",

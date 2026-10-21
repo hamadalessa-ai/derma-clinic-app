@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { can, NAV_ITEMS, PERMISSIONS, ROLES, type Permission, type Role } from "./permissions";
+import {
+  can,
+  NAV_ITEMS,
+  PERMISSIONS,
+  ROLES,
+  splitForMobile,
+  type Permission,
+  type Role,
+} from "./permissions";
 
 // The full truth table. If you change a permission, change this table on purpose.
 const EXPECTED: Record<Permission, Record<Role, boolean>> = {
@@ -162,5 +170,34 @@ describe("role permissions", () => {
 
   it("every sidebar page is guarded by a known permission", () => {
     for (const item of NAV_ITEMS) expect(PERMISSIONS[item.permission]).toBeDefined();
+  });
+});
+
+describe("phone navigation", () => {
+  const itemsFor = (roles: Role[]) => NAV_ITEMS.filter((i) => can(roles, i.permission));
+
+  it.each([
+    [["practitioner"], ["myDay", "calendar", "patients", "clinicalNotes"]],
+    [["receptionist"], ["calendar", "patients", "requests", "dashboard", "services"]],
+    [["clinic_admin"], ["calendar", "patients", "requests", "dashboard"]],
+    [["platform_owner"], ["dashboard", "platform"]],
+  ] as [Role[], string[]][])("%s: the bottom bar shows the most-used pages", (roles, expected) => {
+    expect(splitForMobile(itemsFor(roles)).bar.map((i) => i.key)).toEqual(expected);
+  });
+
+  it("never drops a page: bar + More = exactly the desktop items, for every role combination", () => {
+    const combos: Role[][] = [
+      ["practitioner"],
+      ["receptionist"],
+      ["clinic_admin"],
+      ["platform_owner"],
+      ["clinic_admin", "practitioner"],
+    ];
+    for (const roles of combos) {
+      const items = itemsFor(roles);
+      const { bar, more } = splitForMobile(items);
+      expect([...bar, ...more].map((i) => i.href).sort()).toEqual(items.map((i) => i.href).sort());
+      expect(bar.length).toBeLessThanOrEqual(5);
+    }
   });
 });

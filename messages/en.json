@@ -29,7 +29,9 @@
     "calendar": "Calendar",
     "myDay": "My Day",
     "requests": "Requests",
-    "settings": "Settings"
+    "settings": "Settings",
+    "more": "More",
+    "mainMenu": "Main menu"
   },
   "roles": {
     "platform_owner": "Platform owner",

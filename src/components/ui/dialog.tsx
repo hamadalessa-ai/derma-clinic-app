@@ -13,6 +13,7 @@ export function Dialog({
   children,
   className,
   closeLabel = "Close",
+  placement = "center",
 }: {
   open: boolean;
   onClose: () => void;
@@ -20,6 +21,8 @@ export function Dialog({
   children: React.ReactNode;
   className?: string;
   closeLabel?: string;
+  /** "bottom": a sheet that slides up from the bottom edge (phone menus). */
+  placement?: "center" | "bottom";
 }) {
   const ref = React.useRef<HTMLDialogElement>(null);
   // Only a close the USER started (Esc, close button) should call onClose — not one we do
@@ -43,7 +46,10 @@ export function Dialog({
         onClose();
       }}
       className={cn(
-        "bg-card text-card-foreground shadow-card backdrop:bg-foreground/40 m-auto max-h-[92vh] w-[min(100vw-1rem,40rem)] overflow-y-auto rounded-xl border p-0",
+        "bg-card text-card-foreground shadow-card backdrop:bg-foreground/40 max-h-[92vh] overflow-y-auto border p-0",
+        placement === "bottom"
+          ? "mx-0 mt-auto mb-0 w-full max-w-none rounded-t-2xl pb-[env(safe-area-inset-bottom)]"
+          : "m-auto w-[min(100vw-1rem,40rem)] rounded-xl",
         className,
       )}
     >

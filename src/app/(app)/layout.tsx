@@ -4,6 +4,7 @@ import { signOut } from "@/app/actions/auth";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BranchSwitcher } from "@/components/shell/branch-switcher";
 import { DemoBanner } from "@/components/shell/demo-banner";
+import { MobileNav } from "@/components/shell/mobile-nav";
 import { NavLinks } from "@/components/shell/nav-links";
 import { Button } from "@/components/ui/button";
 import { can, NAV_ITEMS } from "@/lib/auth/permissions";
@@ -53,16 +54,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </form>
           </div>
         </div>
-        <div className="md:hidden">
-          <NavLinks items={items} orientation="horizontal" />
-        </div>
       </header>
       <div className="flex flex-1">
         <aside className="bg-card hidden w-60 shrink-0 border-e p-3 md:block">
           <NavLinks items={items} orientation="vertical" />
         </aside>
-        <main className="min-w-0 flex-1 p-4 md:p-6">{children}</main>
+        {/* Bottom padding on phones so the bottom menu never covers content. */}
+        <main className="min-w-0 flex-1 p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:p-6">
+          {children}
+        </main>
       </div>
+      <MobileNav items={items} />
     </div>
   );
 }
