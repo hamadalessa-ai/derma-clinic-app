@@ -3,7 +3,8 @@ import { inArray } from "drizzle-orm";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
-import { RequestActions } from "@/components/clinic/request-actions";
+import { PendingBookingActions, RequestActions } from "@/components/clinic/request-actions";
+import { SourceBadge } from "@/components/clinic/badges";
 import { users } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
@@ -19,12 +20,19 @@ export default async function RequestsPage() {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("requests");
   const tc = await getTranslations("common");
+  const tsrc = await getTranslations("sources");
 
   const data = await withActor(actorOf(ctx), async (tx) => {
     const reqs = await pendingRequests(tx);
-    const appts = (
-      await loadAppointments(tx, { from: new Date("2000-01-01"), to: new Date("2100-01-01") })
-    ).filter((a) => reqs.some((r) => r.appointmentId === a.id));
+    const all = await loadAppointments(tx, {
+      from: new Date("2000-01-01"),
+      to: new Date("2100-01-01"),
+    });
+    const appts = all.filter((a) => reqs.some((r) => r.appointmentId === a.id));
+    // Online bookings waiting for approval (clinics with "approval required" switched on).
+    const pendingBookings = all
+      .filter((a) => a.status === "pending" && new Date(a.startsAt) > new Date())
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     const requesters = reqs.length
       ? await tx
           .select()
@@ -36,7 +44,7 @@ export default async function RequestsPage() {
             ),
           )
       : [];
-    return { reqs, appts, requesters };
+    return { reqs, appts, requesters, pendingBookings };
   });
   const today = riyadhDay(new Date());
   const windowFrom = dayRange(today)[0];
@@ -47,7 +55,32 @@ export default async function RequestsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
-      {data.reqs.length === 0 && (
+      {data.pendingBookings.length > 0 && (
+        <h2 className="text-base font-semibold">{t("pendingBookings")}</h2>
+      )}
+      {data.pendingBookings.map((a) => (
+        <Card key={a.id} data-testid="pending-booking">
+          <CardContent className="flex flex-col gap-2 pt-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-base font-semibold">
+              <SourceBadge source={a.source} label={tsrc(a.source)} />
+              {pick(locale, a.patient.nameAr, a.patient.nameEn)} ·{" "}
+              {locale === "en" ? a.serviceNameEn : a.serviceNameAr}
+            </div>
+            <div>
+              <strong>{when(new Date(a.startsAt))}</strong>
+              <span className="text-muted-foreground" dir="ltr">
+                {" "}
+                · {a.patient.fileNumber} · {a.patient.phone}
+              </span>
+            </div>
+            <PendingBookingActions appointmentId={a.id} />
+          </CardContent>
+        </Card>
+      ))}
+      {data.reqs.length > 0 && data.pendingBookings.length > 0 && (
+        <h2 className="text-base font-semibold">{t("rescheduleRequests")}</h2>
+      )}
+      {data.reqs.length === 0 && data.pendingBookings.length === 0 && (
         <p className="text-muted-foreground py-8 text-center">{t("empty")}</p>
       )}
       {data.reqs.map((r) => {

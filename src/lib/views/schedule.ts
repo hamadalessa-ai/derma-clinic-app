@@ -29,6 +29,10 @@ export interface ApptView {
   endsAt: string;
   blockedUntil: string;
   status: AppointmentStatus;
+  /** Where the booking came from: reception, online (/book) or WhatsApp. */
+  source: "reception" | "online" | "whatsapp";
+  /** Patient created online, details still to complete at reception. */
+  needsCompletion: boolean;
   practitionerId: string;
   roomId: string;
   deviceNameAr: string | null;
@@ -168,6 +172,8 @@ export async function loadAppointments(
       endsAt: a.endsAt.toISOString(),
       blockedUntil: a.blockedUntil.toISOString(),
       status: a.status,
+      source: a.source,
+      needsCompletion: p.needsCompletion,
       practitionerId: a.practitionerId,
       roomId: a.roomId,
       deviceNameAr: d?.nameAr ?? null,

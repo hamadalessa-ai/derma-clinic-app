@@ -234,7 +234,11 @@
     "patientSelected": "Selected patient",
     "change": "Change",
     "statusChanged": "Status updated",
-    "newPatient": "New patient"
+    "newPatient": "New patient",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectedReason": "Rejected by the clinic",
+    "needsCompletion": "Online booking by a new patient: complete their details (ID, date of birth) on arrival."
   },
   "consent": {
     "sign": "Sign consent",
@@ -389,7 +393,9 @@
     "requestedBy": "Requested by",
     "approvedOk": "Approved and moved",
     "rejectedOk": "Request rejected",
-    "note": "Note (optional)"
+    "note": "Note (optional)",
+    "pendingBookings": "Online bookings awaiting approval",
+    "rescheduleRequests": "Doctors' reschedule requests"
   },
   "settings": {
     "title": "Clinic settings",
@@ -411,7 +417,31 @@
     "refreshDemoHint": "Moves the demo appointments to surround today and cancels test bookings you added.",
     "refreshedOk": "{moved} appointments moved, {cancelled} test bookings cancelled",
     "on": "On",
-    "off": "Off"
+    "off": "Off",
+    "onlineBooking": "Online booking",
+    "onlineEnabled": "Online booking on",
+    "onlineEnabledHint": "Patients book themselves through the clinic link after verifying their mobile.",
+    "horizonDays": "Book up to (days ahead)",
+    "minNoticeHours": "Minimum notice (hours)",
+    "cancelWindowHours": "Cancel/change until (hours before)",
+    "requiresApproval": "Online bookings need reception approval",
+    "requiresApprovalHint": "Bookings start as \"Awaiting approval\" and hold the time until reception approves or rejects them.",
+    "showPrices": "Show prices on the booking page",
+    "showPricesHint": "When off, patients don't see prices.",
+    "save": "Save",
+    "onlineServices": "Services bookable online",
+    "onlineServicesHint": "Saved as soon as you tap.",
+    "doctorGender": "Doctors' gender",
+    "doctorGenderHint": "Used for the \"female / male doctor\" choice on the booking page.",
+    "gender": "Gender",
+    "genderUnset": "Not set",
+    "female": "Female",
+    "male": "Male",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "downloadQr": "Download QR code",
+    "qrAlt": "QR code for the booking link",
+    "bookingLinkHint": "Share the link on WhatsApp or Instagram, or print the QR code for reception."
   },
   "book": {
     "title": "Book your appointment",
@@ -458,5 +488,10 @@
     "priceFrom": "{price}",
     "privacy": "Your details are used for booking only. This is a demo — don't enter real data.",
     "myLink": "Already booked? Patient page"
+  },
+  "sources": {
+    "reception": "Reception",
+    "online": "Online",
+    "whatsapp": "WhatsApp"
   }
 }

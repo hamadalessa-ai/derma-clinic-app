@@ -6,7 +6,7 @@ import { CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ApptView, BlockView } from "@/lib/views/schedule";
 import { cn } from "@/lib/utils";
-import { AlertBadge, BalanceBadge } from "./badges";
+import { AlertBadge, BalanceBadge, SourceBadge } from "./badges";
 import { AppointmentDialog, type AppointmentPermissions } from "./appointment-dialog";
 import { BookingDialog, type PickOption, type ServiceOption } from "./booking-dialog";
 import { BLOCKED_CLASSES, STATUS_CLASSES } from "./status";
@@ -60,6 +60,7 @@ export function CalendarBoard({
 }) {
   const t = useTranslations("calendar");
   const ts = useTranslations("statuses");
+  const tsrc = useTranslations("sources");
   const locale = useLocale();
   // Keep only the id: after a change the page reloads and we show the fresh appointment.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -247,6 +248,7 @@ export function CalendarBoard({
                       type="button"
                       data-testid="appointment"
                       data-status={a.status}
+                      data-source={a.source}
                       data-patient={a.patient.fileNumber}
                       onClick={() => setOpenId(a.id)}
                       className={cn(
@@ -254,12 +256,13 @@ export function CalendarBoard({
                         STATUS_CLASSES[a.status],
                       )}
                       style={{ top: y(s), height: Math.max(22, (e - s) * PX_PER_MIN) }}
-                      title={`${riyadhParts(a.startsAt).time} ${a.patient.nameAr} — ${ts(a.status)}`}
+                      title={`${riyadhParts(a.startsAt).time} ${a.patient.nameAr} — ${ts(a.status)}${a.source !== "reception" ? ` · ${tsrc(a.source)}` : ""}`}
                     >
                       <span className="flex min-w-0 items-center gap-1">
                         <span dir="ltr" className="font-semibold">
                           {riyadhParts(a.startsAt).time}
                         </span>
+                        <SourceBadge source={a.source} label={tsrc(a.source)} compact />
                         <AlertBadge alerts={a.alerts} label={t("allergy")} compact />
                         {a.balance && (
                           <BalanceBadge

@@ -22,7 +22,7 @@ import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
 import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
-import { updateSettings } from "@/lib/settings";
+import { setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
 import { parse, staffAction, ValidationError } from "@/lib/actions";
@@ -585,10 +585,52 @@ export async function addAddendumAction(input: {
 
 // ─── Settings ───────────────────────────────────────────────────────────────
 
-export async function updateSettingsAction(input: { doctorsManageOwnSchedule: boolean }) {
+const settingsInput = z.object({
+  doctorsManageOwnSchedule: z.boolean().optional(),
+  onlineBookingEnabled: z.boolean().optional(),
+  onlineHorizonDays: z.number().int().min(1).max(180).optional(),
+  onlineMinNoticeMinutes: z
+    .number()
+    .int()
+    .min(0)
+    .max(7 * 24 * 60)
+    .optional(),
+  cancellationWindowHours: z
+    .number()
+    .int()
+    .min(0)
+    .max(14 * 24)
+    .optional(),
+  onlineRequiresApproval: z.boolean().optional(),
+  showPricesOnline: z.boolean().optional(),
+});
+
+export async function updateSettingsAction(input: z.input<typeof settingsInput>) {
   return staffAction("settings:manage", async (_ctx, actor) => {
-    const v = parse(z.object({ doctorsManageOwnSchedule: z.boolean() }), input);
+    const v = parse(settingsInput, input);
     await withActor(actor, (tx) => updateSettings(tx, actor, v));
+    revalidatePath("/settings");
+    return null;
+  });
+}
+
+export async function setServiceOnlineAction(input: { serviceId: string; online: boolean }) {
+  return staffAction("settings:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ serviceId: uuid, online: z.boolean() }), input);
+    const row = await withActor(actor, (tx) => setServiceOnline(tx, actor, v.serviceId, v.online));
+    if (!row) throw new ValidationError("service not found");
+    revalidatePath("/settings");
+    return null;
+  });
+}
+
+export async function setMemberGenderAction(input: { memberId: string; gender: string }) {
+  return staffAction("settings:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ memberId: uuid, gender: z.enum(["male", "female", ""]) }), input);
+    const row = await withActor(actor, (tx) =>
+      setMemberGender(tx, actor, v.memberId, v.gender || null),
+    );
+    if (!row) throw new ValidationError("member not found");
     revalidatePath("/settings");
     return null;
   });

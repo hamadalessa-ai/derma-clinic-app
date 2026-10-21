@@ -92,6 +92,17 @@ const FIXED: Omit<
     status: "confirmed",
     note: "مع وليّ الأمر",
   },
+  // Today: booked online (shows the "online" badge on the reception calendar and My Day).
+  {
+    dayIndex: 0,
+    time: "18:30",
+    doctorKey: "derma-dr-sara",
+    branchKey: "riyadh",
+    patientFile: "D-0012",
+    serviceCode: "consultation",
+    status: "booked",
+    source: "online",
+  },
   // Booked online for Botox, injectables consent NOT signed yet: the patient can sign it on /my.
   {
     dayIndex: 1,
