@@ -22,7 +22,11 @@ export function Dialog({
   closeLabel?: string;
 }) {
   const ref = React.useRef<HTMLDialogElement>(null);
+  // Only a close the USER started (Esc, close button) should call onClose — not one we do
+  // ourselves because `open` became false (e.g. swapping to another dialog).
+  const wanted = React.useRef(open);
   React.useEffect(() => {
+    wanted.current = open;
     const el = ref.current;
     if (!el) return;
     if (open && !el.open) el.showModal();
@@ -31,7 +35,9 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
+      onClose={() => {
+        if (wanted.current) onClose();
+      }}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
