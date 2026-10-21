@@ -116,3 +116,27 @@ describe("migration statement order", () => {
     expect(out.indexOf("CREATE TABLE")).toBe(0);
   });
 });
+
+describe("db/reset.sql", () => {
+  it("is up to date (run `pnpm db:build-setup`)", async () => {
+    const { buildResetSql } = await import("@/db/reset-sql");
+    expect(readFileSync(path.resolve(__dirname, "../db/reset.sql"), "utf8")).toBe(buildResetSql());
+  });
+
+  it("removes every table, type and function that setup creates", async () => {
+    const { buildResetSql, schemaTables, schemaEnums } = await import("@/db/reset-sql");
+    const reset = buildResetSql();
+    expect(schemaTables().length).toBeGreaterThanOrEqual(30);
+    for (const t of schemaTables()) expect(reset).toContain(`public.${t}`);
+    for (const e of schemaEnums()) expect(reset).toContain(`public.${e}`);
+    for (const f of [
+      "app_current_tenant",
+      "app_branch_allowed",
+      "sync_appointment_reservations",
+      "demo_workday",
+      "normalize_search",
+    ]) {
+      expect(reset).toContain(`public.${f};`);
+    }
+  });
+});

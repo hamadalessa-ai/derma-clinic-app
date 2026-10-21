@@ -84,13 +84,66 @@ The app runs in Vercel's Mumbai region (set in `vercel.json`), next to your Mumb
 ### Later updates
 
 Every time new work is merged into the `main` branch on GitHub, Vercel updates the site automatically.
-If a phase changes the database, I'll give you a numbered `db/upgrades/...sql` file to run in the
-SQL Editor first, the same way as Part A.
+While we only have fake demo data, a phase that changes the database is installed by **resetting the demo
+data** (Part C below). Once real clinics use the system, we'll switch to numbered `db/upgrades/…sql` files
+that keep existing data.
 
 ### Changing a secret
 
 Vercel → your project → **Settings → Environment Variables** → edit → then **Deployments** →
 the latest one → **⋯ → Redeploy**. Changes only apply after a redeploy.
+
+---
+
+## Part C — Updating the live demo to Phase 1
+
+The live database has Phase 0 tables. Phase 1 adds many new ones, so we **reset the demo data and set it
+up again** (everything is fake, nothing real is lost). About 5 minutes, all in the browser.
+**Nothing changes in Vercel** if you reuse your app database password.
+
+Do it **right after merging** the Phase 1 pull request (Vercel publishes the new app within ~2 minutes;
+until the database is updated, the live link shows errors).
+
+1. On GitHub, merge the Phase 1 pull request (**Merge pull request → Confirm merge**).
+2. Supabase → **SQL Editor** → **+ New query**. Open **`db/reset.sql`** on GitHub (branch `main`), click
+   **Copy raw file**, paste, and click **Run**. Supabase warns that the query is destructive — confirm.
+   Expected: _"Reset complete. Now run db/setup.sql."_
+3. **+ New query** again. Copy **`db/setup.sql`** from GitHub (`main`), paste, and in **STEP 1** put:
+   - `CHANGE_ME_APP_DB_PASSWORD` → the **same app database password as last time** (the one inside your
+     Vercel `DATABASE_URL`). Then Vercel needs no change.
+   - `CHANGE_ME_DEMO_PASSWORD` → your demo staff password (same or new).
+
+   Click **Run**. Expected: _"Setup complete. You can now add DATABASE_URL to Vercel."_
+
+4. Close both query tabs **without saving** (the second contains passwords).
+5. Open the Vercel link and sign in. Done.
+
+**Lost the app database password?** In step 3 choose a new one, then in Vercel → Settings → Environment
+Variables edit `DATABASE_URL` (replace the password part), and **Redeploy** (Deployments → latest → ⋯ → Redeploy).
+
+**Before showing the demo on another day:** sign in as `admin@derma.demo` → **Settings** → **Refresh demo
+week**. The demo appointments move so they surround today again (your test bookings are cancelled).
+On a Friday (clinic closed) "today" becomes Saturday.
+
+### Try the full workflow (about 5 minutes)
+
+Use two devices: your laptop for **reception**, your phone for **Dr. Sara**.
+
+1. **Laptop:** sign in as `reception.riyadh1@derma.demo` → **التقويم** (Calendar) → **حجز جديد** (New booking). Search
+   `D-0016`, choose **التقشير الكيميائي** (Chemical Peeling), doctor **د. سارة العتيبي**, press **أقرب موعد متاح**
+   (Next free slot), tap a time, **احجز** (Book). (To see a package balance drop, first open the patient → **Packages** → sell the
+   _Chemical Peeling — 4 sessions_ package.)
+2. **Phone:** sign in as `dr.sara@derma.demo` → **My Day**: the new patient appears (use the arrows if the
+   slot is another day). Tip: browser menu → **Add to Home screen** installs it like an app.
+3. **Laptop:** tap the appointment → **Check in** → the consent form opens → the patient signs on the
+   screen → **Confirm signature**. You see "one session deducted — 3 of 4 left" and the status becomes
+   **Arrived**.
+4. **Phone:** My Day updates by itself within ~15 seconds → **Start** → **Visit note** → **New note** →
+   write → **Sign note**.
+5. Patient profile → **Consents** → **Print view** (perfect Arabic, "Print / Save as PDF") or **Download PDF**.
+
+Ready-made story for today: **D-0002** has a laser hair-removal package (3 of 6 used) and is booked with
+Dr. Sara at 17:00 without a signed laser consent — check her in to see the consent + deduction straight away.
 
 ---
 

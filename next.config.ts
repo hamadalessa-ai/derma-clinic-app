@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@react-pdf/renderer", "fontkit", "sharp"],
   // The PDF route reads the Arabic font files from disk: make sure Vercel ships them.
   outputFileTracingIncludes: {
-    "/consents/*": ["src/lib/pdf/fonts/**/*"],
+    "/consents/**": ["src/lib/pdf/fonts/**/*"],
   },
   turbopack: {
     rules: {
