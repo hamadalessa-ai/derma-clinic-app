@@ -50,7 +50,9 @@
     "departments": "Departments",
     "inBranch": "in {branch}",
     "active": "Active",
-    "inactive": "Not active yet"
+    "inactive": "Not active yet",
+    "mainLink": "Main clinic link",
+    "mainLinkHint": "Always use this link (not Vercel's per-deployment snapshot links)."
   },
   "patients": {
     "title": "Patients",

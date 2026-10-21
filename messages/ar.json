@@ -50,7 +50,9 @@
     "departments": "الأقسام",
     "inBranch": "في {branch}",
     "active": "مفعّل",
-    "inactive": "غير مفعّل بعد"
+    "inactive": "غير مفعّل بعد",
+    "mainLink": "الرابط الرئيسي للعيادة",
+    "mainLinkHint": "استخدم هذا الرابط دائمًا (وليس روابط النسخ المؤقتة في Vercel)."
   },
   "patients": {
     "title": "المرضى",
