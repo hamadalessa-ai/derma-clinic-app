@@ -78,8 +78,8 @@ export default async function PatientsPage({
                 <TableHead>{t("fileNumber")}</TableHead>
                 <TableHead>{t("name")}</TableHead>
                 <TableHead>{t("phone")}</TableHead>
-                <TableHead>{t("gender")}</TableHead>
-                <TableHead>{t("dateOfBirth")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("gender")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("dateOfBirth")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -97,8 +97,8 @@ export default async function PatientsPage({
                   <TableCell>
                     <span dir="ltr">{p.phone}</span>
                   </TableCell>
-                  <TableCell>{t(p.gender)}</TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="hidden sm:table-cell">{t(p.gender)}</TableCell>
+                  <TableCell className="hidden whitespace-nowrap sm:table-cell">
                     {p.dateOfBirth
                       ? formatGregorian(new Date(`${p.dateOfBirth}T12:00:00Z`), locale, "medium")
                       : ""}

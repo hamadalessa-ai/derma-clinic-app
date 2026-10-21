@@ -44,11 +44,11 @@ export default async function ServicesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("name")}</TableHead>
-                <TableHead>{t("department")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("department")}</TableHead>
                 <TableHead>{t("duration")}</TableHead>
-                <TableHead>{t("buffer")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("buffer")}</TableHead>
                 <TableHead>{t("price")}</TableHead>
-                <TableHead>{t("device")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("device")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,19 +62,19 @@ export default async function ServicesPage() {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="hidden whitespace-nowrap sm:table-cell">
                     {pick(locale, d.nameAr, d.nameEn)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     {t("minutes", { count: s.durationMinutes })}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="hidden whitespace-nowrap sm:table-cell">
                     {t("minutes", { count: s.bufferMinutes })}
                   </TableCell>
                   <TableCell className="font-semibold whitespace-nowrap">
                     {formatSAR(s.priceHalalas, locale)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="hidden whitespace-nowrap sm:table-cell">
                     {s.requiredDeviceType ? tDevices(s.requiredDeviceType) : t("none")}
                   </TableCell>
                 </TableRow>

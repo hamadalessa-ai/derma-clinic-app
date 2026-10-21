@@ -10,7 +10,7 @@ import { AlertBadge, BalanceBadge } from "./badges";
 import { AppointmentDialog, type AppointmentPermissions } from "./appointment-dialog";
 import { BookingDialog, type PickOption, type ServiceOption } from "./booking-dialog";
 import { BLOCKED_CLASSES, STATUS_CLASSES } from "./status";
-import { hhmm, riyadhParts } from "./time";
+import { hhmm, riyadhParts, todayRiyadh } from "./time";
 
 export interface BoardColumn {
   key: string;
@@ -63,6 +63,14 @@ export function CalendarBoard({
   const locale = useLocale();
   // Keep only the id: after a change the page reloads and we show the fresh appointment.
   const [openId, setOpenId] = useState<string | null>(null);
+  // Which column a phone shows: the signed-in doctor's own column, else the first one.
+  // Week view: today's column; day view: the signed-in doctor's own column; else the first.
+  const [focus, setFocus] = useState(() => {
+    const today = columns.findIndex((c) => c.day === todayRiyadh());
+    const own = columns.findIndex((c) => c.doctorId && c.doctorId === memberId);
+    const byDay = new Set(columns.map((c) => c.day)).size > 1;
+    return Math.max(0, byDay ? today : own);
+  });
   const open = openId
     ? (columns.flatMap((c) => c.appointments).find((a) => a.id === openId) ?? null)
     : null;
@@ -88,8 +96,32 @@ export function CalendarBoard({
           {t("newBooking")}
         </Button>
       )}
+      {/* Phones show one column at a time; these buttons wrap (no sideways scrolling). */}
+      {columns.length > 1 && (
+        <div
+          className="flex flex-wrap gap-2 md:hidden"
+          role="tablist"
+          aria-label={t("selectDoctor")}
+          data-testid="column-picker"
+        >
+          {columns.map((col, i) => (
+            <Button
+              key={col.key}
+              type="button"
+              size="sm"
+              role="tab"
+              aria-selected={i === focus}
+              variant={i === focus ? "default" : "outline"}
+              onClick={() => setFocus(i)}
+            >
+              {col.title}
+              <span className="opacity-70">({col.appointments.length})</span>
+            </Button>
+          ))}
+        </div>
+      )}
       <div className="bg-card overflow-x-auto rounded-xl border" data-testid="calendar-board">
-        <div className="flex min-w-max">
+        <div className="flex md:min-w-max">
           {/* time axis */}
           <div className="bg-card sticky start-0 z-10 w-14 shrink-0 border-e">
             <div className="h-12 border-b" />
@@ -107,10 +139,13 @@ export function CalendarBoard({
             </div>
           </div>
 
-          {columns.map((col) => (
+          {columns.map((col, i) => (
             <div
               key={col.key}
-              className="w-44 shrink-0 border-e last:border-e-0 md:w-52"
+              className={cn(
+                "border-e last:border-e-0 md:block md:w-52 md:flex-none md:shrink-0",
+                i === focus ? "min-w-0 flex-1" : "hidden",
+              )}
               data-testid="calendar-column"
               data-column={col.title}
             >
