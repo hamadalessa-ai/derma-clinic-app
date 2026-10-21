@@ -133,7 +133,8 @@
     "code_expired": "The code has expired or wasn't sent. Ask for a new code.",
     "wrong_code": "That code isn't right. Try again.",
     "too_many_attempts": "Too many tries. Ask for a new code.",
-    "patient_signed_out": "Your session has ended. Please sign in again."
+    "patient_signed_out": "Your session has ended. Please sign in again.",
+    "no_patient_file": "There's no patient file with this number. Book an appointment first or contact the clinic."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -238,7 +239,10 @@
     "approve": "Approve",
     "reject": "Reject",
     "rejectedReason": "Rejected by the clinic",
-    "needsCompletion": "Online booking by a new patient: complete their details (ID, date of birth) on arrival."
+    "needsCompletion": "Online booking by a new patient: complete their details (ID, date of birth) on arrival.",
+    "consentSigned": "Consent already signed ✓",
+    "consentSignedOnline": "Consent already signed on the patient page ✓",
+    "consentNeeded": "This service needs a signed consent at check-in."
   },
   "consent": {
     "sign": "Sign consent",
@@ -493,5 +497,47 @@
     "reception": "Reception",
     "online": "Online",
     "whatsapp": "WhatsApp"
+  },
+  "my": {
+    "title": "My page",
+    "signInTitle": "Patient page sign-in",
+    "signInHint": "Enter the mobile number the clinic has for you and we'll send a sign-in code.",
+    "sendCode": "Send sign-in code",
+    "verify": "Sign in",
+    "signOut": "Sign out",
+    "sessionNote": "You're signed out automatically after 30 minutes.",
+    "hello": "Hello, {name}",
+    "upcoming": "Upcoming appointments",
+    "past": "Past appointments",
+    "noUpcoming": "No upcoming appointments.",
+    "noPast": "No past appointments.",
+    "bookNew": "Book a new appointment",
+    "cancel": "Cancel appointment",
+    "cancelConfirm": "Cancel this appointment?",
+    "yesCancel": "Yes, cancel it",
+    "keep": "No, keep it",
+    "reschedule": "Change time",
+    "pickNewTime": "Pick a new day and time (same doctor)",
+    "moved": "Your appointment was moved.",
+    "cancelled": "Your appointment was cancelled.",
+    "changeWindow": "You can cancel or change up to {hours} hours before the visit.",
+    "tooLate": "To change this appointment, please contact the clinic.",
+    "packages": "Package balances",
+    "noPackages": "No packages.",
+    "sessionsLeft": "{remaining} of {total} sessions left",
+    "validUntil": "Valid until {date}",
+    "consents": "Consents",
+    "toSign": "Consents needed before your visit",
+    "toSignHint": "Sign now to save time when you arrive.",
+    "signedConsents": "Signed consents",
+    "noConsents": "No signed consents.",
+    "signedOn": "Signed on {date}",
+    "viaPortal": "on the patient page",
+    "viaClinic": "at the clinic",
+    "signFor": "Signing for: {name}",
+    "agree": "I have read the full text and agree",
+    "signedOk": "Signature saved. You won't need to sign on arrival.",
+    "family": "Family",
+    "forPerson": "For {name}"
   }
 }

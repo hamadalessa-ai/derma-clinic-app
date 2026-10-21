@@ -147,6 +147,23 @@ export function AppointmentDialog({
             {appt.deviceNameAr &&
               ` · ${tc("device")}: ${locale === "en" ? appt.deviceNameEn : appt.deviceNameAr}`}
           </div>
+          {appt.consent && (
+            <div
+              className={
+                appt.consent.signed
+                  ? "bg-success text-success-foreground rounded-md px-3 py-2"
+                  : "bg-warning text-warning-foreground rounded-md px-3 py-2"
+              }
+              data-testid="consent-status"
+              data-signed={appt.consent.signed}
+            >
+              {appt.consent.signed
+                ? appt.consent.viaPatientPage
+                  ? t("consentSignedOnline")
+                  : t("consentSigned")
+                : t("consentNeeded")}
+            </div>
+          )}
           {appt.needsCompletion && (
             <div
               className="bg-info text-info-foreground rounded-md px-3 py-2"

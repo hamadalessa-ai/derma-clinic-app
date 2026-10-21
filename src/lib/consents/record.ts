@@ -25,7 +25,10 @@ export async function loadConsentRecord(id: string) {
       tenant: ctx.tenant,
       consent,
       patient,
-      witnessName: witness?.name ?? consent.witnessUserId,
+      witnessName:
+        consent.signedVia === "patient_portal"
+          ? "لا يوجد — وقّعه المريض من صفحة المريض قبل الزيارة"
+          : (witness?.name ?? consent.witnessUserId ?? "—"),
       signedVia: consent.signedVia,
       signature,
       intact: isIntact(consent),

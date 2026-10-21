@@ -17,6 +17,7 @@ import {
   timeBlocks,
   users,
 } from "@/db/schema";
+import { consentStatusFor } from "@/lib/consents/consents";
 import { getPatientAlerts, type PatientAlerts } from "@/lib/patients/queries";
 import { balanceFor, packagesForPatients } from "@/lib/packages/packages";
 import type { AppointmentStatus } from "@/lib/booking/status";
@@ -45,6 +46,8 @@ export interface ApptView {
   balance: { remaining: number; total: number } | null;
   note: string | null;
   pendingRequest: { proposedStartsAt: string } | null;
+  /** The consent this service needs (current version), and whether it's signed already. */
+  consent: { signed: boolean; viaPatientPage: boolean } | null;
 }
 
 export interface BlockView {
@@ -144,7 +147,11 @@ export async function loadAppointments(
     )
     .orderBy(asc(appointments.startsAt));
   const patientIds = rows.map((r) => r.p.id);
-  const [alerts, pkgs, requests] = await Promise.all([
+  const [consents, alerts, pkgs, requests] = await Promise.all([
+    consentStatusFor(
+      tx,
+      rows.map((r) => ({ id: r.a.id, patientId: r.p.id, serviceId: r.s.id })),
+    ),
     getPatientAlerts(tx, patientIds),
     packagesForPatients(tx, patientIds),
     rows.length
@@ -192,6 +199,10 @@ export async function loadAppointments(
       balance: bal ? { remaining: bal.remaining, total: bal.total } : null,
       note: a.receptionNote,
       pendingRequest: req ? { proposedStartsAt: req.proposedStartsAt.toISOString() } : null,
+      consent: (() => {
+        const c = consents.get(a.id);
+        return c ? { signed: c.signed, viaPatientPage: c.signedVia === "patient_portal" } : null;
+      })(),
     };
   });
 }
