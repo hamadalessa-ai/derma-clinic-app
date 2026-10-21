@@ -44,6 +44,17 @@ export interface SeedPatient {
   phone: string;
   gender: "male" | "female";
   dateOfBirth: string;
+  idType: "national_id" | "iqama";
+  /** FAKE: 10 digits, national IDs start with 1, Iqamas with 2. */
+  idNumber: string;
+  guardian?: { fileNumber: string; relationAr: string; relationEn: string };
+}
+
+export interface SeedMedicalFlag {
+  fileNumber: string;
+  kind: "allergy" | "contraindication" | "medication";
+  label: string;
+  note?: string;
 }
 
 export interface SeedTenant {
@@ -236,6 +247,7 @@ export function makeFakePatients(
     const year = 1970 + ((n * 13) % 36);
     const month = ((n * 5) % 12) + 1;
     const day = ((n * 11) % 28) + 1;
+    const isIqama = n % 9 === 4; // a few residents
     return {
       fileNumber: `${filePrefix}-${String(i + 1).padStart(4, "0")}`,
       fullNameAr: `${firstAr} ${fatherAr} ${familyAr}`,
@@ -243,9 +255,67 @@ export function makeFakePatients(
       phone: `0500${phonePrefix}${String(i + 1).padStart(4, "0")}`,
       gender: isFemale ? "female" : "male",
       dateOfBirth: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+      idType: isIqama ? "iqama" : "national_id",
+      idNumber: `${isIqama ? 2 : 1}00000${phonePrefix}${String(i + 1).padStart(2, "0")}`,
     };
   });
 }
+
+/** A family: D-0008 (Bandar Al-Ghamdi) is the guardian of his two children. */
+function withFamily(patients: SeedPatient[]): SeedPatient[] {
+  const child = (
+    fileNumber: string,
+    c: Partial<SeedPatient>,
+    relationAr: string,
+    relationEn: string,
+  ) => {
+    const p = patients.find((x) => x.fileNumber === fileNumber)!;
+    Object.assign(p, c, { guardian: { fileNumber: "D-0008", relationAr, relationEn } });
+  };
+  child(
+    "D-0039",
+    {
+      fullNameAr: "ليان بندر الغامدي",
+      fullNameEn: "Layan Bandar Al-Ghamdi",
+      gender: "female",
+      dateOfBirth: "2014-03-09",
+    },
+    "ابنة",
+    "Daughter",
+  );
+  child(
+    "D-0040",
+    {
+      fullNameAr: "سلمان بندر الغامدي",
+      fullNameEn: "Salman Bandar Al-Ghamdi",
+      gender: "male",
+      dateOfBirth: "2011-11-20",
+    },
+    "ابن",
+    "Son",
+  );
+  return patients;
+}
+
+/** Allergies, contraindications and medications (shown as warning badges). */
+export const DERMA_MEDICAL_FLAGS: SeedMedicalFlag[] = [
+  {
+    fileNumber: "D-0001",
+    kind: "allergy",
+    label: "ليدوكايين (مخدر موضعي) · Lidocaine",
+    note: "طفح جلدي سابق",
+  },
+  { fileNumber: "D-0003", kind: "allergy", label: "البنسلين · Penicillin" },
+  { fileNumber: "D-0006", kind: "contraindication", label: "حمل · Pregnancy" },
+  { fileNumber: "D-0010", kind: "medication", label: "إيزوتريتينوين (روكتان) · Isotretinoin" },
+  {
+    fileNumber: "D-0010",
+    kind: "contraindication",
+    label: "لا ليزر ولا تقشير أثناء الروكتان · No laser/peel on isotretinoin",
+  },
+  { fileNumber: "D-0014", kind: "allergy", label: "اللاتكس · Latex" },
+  { fileNumber: "D-0021", kind: "medication", label: "مميعات الدم (وارفارين) · Warfarin" },
+];
 
 // ─── Clinic A: Derma Clinics ────────────────────────────────────────────────
 
@@ -451,7 +521,7 @@ export const DERMA: SeedTenant = {
     ),
   ],
   services: DERMA_SERVICES,
-  patients: makeFakePatients(40, "D", "01"),
+  patients: withFamily(makeFakePatients(40, "D", "01")),
 };
 
 // ─── Clinic B: Lamsa Clinic (small, exists to prove isolation) ──────────────
@@ -479,7 +549,16 @@ export const LAMSA: SeedTenant = {
     },
   ],
   rooms: [{ key: "dmm-1", branch: "dammam", nameAr: "غرفة الكشف", nameEn: "Consultation Room" }],
-  devices: [],
+  devices: [
+    {
+      key: "dmm-lhr",
+      branch: "dammam",
+      room: "dmm-1",
+      deviceType: "hair_removal_laser",
+      nameAr: "جهاز ليزر إزالة الشعر",
+      nameEn: "Laser Hair Removal",
+    },
+  ],
   staff: [
     {
       key: "lamsa-admin",
@@ -500,8 +579,167 @@ export const LAMSA: SeedTenant = {
   patients: makeFakePatients(8, "L", "02", 17),
 };
 
+export const LAMSA_MEDICAL_FLAGS: SeedMedicalFlag[] = [
+  { fileNumber: "L-0001", kind: "allergy", label: "الأسبرين · Aspirin" },
+];
+
 export const SEED_TENANTS = [DERMA, LAMSA];
 
 /** Working hours for practitioners and receptionists: Sunday–Thursday 10:00–19:00. */
-export const WORK_WEEK = [0, 1, 2, 3, 4];
-export const WORK_HOURS = { start: "10:00", end: "19:00" };
+/** Saturday–Thursday (Friday off), common for Saudi aesthetic clinics. 0 = Sunday … 6 = Saturday. */
+export const WORK_WEEK = [6, 0, 1, 2, 3, 4];
+export const WORK_HOURS = { start: "10:00", end: "20:00", breakStart: "14:00", breakEnd: "15:00" };
+
+/** Clinic setting: do doctors move their own appointments (true) or send requests (false)? */
+export const DOCTORS_MANAGE_OWN_SCHEDULE: Record<string, boolean> = { derma: false, lamsa: true };
+
+/** Clinic-wide closed days (demo). */
+export const HOLIDAYS = [
+  { day: "2026-09-23", nameAr: "اليوم الوطني السعودي", nameEn: "Saudi National Day" },
+  { day: "2027-02-22", nameAr: "يوم التأسيس", nameEn: "Founding Day" },
+];
+
+// ════════════════════════════════════════════════════════════════════════════
+// PHASE 1 demo data
+// ════════════════════════════════════════════════════════════════════════════
+
+/** Which consent each service needs (service code → consent template code). */
+export const SERVICE_CONSENTS: Record<string, string> = {
+  laser_hair_removal: "laser_hair_removal",
+  botox: "injectables",
+  fillers: "injectables",
+  chemical_peeling: "chemical_peel",
+};
+
+const DEMO_NOTICE_AR = "تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.";
+const DEMO_NOTICE_EN = "Notice: demo wording for demonstration only — NOT legal text.";
+
+export interface SeedConsentTemplate {
+  code: string;
+  titleAr: string;
+  titleEn: string;
+  bodyAr: string;
+  bodyEn: string;
+}
+
+export const CONSENT_TEMPLATES: SeedConsentTemplate[] = [
+  {
+    code: "laser_hair_removal",
+    titleAr: "نموذج موافقة على جلسات ليزر إزالة الشعر",
+    titleEn: "Consent for Laser Hair Removal sessions",
+    bodyAr: [
+      DEMO_NOTICE_AR,
+      "أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.",
+      "أعلم أن الآثار الجانبية الشائعة تشمل الاحمرار والتورم المؤقت، ونادرًا: الحروق أو تغيّر لون الجلد.",
+      "أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.",
+      "أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.",
+    ].join("\n\n"),
+    bodyEn: [
+      DEMO_NOTICE_EN,
+      "I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.",
+      "I understand common side effects include temporary redness and swelling, and rarely burns or pigment change.",
+      "I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.",
+      "I consent to the session and will follow the aftercare instructions.",
+    ].join("\n\n"),
+  },
+  {
+    code: "injectables",
+    titleAr: "نموذج موافقة على حقن البوتوكس والفيلر",
+    titleEn: "Consent for Botox and Filler injections",
+    bodyAr: [
+      DEMO_NOTICE_AR,
+      "أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.",
+      "أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.",
+      "أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.",
+      "أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.",
+    ].join("\n\n"),
+    bodyEn: [
+      DEMO_NOTICE_EN,
+      "I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.",
+      "I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.",
+      "I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.",
+      "I consent to the procedure and to before/after medical photos for my file only.",
+    ].join("\n\n"),
+  },
+  {
+    code: "chemical_peel",
+    titleAr: "نموذج موافقة على التقشير الكيميائي",
+    titleEn: "Consent for Chemical Peeling",
+    bodyAr: [
+      DEMO_NOTICE_AR,
+      "أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.",
+      "أعلم أن البشرة قد تحمرّ وتتقشر لعدة أيام، وأن التعرض للشمس بعد الجلسة قد يسبب تصبغات.",
+      "أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.",
+      "أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.",
+    ].join("\n\n"),
+    bodyEn: [
+      DEMO_NOTICE_EN,
+      "I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.",
+      "I understand my skin may be red and peel for several days, and sun exposure may cause pigmentation.",
+      "I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.",
+      "I consent to the procedure and will use SPF 50 sunscreen daily.",
+    ].join("\n\n"),
+  },
+];
+
+export interface SeedPackageTemplate {
+  key: string;
+  serviceCode: string;
+  nameAr: string;
+  nameEn: string;
+  sessions: number;
+  priceSar: number;
+  validityDays: number;
+}
+
+export const PACKAGE_TEMPLATES: Record<string, SeedPackageTemplate[]> = {
+  derma: [
+    {
+      key: "lhr6",
+      serviceCode: "laser_hair_removal",
+      nameAr: "باقة ليزر إزالة الشعر — 6 جلسات",
+      nameEn: "Laser Hair Removal — 6 sessions",
+      sessions: 6,
+      priceSar: 3600,
+      validityDays: 365,
+    },
+    {
+      key: "peel4",
+      serviceCode: "chemical_peeling",
+      nameAr: "باقة التقشير الكيميائي — 4 جلسات",
+      nameEn: "Chemical Peeling — 4 sessions",
+      sessions: 4,
+      priceSar: 2000,
+      validityDays: 180,
+    },
+    {
+      key: "boost3",
+      serviceCode: "skin_boosters",
+      nameAr: "باقة محفزات البشرة — 3 جلسات",
+      nameEn: "Skin Boosters — 3 sessions",
+      sessions: 3,
+      priceSar: 3900,
+      validityDays: 180,
+    },
+    {
+      key: "facial5",
+      serviceCode: "facial_treatment",
+      nameAr: "باقة تنظيف البشرة — 5 جلسات",
+      nameEn: "Facial Treatment — 5 sessions",
+      sessions: 5,
+      priceSar: 1900,
+      validityDays: 180,
+    },
+  ],
+  lamsa: [
+    {
+      key: "facial5",
+      serviceCode: "facial_treatment",
+      nameAr: "باقة تنظيف البشرة — 5 جلسات",
+      nameEn: "Facial Treatment — 5 sessions",
+      sessions: 5,
+      priceSar: 1800,
+      validityDays: 180,
+    },
+  ],
+};

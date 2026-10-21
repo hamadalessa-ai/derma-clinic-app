@@ -33,6 +33,84 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "calendar:view": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: true,
+    receptionist: true,
+  },
+  "appointments:manage": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+  },
+  "appointments:own": {
+    platform_owner: false,
+    clinic_admin: false,
+    practitioner: true,
+    receptionist: false,
+  },
+  "my_day:view": {
+    platform_owner: false,
+    clinic_admin: false,
+    practitioner: true,
+    receptionist: false,
+  },
+  "requests:decide": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+  },
+  "patients:edit": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+  },
+  "packages:sell": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+  },
+  "packages:override": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+  },
+  "consents:collect": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: true,
+    receptionist: true,
+  },
+  "consents:templates": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: false,
+  },
+  "notes:write": {
+    platform_owner: false,
+    clinic_admin: false,
+    practitioner: true,
+    receptionist: false,
+  },
+  "settings:manage": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: false,
+  },
+  "demo:refresh": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: false,
+  },
 };
 
 describe("role permissions", () => {
@@ -67,6 +145,13 @@ describe("role permissions", () => {
 
   it("admin + receptionist still cannot see clinical notes", () => {
     expect(can(["clinic_admin", "receptionist"], "clinical_notes:read")).toBe(false);
+  });
+
+  it("doctors cannot book for others or approve requests; reception cannot write notes", () => {
+    expect(can("practitioner", "appointments:manage")).toBe(false);
+    expect(can("practitioner", "requests:decide")).toBe(false);
+    expect(can("receptionist", "notes:write")).toBe(false);
+    expect(can(["clinic_admin", "practitioner"], "notes:write")).toBe(true);
   });
 
   it("no role means no access", () => {

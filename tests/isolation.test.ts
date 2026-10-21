@@ -278,3 +278,50 @@ describe("withTenant()", () => {
     expect(rows).toHaveLength(0);
   });
 });
+
+describe("every table, with real data in both clinics (full staff context)", () => {
+  /** Like rawAs, but also tells Postgres the user may see all branches and has all roles. */
+  async function staffAs<T>(tenantId: string, fn: (tx: postgres.TransactionSql) => Promise<T>) {
+    return raw.begin(async (tx) => {
+      await tx`select set_config('app.tenant_id', ${tenantId}, true),
+                      set_config('app.branch_ids', '*', true),
+                      set_config('app.roles', 'clinic_admin,practitioner,receptionist', true),
+                      set_config('app.user_id', 'usr_test', true)`;
+      return fn(tx);
+    }) as Promise<T>;
+  }
+
+  it.each(TENANT_TABLES)("%s: each clinic has rows, and sees only its own", async (table) => {
+    for (const [mine, other] of [
+      [A, B],
+      [B, A],
+    ]) {
+      const rows = await staffAs(mine, (tx) => tx`select tenant_id from ${tx(table)}`);
+      expect(rows.length, `${table} should have demo rows for both clinics`).toBeGreaterThan(0);
+      expect(rows.every((r) => r.tenant_id === mine)).toBe(true);
+      const leaked = await staffAs(
+        mine,
+        (tx) => tx`select count(*)::int as n from ${tx(table)} where tenant_id = ${other}`,
+      );
+      expect(leaked[0].n).toBe(0);
+    }
+  });
+
+  it.each(TENANT_TABLES)("%s: clinic A cannot change or delete clinic B's rows", async (table) => {
+    const update = await staffAs(
+      A,
+      (tx) => tx`update ${tx(table)} set tenant_id = tenant_id where tenant_id = ${B}`,
+    ).then(
+      (r) => r.count,
+      (e: Error) => e.message,
+    );
+    expect(update === 0 || /permission denied/.test(String(update))).toBe(true);
+    const del = await staffAs(A, (tx) => tx`delete from ${tx(table)} where tenant_id = ${B}`).then(
+      (r) => r.count,
+      (e: Error) => e.message,
+    );
+    expect(del === 0 || /permission denied/.test(String(del))).toBe(true);
+    const stillThere = await staffAs(B, (tx) => tx`select count(*)::int as n from ${tx(table)}`);
+    expect(stillThere[0].n).toBeGreaterThan(0);
+  });
+});

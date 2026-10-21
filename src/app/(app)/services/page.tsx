@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
+import { Notice } from "@/components/ui/notice";
 import {
   Table,
   TableBody,
@@ -36,7 +37,7 @@ export default async function ServicesPage() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <span className="text-muted-foreground text-sm">{t("count", { count: rows.length })}</span>
       </div>
-      <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">{t("demoPrices")}</p>
+      <Notice tone="warning">{t("demoPrices")}</Notice>
       <Card>
         <CardContent className="p-0">
           <Table>

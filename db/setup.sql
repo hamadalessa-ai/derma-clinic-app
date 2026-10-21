@@ -15,7 +15,9 @@ begin;
 create temp table setup_params (
   app_db_password text,   -- password for the restricted "clinic_app" database login (goes into Vercel's DATABASE_URL)
   demo_password text,     -- password that every demo staff account uses to sign in to the app
-  demo_password_hash text
+  demo_password_hash text,
+  -- the demo week is centred on today (Riyadh)
+  demo_anchor date default (now() at time zone 'Asia/Riyadh')::date
 ) on commit drop;
 
 insert into pg_temp.setup_params (app_db_password, demo_password) values (
@@ -70,7 +72,6 @@ CREATE TABLE "accounts" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "audit_logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -82,7 +83,6 @@ CREATE TABLE "audit_logs" (
 	"ip_address" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "branches" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -94,7 +94,6 @@ CREATE TABLE "branches" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "branches_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
-
 CREATE TABLE "departments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -107,7 +106,6 @@ CREATE TABLE "departments" (
 	CONSTRAINT "departments_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "departments_tenant_code_key" UNIQUE("tenant_id","code")
 );
-
 CREATE TABLE "devices" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -118,7 +116,6 @@ CREATE TABLE "devices" (
 	"name_en" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "patients" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -134,7 +131,6 @@ CREATE TABLE "patients" (
 	CONSTRAINT "patients_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "patients_tenant_file_key" UNIQUE("tenant_id","file_number")
 );
-
 CREATE TABLE "rooms" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -144,7 +140,6 @@ CREATE TABLE "rooms" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "rooms_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
-
 CREATE TABLE "services" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -162,7 +157,6 @@ CREATE TABLE "services" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "services_tenant_code_key" UNIQUE("tenant_id","code")
 );
-
 CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
@@ -174,7 +168,6 @@ CREATE TABLE "sessions" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "sessions_token_unique" UNIQUE("token")
 );
-
 CREATE TABLE "staff_schedules" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -185,7 +178,6 @@ CREATE TABLE "staff_schedules" (
 	"end_time" time NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 CREATE TABLE "tenant_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -199,7 +191,6 @@ CREATE TABLE "tenant_members" (
 	CONSTRAINT "tenant_members_tenant_user_key" UNIQUE("tenant_id","user_id"),
 	CONSTRAINT "tenant_members_roles_not_empty" CHECK (cardinality("tenant_members"."roles") > 0)
 );
-
 CREATE TABLE "tenants" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"slug" text NOT NULL,
@@ -210,7 +201,6 @@ CREATE TABLE "tenants" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "tenants_slug_unique" UNIQUE("slug")
 );
-
 CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
@@ -223,7 +213,6 @@ CREATE TABLE "users" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
-
 CREATE TABLE "verifications" (
 	"id" text PRIMARY KEY NOT NULL,
 	"identifier" text NOT NULL,
@@ -232,7 +221,6 @@ CREATE TABLE "verifications" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "branches" ADD CONSTRAINT "branches_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
@@ -256,6 +244,504 @@ CREATE INDEX "accounts_user_id_idx" ON "accounts" USING btree ("user_id");
 CREATE INDEX "audit_logs_tenant_created_idx" ON "audit_logs" USING btree ("tenant_id","created_at");
 CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");
 CREATE INDEX "tenant_members_user_id_idx" ON "tenant_members" USING btree ("user_id");
+-- 0001_phase1.sql
+CREATE TYPE "public"."appointment_status" AS ENUM('booked', 'confirmed', 'arrived', 'in_session', 'completed', 'no_show', 'cancelled');
+CREATE TYPE "public"."id_type" AS ENUM('national_id', 'iqama', 'passport');
+CREATE TYPE "public"."medical_flag_kind" AS ENUM('allergy', 'contraindication', 'medication');
+CREATE TYPE "public"."note_status" AS ENUM('draft', 'signed');
+CREATE TYPE "public"."payment_method" AS ENUM('cash', 'card', 'transfer');
+CREATE TYPE "public"."request_status" AS ENUM('pending', 'approved', 'rejected');
+CREATE TYPE "public"."session_event_kind" AS ENUM('deduction', 'override');
+CREATE TABLE "appointments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"service_id" uuid NOT NULL,
+	"practitioner_id" uuid NOT NULL,
+	"room_id" uuid NOT NULL,
+	"device_id" uuid,
+	"starts_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone NOT NULL,
+	"blocked_until" timestamp with time zone NOT NULL,
+	"status" "appointment_status" DEFAULT 'booked' NOT NULL,
+	"reception_note" text,
+	"demo_day_index" smallint,
+	"cancel_reason" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "appointments_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "appointments_times" CHECK ("appointments"."starts_at" < "appointments"."ends_at" and "appointments"."ends_at" <= "appointments"."blocked_until")
+);
+CREATE TABLE "branch_holidays" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid,
+	"day" date NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "clinical_note_addenda" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"note_id" uuid NOT NULL,
+	"author_user_id" text NOT NULL,
+	"author_name" text NOT NULL,
+	"body" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "clinical_note_addenda_body" CHECK (length(btrim("clinical_note_addenda"."body")) > 0)
+);
+CREATE TABLE "clinical_notes" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"appointment_id" uuid,
+	"author_user_id" text NOT NULL,
+	"author_name" text NOT NULL,
+	"body" text DEFAULT '' NOT NULL,
+	"status" "note_status" DEFAULT 'draft' NOT NULL,
+	"signed_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "clinical_notes_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "clinical_notes_signed" CHECK (("clinical_notes"."status" = 'signed') = ("clinical_notes"."signed_at" is not null))
+);
+CREATE TABLE "consent_templates" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"code" text NOT NULL,
+	"version" integer NOT NULL,
+	"is_current" boolean DEFAULT true NOT NULL,
+	"title_ar" text NOT NULL,
+	"title_en" text NOT NULL,
+	"body_ar" text NOT NULL,
+	"body_en" text NOT NULL,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "consent_templates_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "consent_templates_version_key" UNIQUE("tenant_id","code","version")
+);
+CREATE TABLE "files" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"mime_type" text NOT NULL,
+	"size_bytes" integer NOT NULL,
+	"sha256" text NOT NULL,
+	"data" "bytea" NOT NULL,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "files_tenant_id_id_key" UNIQUE("tenant_id","id")
+);
+CREATE TABLE "package_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_package_id" uuid NOT NULL,
+	"amount_halalas" integer NOT NULL,
+	"method" "payment_method" NOT NULL,
+	"paid_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"recorded_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "package_payments_positive" CHECK ("package_payments"."amount_halalas" > 0)
+);
+CREATE TABLE "package_session_events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_package_id" uuid NOT NULL,
+	"appointment_id" uuid,
+	"kind" "session_event_kind" NOT NULL,
+	"delta" smallint NOT NULL,
+	"reason" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "package_session_events_delta" CHECK ("package_session_events"."delta" <> 0),
+	CONSTRAINT "package_session_events_rules" CHECK (("package_session_events"."kind" = 'deduction' and "package_session_events"."delta" = 1 and "package_session_events"."appointment_id" is not null) or ("package_session_events"."kind" = 'override' and length(btrim(coalesce("package_session_events"."reason", ''))) >= 3))
+);
+CREATE TABLE "package_templates" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"service_id" uuid NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"sessions_count" smallint NOT NULL,
+	"price_halalas" integer NOT NULL,
+	"validity_days" smallint NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "package_templates_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "package_templates_values" CHECK ("package_templates"."sessions_count" > 0 and "package_templates"."price_halalas" >= 0 and "package_templates"."validity_days" > 0)
+);
+CREATE TABLE "patient_consents" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"template_id" uuid NOT NULL,
+	"template_code" text NOT NULL,
+	"template_version" integer NOT NULL,
+	"title_ar" text NOT NULL,
+	"title_en" text NOT NULL,
+	"body_ar" text NOT NULL,
+	"body_en" text NOT NULL,
+	"content_sha256" text NOT NULL,
+	"signer_name" text NOT NULL,
+	"signer_relation" text DEFAULT 'self' NOT NULL,
+	"signature_file_id" uuid NOT NULL,
+	"witness_user_id" text NOT NULL,
+	"appointment_id" uuid,
+	"signed_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"user_agent" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "patient_medical_flags" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"kind" "medical_flag_kind" NOT NULL,
+	"label" text NOT NULL,
+	"note" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "patient_packages" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"template_id" uuid NOT NULL,
+	"service_id" uuid NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"sessions_total" smallint NOT NULL,
+	"sessions_used" smallint DEFAULT 0 NOT NULL,
+	"price_halalas" integer NOT NULL,
+	"purchased_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"sold_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "patient_packages_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "patient_packages_balance" CHECK ("patient_packages"."sessions_used" >= 0 and "patient_packages"."sessions_used" <= "patient_packages"."sessions_total"),
+	CONSTRAINT "patient_packages_price" CHECK ("patient_packages"."price_halalas" >= 0 and "patient_packages"."sessions_total" > 0)
+);
+CREATE TABLE "reschedule_requests" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"requested_by" text NOT NULL,
+	"proposed_starts_at" timestamp with time zone NOT NULL,
+	"reason" text,
+	"status" "request_status" DEFAULT 'pending' NOT NULL,
+	"decided_by" text,
+	"decided_at" timestamp with time zone,
+	"decision_note" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "reservations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"resource_kind" text NOT NULL,
+	"resource_id" uuid NOT NULL,
+	"during" "tstzrange" NOT NULL,
+	"appointment_id" uuid,
+	"time_block_id" uuid,
+	CONSTRAINT "reservations_kind" CHECK ("reservations"."resource_kind" in ('practitioner', 'room', 'device')),
+	CONSTRAINT "reservations_source" CHECK (num_nonnulls("reservations"."appointment_id", "reservations"."time_block_id") = 1)
+);
+CREATE TABLE "tenant_settings" (
+	"tenant_id" uuid PRIMARY KEY NOT NULL,
+	"doctors_manage_own_schedule" boolean DEFAULT false NOT NULL,
+	"slot_minutes" smallint DEFAULT 15 NOT NULL,
+	"demo_anchor_day" date,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "time_blocks" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"branch_id" uuid NOT NULL,
+	"member_id" uuid,
+	"room_id" uuid,
+	"device_id" uuid,
+	"starts_at" timestamp with time zone NOT NULL,
+	"ends_at" timestamp with time zone NOT NULL,
+	"reason" text,
+	"demo_day_index" smallint,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "time_blocks_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "time_blocks_times" CHECK ("time_blocks"."starts_at" < "time_blocks"."ends_at"),
+	CONSTRAINT "time_blocks_one_resource" CHECK (num_nonnulls("time_blocks"."member_id", "time_blocks"."room_id", "time_blocks"."device_id") = 1)
+);
+ALTER TABLE "devices" ADD CONSTRAINT "devices_tenant_id_id_key" UNIQUE("tenant_id","id");
+ALTER TABLE "devices" ADD CONSTRAINT "devices_tenant_branch_id_key" UNIQUE("tenant_id","branch_id","id");
+ALTER TABLE "rooms" ADD CONSTRAINT "rooms_tenant_branch_id_key" UNIQUE("tenant_id","branch_id","id");
+ALTER TABLE "services" ADD CONSTRAINT "services_tenant_id_id_key" UNIQUE("tenant_id","id");
+ALTER TABLE "patients" ADD COLUMN "id_type" "id_type";
+ALTER TABLE "patients" ADD COLUMN "id_number" text;
+ALTER TABLE "patients" ADD COLUMN "email" text;
+ALTER TABLE "patients" ADD COLUMN "guardian_id" uuid;
+ALTER TABLE "patients" ADD COLUMN "guardian_relation_ar" text;
+ALTER TABLE "patients" ADD COLUMN "guardian_relation_en" text;
+ALTER TABLE "services" ADD COLUMN "consent_code" text;
+ALTER TABLE "staff_schedules" ADD COLUMN "break_start" time;
+ALTER TABLE "staff_schedules" ADD COLUMN "break_end" time;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_practitioner_fk" FOREIGN KEY ("tenant_id","practitioner_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_room_fk" FOREIGN KEY ("tenant_id","branch_id","room_id") REFERENCES "public"."rooms"("tenant_id","branch_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_device_fk" FOREIGN KEY ("tenant_id","branch_id","device_id") REFERENCES "public"."devices"("tenant_id","branch_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "branch_holidays" ADD CONSTRAINT "branch_holidays_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "branch_holidays" ADD CONSTRAINT "branch_holidays_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "clinical_note_addenda" ADD CONSTRAINT "clinical_note_addenda_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "clinical_note_addenda" ADD CONSTRAINT "clinical_note_addenda_note_fk" FOREIGN KEY ("tenant_id","note_id") REFERENCES "public"."clinical_notes"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "consent_templates" ADD CONSTRAINT "consent_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "files" ADD CONSTRAINT "files_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_package_fk" FOREIGN KEY ("tenant_id","patient_package_id") REFERENCES "public"."patient_packages"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_package_fk" FOREIGN KEY ("tenant_id","patient_package_id") REFERENCES "public"."patient_packages"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "package_templates" ADD CONSTRAINT "package_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "package_templates" ADD CONSTRAINT "package_templates_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_template_fk" FOREIGN KEY ("tenant_id","template_id") REFERENCES "public"."consent_templates"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_signature_fk" FOREIGN KEY ("tenant_id","signature_file_id") REFERENCES "public"."files"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_consents" ADD CONSTRAINT "patient_consents_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_medical_flags" ADD CONSTRAINT "patient_medical_flags_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_medical_flags" ADD CONSTRAINT "patient_medical_flags_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_template_fk" FOREIGN KEY ("tenant_id","template_id") REFERENCES "public"."package_templates"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_packages" ADD CONSTRAINT "patient_packages_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "reschedule_requests" ADD CONSTRAINT "reschedule_requests_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reschedule_requests" ADD CONSTRAINT "reschedule_requests_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reschedule_requests" ADD CONSTRAINT "reschedule_requests_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_time_block_fk" FOREIGN KEY ("tenant_id","time_block_id") REFERENCES "public"."time_blocks"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "tenant_settings" ADD CONSTRAINT "tenant_settings_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_member_fk" FOREIGN KEY ("tenant_id","member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_room_fk" FOREIGN KEY ("tenant_id","branch_id","room_id") REFERENCES "public"."rooms"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_device_fk" FOREIGN KEY ("tenant_id","branch_id","device_id") REFERENCES "public"."devices"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "appointments_branch_start_idx" ON "appointments" USING btree ("tenant_id","branch_id","starts_at");
+CREATE INDEX "appointments_practitioner_start_idx" ON "appointments" USING btree ("tenant_id","practitioner_id","starts_at");
+CREATE INDEX "appointments_patient_idx" ON "appointments" USING btree ("tenant_id","patient_id");
+CREATE INDEX "clinical_notes_patient_idx" ON "clinical_notes" USING btree ("tenant_id","patient_id");
+CREATE UNIQUE INDEX "consent_templates_one_current" ON "consent_templates" USING btree ("tenant_id","code") WHERE "consent_templates"."is_current";
+CREATE UNIQUE INDEX "package_session_events_one_deduction" ON "package_session_events" USING btree ("tenant_id","appointment_id") WHERE "package_session_events"."kind" = 'deduction';
+CREATE INDEX "patient_consents_patient_idx" ON "patient_consents" USING btree ("tenant_id","patient_id","template_code");
+CREATE INDEX "patient_medical_flags_patient_idx" ON "patient_medical_flags" USING btree ("tenant_id","patient_id");
+CREATE INDEX "patient_packages_patient_idx" ON "patient_packages" USING btree ("tenant_id","patient_id");
+ALTER TABLE "patients" ADD CONSTRAINT "patients_guardian_fk" FOREIGN KEY ("tenant_id","guardian_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patients" ADD CONSTRAINT "patients_not_own_guardian" CHECK ("patients"."guardian_id" is null or "patients"."guardian_id" <> "patients"."id");
+ALTER TABLE "staff_schedules" ADD CONSTRAINT "staff_schedules_hours" CHECK ("staff_schedules"."start_time" < "staff_schedules"."end_time");
+ALTER TABLE "staff_schedules" ADD CONSTRAINT "staff_schedules_break" CHECK (("staff_schedules"."break_start" is null and "staff_schedules"."break_end" is null) or ("staff_schedules"."break_start" < "staff_schedules"."break_end" and "staff_schedules"."break_start" >= "staff_schedules"."start_time" and "staff_schedules"."break_end" <= "staff_schedules"."end_time"));
+
+-- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
+-- ════════════════════════════════════════════════════════════════════════════
+-- Phase 1 database rules that Drizzle cannot express. Runs after the tables exist
+-- and before RLS (db/rls.sql). Everything here works WITHOUT superuser rights.
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- Needed so an exclusion constraint can combine "=" on ids with "&&" (overlap) on time ranges.
+create extension if not exists btree_gist with schema extensions;
+
+-- ─── No double-booking ──────────────────────────────────────────────────────
+-- Two reservations for the same doctor, room or device may never overlap in time.
+-- The database checks this itself, so two simultaneous bookings can't both succeed.
+-- DEFERRABLE INITIALLY IMMEDIATE: still checked at the end of every statement (so races are
+-- refused), but "Refresh demo week" can move a whole week in one go without false clashes.
+alter table public.reservations
+  add constraint reservations_no_overlap
+  exclude using gist (
+    tenant_id with =,
+    resource_kind with =,
+    resource_id with =,
+    during with &&
+  ) deferrable initially immediate;
+
+create index reservations_lookup_idx on public.reservations
+  using gist (tenant_id, resource_kind, resource_id, during);
+
+-- Appointments reserve their doctor, room and device from start until end + buffer.
+-- Cancelled and no-show appointments free their slot.
+create or replace function public.sync_appointment_reservations() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+declare
+  slot tstzrange;
+begin
+  if tg_op = 'UPDATE' then
+    delete from public.reservations
+      where tenant_id = old.tenant_id and appointment_id = old.id;
+  end if;
+  if new.status not in ('cancelled', 'no_show') then
+    slot := tstzrange(new.starts_at, new.blocked_until, '[)');
+    insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
+      values (new.tenant_id, new.branch_id, 'practitioner', new.practitioner_id, slot, new.id),
+             (new.tenant_id, new.branch_id, 'room', new.room_id, slot, new.id);
+    if new.device_id is not null then
+      insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
+        values (new.tenant_id, new.branch_id, 'device', new.device_id, slot, new.id);
+    end if;
+  end if;
+  return null;
+end $$;
+
+create trigger appointments_reservations
+  after insert or update of branch_id, practitioner_id, room_id, device_id, starts_at, blocked_until, status
+  on public.appointments
+  for each row execute function public.sync_appointment_reservations();
+
+-- Blocked time (doctor's own block, leave, room/device maintenance) reserves its resource too,
+-- so nobody can book over it, and it can't be placed over an existing booking.
+create or replace function public.sync_time_block_reservations() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' then
+    delete from public.reservations
+      where tenant_id = old.tenant_id and time_block_id = old.id;
+  end if;
+  insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, time_block_id)
+    values (
+      new.tenant_id, new.branch_id,
+      case when new.member_id is not null then 'practitioner'
+           when new.room_id is not null then 'room' else 'device' end,
+      coalesce(new.member_id, new.room_id, new.device_id),
+      tstzrange(new.starts_at, new.ends_at, '[)'),
+      new.id);
+  return null;
+end $$;
+
+create trigger time_blocks_reservations
+  after insert or update on public.time_blocks
+  for each row execute function public.sync_time_block_reservations();
+
+-- ─── Package balances ───────────────────────────────────────────────────────
+-- The balance changes ONLY by recording an event. The CHECK on patient_packages
+-- (0 <= used <= total) then rejects anything that would go below zero.
+create or replace function public.apply_package_session_event() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  perform set_config('app.package_event', 'on', true);
+  update public.patient_packages
+    set sessions_used = sessions_used + new.delta, updated_at = now()
+    where tenant_id = new.tenant_id and id = new.patient_package_id;
+  if not found then
+    raise exception 'package % not found', new.patient_package_id;
+  end if;
+  perform set_config('app.package_event', 'off', true);
+  return null;
+end $$;
+
+create trigger package_session_events_apply
+  after insert on public.package_session_events
+  for each row execute function public.apply_package_session_event();
+
+create or replace function public.guard_package_balance() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if new.sessions_used is distinct from old.sessions_used
+     and coalesce(current_setting('app.package_event', true), 'off') <> 'on' then
+    raise exception 'package balance can only change through package_session_events';
+  end if;
+  return new;
+end $$;
+
+create trigger patient_packages_guard_balance
+  before update on public.patient_packages
+  for each row execute function public.guard_package_balance();
+
+-- ─── Clinical notes: signed notes are final ─────────────────────────────────
+create or replace function public.guard_clinical_note() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if old.status = 'signed' then
+    raise exception 'signed notes cannot be changed; add an addendum instead';
+  end if;
+  if new.author_user_id is distinct from old.author_user_id
+     or new.patient_id is distinct from old.patient_id
+     or new.appointment_id is distinct from old.appointment_id then
+    raise exception 'note author, patient and visit cannot be changed';
+  end if;
+  return new;
+end $$;
+
+create trigger clinical_notes_guard
+  before update on public.clinical_notes
+  for each row execute function public.guard_clinical_note();
+
+create or replace function public.guard_note_addendum() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1 from public.clinical_notes
+    where tenant_id = new.tenant_id and id = new.note_id and status = 'signed'
+  ) then
+    raise exception 'addenda can only be added to signed notes';
+  end if;
+  return new;
+end $$;
+
+create trigger clinical_note_addenda_guard
+  before insert on public.clinical_note_addenda
+  for each row execute function public.guard_note_addendum();
+
+-- ─── Search: Arabic-aware normalisation ─────────────────────────────────────
+-- "أحمد" = "احمد" = "إحمد", "فاطمة" = "فاطمه", "مصطفى" = "مصطفي", Arabic digits → 0-9,
+-- diacritics and tatweel removed, lower-case for English.
+create or replace function public.normalize_search(t text) returns text
+  language sql immutable parallel safe
+  set search_path = ''
+as $$
+  select regexp_replace(
+    translate(lower(coalesce(t, '')), 'أإآٱىةؤئ٠١٢٣٤٥٦٧٨٩', 'اااايهوي0123456789'),
+    '[ً-ٰٟـ]', '', 'g')
+$$;
+
+-- ─── Demo week ──────────────────────────────────────────────────────────────
+-- The k-th working day (Friday off) counted from `anchor`. Day 0 is the anchor itself,
+-- or the next Saturday when the anchor is a Friday. Used by the demo seed and by
+-- "Refresh demo week", so demo appointments always surround today.
+create or replace function public.demo_workday(anchor date, k integer) returns date
+  language plpgsql immutable
+  set search_path = ''
+as $$
+declare
+  d date := anchor;
+  steps integer := abs(k);
+begin
+  while extract(dow from d) = 5 loop d := d + 1; end loop;
+  while steps > 0 loop
+    d := d + sign(k)::integer;
+    if extract(dow from d) <> 5 then steps := steps - 1; end if;
+  end loop;
+  return d;
+end $$;
+
 
 -- ─── STEP 3: DEMO DATA (FAKE) ───────────────────────────────────────────────
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_platform-owner', 'مالك المنصة', 'Platform Owner', 'owner@platform.demo', true, true);
@@ -331,113 +817,196 @@ insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, tit
   ('92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-majed', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist'),
   ('3973e5f5-1994-5c66-8033-04c749bad229', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-jed', '{receptionist}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'موظف استقبال', 'Receptionist');
 
-insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '19:00'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '19:00');
+insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time, break_start, break_end) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '356e5967-34b6-564e-a086-32c2e4a387d1', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f17eb715-8314-58e7-8a8f-4b63b1be7918', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
-  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
-  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true, 1),
-  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true, 2),
-  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, true, 3),
-  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, true, 4),
-  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, true, 5),
-  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true, 6),
-  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, true, 7),
-  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, true, 8),
-  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, true, 9),
-  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, true, 10),
-  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, true, 11),
-  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', true, 12),
-  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', true, 13),
-  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', true, 14),
-  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', true, 15),
-  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', true, 16),
-  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', true, 17),
-  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', true, 18),
-  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', true, 19),
-  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, true, 20),
-  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, true, 21);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, sort_order) values
+  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, 0),
+  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, 1),
+  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, 2),
+  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, null, true, 3),
+  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, null, true, 4),
+  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, 'chemical_peel', true, 5),
+  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, 6),
+  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, null, true, 7),
+  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, null, true, 8),
+  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, null, true, 9),
+  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, null, true, 10),
+  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, null, true, 11),
+  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', null, true, 12),
+  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', null, true, 13),
+  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', null, true, 14),
+  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', null, true, 15),
+  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', null, true, 16),
+  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', null, true, 17),
+  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', null, true, 18),
+  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', 'laser_hair_removal', true, 19),
+  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, null, true, 20),
+  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, null, true, 21);
 
-insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, is_fake) values
-  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', true),
-  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', true),
-  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '0500010003', 'female', '1996-11-23', true),
-  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '0500010004', 'female', '1973-04-06', true),
-  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '0500010005', 'female', '1986-09-17', true),
-  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '0500010006', 'female', '1999-02-28', true),
-  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '0500010007', 'female', '1976-07-11', true),
-  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '0500010008', 'male', '1989-12-22', true),
-  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '0500010009', 'male', '2002-05-05', true),
-  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '0500010010', 'male', '1979-10-16', true),
-  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '0500010011', 'female', '1992-03-27', true),
-  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '0500010012', 'female', '2005-08-10', true),
-  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '0500010013', 'female', '1982-01-21', true),
-  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '0500010014', 'female', '1995-06-04', true),
-  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '0500010015', 'female', '1972-11-15', true),
-  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '0500010016', 'female', '1985-04-26', true),
-  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '0500010017', 'female', '1998-09-09', true),
-  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500010018', 'male', '1975-02-20', true),
-  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500010019', 'male', '1988-07-03', true),
-  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500010020', 'male', '2001-12-14', true),
-  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500010021', 'female', '1978-05-25', true),
-  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500010022', 'female', '1991-10-08', true),
-  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500010023', 'female', '2004-03-19', true),
-  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500010024', 'female', '1981-08-02', true),
-  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500010025', 'female', '1994-01-13', true),
-  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '0500010026', 'female', '1971-06-24', true),
-  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '0500010027', 'female', '1984-11-07', true),
-  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '0500010028', 'male', '1997-04-18', true),
-  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '0500010029', 'male', '1974-09-01', true),
-  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '0500010030', 'male', '1987-02-12', true),
-  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '0500010031', 'female', '2000-07-23', true),
-  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '0500010032', 'female', '1977-12-06', true),
-  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '0500010033', 'female', '1990-05-17', true),
-  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '0500010034', 'female', '2003-10-28', true),
-  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '0500010035', 'female', '1980-03-11', true),
-  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '0500010036', 'female', '1993-08-22', true),
-  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '0500010037', 'female', '1970-01-05', true),
-  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '0500010038', 'male', '1983-06-16', true),
-  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ناصر سليمان البقمي', 'Nasser Sulaiman Al-Buqami', '0500010039', 'male', '1996-11-27', true),
-  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'بندر حمد الشهري', 'Bandar Hamad Al-Shehri', '0500010040', 'male', '1973-04-10', true);
+insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
+  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', 'national_id', '1000000101', null, null, null, true),
+  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', 'national_id', '1000000102', null, null, null, true),
+  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '0500010003', 'female', '1996-11-23', 'national_id', '1000000103', null, null, null, true),
+  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '0500010004', 'female', '1973-04-06', 'national_id', '1000000104', null, null, null, true),
+  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '0500010005', 'female', '1986-09-17', 'iqama', '2000000105', null, null, null, true),
+  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '0500010006', 'female', '1999-02-28', 'national_id', '1000000106', null, null, null, true),
+  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '0500010007', 'female', '1976-07-11', 'national_id', '1000000107', null, null, null, true),
+  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '0500010008', 'male', '1989-12-22', 'national_id', '1000000108', null, null, null, true),
+  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '0500010009', 'male', '2002-05-05', 'national_id', '1000000109', null, null, null, true),
+  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '0500010010', 'male', '1979-10-16', 'national_id', '1000000110', null, null, null, true),
+  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '0500010011', 'female', '1992-03-27', 'national_id', '1000000111', null, null, null, true),
+  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '0500010012', 'female', '2005-08-10', 'national_id', '1000000112', null, null, null, true),
+  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '0500010013', 'female', '1982-01-21', 'national_id', '1000000113', null, null, null, true),
+  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '0500010014', 'female', '1995-06-04', 'iqama', '2000000114', null, null, null, true),
+  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '0500010015', 'female', '1972-11-15', 'national_id', '1000000115', null, null, null, true),
+  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '0500010016', 'female', '1985-04-26', 'national_id', '1000000116', null, null, null, true),
+  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '0500010017', 'female', '1998-09-09', 'national_id', '1000000117', null, null, null, true),
+  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500010018', 'male', '1975-02-20', 'national_id', '1000000118', null, null, null, true),
+  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500010019', 'male', '1988-07-03', 'national_id', '1000000119', null, null, null, true),
+  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500010020', 'male', '2001-12-14', 'national_id', '1000000120', null, null, null, true),
+  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500010021', 'female', '1978-05-25', 'national_id', '1000000121', null, null, null, true),
+  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500010022', 'female', '1991-10-08', 'national_id', '1000000122', null, null, null, true),
+  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500010023', 'female', '2004-03-19', 'iqama', '2000000123', null, null, null, true),
+  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500010024', 'female', '1981-08-02', 'national_id', '1000000124', null, null, null, true),
+  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500010025', 'female', '1994-01-13', 'national_id', '1000000125', null, null, null, true),
+  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '0500010026', 'female', '1971-06-24', 'national_id', '1000000126', null, null, null, true),
+  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '0500010027', 'female', '1984-11-07', 'national_id', '1000000127', null, null, null, true),
+  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '0500010028', 'male', '1997-04-18', 'national_id', '1000000128', null, null, null, true),
+  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '0500010029', 'male', '1974-09-01', 'national_id', '1000000129', null, null, null, true),
+  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '0500010030', 'male', '1987-02-12', 'national_id', '1000000130', null, null, null, true),
+  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '0500010031', 'female', '2000-07-23', 'national_id', '1000000131', null, null, null, true),
+  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '0500010032', 'female', '1977-12-06', 'iqama', '2000000132', null, null, null, true),
+  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '0500010033', 'female', '1990-05-17', 'national_id', '1000000133', null, null, null, true),
+  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '0500010034', 'female', '2003-10-28', 'national_id', '1000000134', null, null, null, true),
+  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '0500010035', 'female', '1980-03-11', 'national_id', '1000000135', null, null, null, true),
+  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '0500010036', 'female', '1993-08-22', 'national_id', '1000000136', null, null, null, true),
+  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '0500010037', 'female', '1970-01-05', 'national_id', '1000000137', null, null, null, true),
+  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '0500010038', 'male', '1983-06-16', 'national_id', '1000000138', null, null, null, true),
+  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ليان بندر الغامدي', 'Layan Bandar Al-Ghamdi', '0500010039', 'female', '2014-03-09', 'national_id', '1000000139', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابنة', 'Daughter', true),
+  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'سلمان بندر الغامدي', 'Salman Bandar Al-Ghamdi', '0500010040', 'male', '2011-11-20', 'national_id', '1000000140', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابن', 'Son', true);
+
+insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, note) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'allergy', 'ليدوكايين (مخدر موضعي) · Lidocaine', 'طفح جلدي سابق'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'allergy', 'البنسلين · Penicillin', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e5a6936e-d013-5b42-a13a-2f69f172f7a2', 'contraindication', 'حمل · Pregnancy', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'medication', 'إيزوتريتينوين (روكتان) · Isotretinoin', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'contraindication', 'لا ليزر ولا تقشير أثناء الروكتان · No laser/peel on isotretinoin', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', 'allergy', 'اللاتكس · Latex', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '8f896380-cce7-5b07-8a3c-83368787969f', 'medication', 'مميعات الدم (وارفارين) · Warfarin', null);
+
+insert into public.consent_templates (id, tenant_id, code, version, is_current, title_ar, title_en, body_ar, body_en) values
+  ('3edebd96-da81-580f-8bed-223be231bdf7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
+
+أعلم أن الآثار الجانبية الشائعة تشمل الاحمرار والتورم المؤقت، ونادرًا: الحروق أو تغيّر لون الجلد.
+
+أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
+
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
+
+I understand common side effects include temporary redness and swelling, and rarely burns or pigment change.
+
+I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
+
+I consent to the session and will follow the aftercare instructions.'),
+  ('6ce721bf-f6ac-5c3b-94e6-31fc56aaab00', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
+
+أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.
+
+أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
+
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
+
+I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.
+
+I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
+
+I consent to the procedure and to before/after medical photos for my file only.'),
+  ('b020a4a7-5411-58e7-9ae3-b3c4a0084017', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
+
+أعلم أن البشرة قد تحمرّ وتتقشر لعدة أيام، وأن التعرض للشمس بعد الجلسة قد يسبب تصبغات.
+
+أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
+
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
+
+I understand my skin may be red and peel for several days, and sun exposure may cause pigmentation.
+
+I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
+
+I consent to the procedure and will use SPF 50 sunscreen daily.');
+
+insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
+  ('e3f5912c-34e3-5c06-ad82-859640083596', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '901925ea-47ec-5bdd-bc69-bab97d91b50b', 'باقة ليزر إزالة الشعر — 6 جلسات', 'Laser Hair Removal — 6 sessions', 6, 360000, 365),
+  ('2ba9840c-7b0b-5c2d-aa4f-a45beb511d57', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', 'باقة التقشير الكيميائي — 4 جلسات', 'Chemical Peeling — 4 sessions', 4, 200000, 180),
+  ('d3475e8c-f332-5206-92b7-789d4e7e838d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', 'باقة محفزات البشرة — 3 جلسات', 'Skin Boosters — 3 sessions', 3, 390000, 180),
+  ('8eb6d02a-4e51-5c37-8c65-a971dd40b976', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '238646ad-fa4b-5239-a04f-c948716feebd', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 190000, 180);
+
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, demo_anchor_day) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false, (select demo_anchor from pg_temp.setup_params));
+
+insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, '2026-09-23', 'اليوم الوطني السعودي', 'Saudi National Day'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, '2027-02-22', 'يوم التأسيس', 'Founding Day');
 
 insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, 'tenant.seed', 'tenant', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602');
@@ -455,6 +1024,9 @@ insert into public.departments (id, tenant_id, code, name_ar, name_en, is_active
 insert into public.rooms (id, tenant_id, branch_id, name_ar, name_en) values
   ('e12bccd6-9e21-52ec-bbcf-1b1727158b14', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', 'غرفة الكشف', 'Consultation Room');
 
+insert into public.devices (id, tenant_id, branch_id, room_id, device_type, name_ar, name_en) values
+  ('55d6aa3b-6748-5873-9ea6-685d383eef28', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', 'e12bccd6-9e21-52ec-bbcf-1b1727158b14', 'hair_removal_laser', 'جهاز ليزر إزالة الشعر', 'Laser Hair Removal');
+
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_lamsa-admin', 'خالد العنزي', 'Khaled Al-Anazi', 'admin@lamsa.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_lamsa-admin', 'usr_lamsa-admin', 'credential', 'usr_lamsa-admin', (select demo_password_hash from pg_temp.setup_params));
 
@@ -469,36 +1041,473 @@ insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, tit
   ('2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-dr-mona', '{practitioner}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'طبيب جلدية وتجميل', 'Dermatologist'),
   ('09432151-a569-5185-b3af-b3ce36532332', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-rec', '{receptionist}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'موظف استقبال', 'Receptionist');
 
-insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '19:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '19:00');
+insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time, break_start, break_end) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, is_demo_value, sort_order) values
-  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, true, 0),
-  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, true, 1),
-  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, true, 2),
-  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, true, 3);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, sort_order) values
+  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, 0),
+  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, 1),
+  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, 2),
+  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, 3);
 
-insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, is_fake) values
-  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', true),
-  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500020002', 'male', '1988-07-03', true),
-  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500020003', 'male', '2001-12-14', true),
-  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500020004', 'female', '1978-05-25', true),
-  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500020005', 'female', '1991-10-08', true),
-  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', true),
-  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', true),
-  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', true);
+insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
+  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', 'national_id', '1000000201', null, null, null, true),
+  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500020002', 'male', '1988-07-03', 'national_id', '1000000202', null, null, null, true),
+  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500020003', 'male', '2001-12-14', 'national_id', '1000000203', null, null, null, true),
+  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500020004', 'female', '1978-05-25', 'national_id', '1000000204', null, null, null, true),
+  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500020005', 'female', '1991-10-08', 'national_id', '1000000205', null, null, null, true),
+  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', 'iqama', '2000000206', null, null, null, true),
+  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', 'national_id', '1000000207', null, null, null, true),
+  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', 'national_id', '1000000208', null, null, null, true);
+
+insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, note) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '47976cc3-ac45-5a95-a2c5-056e158e9ee2', 'allergy', 'الأسبرين · Aspirin', null);
+
+insert into public.consent_templates (id, tenant_id, code, version, is_current, title_ar, title_en, body_ar, body_en) values
+  ('06e6419e-1104-54c8-87ba-5637bc095f9b', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'laser_hair_removal', 1, true, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
+
+أعلم أن الآثار الجانبية الشائعة تشمل الاحمرار والتورم المؤقت، ونادرًا: الحروق أو تغيّر لون الجلد.
+
+أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
+
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
+
+I understand common side effects include temporary redness and swelling, and rarely burns or pigment change.
+
+I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
+
+I consent to the session and will follow the aftercare instructions.'),
+  ('37c21ec2-2835-5df9-aaa4-65939e8fb70e', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'injectables', 1, true, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
+
+أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.
+
+أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
+
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
+
+I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.
+
+I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
+
+I consent to the procedure and to before/after medical photos for my file only.'),
+  ('0c10ddb0-6a59-5ed2-87a5-ecf94b1d9854', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'chemical_peel', 1, true, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
+
+أعلم أن البشرة قد تحمرّ وتتقشر لعدة أيام، وأن التعرض للشمس بعد الجلسة قد يسبب تصبغات.
+
+أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
+
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
+
+I understand my skin may be red and peel for several days, and sun exposure may cause pigmentation.
+
+I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
+
+I consent to the procedure and will use SPF 50 sunscreen daily.');
+
+insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
+  ('baa4e36f-c509-587a-ab60-06c22bf3188a', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, 180);
+
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, demo_anchor_day) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', true, (select demo_anchor from pg_temp.setup_params));
+
+insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, '2026-09-23', 'اليوم الوطني السعودي', 'Saudi National Day'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, '2027-02-22', 'يوم التأسيس', 'Founding Day');
 
 insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, entity_id) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, 'tenant.seed', 'tenant', '55d937e8-cf0c-583b-871e-f90fbc8af348');
+
+
+-- ─── STEP 3b: DEMO WEEK, PACKAGES, CONSENTS, NOTES (FAKE) ───────────────────
+insert into public.time_blocks (id, tenant_id, branch_id, member_id, starts_at, ends_at, reason, demo_day_index, created_by) values
+  ('ab2bae82-bbfb-58c1-9da2-2e5ee94a897b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '356e5967-34b6-564e-a086-32c2e4a387d1', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '13:00') at time zone 'Asia/Riyadh'), 'اجتماع الطاقم الطبي', 0, 'usr_derma-admin'),
+  ('871ad32f-850f-57b2-a3e5-dc566508f9b0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:00') at time zone 'Asia/Riyadh'), 'إجازة صباحية', 1, 'usr_derma-admin');
+
+insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, created_by) values
+  ('6aef2b36-4ae0-5be8-9fff-e7164a60ec33', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('919bdfe9-4a9f-53b5-926f-203243dd199d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('5e5f4b9c-06ef-5fa0-a45e-b8e99c3869b0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('0764a28f-67a6-5d37-96de-d9d17e433c16', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'no_show', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('0539b690-ea3d-56ef-8a7f-810f312a8795', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:00') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:00') at time zone 'Asia/Riyadh') + interval '90 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('8a347df1-cc8a-53dd-b9cd-e957410aacb4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'd141affc-93d5-521c-ae7f-81724efa6efd', 'f81befe7-9561-50af-adc9-2553e96b6277', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:45') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:45') at time zone 'Asia/Riyadh') + interval '40 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('c1ede045-e3a8-5116-abf6-4f34aef532bf', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('f9a3aaf1-228c-5973-8863-01e651d1b60f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'cancelled', null, 'طلب المريض', -3, 'usr_derma-rec-ruh1'),
+  ('f1859983-a24f-5057-992c-e005a0cd7fde', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '13:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '13:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '13:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('1f71d0e7-84e5-555e-b584-058e54b68b9f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('41046268-73b6-5628-9c91-90b9c90c165c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'd141affc-93d5-521c-ae7f-81724efa6efd', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('16eb7815-c654-5beb-8f34-de37578fbcfb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '3604e597-9d7a-556d-8fda-c421d5eee09f', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('7c2553d0-38d4-5e2c-9ec0-6f7421ce79d6', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'd8b97501-c3db-5396-a574-756d8fbddc60', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('8fcb3607-62cc-5cb4-8fae-0e612bb325ce', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'no_show', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('26c85534-bbb2-5c42-87f8-e8eff913e1da', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '13:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '13:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '13:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('2a5254fc-6b5e-5b9e-a8e1-3eaea25ef8d7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'd141affc-93d5-521c-ae7f-81724efa6efd', '9231fbe6-71a2-5249-bb19-9a3165c3fac7', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '5c26fa4d-3528-5731-8fa1-4f3175201abd', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('654317f8-9512-508b-9fc5-f35470ab0f54', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '3604e597-9d7a-556d-8fda-c421d5eee09f', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '18:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '18:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '18:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('a17869ab-7ba2-5142-80fe-3ee4768349b8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'cancelled', null, 'طلب المريض', -3, 'usr_derma-rec-ruh1'),
+  ('a29f3688-d33e-549a-b89f-6a6541f241a7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:10') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:10') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('96a8c9d0-880b-5527-9eb8-9e2083dcb231', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:10') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:10') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('27622f56-e831-54af-92cd-c977cbe1c80b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:10') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:10') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('ed5561c9-3356-5924-bc71-9215eeb93a69', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:55') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:55') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('09da0734-8177-5f2d-be52-fb6014cc1a92', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:25') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:25') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:25') at time zone 'Asia/Riyadh') + interval '40 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('b2043808-df9d-5b2e-b9c8-9c59abd1e5b9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'no_show', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('89bb858e-1b5e-5c90-b006-4901fbb1d8f8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:15') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:15') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('76c3aa0e-c4ce-53f3-a95b-d9efb3a8b828', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '12:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('f16e80ff-ec87-5394-910f-587638b581bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('58d1b119-1af1-53ca-b6ea-bb1ba63b5e4b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '16:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'cancelled', null, 'طلب المريض', -3, 'usr_derma-rec-ruh1'),
+  ('40f2cf72-8daf-54f3-b30d-b81edd4d88a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '17:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -3, 'usr_derma-rec-ruh1'),
+  ('a324ce42-a9dc-5048-92e2-db8dddd7ca45', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('a75b8dcf-b6d8-5601-bfb9-5afb5f1d4d42', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('a07ae781-462f-5104-baaa-a50c3379a78e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '12:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '12:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '12:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('050e35af-d744-5925-8898-1006fd3a5339', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh') + interval '90 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('a0135155-3b24-5702-8fb6-342628ae0dda', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'df796466-c642-5bad-a390-ce372c145876', 'f81befe7-9561-50af-adc9-2553e96b6277', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'no_show', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('5aa46ebc-3791-5510-9698-67dbf1dac9a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:40') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:40') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('0a5cb674-ebd1-5963-a163-1efd3e417d2b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('c96d2ced-8b89-581c-9d45-293d2eedb039', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '12:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '12:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '12:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('0767d45a-58da-572d-8797-24cd22cb212b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'cancelled', null, 'طلب المريض', -2, 'usr_derma-rec-ruh1'),
+  ('a713cd9d-22fb-556c-9153-a4bd157ae0e6', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'df796466-c642-5bad-a390-ce372c145876', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('62739a6f-6bbe-5b32-a994-f92efc3b6ae7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('358d1604-40a9-5eae-b6b0-7662629e9f9c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('afd5a3d2-5926-5300-8af9-17d5b681b268', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', 'f8f8372c-997d-5158-8d3b-da4afa225f46', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '13:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '13:15') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '13:15') at time zone 'Asia/Riyadh') + interval '40 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('3f0bc9ec-ae07-5736-aeca-217ae91b45fc', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', 'b7715006-a012-5f4f-96d1-7d78fcb01fd8', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'adb71670-7e6f-5e59-8e14-851cbbee537a', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:40') at time zone 'Asia/Riyadh') + interval '90 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:40') at time zone 'Asia/Riyadh') + interval '105 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('ea30c807-0326-5bd7-86ff-432ed81ebb36', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'df796466-c642-5bad-a390-ce372c145876', 'd8b97501-c3db-5396-a574-756d8fbddc60', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:25') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:25') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:25') at time zone 'Asia/Riyadh') + interval '60 minutes', 'no_show', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('610b5d8d-e90c-52fa-a78b-00ea0407a606', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('5c3823be-147c-5e6b-ae00-2cfe2f9659e7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('6ff0bfc8-094b-5d4a-9f0c-5ac3f96aef9f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:40') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:40') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('251c582e-54b4-5a6b-9ea2-7f6957d684e2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:10') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:10') at time zone 'Asia/Riyadh') + interval '75 minutes', 'cancelled', null, 'طلب المريض', -2, 'usr_derma-rec-ruh1'),
+  ('e23df951-6b72-58db-b48f-7d7e0675ee33', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:55') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:55') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('e71d8d93-cd99-5c43-9894-5264d1ddb791', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:10') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '18:10') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('f6644c33-4c6c-55ba-b34e-a802cceeb56a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('c7e4311f-5c0f-528d-b34d-1fcc0d414823', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:45') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '11:45') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('94d9c466-7f70-5ba1-9de6-96685790dc58', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '13:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '13:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '13:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('68778202-6bcd-5c0a-b6ba-3c8c0e442c2a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'no_show', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('aaa7ab33-26d7-5af9-9ba9-48059c0c91eb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '16:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('76f6a44f-5682-5963-98fa-8fca14ebec01', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -2) + time '17:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -2, 'usr_derma-rec-ruh1'),
+  ('94deff40-6eb6-5044-a1c0-ff70a9a3f4c3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '5f737b56-5bee-54f6-b3a7-095e399e958a', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('3fea5fe3-5403-58b9-8cc5-ff6f50216377', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'cancelled', null, 'طلب المريض', -1, 'usr_derma-rec-ruh1'),
+  ('35cad860-a664-5720-8297-aeb60ffe7c48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('5f245610-1439-59e3-acf7-ab6f1abb5f63', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh') + interval '90 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('8f1f330c-da6f-5273-9338-ec818662ddde', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'f81befe7-9561-50af-adc9-2553e96b6277', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('e7e22d67-d4f8-5e71-b901-8835fab4c089', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:40') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:40') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('a5605029-5ac1-5ba9-8b90-4d239e7274a9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('f5ee9849-ebb2-517c-8068-748900eefd2b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '75 minutes', 'no_show', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('24007741-8f59-5c77-be02-e9267c407e47', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('576b17a7-2899-59cf-b937-fed0a1f9cc61', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('c62624fd-2d7b-5b1f-955c-3934821e7a12', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('3f1f7339-2bec-57fb-8ed6-330b57e65b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'cancelled', null, 'طلب المريض', -1, 'usr_derma-rec-ruh1'),
+  ('83648774-b8ef-5b7b-97f0-ec552b669fbb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'f8f8372c-997d-5158-8d3b-da4afa225f46', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '40 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('f6f3296a-15db-5ece-90a5-07793da46617', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'b7715006-a012-5f4f-96d1-7d78fcb01fd8', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'adb71670-7e6f-5e59-8e14-851cbbee537a', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:40') at time zone 'Asia/Riyadh') + interval '90 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:40') at time zone 'Asia/Riyadh') + interval '105 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('3444d3c2-2f92-506e-a38e-4ec514520dde', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'd8b97501-c3db-5396-a574-756d8fbddc60', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:25') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:25') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:25') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('312549dc-a3c8-52a3-85d9-219095fb7590', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('7fd83ca2-8a6e-54ea-9997-86d3fa1c7c8f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('a9ea3009-ecd5-5d92-b21f-c590672ac693', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:15') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:15') at time zone 'Asia/Riyadh') + interval '40 minutes', 'no_show', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('7edd73f3-12bd-52b0-919a-56790867f7f3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:10') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:10') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('c51af41f-aaca-5e40-b84b-97912fe84d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:40') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:40') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('6ed9334a-2d71-54da-b908-c27497af0fe1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:55') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '17:55') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('64482ec8-27c0-553b-81e3-fa9f0a9ac3b1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'cancelled', null, 'طلب المريض', -1, 'usr_derma-rec-ruh1'),
+  ('90df549e-1269-5e7c-a4f8-60074bdee50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('baf78c85-65d5-5887-82f0-51ddb5b671d4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:45') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '12:45') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('419702b0-3a2f-52f7-9a43-d44d4aca25a5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '15:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('632c18b4-118b-5232-a150-c489a33e8d83', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('a57fd9de-ed59-5edf-9107-7f8a419a9020', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '18:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -1, 'usr_derma-rec-ruh1'),
+  ('8120d530-d52f-5164-a079-a5d19f61fc0e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '56811db4-8b1a-522c-9015-7dce6ade7d82', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '8ab8a1ea-925e-5ccb-938c-5504d9e2ee11', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', 'باقة ليزر — الجلسة 4 من 6', null, 0, 'usr_derma-rec-ruh1'),
+  ('bca1934b-ac68-5e6a-be9c-0b4a8d17854c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('6fdd1c84-9eac-57ee-a42e-0e36ebff2772', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('da8b32ee-228a-570f-8776-e59227c0657d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'in_session', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('552915ba-50a0-5c29-a233-8e5087584186', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'arrived', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('360412be-e8c5-54f7-aa16-4ad5f2e0babe', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '18:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '18:15') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '18:15') at time zone 'Asia/Riyadh') + interval '90 minutes', 'confirmed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('a6743e0b-ff39-5b2a-929f-3f4b7caaaeb6', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '3604e597-9d7a-556d-8fda-c421d5eee09f', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('feba8107-ecc9-58b1-af3d-7b9842aff34e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'in_session', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('2e9033e2-766b-53c7-83f3-8acfea7f27df', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '18:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '18:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '18:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'arrived', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('8545371c-22cf-590f-8870-342ba18f86cc', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:30') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:30') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('2ccba8e8-e2dd-5cff-85d4-632894e0cae1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'd141affc-93d5-521c-ae7f-81724efa6efd', '9231fbe6-71a2-5249-bb19-9a3165c3fac7', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '5c26fa4d-3528-5731-8fa1-4f3175201abd', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'in_session', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('42075f0d-3501-5bd8-8ada-2d04e07f35fe', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '3604e597-9d7a-556d-8fda-c421d5eee09f', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'arrived', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('1c516cfe-5328-55ac-a496-d3b9ec3234ea', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', 'f8f8372c-997d-5158-8d3b-da4afa225f46', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:15') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:15') at time zone 'Asia/Riyadh') + interval '40 minutes', 'confirmed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('93eb2f1a-6b22-5a4d-8a32-2cc476562255', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'completed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('e615a4d3-8a89-52d3-b462-da16f16dec7f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:55') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:55') at time zone 'Asia/Riyadh') + interval '60 minutes', 'in_session', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('7a54a94e-a7d6-5252-aa5e-50521fa6cb98', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:25') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:25') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:25') at time zone 'Asia/Riyadh') + interval '75 minutes', 'arrived', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('6d96c49c-46f7-5c65-895f-f2875caf0a44', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:10') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:10') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('d7cf4359-a4be-50f3-a788-acbb2f66ca29', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:40') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:40') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('95aa7efd-e003-55d1-956d-a2827d1007fc', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:40') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:40') at time zone 'Asia/Riyadh') + interval '40 minutes', 'booked', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('4e16d475-b492-5f67-9440-061e533d5c4b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('8611dec6-0b4c-5e05-b4d8-c4fb49748a90', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:45') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:45') at time zone 'Asia/Riyadh') + interval '30 minutes', 'in_session', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('1069257d-b82d-5321-a679-f8327c74cd95', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'arrived', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('0e104593-f34c-565b-b6b0-66b39d3116d4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('b56a8014-19e1-5af7-829e-490ba46f9965', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('ae2b358e-02e6-5975-87e9-aa11cbc94466', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:45') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:45') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 0, 'usr_derma-rec-ruh1'),
+  ('9a34e22a-c2cd-553f-b99a-1a4b88b95ddd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', 'مع وليّ الأمر', null, 1, 'usr_derma-rec-ruh1'),
+  ('d28306d6-9eaf-514b-a4f0-2d5517aa4c79', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('b5e10723-17e1-53b4-b49c-f872de517e93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('742aa71f-4d88-5553-a9ac-94074cb411b5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:45') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:45') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('2f6461bc-1e6f-55ce-92b3-3b69e1ea2bfd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'df796466-c642-5bad-a390-ce372c145876', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('6337489f-c386-594d-8eb1-0fc3b2ce9b08', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('4315e20b-4c3e-5bc0-a8a6-29b964808555', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7c704206-bb3b-50a7-ac75-65910b0c9211', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:45') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:45') at time zone 'Asia/Riyadh') + interval '90 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('445c76e1-5c6c-50a0-bd85-3003e926fe07', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('a41ccfb6-047f-5528-b9db-aac9a9e881ed', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('24df94cd-509a-5244-942e-8ff66fd873fd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'df796466-c642-5bad-a390-ce372c145876', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('c47f4f3c-2a13-5b70-90bc-25204c98981a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('80bcb4f8-7d7e-5059-b87f-bded7dd1f558', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7c704206-bb3b-50a7-ac75-65910b0c9211', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('73c2bc1a-fe9c-5e9a-8d07-bb318f1e11f7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:30') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:30') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('eaf3190c-6d7f-54e9-be82-2d07651abb5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', '9231fbe6-71a2-5249-bb19-9a3165c3fac7', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '5c26fa4d-3528-5731-8fa1-4f3175201abd', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('66ec848d-dc8a-559b-8566-74a6bd5e2d7b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'df796466-c642-5bad-a390-ce372c145876', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('4fcbf246-8f8c-5e9a-bb1a-c9d2aa38b74c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'f8f8372c-997d-5158-8d3b-da4afa225f46', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('8460973a-3ddc-579e-ad10-2a559a0a5f39', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7c704206-bb3b-50a7-ac75-65910b0c9211', 'b7715006-a012-5f4f-96d1-7d78fcb01fd8', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'adb71670-7e6f-5e59-8e14-851cbbee537a', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:40') at time zone 'Asia/Riyadh') + interval '90 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:40') at time zone 'Asia/Riyadh') + interval '105 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('75538ba7-8a95-58b4-bc7b-0c91f14c9768', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e5a6936e-d013-5b42-a13a-2f69f172f7a2', 'd8b97501-c3db-5396-a574-756d8fbddc60', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:40') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:40') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('977cf0f1-123b-5362-b97d-c5daf2710924', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('0e96d315-622b-5ae3-b8ec-b03b178172e5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:40') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:40') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('e6cf4183-840a-51f5-9c41-f588548e857c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:55') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '11:55') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('1f91870b-c1fc-5c02-92c2-c74133ba983e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:40') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:40') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('46219d43-df85-5f4f-a690-579c589a1b8c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:55') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:55') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('767f4353-d9cf-5cf2-993b-abff38463dbd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '18:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '18:40') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '18:40') at time zone 'Asia/Riyadh') + interval '40 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('12c9dc97-6e3f-5ba0-8f6f-fb826d32a2e9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('57fd8b79-ffd1-53ca-bc32-3a09c48dd60c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '16:15') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('90dfcdc7-12fc-538f-9430-475b378ee182', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '17:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('92438476-a0e1-5777-bd81-11be529281aa', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '18:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '18:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '18:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 1, 'usr_derma-rec-ruh1'),
+  ('4fa305bb-0c6f-5fdd-8265-324b67459050', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('a515da45-10ac-5a19-9ccb-f29d90f69041', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('e813bc1d-186b-596b-98c6-21b15c623ab1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:45') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:45') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('a273a2be-1e9a-54b9-be19-2e07cbbe0407', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('1dbb4c77-f4d7-5f36-b787-8a29c871d264', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('7c217211-b216-51e3-a8a1-3e1b8ccf53bd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'd141affc-93d5-521c-ae7f-81724efa6efd', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:45') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:45') at time zone 'Asia/Riyadh') + interval '90 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('ae45dd8b-7623-5683-8a0e-cfb30dab09b7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('c133ed7f-8ac6-5cc6-bbaf-860eb93a605a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:45') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:45') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('6d4e8889-9b77-5043-a550-c9000aacffe6', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('181d9e82-7d3d-528e-acc7-cd3f33a75811', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('8f0fe8e7-91da-5c10-9e9c-aa2af4542179', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'd141affc-93d5-521c-ae7f-81724efa6efd', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('dfd8ac7c-46f0-5492-88f2-a15d61f4893c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:30') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:30') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('fb3c3a3f-be1d-54f9-adc3-5a5f9f3a8b43', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', '9231fbe6-71a2-5249-bb19-9a3165c3fac7', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '5c26fa4d-3528-5731-8fa1-4f3175201abd', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('b9452dd6-2577-5378-a27c-6475fc26eb5b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('445aaf68-e07c-5850-9a75-3fca216254c5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', 'f8f8372c-997d-5158-8d3b-da4afa225f46', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('79fddb47-6a32-572f-bf60-1133f3cb9088', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('55a43d23-307d-5885-8ed7-b06abc707bc2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:30') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:30') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('932664b4-5507-599d-a876-139d0b29fe83', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:30') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '12:30') at time zone 'Asia/Riyadh') + interval '40 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('37189494-5598-50c7-9ca8-f3f3dc279bec', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:10') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:10') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('a8a18752-a5b6-52ff-a247-2359e01f07ee', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:25') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:25') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:25') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('d416c0b6-5e22-52f7-bcb8-581ad9fc713f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '18:10') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '18:10') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '18:10') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('ab0bfc37-16a4-5c70-8189-6aca8f1ae91b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('866249d9-f411-5e2c-872c-ba36b401c06c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '11:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('c34eaada-2c00-527f-bb91-f5683011c3f9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('f78ee5fd-4c7d-543f-bb69-c3e74500af44', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:15') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '16:15') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('9603ae79-ad50-537b-a96e-7a5fe58e4524', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '17:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('e29009ff-7c1a-55e3-8cc2-43ef7c6461f7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '18:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '18:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 2) + time '18:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 2, 'usr_derma-rec-ruh1'),
+  ('b6762cb7-0c83-5066-b7bd-0c196fcaf20c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('83d5fa7d-2eec-5fc7-b150-adeba91833b4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b848630c-5546-5f5c-aa8e-24f101175b35', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('5e1c777f-3140-5802-9280-bd45a2b735b0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '12:45') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '12:45') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('9636ce14-e24c-52f5-8144-c1efb3b83f60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('32646ad1-2112-50c6-a673-3a78e865a62d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('2342fa27-973c-5f28-9fb9-4380042e673e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:45') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:45') at time zone 'Asia/Riyadh') + interval '90 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('8029aecc-6219-5a92-9716-36e27dc8214b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b848630c-5546-5f5c-aa8e-24f101175b35', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('75d15ca2-b2f0-5631-9e5b-5640fbdfe625', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('86af67d4-1718-5b4d-af82-d0a3ab16de27', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('6eb40a2d-135a-59ab-b7f1-e2ce156b23d7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('590e65a5-42fd-5608-929e-5493ab371088', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '6da3c84d-b21a-518f-a656-be957c5b0247', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('b0dd7ca0-e41f-5b91-b519-a5344b6ca3eb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:30') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:30') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('9de9e39c-f67f-5cf3-8ce3-a958effb9ca7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', '9231fbe6-71a2-5249-bb19-9a3165c3fac7', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '5c26fa4d-3528-5731-8fa1-4f3175201abd', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('74d903ef-f18d-5da9-8584-38d45fc19926', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '12:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '12:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '12:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('976e4b31-b20e-579c-a31f-0a21e55e4060', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', 'f8f8372c-997d-5158-8d3b-da4afa225f46', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:15') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:15') at time zone 'Asia/Riyadh') + interval '40 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('fe134b3e-89c8-5c44-9796-deda2faec1ce', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('5083e706-a830-5314-90ee-e2382b83e1f7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('295dabe9-40c6-510b-aa0a-439da0fa708e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '13:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '13:15') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '13:15') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('21dfd2bd-ba88-5f43-8eff-3d944051bf8f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('0403ca25-8422-5e2e-9139-02611edc2d65', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:55') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:55') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('30e3b799-10d3-5709-807c-433617b138c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:25') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:25') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:25') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('bb9529f9-da73-50e4-9b9d-86c503832ca6', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('9c25d545-c0e0-5ce8-8459-5546cd2a55a9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '11:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('0d97bfc4-68ad-5ce9-8950-19c120be6b5b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '13:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '13:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '13:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('5dccf892-ec5a-51c1-9104-11f5b0117dbd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('490983c6-1121-5f46-8169-1cd0991d29c2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:30') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '16:30') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('993872c4-db27-5914-b81b-1a9804bbe1ab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '17:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 3, 'usr_derma-rec-ruh1'),
+  ('15883bc9-4ace-5353-b3f2-5c92c30cf412', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7c704206-bb3b-50a7-ac75-65910b0c9211', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('91ee044c-f711-5979-b75b-bc83bce40b52', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e5a6936e-d013-5b42-a13a-2f69f172f7a2', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('8f9842e1-d020-598f-b519-84c286c2c5ea', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '5f737b56-5bee-54f6-b3a7-095e399e958a', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:45') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:45') at time zone 'Asia/Riyadh') + interval '30 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('acacce5c-ee0e-5dec-94c1-4631b63428a9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('9971cc53-932f-5444-9d71-746f24c4187c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('b3c4aa65-750e-50ed-8095-699a55624dd6', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', '9255076a-e45b-5c4b-8ebb-6899c5499bab', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '255381e0-91b1-5f18-ae4a-cd5047b8df1b', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:45') at time zone 'Asia/Riyadh') + interval '75 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:45') at time zone 'Asia/Riyadh') + interval '90 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('9db44294-326b-5cb9-a6a5-524e467a3d4f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e5a6936e-d013-5b42-a13a-2f69f172f7a2', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('d4937561-1367-56ef-9c51-98b9c150f893', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '5f737b56-5bee-54f6-b3a7-095e399e958a', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('ed960eab-10df-5751-a02c-495aaa5bc8bc', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '238646ad-fa4b-5239-a04f-c948716feebd', '356e5967-34b6-564e-a086-32c2e4a387d1', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('c24c1066-c630-5692-ab0d-05a352be3763', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'a4b2d666-9415-5a07-92ee-e520efe5d5c4', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', '80fe641a-1e18-5a33-8b8a-eed174677889', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('d92d4dd2-e966-5ac0-8e91-58edec84d47e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', '5f4d4957-b818-557e-a0df-b307292dc651', '356e5967-34b6-564e-a086-32c2e4a387d1', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:45') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:45') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('b3793495-0c5d-5c56-ab54-c2965ebcfffa', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e5a6936e-d013-5b42-a13a-2f69f172f7a2', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:30') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:30') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('7bb0f5a5-c172-5d34-97bc-1c5c07924419', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '5f737b56-5bee-54f6-b3a7-095e399e958a', '9231fbe6-71a2-5249-bb19-9a3165c3fac7', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', '5c26fa4d-3528-5731-8fa1-4f3175201abd', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('bd86c0cf-dd72-506d-b1db-2087353a0868', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '49f3fc0d-2485-51b6-8c84-875e7f7c32c6', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('770cada0-4e2b-5f8c-8d42-69cd36d0565b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'f8f8372c-997d-5158-8d3b-da4afa225f46', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'd69a9e84-ecf6-5326-aea0-0849da32e918', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('5ca597b2-5cd8-5f74-993c-d4b8e21a1c54', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'b7715006-a012-5f4f-96d1-7d78fcb01fd8', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', 'adb71670-7e6f-5e59-8e14-851cbbee537a', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:40') at time zone 'Asia/Riyadh') + interval '90 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:40') at time zone 'Asia/Riyadh') + interval '105 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('b449ddfb-0615-51b9-9acd-bac17423439b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', 'd8b97501-c3db-5396-a574-756d8fbddc60', 'e20f9e2f-edec-5542-a7ee-b67d174a130b', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:40') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:40') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('2a2edf88-bbc0-5289-9de1-8f44eae7a48c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('68fcf8b0-b91e-5fff-89cf-0cde349b5f13', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '238646ad-fa4b-5239-a04f-c948716feebd', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('ec20d207-9c34-58f6-88f6-c4c670644e69', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:45') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:45') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:45') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('7466c349-e8b9-54e4-b1c6-17c494de0bbb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'fa096d95-0efb-5474-bf05-4ade2b49fbe2', 'f81befe7-9561-50af-adc9-2553e96b6277', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '30 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '40 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('a21c0f9e-8a12-5589-be30-819a42e4832c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '7af5d6b7-2ad1-5e45-be3a-51af068416db', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:40') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:40') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:40') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('7d2e2c41-af5e-5875-b60d-37b8e0f2717d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '98a24ab8-4ab7-5753-9b10-126dfcd66167', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:55') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:55') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:55') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('f6a188df-bf57-50d3-a347-a2320982a197', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '10:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('4434a4a0-a713-5d83-afc9-8bfbfa0469b2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '11:15') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('cba6a4d7-f89c-5a95-84fa-c4fed91ba247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'ca94abdb-c5cc-5ac3-b91d-d621c575419b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:30') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:30') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '12:30') at time zone 'Asia/Riyadh') + interval '60 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('f52865bf-5228-5c43-a84c-f86b8354b64e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '1deab004-8246-5eae-8675-ea2b5e463b09', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', '57df96a6-f28e-56c2-afd9-959c7f7e90b9', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '15:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('8c043919-ffce-51a1-9a60-0e0417377545', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '96d64a3d-5b03-59e3-a3da-8230714c1eac', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '86737463-421e-5c8f-aeaa-398dfe9d0ccb', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '16:15') at time zone 'Asia/Riyadh') + interval '30 minutes', 'confirmed', null, null, 4, 'usr_derma-rec-ruh1'),
+  ('cee01aef-5cda-5738-8db7-1359c82df92c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'dac08cea-8ab1-55f5-b636-91120331fac9', 'df0d892c-0dbf-543b-bfdb-8125f294ed1c', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '067421e1-88fa-5abd-8a7b-f266b2b25ade', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 4) + time '17:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'booked', null, null, 4, 'usr_derma-rec-ruh1');
+
+insert into public.reschedule_requests (tenant_id, branch_id, appointment_id, requested_by, proposed_starts_at, reason, status) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '4fa305bb-0c6f-5fdd-8265-324b67459050', 'usr_derma-dr-sara', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 3) + time '18:30') at time zone 'Asia/Riyadh'), 'لدي محاضرة في المؤتمر صباحًا', 'pending');
+
+insert into public.patient_packages (id, tenant_id, patient_id, template_id, service_id, name_ar, name_en, sessions_total, price_halalas, purchased_at, expires_at, sold_by) values
+  ('b763049e-9ae9-5409-9f1b-f9e519ebc680', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bda3525c-2cfc-5da5-b720-d4c64f553d48', 'e3f5912c-34e3-5c06-ad82-859640083596', '901925ea-47ec-5bdd-bc69-bab97d91b50b', 'باقة ليزر إزالة الشعر — 6 جلسات', 'Laser Hair Removal — 6 sessions', 6, 360000, now() - interval '75 days', now() - interval '75 days' + interval '365 days', 'usr_derma-rec-ruh1'),
+  ('9ff9e70f-1912-5cae-a38a-b2a2f906d2a1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'e3f5912c-34e3-5c06-ad82-859640083596', '901925ea-47ec-5bdd-bc69-bab97d91b50b', 'باقة ليزر إزالة الشعر — 6 جلسات', 'Laser Hair Removal — 6 sessions', 6, 360000, now() - interval '90 days', now() - interval '90 days' + interval '365 days', 'usr_derma-rec-ruh1'),
+  ('e9c01623-8d6a-5339-b403-e3bc6e63f3ad', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e172214f-c582-5cbb-9687-66298cf4d2c9', '2ba9840c-7b0b-5c2d-aa4f-a45beb511d57', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', 'باقة التقشير الكيميائي — 4 جلسات', 'Chemical Peeling — 4 sessions', 4, 200000, now() - interval '30 days', now() - interval '30 days' + interval '180 days', 'usr_derma-rec-ruh1'),
+  ('24204b6c-48c2-5d96-86f0-f1c6aed7d0a5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7c704206-bb3b-50a7-ac75-65910b0c9211', 'd3475e8c-f332-5206-92b7-789d4e7e838d', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', 'باقة محفزات البشرة — 3 جلسات', 'Skin Boosters — 3 sessions', 3, 390000, now() - interval '5 days', now() - interval '5 days' + interval '180 days', 'usr_derma-rec-ruh1'),
+  ('36b31deb-9aea-5ffb-858d-178d5a3cc132', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'df796466-c642-5bad-a390-ce372c145876', '8eb6d02a-4e51-5c37-8c65-a971dd40b976', '238646ad-fa4b-5239-a04f-c948716feebd', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 190000, now() - interval '40 days', now() - interval '40 days' + interval '180 days', 'usr_derma-rec-ruh1');
+
+insert into public.package_payments (tenant_id, patient_package_id, amount_halalas, method, paid_at, recorded_by) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b763049e-9ae9-5409-9f1b-f9e519ebc680', 180000, 'card', now() - interval '75 days', 'usr_derma-rec-ruh1'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '9ff9e70f-1912-5cae-a38a-b2a2f906d2a1', 360000, 'card', now() - interval '90 days', 'usr_derma-rec-ruh1'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e9c01623-8d6a-5339-b403-e3bc6e63f3ad', 50000, 'card', now() - interval '30 days', 'usr_derma-rec-ruh1'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e9c01623-8d6a-5339-b403-e3bc6e63f3ad', 50000, 'cash', now() - interval '16 days', 'usr_derma-rec-ruh1'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '24204b6c-48c2-5d96-86f0-f1c6aed7d0a5', 390000, 'card', now() - interval '5 days', 'usr_derma-rec-ruh1');
+
+insert into public.package_session_events (tenant_id, patient_package_id, kind, delta, reason, created_by, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b763049e-9ae9-5409-9f1b-f9e519ebc680', 'override', 1, 'جلسة سابقة 1 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '54 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b763049e-9ae9-5409-9f1b-f9e519ebc680', 'override', 1, 'جلسة سابقة 2 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '33 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b763049e-9ae9-5409-9f1b-f9e519ebc680', 'override', 1, 'جلسة سابقة 3 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '12 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '9ff9e70f-1912-5cae-a38a-b2a2f906d2a1', 'override', 1, 'جلسة سابقة 1 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '69 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '9ff9e70f-1912-5cae-a38a-b2a2f906d2a1', 'override', 1, 'جلسة سابقة 2 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '48 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '9ff9e70f-1912-5cae-a38a-b2a2f906d2a1', 'override', 1, 'جلسة سابقة 3 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '27 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e9c01623-8d6a-5339-b403-e3bc6e63f3ad', 'override', 1, 'جلسة سابقة 1 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '9 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '36b31deb-9aea-5ffb-858d-178d5a3cc132', 'override', 1, 'جلسة سابقة 1 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '19 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '36b31deb-9aea-5ffb-858d-178d5a3cc132', 'override', 1, 'جلسة سابقة 2 (بيانات تجريبية)', 'usr_derma-rec-ruh1', now() - interval '-2 days');
+
+insert into public.files (id, tenant_id, kind, mime_type, size_bytes, sha256, data, created_by) values
+  ('3c056d0a-e6fb-5597-ad27-af8aa49cbbc1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'signature', 'image/png', 2631, '0ba6adb9337cbaecc825683d717b370491e13b99262b313300d831bfa9531198', decode('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', 'base64'), 'usr_derma-rec-ruh1'),
+  ('f711cf9c-6268-5554-aea0-97bc2c76f023', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'signature', 'image/png', 2631, '0ba6adb9337cbaecc825683d717b370491e13b99262b313300d831bfa9531198', decode('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', 'base64'), 'usr_derma-rec-ruh1'),
+  ('8cb41498-0f3a-5429-ae03-3760b0f41d78', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'signature', 'image/png', 2631, '0ba6adb9337cbaecc825683d717b370491e13b99262b313300d831bfa9531198', decode('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', 'base64'), 'usr_derma-rec-ruh1');
+
+insert into public.patient_consents (id, tenant_id, patient_id, template_id, template_code, template_version, title_ar, title_en, body_ar, body_en, content_sha256, signer_name, signer_relation, signature_file_id, witness_user_id, signed_at) values
+  ('f8aa4428-7078-523b-b394-95248cdd1a72', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '3edebd96-da81-580f-8bed-223be231bdf7', 'laser_hair_removal', 1, 'نموذج موافقة على جلسات ليزر إزالة الشعر', 'Consent for Laser Hair Removal sessions', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي طبيعة جلسات ليزر إزالة الشعر (Laser Hair Removal) وعدد الجلسات المتوقع.
+
+أعلم أن الآثار الجانبية الشائعة تشمل الاحمرار والتورم المؤقت، ونادرًا: الحروق أو تغيّر لون الجلد.
+
+أقرّ بأنني أبلغت العيادة عن أي أدوية أتناولها، وعن الحمل، وعن التعرض للشمس خلال آخر 14 يومًا.
+
+أوافق على إجراء الجلسة وأتحمّل مسؤولية الالتزام بتعليمات العناية بعد الجلسة.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained Laser Hair Removal sessions and the expected number of sessions.
+
+I understand common side effects include temporary redness and swelling, and rarely burns or pigment change.
+
+I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
+
+I consent to the session and will follow the aftercare instructions.', '7632119da4e88d6349aa1cd333da3c7df707cb2134ade66a63946d341c69821e', 'غادة صالح السبيعي', 'self', '3c056d0a-e6fb-5597-ad27-af8aa49cbbc1', 'usr_derma-rec-ruh1', now() - interval '90 days'),
+  ('d9a62288-5402-54d6-8057-bab03c53fe8b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'b020a4a7-5411-58e7-9ae3-b3c4a0084017', 'chemical_peel', 1, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
+
+أعلم أن البشرة قد تحمرّ وتتقشر لعدة أيام، وأن التعرض للشمس بعد الجلسة قد يسبب تصبغات.
+
+أقرّ بأنني لا أستخدم الإيزوتريتينوين (روكتان) حاليًا أو خلال آخر 6 أشهر.
+
+أوافق على الإجراء وألتزم باستخدام واقي الشمس SPF 50 يوميًا.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained chemical peeling and the peel depth suitable for my skin.
+
+I understand my skin may be red and peel for several days, and sun exposure may cause pigmentation.
+
+I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
+
+I consent to the procedure and will use SPF 50 sunscreen daily.', 'ef49f32ba9a4da417330e5f78d0251094df1dc022d35bb17fc77bba28bec15cf', 'مها سليمان العنزي', 'self', 'f711cf9c-6268-5554-aea0-97bc2c76f023', 'usr_derma-rec-ruh1', now() - interval '30 days'),
+  ('4b1bb48c-237b-5f87-b5d8-c6ef9c6b6d19', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'df796466-c642-5bad-a390-ce372c145876', '6ce721bf-f6ac-5c3b-94e6-31fc56aaab00', 'injectables', 1, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
+
+أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.
+
+أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
+
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
+
+I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.
+
+I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
+
+I consent to the procedure and to before/after medical photos for my file only.', '3d783b527caf14d792befa3823b8b6998e32f122cd65c10ca21fd798fa555f51', 'لمى إبراهيم المطيري', 'self', '8cb41498-0f3a-5429-ae03-3760b0f41d78', 'usr_derma-rec-ruh1', now() - interval '40 days');
+
+insert into public.clinical_notes (id, tenant_id, patient_id, author_user_id, author_name, body, status, signed_at, created_at) values
+  ('78bbdd3e-1e01-5d27-aa22-2df7e5556425', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'usr_derma-dr-sara', 'د. سارة العتيبي', 'الشكوى: خطوط تعبيرية بين الحاجبين.
+الفحص: بشرة سليمة، لا علامات التهاب.
+الخطة: بوتوكس 20 وحدة مع مراجعة بعد 14 يومًا. تنبيه: حساسية من الليدوكايين — تم استخدام تخدير بديل.', 'signed', now() - interval '21 days', now() - interval '21 days'),
+  ('5438c8e3-a301-5785-a009-8ec792cf5966', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'usr_derma-dr-sara', 'د. سارة العتيبي', 'جلسة ليزر إزالة الشعر رقم 3 من 6. المنطقة: الساقين. الإعدادات: 18 J/cm² — 10 ms. لا مضاعفات.', 'signed', now() - interval '12 days', now() - interval '12 days'),
+  ('ab74b661-2014-558e-a5b6-0c6e0fc2d4ed', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3604e597-9d7a-556d-8fda-c421d5eee09f', 'usr_derma-dr-sara', 'د. سارة العتيبي', 'مسودة: استشارة بخصوص التصبغات. يقترح تقشير كيميائي خفيف — بانتظار نتائج اختبار الحساسية.', 'draft', null, now() - interval '1 days');
+
+insert into public.clinical_note_addenda (tenant_id, note_id, author_user_id, author_name, body, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '78bbdd3e-1e01-5d27-aa22-2df7e5556425', 'usr_derma-dr-sara', 'د. سارة العتيبي', 'إضافة: المراجعة تمت — نتيجة متماثلة، لا حاجة لجرعة إضافية.', now() - interval '7 days');
+
+insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, created_by) values
+  ('5be574b8-8c14-5b75-af31-fd4fb861b805', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', 'e12bccd6-9e21-52ec-bbcf-1b1727158b14', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 0, 'usr_lamsa-rec');
+
+insert into public.time_blocks (id, tenant_id, branch_id, member_id, starts_at, ends_at, reason, demo_day_index, created_by) values
+  ('72211765-873d-5e3d-be2b-307fada23821', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:00') at time zone 'Asia/Riyadh'), 'اجتماع', 0, 'usr_lamsa-admin');
+
+insert into public.patient_packages (id, tenant_id, patient_id, template_id, service_id, name_ar, name_en, sessions_total, price_halalas, purchased_at, expires_at, sold_by) values
+  ('0e192f25-9a21-5b2c-9793-8f8c2bb1eb27', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'baa4e36f-c509-587a-ab60-06c22bf3188a', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, now() - interval '20 days', now() + interval '160 days', 'usr_lamsa-rec');
+
+insert into public.package_payments (tenant_id, patient_package_id, amount_halalas, method, paid_at, recorded_by) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '0e192f25-9a21-5b2c-9793-8f8c2bb1eb27', 90000, 'card', now() - interval '20 days', 'usr_lamsa-rec');
+
+insert into public.package_session_events (tenant_id, patient_package_id, kind, delta, reason, created_by, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '0e192f25-9a21-5b2c-9793-8f8c2bb1eb27', 'override', 1, 'جلسة سابقة (بيانات تجريبية)', 'usr_lamsa-rec', now() - interval '10 days');
+
+insert into public.files (id, tenant_id, kind, mime_type, size_bytes, sha256, data, created_by) values
+  ('46f6205f-1cf7-524b-a6d3-fec4b799926e', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'signature', 'image/png', 2631, '0ba6adb9337cbaecc825683d717b370491e13b99262b313300d831bfa9531198', decode('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', 'base64'), 'usr_lamsa-rec');
+
+insert into public.patient_consents (id, tenant_id, patient_id, template_id, template_code, template_version, title_ar, title_en, body_ar, body_en, content_sha256, signer_name, signer_relation, signature_file_id, witness_user_id, signed_at) values
+  ('6eaf2bde-5823-5b61-abf2-3e2755bb0e12', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '37c21ec2-2835-5df9-aaa4-65939e8fb70e', 'injectables', 1, 'نموذج موافقة على حقن البوتوكس والفيلر', 'Consent for Botox and Filler injections', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أقرّ بأن الطبيب/ة شرح لي إجراء الحقن (Botox / Fillers) والنتائج المتوقعة ومدة بقائها.
+
+أعلم بالمخاطر المحتملة: الكدمات، التورم، عدم التماثل المؤقت، ونادرًا: انسداد الأوعية الدموية.
+
+أقرّ بعدم وجود حمل أو رضاعة، وأنني أبلغت عن الحساسية من أي مادة، بما فيها الليدوكايين.
+
+أوافق على الإجراء وعلى التصوير الطبي قبل وبعد لأغراض الملف الطبي فقط.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I confirm the practitioner explained the injection procedure (Botox / Fillers), expected results and duration.
+
+I understand possible risks: bruising, swelling, temporary asymmetry, and rarely vascular occlusion.
+
+I confirm I am not pregnant or breastfeeding and have reported any allergies, including to lidocaine.
+
+I consent to the procedure and to before/after medical photos for my file only.', '3d783b527caf14d792befa3823b8b6998e32f122cd65c10ca21fd798fa555f51', 'مريضة لمسة', 'self', '46f6205f-1cf7-524b-a6d3-fec4b799926e', 'usr_lamsa-rec', now() - interval '20 days');
+
+insert into public.clinical_notes (id, tenant_id, patient_id, author_user_id, author_name, body, status, signed_at, created_at) values
+  ('f719f56d-0af0-55d3-85c6-904f3694f067', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'usr_lamsa-dr-mona', 'د. منى السبيعي', 'ملاحظة لمسة السرية.', 'signed', now() - interval '10 days', now() - interval '10 days');
+
+insert into public.clinical_note_addenda (tenant_id, note_id, author_user_id, author_name, body, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f719f56d-0af0-55d3-85c6-904f3694f067', 'usr_lamsa-dr-mona', 'د. منى السبيعي', 'إضافة لمسة.', now() - interval '9 days');
+
+insert into public.reschedule_requests (tenant_id, branch_id, appointment_id, requested_by, proposed_starts_at, reason, status) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '5be574b8-8c14-5b75-af31-fd4fb861b805', 'usr_lamsa-dr-mona', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:00') at time zone 'Asia/Riyadh'), 'طلب تجريبي', 'pending');
 
 
 -- ─── STEP 4: RESTRICTED APP LOGIN (clinic_app) ──────────────────────────────
@@ -524,6 +1533,12 @@ end $$;
 -- ════════════════════════════════════════════════════════════════════════════
 -- Tenant isolation: restricted app role + Row-Level Security.
 -- The app ALWAYS connects as clinic_app. It cannot bypass RLS and does not own any table.
+--
+-- withTenant() (src/db/tenant.ts) sets, for one transaction only:
+--   app.tenant_id   the clinic                       (unset → zero rows everywhere)
+--   app.user_id     the signed-in staff user
+--   app.roles       e.g. "clinic_admin,practitioner"
+--   app.branch_ids  "*" for all branches, or a comma-separated list (unset → no branch rows)
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- Current clinic for this transaction. NULL when unset → every policy below matches zero rows.
@@ -532,9 +1547,31 @@ create or replace function public.app_current_tenant() returns uuid
   set search_path = ''
 as $$ select nullif(current_setting('app.tenant_id', true), '')::uuid $$;
 
+create or replace function public.app_current_user() returns text
+  language sql stable
+  set search_path = ''
+as $$ select nullif(current_setting('app.user_id', true), '') $$;
+
+create or replace function public.app_has_role(role_name text) returns boolean
+  language sql stable
+  set search_path = ''
+as $$ select role_name = any(string_to_array(coalesce(current_setting('app.roles', true), ''), ',')) $$;
+
+-- Branch-restricted staff (e.g. a Jeddah-only doctor) only see their branch. Fails closed.
+create or replace function public.app_branch_allowed(branch uuid) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select coalesce(current_setting('app.branch_ids', true), '') = '*'
+      or branch::text = any(string_to_array(coalesce(current_setting('app.branch_ids', true), ''), ','))
+$$;
+
 -- ─── Privileges ─────────────────────────────────────────────────────────────
 grant usage on schema public to clinic_app;
-grant execute on function public.app_current_tenant() to clinic_app;
+grant execute on function public.app_current_tenant(), public.app_current_user(),
+  public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
+  public.demo_workday(date, integer)
+  to clinic_app;
 
 -- Clinic directory: read-only (needed to resolve the subdomain before login).
 grant select on public.tenants to clinic_app;
@@ -546,10 +1583,24 @@ grant select, insert, update, delete on public.users, public.sessions, public.ac
 -- Clinic data.
 grant select, insert, update, delete on public.branches, public.departments,
   public.tenant_members, public.rooms, public.devices, public.services,
-  public.staff_schedules, public.patients to clinic_app;
-
--- Audit log is append-only for the app: no update, no delete.
-grant select, insert on public.audit_logs to clinic_app;
+  public.staff_schedules, public.patients, public.branch_holidays,
+  public.patient_medical_flags, public.time_blocks, public.package_templates
+  to clinic_app;
+grant select, update on public.tenant_settings to clinic_app;
+-- Appointments are never deleted: they are cancelled (status), which keeps the history.
+grant select, insert, update on public.appointments, public.reschedule_requests,
+  public.patient_packages to clinic_app;
+-- Reservations are written by the booking triggers, which run as clinic_app.
+grant select, insert, delete on public.reservations to clinic_app;
+-- Append-only records: payments, balance changes, files, signed consents, audit log.
+grant select, insert on public.package_payments, public.package_session_events,
+  public.files, public.patient_consents, public.audit_logs to clinic_app;
+-- Consent template versions are immutable: only the "current" flag may change.
+grant select, insert on public.consent_templates to clinic_app;
+grant update (is_current) on public.consent_templates to clinic_app;
+-- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
+grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
+grant update (body, status, signed_at, updated_at) on public.clinical_notes to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -567,7 +1618,11 @@ declare
 begin
   foreach t in array array[
     'branches', 'departments', 'tenant_members', 'rooms', 'devices', 'services',
-    'staff_schedules', 'patients', 'audit_logs'
+    'staff_schedules', 'patients', 'audit_logs',
+    'tenant_settings', 'branch_holidays', 'patient_medical_flags', 'appointments',
+    'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
+    'patient_packages', 'package_payments', 'package_session_events', 'files',
+    'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -578,6 +1633,42 @@ begin
       t || '_tenant_isolation', t);
   end loop;
 end $$;
+
+-- Branch-scoped tables: ALSO limited to the user's allowed branches ("restrictive" = AND).
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['appointments', 'time_blocks', 'reservations', 'reschedule_requests'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using (public.app_branch_allowed(branch_id))
+         with check (public.app_branch_allowed(branch_id))',
+      t || '_branch_scope', t);
+  end loop;
+end $$;
+
+-- Clinical notes: ONLY the practitioner role, enforced by the database itself.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['clinical_notes', 'clinical_note_addenda'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using (public.app_has_role(''practitioner''))
+         with check (public.app_has_role(''practitioner''))',
+      t || '_practitioners_only', t);
+  end loop;
+end $$;
+
+-- Notes and addenda are written in the author's own name; only the author edits a draft.
+create policy clinical_notes_author_insert on public.clinical_notes as restrictive
+  for insert to clinic_app with check (author_user_id = public.app_current_user());
+create policy clinical_notes_author_update on public.clinical_notes as restrictive
+  for update to clinic_app using (author_user_id = public.app_current_user());
+create policy clinical_note_addenda_author_insert on public.clinical_note_addenda as restrictive
+  for insert to clinic_app with check (author_user_id = public.app_current_user());
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;

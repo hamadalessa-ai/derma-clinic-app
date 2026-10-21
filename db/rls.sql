@@ -1,6 +1,12 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- Tenant isolation: restricted app role + Row-Level Security.
 -- The app ALWAYS connects as clinic_app. It cannot bypass RLS and does not own any table.
+--
+-- withTenant() (src/db/tenant.ts) sets, for one transaction only:
+--   app.tenant_id   the clinic                       (unset → zero rows everywhere)
+--   app.user_id     the signed-in staff user
+--   app.roles       e.g. "clinic_admin,practitioner"
+--   app.branch_ids  "*" for all branches, or a comma-separated list (unset → no branch rows)
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- Current clinic for this transaction. NULL when unset → every policy below matches zero rows.
@@ -9,9 +15,31 @@ create or replace function public.app_current_tenant() returns uuid
   set search_path = ''
 as $$ select nullif(current_setting('app.tenant_id', true), '')::uuid $$;
 
+create or replace function public.app_current_user() returns text
+  language sql stable
+  set search_path = ''
+as $$ select nullif(current_setting('app.user_id', true), '') $$;
+
+create or replace function public.app_has_role(role_name text) returns boolean
+  language sql stable
+  set search_path = ''
+as $$ select role_name = any(string_to_array(coalesce(current_setting('app.roles', true), ''), ',')) $$;
+
+-- Branch-restricted staff (e.g. a Jeddah-only doctor) only see their branch. Fails closed.
+create or replace function public.app_branch_allowed(branch uuid) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select coalesce(current_setting('app.branch_ids', true), '') = '*'
+      or branch::text = any(string_to_array(coalesce(current_setting('app.branch_ids', true), ''), ','))
+$$;
+
 -- ─── Privileges ─────────────────────────────────────────────────────────────
 grant usage on schema public to clinic_app;
-grant execute on function public.app_current_tenant() to clinic_app;
+grant execute on function public.app_current_tenant(), public.app_current_user(),
+  public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
+  public.demo_workday(date, integer)
+  to clinic_app;
 
 -- Clinic directory: read-only (needed to resolve the subdomain before login).
 grant select on public.tenants to clinic_app;
@@ -23,10 +51,24 @@ grant select, insert, update, delete on public.users, public.sessions, public.ac
 -- Clinic data.
 grant select, insert, update, delete on public.branches, public.departments,
   public.tenant_members, public.rooms, public.devices, public.services,
-  public.staff_schedules, public.patients to clinic_app;
-
--- Audit log is append-only for the app: no update, no delete.
-grant select, insert on public.audit_logs to clinic_app;
+  public.staff_schedules, public.patients, public.branch_holidays,
+  public.patient_medical_flags, public.time_blocks, public.package_templates
+  to clinic_app;
+grant select, update on public.tenant_settings to clinic_app;
+-- Appointments are never deleted: they are cancelled (status), which keeps the history.
+grant select, insert, update on public.appointments, public.reschedule_requests,
+  public.patient_packages to clinic_app;
+-- Reservations are written by the booking triggers, which run as clinic_app.
+grant select, insert, delete on public.reservations to clinic_app;
+-- Append-only records: payments, balance changes, files, signed consents, audit log.
+grant select, insert on public.package_payments, public.package_session_events,
+  public.files, public.patient_consents, public.audit_logs to clinic_app;
+-- Consent template versions are immutable: only the "current" flag may change.
+grant select, insert on public.consent_templates to clinic_app;
+grant update (is_current) on public.consent_templates to clinic_app;
+-- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
+grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
+grant update (body, status, signed_at, updated_at) on public.clinical_notes to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -44,7 +86,11 @@ declare
 begin
   foreach t in array array[
     'branches', 'departments', 'tenant_members', 'rooms', 'devices', 'services',
-    'staff_schedules', 'patients', 'audit_logs'
+    'staff_schedules', 'patients', 'audit_logs',
+    'tenant_settings', 'branch_holidays', 'patient_medical_flags', 'appointments',
+    'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
+    'patient_packages', 'package_payments', 'package_session_events', 'files',
+    'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -55,6 +101,42 @@ begin
       t || '_tenant_isolation', t);
   end loop;
 end $$;
+
+-- Branch-scoped tables: ALSO limited to the user's allowed branches ("restrictive" = AND).
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['appointments', 'time_blocks', 'reservations', 'reschedule_requests'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using (public.app_branch_allowed(branch_id))
+         with check (public.app_branch_allowed(branch_id))',
+      t || '_branch_scope', t);
+  end loop;
+end $$;
+
+-- Clinical notes: ONLY the practitioner role, enforced by the database itself.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['clinical_notes', 'clinical_note_addenda'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using (public.app_has_role(''practitioner''))
+         with check (public.app_has_role(''practitioner''))',
+      t || '_practitioners_only', t);
+  end loop;
+end $$;
+
+-- Notes and addenda are written in the author's own name; only the author edits a draft.
+create policy clinical_notes_author_insert on public.clinical_notes as restrictive
+  for insert to clinic_app with check (author_user_id = public.app_current_user());
+create policy clinical_notes_author_update on public.clinical_notes as restrictive
+  for update to clinic_app using (author_user_id = public.app_current_user());
+create policy clinical_note_addenda_author_insert on public.clinical_note_addenda as restrictive
+  for insert to clinic_app with check (author_user_id = public.app_current_user());
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;

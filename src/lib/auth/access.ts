@@ -10,6 +10,8 @@ export interface StaffAccess {
   /** All roles in this clinic (at least one). */
   roles: Role[];
   memberId: string | null;
+  /** Set when this person may only work in one branch. */
+  restrictedBranchId: string | null;
   /** Branches this person may switch between (all, or only their own). */
   branches: Branch[];
   titleAr: string | null;
@@ -42,6 +44,7 @@ export async function getStaffAccess(
     return {
       roles: member ? member.roles : ["platform_owner"],
       memberId: member?.id ?? null,
+      restrictedBranchId: member?.branchId ?? null,
       branches: visible,
       titleAr: member?.titleAr ?? null,
       titleEn: member?.titleEn ?? null,

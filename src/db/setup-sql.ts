@@ -7,10 +7,19 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { insert, lit, raw } from "./sql-render";
+import { demoSql } from "./demo-sql";
 import {
   demoId,
   PLATFORM_OWNER,
   SEED_TENANTS,
+  CONSENT_TEMPLATES,
+  DERMA_MEDICAL_FLAGS,
+  PACKAGE_TEMPLATES,
+  SERVICE_CONSENTS,
+  DOCTORS_MANAGE_OWN_SCHEDULE,
+  LAMSA_MEDICAL_FLAGS,
+  HOLIDAYS,
   WORK_HOURS,
   WORK_WEEK,
   type SeedTenant,
@@ -20,19 +29,6 @@ export const APP_PASSWORD_PLACEHOLDER = "CHANGE_ME_APP_DB_PASSWORD";
 export const DEMO_PASSWORD_PLACEHOLDER = "CHANGE_ME_DEMO_PASSWORD";
 
 const ROOT = path.resolve(__dirname, "../..");
-
-function lit(value: string | number | boolean | null): string {
-  if (value === null) return "null";
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return `'${value.replace(/'/g, "''")}'`;
-}
-
-function insert(table: string, rows: Record<string, string | number | boolean | null>[]) {
-  if (rows.length === 0) return "";
-  const cols = Object.keys(rows[0]);
-  const values = rows.map((r) => `  (${cols.map((c) => lit(r[c])).join(", ")})`).join(",\n");
-  return `insert into public.${table} (${cols.join(", ")}) values\n${values};\n`;
-}
 
 /** Password hash computed once inside Postgres with pgcrypto bcrypt (verified by bcryptjs). */
 const PASSWORD_HASH = "(select demo_password_hash from pg_temp.setup_params)";
@@ -146,6 +142,8 @@ function tenantSql(t: SeedTenant): string {
             weekday,
             start_time: WORK_HOURS.start,
             end_time: WORK_HOURS.end,
+            break_start: WORK_HOURS.breakStart,
+            break_end: WORK_HOURS.breakEnd,
           })),
         ),
     ),
@@ -164,6 +162,7 @@ function tenantSql(t: SeedTenant): string {
         buffer_minutes: s.bufferMinutes,
         price_halalas: Math.round(s.priceSar * 100),
         required_device_type: s.requiredDeviceType,
+        consent_code: SERVICE_CONSENTS[s.code] ?? null,
         is_demo_value: true,
         sort_order: i,
       })),
@@ -181,7 +180,76 @@ function tenantSql(t: SeedTenant): string {
         phone: p.phone,
         gender: p.gender,
         date_of_birth: p.dateOfBirth,
+        id_type: p.idType,
+        id_number: p.idNumber,
+        guardian_id: p.guardian ? ref("patient", p.guardian.fileNumber) : null,
+        guardian_relation_ar: p.guardian?.relationAr ?? null,
+        guardian_relation_en: p.guardian?.relationEn ?? null,
         is_fake: true,
+      })),
+    ),
+  );
+  out.push(
+    insert(
+      "patient_medical_flags",
+      (t.slug === "derma" ? DERMA_MEDICAL_FLAGS : LAMSA_MEDICAL_FLAGS).map((f) => ({
+        tenant_id: tid,
+        patient_id: ref("patient", f.fileNumber),
+        kind: f.kind,
+        label: f.label,
+        note: f.note ?? null,
+      })),
+    ),
+  );
+  out.push(
+    insert(
+      "consent_templates",
+      CONSENT_TEMPLATES.map((c) => ({
+        id: ref("consent_template", `${c.code}:v1`),
+        tenant_id: tid,
+        code: c.code,
+        version: 1,
+        is_current: true,
+        title_ar: c.titleAr,
+        title_en: c.titleEn,
+        body_ar: c.bodyAr,
+        body_en: c.bodyEn,
+      })),
+    ),
+  );
+  out.push(
+    insert(
+      "package_templates",
+      (PACKAGE_TEMPLATES[t.slug] ?? []).map((p) => ({
+        id: ref("package_template", p.key),
+        tenant_id: tid,
+        service_id: ref("service", p.serviceCode),
+        name_ar: p.nameAr,
+        name_en: p.nameEn,
+        sessions_count: p.sessions,
+        price_halalas: p.priceSar * 100,
+        validity_days: p.validityDays,
+      })),
+    ),
+  );
+  out.push(
+    insert("tenant_settings", [
+      {
+        tenant_id: tid,
+        doctors_manage_own_schedule: DOCTORS_MANAGE_OWN_SCHEDULE[t.slug] ?? false,
+        demo_anchor_day: raw("(select demo_anchor from pg_temp.setup_params)"),
+      },
+    ]),
+  );
+  out.push(
+    insert(
+      "branch_holidays",
+      HOLIDAYS.map((h) => ({
+        tenant_id: tid,
+        branch_id: null,
+        day: h.day,
+        name_ar: h.nameAr,
+        name_en: h.nameEn,
       })),
     ),
   );
@@ -199,20 +267,37 @@ function tenantSql(t: SeedTenant): string {
   return out.filter(Boolean).join("\n");
 }
 
+/**
+ * drizzle-kit sometimes emits a composite FOREIGN KEY before the UNIQUE constraint it
+ * points at. Within each migration file, run statements in a safe order:
+ * types/tables → unique constraints → everything else (keeping their relative order).
+ */
+export function orderMigrationStatements(fileSql: string): string {
+  const statements = fileSql
+    .split("--> statement-breakpoint")
+    .map((st) => st.trim())
+    .filter(Boolean);
+  const rank = (st: string) =>
+    /^CREATE (TYPE|TABLE)\b/i.test(st) ? 0 : /ADD CONSTRAINT "[^"]+" UNIQUE\(/i.test(st) ? 1 : 2;
+  return statements
+    .map((st, i) => ({ st, i, r: rank(st) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.st)
+    .join("\n");
+}
+
 function migrationsSql(): string {
   const dir = path.join(ROOT, "db/migrations");
   return readdirSync(dir)
     .filter((f) => f.endsWith(".sql"))
     .sort()
-    .map(
-      (f) =>
-        `-- ${f}\n${readFileSync(path.join(dir, f), "utf8").replaceAll("--> statement-breakpoint", "")}`,
-    )
+    .map((f) => `-- ${f}\n${orderMigrationStatements(readFileSync(path.join(dir, f), "utf8"))}`)
     .join("\n");
 }
 
 export function buildSetupSql(): string {
   const rls = readFileSync(path.join(ROOT, "db/rls.sql"), "utf8");
+  const booking = readFileSync(path.join(ROOT, "db/booking.sql"), "utf8");
   return `-- ════════════════════════════════════════════════════════════════════════════
 -- DEMO DATABASE SETUP — generated by \`pnpm db:build-setup\`. DO NOT EDIT BY HAND
 -- (except the two passwords below). ALL PATIENT DATA IN THIS FILE IS FAKE.
@@ -230,7 +315,9 @@ begin;
 create temp table setup_params (
   app_db_password text,   -- password for the restricted "clinic_app" database login (goes into Vercel's DATABASE_URL)
   demo_password text,     -- password that every demo staff account uses to sign in to the app
-  demo_password_hash text
+  demo_password_hash text,
+  -- the demo week is centred on today (Riyadh)
+  demo_anchor date default (now() at time zone 'Asia/Riyadh')::date
 ) on commit drop;
 
 insert into pg_temp.setup_params (app_db_password, demo_password) values (
@@ -269,9 +356,15 @@ update pg_temp.setup_params
 -- ─── STEP 2: TABLES ─────────────────────────────────────────────────────────
 ${migrationsSql()}
 
+-- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
+${booking}
+
 -- ─── STEP 3: DEMO DATA (FAKE) ───────────────────────────────────────────────
 ${userInsert(`usr_${PLATFORM_OWNER.key}`, PLATFORM_OWNER.email, PLATFORM_OWNER.nameAr, PLATFORM_OWNER.nameEn, true)}
 ${SEED_TENANTS.map(tenantSql).join("\n")}
+
+-- ─── STEP 3b: DEMO WEEK, PACKAGES, CONSENTS, NOTES (FAKE) ───────────────────
+${demoSql()}
 
 -- ─── STEP 4: RESTRICTED APP LOGIN (clinic_app) ──────────────────────────────
 do $$
