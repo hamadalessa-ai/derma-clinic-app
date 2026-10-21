@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICONS = {
+export const NAV_ICONS = {
   dashboard: LayoutDashboard,
   patients: Users,
   services: Sparkles,
@@ -31,7 +31,7 @@ export function NavLinks({
   items,
   orientation,
 }: {
-  items: { href: string; key: keyof typeof ICONS; label: string }[];
+  items: { href: string; key: keyof typeof NAV_ICONS; label: string }[];
   orientation: "vertical" | "horizontal";
 }) {
   const pathname = usePathname();
@@ -43,7 +43,7 @@ export function NavLinks({
       )}
     >
       {items.map((item) => {
-        const Icon = ICONS[item.key];
+        const Icon = NAV_ICONS[item.key];
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         return (
           <Link

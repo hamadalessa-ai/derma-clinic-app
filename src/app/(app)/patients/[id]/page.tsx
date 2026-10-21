@@ -39,6 +39,7 @@ import {
 } from "@/lib/packages/packages";
 import { getFamily, getPatient, getPatientAlerts } from "@/lib/patients/queries";
 import { loadAppointments } from "@/lib/views/schedule";
+import { riyadhDay, riyadhTime } from "@/lib/booking/time";
 import type { Locale } from "@/i18n/config";
 
 const TABS = ["overview", "visits", "packages", "consents", "notes"] as const;
@@ -279,18 +280,23 @@ export default async function PatientProfilePage({
                 <TableRow>
                   <TableHead>{tco("date")}</TableHead>
                   <TableHead>{tco("service")}</TableHead>
-                  <TableHead>{tc("balance")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{tc("balance")}</TableHead>
                   <TableHead>{tco("status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {[...data.appts].reverse().map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDualDate(new Date(a.startsAt), locale, "medium")}
+                    <TableCell>
+                      <span className="hidden sm:inline">
+                        {formatDualDate(new Date(a.startsAt), locale, "medium")}
+                      </span>
+                      <span className="whitespace-nowrap sm:hidden" dir="ltr">
+                        {riyadhDay(new Date(a.startsAt))} {riyadhTime(new Date(a.startsAt))}
+                      </span>
                     </TableCell>
                     <TableCell>{locale === "en" ? a.serviceNameEn : a.serviceNameAr}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {a.balance && (
                         <BalanceBadge
                           remaining={a.balance.remaining}

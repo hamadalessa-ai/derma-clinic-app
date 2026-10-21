@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-/** Tabs as links (?tab=…), so each tab has its own address and works without JavaScript. */
+/** Tabs as links (?tab=…), so each tab has its own address and works without JavaScript. Wraps on phones. */
 export function LinkTabs({
   tabs,
   active,
@@ -10,7 +10,7 @@ export function LinkTabs({
   active: string;
 }) {
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b" role="tablist">
+    <nav className="flex flex-wrap gap-x-1 border-b" role="tablist">
       {tabs.map((t) => (
         <Link
           key={t.key}
