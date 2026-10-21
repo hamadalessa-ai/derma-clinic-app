@@ -31,6 +31,7 @@ import {
   patientForToken,
   revokePatientSession,
 } from "@/lib/portal/session";
+import { notifyLater } from "@/lib/push/notify";
 import { clientIp } from "@/lib/request-info";
 import { checkCode, sendCode } from "@/lib/verify/codes";
 
@@ -137,6 +138,10 @@ export async function confirmBookingAction(input: z.input<typeof bookingConfirm>
     });
     if (result.error) throw new PublicError(result.error);
     setPatientCookie(await cookies(), result.session.token);
+    notifyLater(tenant.id, [
+      { type: "new_booking", appointmentId: result.appt.id },
+      { type: "online_booking", appointmentId: result.appt.id },
+    ]);
     return {
       appointmentId: result.appt.id,
       status: result.appt.status,
@@ -232,6 +237,10 @@ export async function portalCancelAction(input: { appointmentId: string }) {
       cancelByPatient(tx, { patientId, appointmentId: v.appointmentId }),
     );
     revalidatePath("/my");
+    notifyLater(tenant.id, [
+      { type: "cancelled", appointmentId: v.appointmentId },
+      { type: "patient_cancelled", appointmentId: v.appointmentId },
+    ]);
     return null;
   });
 }
@@ -272,6 +281,10 @@ export async function portalMoveAction(input: { appointmentId: string; startsAt:
       }),
     );
     revalidatePath("/my");
+    notifyLater(tenant.id, [
+      { type: "rescheduled", appointmentId: v.appointmentId },
+      { type: "patient_rescheduled", appointmentId: v.appointmentId },
+    ]);
     return null;
   });
 }

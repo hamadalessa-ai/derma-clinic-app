@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { asc } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,13 @@ export default async function PlatformPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold">{t("title")}</h1>
       <p className="text-muted-foreground text-sm">{t("noPatientAccess")}</p>
+      <Link
+        href="/platform/push-keys"
+        className="text-brand self-start text-sm font-medium underline"
+        data-testid="push-keys-link"
+      >
+        {t("pushKeys")}
+      </Link>
       <div className="grid gap-3 sm:grid-cols-2">
         {rows.map((tenant) => (
           <Card key={tenant.id}>

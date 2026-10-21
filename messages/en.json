@@ -31,7 +31,8 @@
     "requests": "Requests",
     "settings": "Settings",
     "more": "More",
-    "mainMenu": "Main menu"
+    "mainMenu": "Main menu",
+    "account": "My account"
   },
   "roles": {
     "platform_owner": "Platform owner",
@@ -86,7 +87,8 @@
   "platform": {
     "title": "Clinics on the platform",
     "subdomain": "Subdomain",
-    "noPatientAccess": "The platform owner cannot view patient data in any clinic."
+    "noPatientAccess": "The platform owner cannot view patient data in any clinic.",
+    "pushKeys": "Push notification keys"
   },
   "errors": {
     "forbiddenTitle": "Not allowed",
@@ -539,5 +541,53 @@
     "signedOk": "Signature saved. You won't need to sign on arrival.",
     "family": "Family",
     "forPerson": "For {name}"
+  },
+  "account": {
+    "title": "My account & notifications",
+    "pushTitle": "Phone notifications",
+    "pushHint": "Short alerts on this device: only the patient's initials, the service and the time.",
+    "notConfigured": "Notifications aren't set up on the platform yet (the platform owner must create the push keys and add them in Vercel).",
+    "notSupported": "This browser doesn't support notifications.",
+    "denied": "Notifications are blocked for this site. Allow them in the browser settings, then try again.",
+    "turnOn": "Turn on for this device",
+    "turnOff": "Turn off on this device",
+    "onHere": "Notifications are on for this device ✓",
+    "devices": "Your registered devices: {count}",
+    "test": "Send a test notification",
+    "testSent": "Test sent to {count} device(s).",
+    "testNone": "No registered devices.",
+    "prefsTitle": "What do you want to get?",
+    "allOn": "Notifications (main switch)",
+    "saved": "Saved",
+    "iosTitle": "On iPhone: add the app to your Home Screen first",
+    "iosStep1": "Open this site in Safari.",
+    "iosStep2": "Tap the Share button (square with an arrow up).",
+    "iosStep3": "Choose \"Add to Home Screen\", then \"Add\".",
+    "iosStep4": "Open the app from its Home Screen icon, sign in, come back to this page and tap \"Turn on\".",
+    "types": {
+      "new_booking": "New booking for me",
+      "cancelled": "One of my appointments cancelled",
+      "rescheduled": "One of my appointments moved",
+      "checked_in": "Patient arrived (check-in)",
+      "request_answered": "Answers to my reschedule requests",
+      "online_booking": "New online booking",
+      "patient_cancelled": "Cancelled on the patient page",
+      "patient_rescheduled": "Moved on the patient page",
+      "reschedule_request": "Doctor's reschedule request"
+    }
+  },
+  "pushKeys": {
+    "title": "Push notification keys (VAPID)",
+    "configured": "Push keys are set on the server ✓ — notifications work.",
+    "notConfigured": "Push keys aren't set yet. Create them here, then add them in Vercel.",
+    "intro": "The keys are created inside your browser only. The private key is never sent to a server or saved. Copy it straight into Vercel's settings.",
+    "generate": "Create new keys",
+    "privateWarning": "The private key is secret: never paste it into a chat or email. Put it only into Vercel. If you close this page before copying, just create new keys.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "step1": "Open Vercel → your project → Settings → Environment Variables.",
+    "step2": "Add the three variables (name on the left, value on the right). For VAPID_SUBJECT use your email as mailto:.",
+    "step3": "Click Save, then Deployments → latest → ⋯ → Redeploy.",
+    "step4": "After the redeploy, every doctor and staff member opens \"My account\" and taps \"Turn on\". (Changing the keys later disconnects registered devices.)"
   }
 }

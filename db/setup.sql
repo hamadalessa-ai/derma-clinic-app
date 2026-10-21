@@ -1599,16 +1599,16 @@ insert into public.reschedule_requests (tenant_id, branch_id, appointment_id, re
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '5be574b8-8c14-5b75-af31-fd4fb861b805', 'usr_lamsa-dr-mona', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:00') at time zone 'Asia/Riyadh'), 'طلب تجريبي', 'pending');
 
 insert into public.verification_codes (tenant_id, phone, purpose, code_hash, expires_at, attempts, consumed_at, created_at) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010007', 'portal', 'f00cd90d8a488fe4f87bd8850d8271831ca16e63245b3144756ad46ac1af4389', now() - interval '3 days', 1, now() - interval '3 days', now() - interval '3 days');
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010007', 'portal', 'f00cd90d8a488fe4f87bd8850d8271831ca16e63245b3144756ad46ac1af4389', now() - interval '12 hours', 1, now() - interval '12 hours', now() - interval '12 hours');
 
 insert into public.rate_limit_hits (tenant_id, bucket, created_at) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'otp:phone:0500010007', now() - interval '3 days');
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'otp:phone:0500010007', now() - interval '12 hours');
 
 insert into public.patient_sessions (tenant_id, patient_id, token_hash, expires_at, revoked_at, created_at) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'd800c92f216020ea5a31da66be09ae00cb03d2ac32594f6a190a8f88acafd1bb', now() - interval '3 days', now() - interval '3 days', now() - interval '3 days');
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'd800c92f216020ea5a31da66be09ae00cb03d2ac32594f6a190a8f88acafd1bb', now() - interval '12 hours', now() - interval '12 hours', now() - interval '12 hours');
 
 insert into public.outbound_messages (tenant_id, channel, to_phone, template, body, status, created_at) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'demo', '0500010007', 'portal_code', 'رمز الدخول (تجريبي): ******', 'demo_logged', now() - interval '3 days');
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'demo', '0500010007', 'portal_code', 'رمز الدخول (تجريبي): ******', 'demo_logged', now() - interval '12 hours');
 
 insert into public.notification_prefs (tenant_id, user_id, enabled) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-admin', true);
@@ -1617,16 +1617,16 @@ insert into public.push_subscriptions (tenant_id, user_id, endpoint, p256dh, aut
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-admin', 'https://push.invalid/demo-device/derma', 'demo', 'demo', 'Demo device (never receives anything)');
 
 insert into public.verification_codes (tenant_id, phone, purpose, code_hash, expires_at, attempts, consumed_at, created_at) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '0500020002', 'portal', '44e56ec831f0e0f5935dce6ca7f28a2419a10cc49db53689c832d13fdc0e9361', now() - interval '3 days', 1, now() - interval '3 days', now() - interval '3 days');
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '0500020002', 'portal', '44e56ec831f0e0f5935dce6ca7f28a2419a10cc49db53689c832d13fdc0e9361', now() - interval '12 hours', 1, now() - interval '12 hours', now() - interval '12 hours');
 
 insert into public.rate_limit_hits (tenant_id, bucket, created_at) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'otp:phone:0500020002', now() - interval '3 days');
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'otp:phone:0500020002', now() - interval '12 hours');
 
 insert into public.patient_sessions (tenant_id, patient_id, token_hash, expires_at, revoked_at, created_at) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'f1dbc43c1cbdbe3454ad2ad8df8baae776c49dc5a828ab6689d07a487a97c338', now() - interval '3 days', now() - interval '3 days', now() - interval '3 days');
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'f1dbc43c1cbdbe3454ad2ad8df8baae776c49dc5a828ab6689d07a487a97c338', now() - interval '12 hours', now() - interval '12 hours', now() - interval '12 hours');
 
 insert into public.outbound_messages (tenant_id, channel, to_phone, template, body, status, created_at) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'demo', '0500020002', 'portal_code', 'رمز الدخول (تجريبي): ******', 'demo_logged', now() - interval '3 days');
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'demo', '0500020002', 'portal_code', 'رمز الدخول (تجريبي): ******', 'demo_logged', now() - interval '12 hours');
 
 insert into public.notification_prefs (tenant_id, user_id, enabled) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', true);

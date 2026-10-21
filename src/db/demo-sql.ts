@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { contentFingerprint } from "../lib/consents/fingerprint";
 import { DEMO_SIGNATURE_PNG_BASE64, DEMO_TIME_BLOCKS, generateDemoWeek } from "./demo-week";
 import { CONSENT_TEMPLATES, DERMA, demoId, LAMSA, PACKAGE_TEMPLATES } from "./seed-data";
+import { DEMO_PUSH_HOST } from "../lib/push/payload";
 import { insert, raw } from "./sql-render";
 
 const ANCHOR = "(select demo_anchor from pg_temp.setup_params)";
@@ -16,6 +17,7 @@ const at = (dayIndex: number, time: string, plusMinutes = 0) =>
       (plusMinutes ? ` + interval '${plusMinutes} minutes'` : ""),
   );
 const daysAgo = (n: number) => raw(`now() - interval '${n} days'`);
+const hoursAgo = (n: number) => raw(`now() - interval '${n} hours'`);
 
 interface DemoPackage {
   key: string;
@@ -488,9 +490,6 @@ export function demoSql(): string {
   return out.filter(Boolean).join("\n");
 }
 
-/** A demo push device lives on this host: the push sender only logs, it never sends there. */
-export const DEMO_PUSH_HOST = "push.invalid";
-
 /**
  * Phase 2a rows in BOTH clinics (old, used-up codes and sessions, a logged demo message,
  * notification choices and a demo push device), so the isolation tests cover every new table.
@@ -514,23 +513,23 @@ function phase2aRows(): string {
           purpose: "portal",
           // Not a real code: a fixed placeholder hash, long expired and used.
           code_hash: createHash("sha256").update(`demo-used-code:${slug}`).digest("hex"),
-          expires_at: daysAgo(3),
+          expires_at: hoursAgo(12),
           attempts: 1,
-          consumed_at: daysAgo(3),
-          created_at: daysAgo(3),
+          consumed_at: hoursAgo(12),
+          created_at: hoursAgo(12),
         },
       ]),
       insert("rate_limit_hits", [
-        { tenant_id: tenant, bucket: `otp:phone:${phone}`, created_at: daysAgo(3) },
+        { tenant_id: tenant, bucket: `otp:phone:${phone}`, created_at: hoursAgo(12) },
       ]),
       insert("patient_sessions", [
         {
           tenant_id: tenant,
           patient_id: patient,
           token_hash: createHash("sha256").update(`demo-old-session:${slug}`).digest("hex"),
-          expires_at: daysAgo(3),
-          revoked_at: daysAgo(3),
-          created_at: daysAgo(3),
+          expires_at: hoursAgo(12),
+          revoked_at: hoursAgo(12),
+          created_at: hoursAgo(12),
         },
       ]),
       insert("outbound_messages", [
@@ -541,7 +540,7 @@ function phase2aRows(): string {
           template: "portal_code",
           body: "رمز الدخول (تجريبي): ******",
           status: "demo_logged",
-          created_at: daysAgo(3),
+          created_at: hoursAgo(12),
         },
       ]),
       insert("notification_prefs", [
