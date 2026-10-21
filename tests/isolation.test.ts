@@ -9,12 +9,14 @@ import { eq, sql } from "drizzle-orm";
 import { assertRestrictedRole, closeDb } from "@/db/client";
 import { withTenant } from "@/db/tenant";
 import { auditLogs, patients, rooms, TENANT_TABLES } from "@/db/schema";
-import { demoId } from "@/db/seed-data";
+import { demoId, DERMA, LAMSA } from "@/db/seed-data";
 
 const A = demoId("tenant:derma");
 const B = demoId("tenant:lamsa");
 const B_PATIENT = demoId("lamsa:patient:L-0001");
 const B_BRANCH = demoId("lamsa:branch:dammam");
+const SEEDED_A = new Set(DERMA.patients.map((p) => demoId(`derma:patient:${p.fileNumber}`)));
+const SEEDED_B = new Set(LAMSA.patients.map((p) => demoId(`lamsa:patient:${p.fileNumber}`)));
 
 // A raw connection as clinic_app with a single connection, to prove pooled reuse is safe.
 let raw: postgres.Sql;
@@ -106,8 +108,9 @@ describe("without a clinic set (fail closed)", () => {
 
 describe("clinic A cannot READ clinic B (raw SQL through the app role)", () => {
   it("sees only its own patients", async () => {
-    const rows = await rawAs(A, (tx) => tx`select tenant_id from patients`);
-    expect(rows).toHaveLength(40);
+    const rows = await rawAs(A, (tx) => tx`select id, tenant_id from patients`);
+    // (Other test files may add patients; all 40 seeded ones must be there.)
+    expect(rows.filter((r) => SEEDED_A.has(r.id))).toHaveLength(40);
     expect(new Set(rows.map((r) => r.tenant_id))).toEqual(new Set([A]));
   });
 
@@ -210,8 +213,8 @@ describe("withTenant()", () => {
   it("returns only the current clinic's data", async () => {
     const a = await withTenant(A, (tx) => tx.select().from(patients));
     const b = await withTenant(B, (tx) => tx.select().from(patients));
-    expect(a).toHaveLength(40);
-    expect(b).toHaveLength(8);
+    expect(a.filter((p) => SEEDED_A.has(p.id))).toHaveLength(40);
+    expect(b.filter((p) => SEEDED_B.has(p.id))).toHaveLength(8);
     expect(a.every((p) => p.tenantId === A)).toBe(true);
     expect(b.every((p) => p.tenantId === B)).toBe(true);
   });

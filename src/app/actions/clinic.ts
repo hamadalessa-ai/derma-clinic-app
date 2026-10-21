@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { patientMedicalFlags, patients } from "@/db/schema";
 import { audit } from "@/lib/audit";
@@ -21,7 +21,7 @@ import { saveTemplateVersion, signConsent } from "@/lib/consents/consents";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
-import { searchPatients } from "@/lib/patients/queries";
+import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
 import { updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
@@ -78,13 +78,7 @@ export async function createPatientAction(input: z.input<typeof newPatient>) {
     const v = parse(newPatient, input);
     const prefix = ctx.tenant.slug.charAt(0).toUpperCase();
     return withActor(actor, async (tx) => {
-      // Next file number for this clinic, e.g. D-0041 (the unique key stops duplicates).
-      const [{ max }] = await tx
-        .select({
-          max: sql<number>`coalesce(max(substring(${patients.fileNumber} from '[0-9]+$')::int), 0)`,
-        })
-        .from(patients)
-        .where(sql`${patients.fileNumber} ~ ${`^${prefix}-[0-9]+$`}`);
+      const fileNumber = await nextFileNumber(tx, prefix);
       let guardianId: string | null = null;
       if (v.guardianFile) {
         const [g] = await tx
@@ -98,7 +92,7 @@ export async function createPatientAction(input: z.input<typeof newPatient>) {
         .insert(patients)
         .values({
           tenantId: actor.tenantId,
-          fileNumber: `${prefix}-${String(Number(max) + 1).padStart(4, "0")}`,
+          fileNumber,
           fullNameAr: v.fullNameAr,
           fullNameEn: v.fullNameEn || null,
           phone: v.phone,
