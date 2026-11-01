@@ -470,6 +470,8 @@ export const tenantSettings = pgTable("tenant_settings", {
   showPricesOnline: boolean("show_prices_online").notNull().default(true),
   /** WhatsApp: name the service in confirmations, reminders and recalls (off → "your appointment"). */
   showServiceInMessages: boolean("show_service_in_messages").notNull().default(true),
+  /** When Meta last verified our webhook (WhatsApp status page). */
+  whatsappWebhookVerifiedAt: timestamp("whatsapp_webhook_verified_at", { withTimezone: true }),
   updatedAt: updatedAt(),
 });
 

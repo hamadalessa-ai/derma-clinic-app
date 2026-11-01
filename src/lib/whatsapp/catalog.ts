@@ -25,6 +25,7 @@ export const REPLY_KINDS = [
   "confirm_ack",
   "cancel_ack",
   "cancel_too_late",
+  "change_too_late",
   "reschedule_offer",
   "reschedule_done",
   "reschedule_failed",
@@ -174,6 +175,10 @@ export const REPLIES: Record<Exclude<ReplyKind, "staff_reply">, { ar: string; en
   cancel_too_late: {
     ar: "لا يمكن الإلغاء عبر واتساب قبل أقل من {hours} ساعة من الموعد. فضلًا تواصل مع العيادة.",
     en: "It's less than {hours} hours before your visit, so it can't be cancelled on WhatsApp. Please contact the clinic.",
+  },
+  change_too_late: {
+    ar: "لا يمكن تغيير الموعد عبر واتساب قبل أقل من {hours} ساعة منه. فضلًا تواصل مع العيادة.",
+    en: "It's less than {hours} hours before your visit, so it can't be changed on WhatsApp. Please contact the clinic.",
   },
   reschedule_offer: {
     ar: "اختر وقتًا جديدًا مع نفس الطبيب، أو اختر يومًا آخر من صفحتك: {my_link}",

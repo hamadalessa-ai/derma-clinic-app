@@ -1,5 +1,5 @@
 {
-  "id": "d1fca933-68b8-4939-8d41-b2a917793087",
+  "id": "8c57f961-304f-4417-90c6-9da9991a37c5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4646,6 +4646,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "whatsapp_webhook_verified_at": {
+          "name": "whatsapp_webhook_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",

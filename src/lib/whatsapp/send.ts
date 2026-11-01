@@ -104,7 +104,7 @@ export async function prepareMessage(
 
   const messageId = randomUUID();
   // Claim the dedupe key first: a duplicate run stops here.
-  const claim = async (outcome: string) => {
+  const claim = async () => {
     if (!input.dedupeKey) return true;
     const rows = await tx
       .insert(messageDispatches)
@@ -114,8 +114,8 @@ export async function prepareMessage(
         kind: input.kind,
         appointmentId: input.appointmentId ?? null,
         patientId: patient?.id ?? null,
-        messageId: outcome === "sent" ? messageId : null,
-        outcome,
+        messageId,
+        outcome: "sent",
       })
       .onConflictDoNothing()
       .returning({ id: messageDispatches.id });
@@ -127,11 +127,9 @@ export async function prepareMessage(
   const consentHolder = patient ?? null;
   const consented =
     !!consentHolder?.whatsappOptInAt && !consentHolder.whatsappOptedOutAt && !convo.optedOutAt;
-  if (!essential && !consented) {
-    return (await claim("skipped_no_consent"))
-      ? { outcome: "skipped", reason: "no_consent" }
-      : { outcome: "skipped", reason: "duplicate" };
-  }
+  // Skips are not "sent": if the patient opts back in, or the admin switches the type on again,
+  // a later run may still send it (while it is still useful).
+  if (!essential && !consented) return { outcome: "skipped", reason: "no_consent" };
 
   let wording: { ar: string; en: string };
   if (isTemplateKind(input.kind)) {
@@ -141,9 +139,7 @@ export async function prepareMessage(
       .where(eq(messageTemplates.kind, input.kind))
       .limit(1);
     if (row && !row.enabled && TEMPLATES[input.kind].canDisable) {
-      return (await claim("skipped_disabled"))
-        ? { outcome: "skipped", reason: "disabled" }
-        : { outcome: "skipped", reason: "duplicate" };
+      return { outcome: "skipped", reason: "disabled" };
     }
     wording = row
       ? { ar: row.bodyAr, en: row.bodyEn }
@@ -153,7 +149,7 @@ export async function prepareMessage(
   } else {
     wording = REPLIES[input.kind];
   }
-  if (!(await claim("sent"))) return { outcome: "skipped", reason: "duplicate" };
+  if (!(await claim())) return { outcome: "skipped", reason: "duplicate" };
 
   const lang: "ar" | "en" = patient?.preferredLanguage === "en" ? "en" : "ar";
   const vars = { ...(input.vars ?? {}) };

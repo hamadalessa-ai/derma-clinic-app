@@ -545,6 +545,7 @@ CREATE TABLE "tenant_settings" (
 	"online_requires_approval" boolean DEFAULT false NOT NULL,
 	"show_prices_online" boolean DEFAULT true NOT NULL,
 	"show_service_in_messages" boolean DEFAULT true NOT NULL,
+	"whatsapp_webhook_verified_at" timestamp with time zone,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE TABLE "tenants" (

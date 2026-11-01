@@ -573,7 +573,8 @@
       "online_booking": "New online booking",
       "patient_cancelled": "Cancelled on the patient page",
       "patient_rescheduled": "Moved on the patient page",
-      "reschedule_request": "Doctor's reschedule request"
+      "reschedule_request": "Doctor's reschedule request",
+      "patient_concern": "Patient concern after a procedure (WhatsApp)"
     }
   },
   "pushKeys": {

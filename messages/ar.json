@@ -573,7 +573,8 @@
       "online_booking": "حجز إلكتروني جديد",
       "patient_cancelled": "إلغاء من صفحة المريض",
       "patient_rescheduled": "تغيير موعد من صفحة المريض",
-      "reschedule_request": "طلب تغيير موعد من طبيب"
+      "reschedule_request": "طلب تغيير موعد من طبيب",
+      "patient_concern": "مريض لديه قلق بعد الإجراء (واتساب)"
     }
   },
   "pushKeys": {
