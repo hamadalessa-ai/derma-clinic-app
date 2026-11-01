@@ -77,6 +77,7 @@ CREATE TABLE "branches" (
 	"name_en" text NOT NULL,
 	"city_ar" text NOT NULL,
 	"city_en" text NOT NULL,
+	"map_url" text,
 	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "branches_tenant_id_id_key" UNIQUE("tenant_id","id")
@@ -125,6 +126,21 @@ CREATE TABLE "consent_templates" (
 	CONSTRAINT "consent_templates_version_key" UNIQUE("tenant_id","code","version")
 );
 --> statement-breakpoint
+CREATE TABLE "conversations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"phone" text NOT NULL,
+	"patient_id" uuid,
+	"profile_name" text,
+	"needs_reply" boolean DEFAULT false NOT NULL,
+	"last_inbound_at" timestamp with time zone,
+	"last_message_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"opted_out_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "conversations_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "conversations_tenant_phone_key" UNIQUE("tenant_id","phone")
+);
+--> statement-breakpoint
 CREATE TABLE "departments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -164,6 +180,59 @@ CREATE TABLE "files" (
 	CONSTRAINT "files_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
 --> statement-breakpoint
+CREATE TABLE "message_dispatches" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"dedupe_key" text NOT NULL,
+	"kind" text NOT NULL,
+	"appointment_id" uuid,
+	"patient_id" uuid,
+	"message_id" uuid,
+	"outcome" text DEFAULT 'sent' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "message_dispatches_key" UNIQUE("tenant_id","dedupe_key")
+);
+--> statement-breakpoint
+CREATE TABLE "message_templates" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"enabled" boolean DEFAULT true NOT NULL,
+	"body_ar" text NOT NULL,
+	"body_en" text NOT NULL,
+	"meta_name" text NOT NULL,
+	"category" text DEFAULT 'utility' NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "message_templates_kind_key" UNIQUE("tenant_id","kind")
+);
+--> statement-breakpoint
+CREATE TABLE "messages" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"conversation_id" uuid NOT NULL,
+	"patient_id" uuid,
+	"appointment_id" uuid,
+	"direction" text NOT NULL,
+	"kind" text NOT NULL,
+	"body" text NOT NULL,
+	"buttons" jsonb,
+	"button_id" text,
+	"channel" text NOT NULL,
+	"status" text NOT NULL,
+	"provider_message_id" text,
+	"error_code" text,
+	"error_text" text,
+	"template_name" text,
+	"language" text,
+	"flag" text,
+	"sent_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"status_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "messages_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "messages_direction" CHECK ("messages"."direction" in ('in', 'out')),
+	CONSTRAINT "messages_status" CHECK ("messages"."status" in ('queued', 'sent', 'delivered', 'read', 'failed', 'received'))
+);
+--> statement-breakpoint
 CREATE TABLE "notification_prefs" (
 	"tenant_id" uuid NOT NULL,
 	"user_id" text NOT NULL,
@@ -171,17 +240,6 @@ CREATE TABLE "notification_prefs" (
 	"muted_types" text[] DEFAULT '{}'::text[] NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "notification_prefs_user_key" UNIQUE("tenant_id","user_id")
-);
---> statement-breakpoint
-CREATE TABLE "outbound_messages" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"tenant_id" uuid NOT NULL,
-	"channel" text NOT NULL,
-	"to_phone" text NOT NULL,
-	"template" text NOT NULL,
-	"body" text NOT NULL,
-	"status" text DEFAULT 'sent' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "package_payments" (
@@ -311,10 +369,15 @@ CREATE TABLE "patients" (
 	"is_fake" boolean DEFAULT true NOT NULL,
 	"created_via" "booking_source" DEFAULT 'reception' NOT NULL,
 	"needs_completion" boolean DEFAULT false NOT NULL,
+	"preferred_language" text DEFAULT 'ar' NOT NULL,
+	"whatsapp_opt_in_at" timestamp with time zone,
+	"whatsapp_opt_in_source" text,
+	"whatsapp_opted_out_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "patients_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "patients_tenant_file_key" UNIQUE("tenant_id","file_number"),
+	CONSTRAINT "patients_preferred_language" CHECK ("patients"."preferred_language" in ('ar', 'en')),
 	CONSTRAINT "patients_not_own_guardian" CHECK ("patients"."guardian_id" is null or "patients"."guardian_id" <> "patients"."id")
 );
 --> statement-breakpoint
@@ -391,6 +454,11 @@ CREATE TABLE "services" (
 	"required_device_type" text,
 	"consent_code" text,
 	"online_bookable" boolean DEFAULT false NOT NULL,
+	"pre_visit_ar" text,
+	"pre_visit_en" text,
+	"post_care_ar" text,
+	"post_care_en" text,
+	"recall_after_days" smallint,
 	"is_demo_value" boolean DEFAULT true NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"sort_order" smallint DEFAULT 0 NOT NULL,
@@ -452,6 +520,7 @@ CREATE TABLE "tenant_settings" (
 	"cancellation_window_hours" smallint DEFAULT 24 NOT NULL,
 	"online_requires_approval" boolean DEFAULT false NOT NULL,
 	"show_prices_online" boolean DEFAULT true NOT NULL,
+	"show_service_in_messages" boolean DEFAULT true NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -521,6 +590,14 @@ CREATE TABLE "verifications" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "webhook_events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"event_key" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "webhook_events_key" UNIQUE("tenant_id","event_key")
+);
+--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -539,14 +616,21 @@ ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_tenant_id_tenants_id
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "consent_templates" ADD CONSTRAINT "consent_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "departments" ADD CONSTRAINT "departments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "devices" ADD CONSTRAINT "devices_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "devices" ADD CONSTRAINT "devices_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "devices" ADD CONSTRAINT "devices_room_fk" FOREIGN KEY ("tenant_id","room_id") REFERENCES "public"."rooms"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "files" ADD CONSTRAINT "files_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "message_dispatches" ADD CONSTRAINT "message_dispatches_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "message_templates" ADD CONSTRAINT "message_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_fk" FOREIGN KEY ("tenant_id","conversation_id") REFERENCES "public"."conversations"("tenant_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "outbound_messages" ADD CONSTRAINT "outbound_messages_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_package_fk" FOREIGN KEY ("tenant_id","patient_package_id") REFERENCES "public"."patient_packages"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -596,6 +680,7 @@ ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_member_fk" FOREIGN KEY ("t
 ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_room_fk" FOREIGN KEY ("tenant_id","branch_id","room_id") REFERENCES "public"."rooms"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_device_fk" FOREIGN KEY ("tenant_id","branch_id","device_id") REFERENCES "public"."devices"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "verification_codes" ADD CONSTRAINT "verification_codes_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "webhook_events" ADD CONSTRAINT "webhook_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "accounts_user_id_idx" ON "accounts" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "appointments_one_pending_per_slot" ON "appointments" USING btree ("tenant_id","patient_id","starts_at") WHERE "appointments"."status" = 'pending';--> statement-breakpoint
 CREATE INDEX "appointments_branch_start_idx" ON "appointments" USING btree ("tenant_id","branch_id","starts_at");--> statement-breakpoint
@@ -604,7 +689,10 @@ CREATE INDEX "appointments_patient_idx" ON "appointments" USING btree ("tenant_i
 CREATE INDEX "audit_logs_tenant_created_idx" ON "audit_logs" USING btree ("tenant_id","created_at");--> statement-breakpoint
 CREATE INDEX "clinical_notes_patient_idx" ON "clinical_notes" USING btree ("tenant_id","patient_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "consent_templates_one_current" ON "consent_templates" USING btree ("tenant_id","code") WHERE "consent_templates"."is_current";--> statement-breakpoint
-CREATE INDEX "outbound_messages_created_idx" ON "outbound_messages" USING btree ("tenant_id","created_at");--> statement-breakpoint
+CREATE INDEX "conversations_inbox_idx" ON "conversations" USING btree ("tenant_id","needs_reply","last_message_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "messages_provider_id_key" ON "messages" USING btree ("tenant_id","provider_message_id") WHERE "messages"."provider_message_id" is not null;--> statement-breakpoint
+CREATE INDEX "messages_conversation_idx" ON "messages" USING btree ("tenant_id","conversation_id","created_at");--> statement-breakpoint
+CREATE INDEX "messages_appointment_idx" ON "messages" USING btree ("tenant_id","appointment_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "package_session_events_one_deduction" ON "package_session_events" USING btree ("tenant_id","appointment_id") WHERE "package_session_events"."kind" = 'deduction';--> statement-breakpoint
 CREATE INDEX "patient_consents_patient_idx" ON "patient_consents" USING btree ("tenant_id","patient_id","template_code");--> statement-breakpoint
 CREATE INDEX "patient_medical_flags_patient_idx" ON "patient_medical_flags" USING btree ("tenant_id","patient_id");--> statement-breakpoint

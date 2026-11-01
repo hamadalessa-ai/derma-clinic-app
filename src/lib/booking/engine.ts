@@ -113,6 +113,7 @@ const DEFAULT_SETTINGS: Settings = {
   cancellationWindowHours: 24,
   onlineRequiresApproval: false,
   showPricesOnline: true,
+  showServiceInMessages: true,
 };
 
 export async function getSettings(tx: TenantTx): Promise<Settings> {

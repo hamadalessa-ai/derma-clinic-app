@@ -8,6 +8,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { insert, lit, raw } from "./sql-render";
+import { SERVICE_TEXTS, TEMPLATE_KINDS, TEMPLATES } from "../lib/whatsapp/catalog";
 import { demoSql } from "./demo-sql";
 import {
   demoId,
@@ -23,6 +24,7 @@ import {
   ONLINE_SERVICES,
   ONLINE_SETTINGS,
   STAFF_GENDER,
+  WHATSAPP_OPTED_OUT,
   WORK_HOURS,
   WORK_WEEK,
   type SeedTenant,
@@ -71,6 +73,7 @@ function tenantSql(t: SeedTenant): string {
         name_en: b.nameEn,
         city_ar: b.cityAr,
         city_en: b.cityEn,
+        map_url: `https://maps.google.com/?q=${encodeURIComponent(`${t.nameEn} ${b.cityEn}`)}`,
         sort_order: i,
       })),
     ),
@@ -169,6 +172,11 @@ function tenantSql(t: SeedTenant): string {
         consent_code: SERVICE_CONSENTS[s.code] ?? null,
         is_demo_value: true,
         online_bookable: (ONLINE_SERVICES[t.slug] ?? []).includes(s.code),
+        pre_visit_ar: SERVICE_TEXTS[s.code]?.preVisitAr ?? null,
+        pre_visit_en: SERVICE_TEXTS[s.code]?.preVisitEn ?? null,
+        post_care_ar: SERVICE_TEXTS[s.code]?.postCareAr ?? null,
+        post_care_en: SERVICE_TEXTS[s.code]?.postCareEn ?? null,
+        recall_after_days: SERVICE_TEXTS[s.code]?.recallAfterDays ?? null,
         sort_order: i,
       })),
     ),
@@ -191,6 +199,11 @@ function tenantSql(t: SeedTenant): string {
         guardian_relation_ar: p.guardian?.relationAr ?? null,
         guardian_relation_en: p.guardian?.relationEn ?? null,
         is_fake: true,
+        // Demo: everyone agreed to WhatsApp messages, except one patient who sent STOP.
+        whatsapp_opt_in_at: raw("now() - interval '60 days'"),
+        whatsapp_opt_in_source: "demo",
+        whatsapp_opted_out_at:
+          p.fileNumber === WHATSAPP_OPTED_OUT ? raw("now() - interval '5 days'") : null,
       })),
     ),
   );
@@ -248,6 +261,20 @@ function tenantSql(t: SeedTenant): string {
         demo_anchor_day: raw("(select demo_anchor from pg_temp.setup_params)"),
       },
     ]),
+  );
+  out.push(
+    insert(
+      "message_templates",
+      TEMPLATE_KINDS.map((kind) => ({
+        tenant_id: tid,
+        kind,
+        enabled: true,
+        body_ar: TEMPLATES[kind].bodyAr,
+        body_en: TEMPLATES[kind].bodyEn,
+        meta_name: TEMPLATES[kind].metaName,
+        category: "utility",
+      })),
+    ),
   );
   out.push(
     insert(

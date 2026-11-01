@@ -779,3 +779,10 @@ export const ONLINE_SERVICES: Record<string, string[]> = {
   ],
   lamsa: ["consultation", "facial_treatment"],
 };
+
+// ════════════════════════════════════════════════════════════════════════════
+// PHASE 2b demo data (WhatsApp)
+// ════════════════════════════════════════════════════════════════════════════
+
+/** The demo patient who sent STOP (no more reminders or follow-ups). */
+export const WHATSAPP_OPTED_OUT = "D-0014";

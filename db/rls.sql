@@ -95,7 +95,11 @@ grant update (body, status, signed_at, updated_at) on public.clinical_notes to c
 -- Phase 2a: codes, rate limits, patient sessions, message log, push.
 grant select, insert, update on public.verification_codes, public.patient_sessions to clinic_app;
 grant select, insert, delete on public.rate_limit_hits to clinic_app;
-grant select, insert on public.outbound_messages to clinic_app;
+-- Phase 2b: WhatsApp. Messages are a record: never deleted by the app; only their status changes.
+grant select, insert, update on public.conversations, public.message_templates to clinic_app;
+grant select, insert on public.messages, public.message_dispatches to clinic_app;
+grant update (status, status_at, provider_message_id, error_code, error_text) on public.messages to clinic_app;
+grant select, insert, delete on public.webhook_events to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
 
@@ -120,7 +124,8 @@ begin
     'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
     'patient_packages', 'package_payments', 'package_session_events', 'files',
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
-    'verification_codes', 'rate_limit_hits', 'patient_sessions', 'outbound_messages',
+    'verification_codes', 'rate_limit_hits', 'patient_sessions',
+    'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_subscriptions', 'notification_prefs'
   ] loop
     execute format('alter table public.%I enable row level security', t);
@@ -207,7 +212,8 @@ begin
     'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
     'patient_packages', 'package_payments', 'package_session_events', 'files',
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
-    'verification_codes', 'rate_limit_hits', 'patient_sessions', 'outbound_messages',
+    'verification_codes', 'rate_limit_hits', 'patient_sessions',
+    'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_subscriptions', 'notification_prefs',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop

@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import { closeDb } from "@/db/client";
-import { outboundMessages, verificationCodes } from "@/db/schema";
+import { conversations, messages, verificationCodes } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { demoId } from "@/db/seed-data";
 import { demoMessagingAllowed, getMessageSender, redacted } from "@/lib/messaging/sender";
@@ -100,15 +100,20 @@ describe("DEMO safety", () => {
     expect(await errorOf(send(freshPhone(), { env: DEMO_OFF }))).toBe("messaging_unavailable");
   });
 
-  it("the message log and the code table never contain the code itself", async () => {
+  it("demo: the code shows in the simulator; the code table only stores a hash", async () => {
     const phone = freshPhone();
     const { demoCode } = await send(phone);
+    // Demo clinic + demo mode: the code is shown in the WhatsApp simulator (that's the point).
     const [msg] = await withTenant(DERMA, (tx) =>
-      tx.select().from(outboundMessages).where(eq(outboundMessages.toPhone, phone)),
+      tx
+        .select({ m: messages })
+        .from(messages)
+        .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+        .where(eq(conversations.phone, phone)),
     );
-    expect(msg.channel).toBe("demo");
-    expect(msg.body).not.toContain(demoCode!);
-    expect(msg.body).toContain("******");
+    expect(msg.m.channel).toBe("demo");
+    expect(msg.m.kind).toBe("verification_code");
+    expect(msg.m.body).toContain(demoCode!);
     const [row] = await withTenant(DERMA, (tx) =>
       tx.select().from(verificationCodes).where(eq(verificationCodes.phone, phone)),
     );

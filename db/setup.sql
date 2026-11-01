@@ -130,6 +130,7 @@ CREATE TABLE "branches" (
 	"name_en" text NOT NULL,
 	"city_ar" text NOT NULL,
 	"city_en" text NOT NULL,
+	"map_url" text,
 	"sort_order" smallint DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "branches_tenant_id_id_key" UNIQUE("tenant_id","id")
@@ -174,6 +175,20 @@ CREATE TABLE "consent_templates" (
 	CONSTRAINT "consent_templates_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "consent_templates_version_key" UNIQUE("tenant_id","code","version")
 );
+CREATE TABLE "conversations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"phone" text NOT NULL,
+	"patient_id" uuid,
+	"profile_name" text,
+	"needs_reply" boolean DEFAULT false NOT NULL,
+	"last_inbound_at" timestamp with time zone,
+	"last_message_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"opted_out_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "conversations_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "conversations_tenant_phone_key" UNIQUE("tenant_id","phone")
+);
 CREATE TABLE "departments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -210,6 +225,56 @@ CREATE TABLE "files" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "files_tenant_id_id_key" UNIQUE("tenant_id","id")
 );
+CREATE TABLE "message_dispatches" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"dedupe_key" text NOT NULL,
+	"kind" text NOT NULL,
+	"appointment_id" uuid,
+	"patient_id" uuid,
+	"message_id" uuid,
+	"outcome" text DEFAULT 'sent' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "message_dispatches_key" UNIQUE("tenant_id","dedupe_key")
+);
+CREATE TABLE "message_templates" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"enabled" boolean DEFAULT true NOT NULL,
+	"body_ar" text NOT NULL,
+	"body_en" text NOT NULL,
+	"meta_name" text NOT NULL,
+	"category" text DEFAULT 'utility' NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "message_templates_kind_key" UNIQUE("tenant_id","kind")
+);
+CREATE TABLE "messages" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"conversation_id" uuid NOT NULL,
+	"patient_id" uuid,
+	"appointment_id" uuid,
+	"direction" text NOT NULL,
+	"kind" text NOT NULL,
+	"body" text NOT NULL,
+	"buttons" jsonb,
+	"button_id" text,
+	"channel" text NOT NULL,
+	"status" text NOT NULL,
+	"provider_message_id" text,
+	"error_code" text,
+	"error_text" text,
+	"template_name" text,
+	"language" text,
+	"flag" text,
+	"sent_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"status_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "messages_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "messages_direction" CHECK ("messages"."direction" in ('in', 'out')),
+	CONSTRAINT "messages_status" CHECK ("messages"."status" in ('queued', 'sent', 'delivered', 'read', 'failed', 'received'))
+);
 CREATE TABLE "notification_prefs" (
 	"tenant_id" uuid NOT NULL,
 	"user_id" text NOT NULL,
@@ -217,16 +282,6 @@ CREATE TABLE "notification_prefs" (
 	"muted_types" text[] DEFAULT '{}'::text[] NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "notification_prefs_user_key" UNIQUE("tenant_id","user_id")
-);
-CREATE TABLE "outbound_messages" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"tenant_id" uuid NOT NULL,
-	"channel" text NOT NULL,
-	"to_phone" text NOT NULL,
-	"template" text NOT NULL,
-	"body" text NOT NULL,
-	"status" text DEFAULT 'sent' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE TABLE "package_payments" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -348,10 +403,15 @@ CREATE TABLE "patients" (
 	"is_fake" boolean DEFAULT true NOT NULL,
 	"created_via" "booking_source" DEFAULT 'reception' NOT NULL,
 	"needs_completion" boolean DEFAULT false NOT NULL,
+	"preferred_language" text DEFAULT 'ar' NOT NULL,
+	"whatsapp_opt_in_at" timestamp with time zone,
+	"whatsapp_opt_in_source" text,
+	"whatsapp_opted_out_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "patients_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "patients_tenant_file_key" UNIQUE("tenant_id","file_number"),
+	CONSTRAINT "patients_preferred_language" CHECK ("patients"."preferred_language" in ('ar', 'en')),
 	CONSTRAINT "patients_not_own_guardian" CHECK ("patients"."guardian_id" is null or "patients"."guardian_id" <> "patients"."id")
 );
 CREATE TABLE "push_subscriptions" (
@@ -422,6 +482,11 @@ CREATE TABLE "services" (
 	"required_device_type" text,
 	"consent_code" text,
 	"online_bookable" boolean DEFAULT false NOT NULL,
+	"pre_visit_ar" text,
+	"pre_visit_en" text,
+	"post_care_ar" text,
+	"post_care_en" text,
+	"recall_after_days" smallint,
 	"is_demo_value" boolean DEFAULT true NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"sort_order" smallint DEFAULT 0 NOT NULL,
@@ -479,6 +544,7 @@ CREATE TABLE "tenant_settings" (
 	"cancellation_window_hours" smallint DEFAULT 24 NOT NULL,
 	"online_requires_approval" boolean DEFAULT false NOT NULL,
 	"show_prices_online" boolean DEFAULT true NOT NULL,
+	"show_service_in_messages" boolean DEFAULT true NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE TABLE "tenants" (
@@ -542,6 +608,13 @@ CREATE TABLE "verifications" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+CREATE TABLE "webhook_events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"event_key" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "webhook_events_key" UNIQUE("tenant_id","event_key")
+);
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE no action ON UPDATE no action;
@@ -560,14 +633,21 @@ ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_tenant_id_tenants_id
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "consent_templates" ADD CONSTRAINT "consent_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "conversations" ADD CONSTRAINT "conversations_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "departments" ADD CONSTRAINT "departments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "devices" ADD CONSTRAINT "devices_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "devices" ADD CONSTRAINT "devices_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "devices" ADD CONSTRAINT "devices_room_fk" FOREIGN KEY ("tenant_id","room_id") REFERENCES "public"."rooms"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "files" ADD CONSTRAINT "files_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "message_dispatches" ADD CONSTRAINT "message_dispatches_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "message_templates" ADD CONSTRAINT "message_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "messages" ADD CONSTRAINT "messages_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_fk" FOREIGN KEY ("tenant_id","conversation_id") REFERENCES "public"."conversations"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "messages" ADD CONSTRAINT "messages_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "messages" ADD CONSTRAINT "messages_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
-ALTER TABLE "outbound_messages" ADD CONSTRAINT "outbound_messages_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_package_fk" FOREIGN KEY ("tenant_id","patient_package_id") REFERENCES "public"."patient_packages"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "package_session_events" ADD CONSTRAINT "package_session_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
@@ -617,6 +697,7 @@ ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_member_fk" FOREIGN KEY ("t
 ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_room_fk" FOREIGN KEY ("tenant_id","branch_id","room_id") REFERENCES "public"."rooms"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "time_blocks" ADD CONSTRAINT "time_blocks_device_fk" FOREIGN KEY ("tenant_id","branch_id","device_id") REFERENCES "public"."devices"("tenant_id","branch_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "verification_codes" ADD CONSTRAINT "verification_codes_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "webhook_events" ADD CONSTRAINT "webhook_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "accounts_user_id_idx" ON "accounts" USING btree ("user_id");
 CREATE UNIQUE INDEX "appointments_one_pending_per_slot" ON "appointments" USING btree ("tenant_id","patient_id","starts_at") WHERE "appointments"."status" = 'pending';
 CREATE INDEX "appointments_branch_start_idx" ON "appointments" USING btree ("tenant_id","branch_id","starts_at");
@@ -625,7 +706,10 @@ CREATE INDEX "appointments_patient_idx" ON "appointments" USING btree ("tenant_i
 CREATE INDEX "audit_logs_tenant_created_idx" ON "audit_logs" USING btree ("tenant_id","created_at");
 CREATE INDEX "clinical_notes_patient_idx" ON "clinical_notes" USING btree ("tenant_id","patient_id");
 CREATE UNIQUE INDEX "consent_templates_one_current" ON "consent_templates" USING btree ("tenant_id","code") WHERE "consent_templates"."is_current";
-CREATE INDEX "outbound_messages_created_idx" ON "outbound_messages" USING btree ("tenant_id","created_at");
+CREATE INDEX "conversations_inbox_idx" ON "conversations" USING btree ("tenant_id","needs_reply","last_message_at");
+CREATE UNIQUE INDEX "messages_provider_id_key" ON "messages" USING btree ("tenant_id","provider_message_id") WHERE "messages"."provider_message_id" is not null;
+CREATE INDEX "messages_conversation_idx" ON "messages" USING btree ("tenant_id","conversation_id","created_at");
+CREATE INDEX "messages_appointment_idx" ON "messages" USING btree ("tenant_id","appointment_id");
 CREATE UNIQUE INDEX "package_session_events_one_deduction" ON "package_session_events" USING btree ("tenant_id","appointment_id") WHERE "package_session_events"."kind" = 'deduction';
 CREATE INDEX "patient_consents_patient_idx" ON "patient_consents" USING btree ("tenant_id","patient_id","template_code");
 CREATE INDEX "patient_medical_flags_patient_idx" ON "patient_medical_flags" USING btree ("tenant_id","patient_id");
@@ -838,9 +922,9 @@ insert into public.accounts (id, account_id, provider_id, user_id, password) val
 insert into public.tenants (id, slug, name_ar, name_en, brand_color) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'derma', 'عيادات ديرما', 'Derma Clinics', '#28817a');
 
-insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, sort_order) values
-  ('476edfa8-32de-5660-8aad-64aef84f81c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع الرياض', 'Riyadh Branch', 'الرياض', 'Riyadh', 0),
-  ('bf17d28d-ae19-50a1-ab69-44a15687a64e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع جدة', 'Jeddah Branch', 'جدة', 'Jeddah', 1);
+insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, map_url, sort_order) values
+  ('476edfa8-32de-5660-8aad-64aef84f81c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع الرياض', 'Riyadh Branch', 'الرياض', 'Riyadh', 'https://maps.google.com/?q=Derma%20Clinics%20Riyadh', 0),
+  ('bf17d28d-ae19-50a1-ab69-44a15687a64e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع جدة', 'Jeddah Branch', 'جدة', 'Jeddah', 'https://maps.google.com/?q=Derma%20Clinics%20Jeddah', 1);
 
 insert into public.departments (id, tenant_id, code, name_ar, name_en, is_active, sort_order) values
   ('62531e32-6cf4-5dd1-9fba-5f64761380b7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'dermatology', 'الجلدية والتجميل', 'Dermatology & Aesthetics', true, 0),
@@ -954,71 +1038,71 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, sort_order) values
-  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, 0),
-  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, true, 1),
-  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, true, 2),
-  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, null, true, false, 3),
-  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, null, true, false, 4),
-  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, 'chemical_peel', true, true, 5),
-  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, 6),
-  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, null, true, false, 7),
-  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, null, true, false, 8),
-  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, null, true, false, 9),
-  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, null, true, false, 10),
-  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, null, true, false, 11),
-  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', null, true, false, 12),
-  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', null, true, false, 13),
-  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', null, true, false, 14),
-  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', null, true, false, 15),
-  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', null, true, false, 16),
-  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', null, true, false, 17),
-  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', null, true, false, 18),
-  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', 'laser_hair_removal', true, true, 19),
-  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, null, true, false, 20),
-  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, null, true, false, 21);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, pre_visit_ar, pre_visit_en, post_care_ar, post_care_en, recall_after_days, sort_order) values
+  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, 'أحضر قائمة بأي أدوية أو منتجات تستخدمها حاليًا.', 'Bring a list of any medicines or skin products you use now.', null, null, null, 0),
+  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, true, 'قبل الجلسة: تجنّب الأسبرين والكحول ومميّعات الدم قبل 48 ساعة إن أمكن.', 'Before the session: avoid aspirin, alcohol and blood thinners for 48 hours if possible.', 'كيف تشعر بعد جلسة البوتوكس؟ تذكّر ألا تستلقي 4 ساعات بعد الحقن.', 'How do you feel after your Botox session? Remember not to lie down for 4 hours after the injection.', 120, 1),
+  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, true, 'قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.', 'Before the session: avoid blood thinners for 48 hours, and tell us about any infection.', 'كيف تشعر بعد حقن الفيلر؟ التورّم الخفيف طبيعي في الأيام الأولى.', 'How do you feel after the filler? Mild swelling is normal in the first days.', 270, 2),
+  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, null, true, false, null, null, null, null, null, 3),
+  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, null, true, false, null, null, null, null, null, 4),
+  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, 'chemical_peel', true, true, 'قبل الجلسة: أوقف الريتينول والمقشّرات قبل 5 أيام، وتجنّب الشمس.', 'Before the session: stop retinol and exfoliants 5 days before, and avoid the sun.', 'كيف حال بشرتك بعد التقشير؟ استخدم واقي الشمس والمرطّب بانتظام.', 'How is your skin after the peel? Use sunscreen and moisturiser regularly.', 30, 5),
+  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, 'قبل الجلسة: تعال بوجه نظيف بدون مكياج إن أمكن.', 'Before the session: come with a clean face, no make-up if possible.', 'كيف حال بشرتك بعد جلسة التنظيف؟', 'How is your skin after the facial?', 30, 6),
+  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, null, true, false, null, null, null, null, null, 7),
+  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, null, true, false, null, null, null, null, null, 8),
+  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, null, true, false, null, null, null, null, null, 9),
+  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, null, true, false, null, null, null, null, null, 10),
+  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, null, true, false, null, null, null, null, null, 11),
+  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', null, true, false, null, null, null, null, null, 12),
+  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', null, true, false, null, null, null, null, null, 13),
+  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', null, true, false, null, null, null, null, null, 14),
+  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', null, true, false, null, null, null, null, null, 15),
+  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', null, true, false, null, null, null, null, null, 16),
+  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', null, true, false, null, null, null, null, null, 17),
+  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', null, true, false, null, null, null, null, null, 18),
+  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', 'laser_hair_removal', true, true, 'قبل الجلسة: احلق المنطقة قبل يوم، وتجنّب الشمس والتقشير لمدة أسبوع.', 'Before the session: shave the area the day before, and avoid sun and exfoliation for a week.', 'كيف حال بشرتك بعد جلسة الليزر؟', 'How is your skin after the laser session?', 42, 19),
+  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, null, true, false, null, null, null, null, null, 20),
+  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, null, true, false, null, null, null, null, null, 21);
 
-insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
-  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', 'national_id', '1000000101', null, null, null, true),
-  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', 'national_id', '1000000102', null, null, null, true),
-  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '0500010003', 'female', '1996-11-23', 'national_id', '1000000103', null, null, null, true),
-  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '0500010004', 'female', '1973-04-06', 'national_id', '1000000104', null, null, null, true),
-  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '0500010005', 'female', '1986-09-17', 'iqama', '2000000105', null, null, null, true),
-  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '0500010006', 'female', '1999-02-28', 'national_id', '1000000106', null, null, null, true),
-  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '0500010007', 'female', '1976-07-11', 'national_id', '1000000107', null, null, null, true),
-  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '0500010008', 'male', '1989-12-22', 'national_id', '1000000108', null, null, null, true),
-  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '0500010009', 'male', '2002-05-05', 'national_id', '1000000109', null, null, null, true),
-  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '0500010010', 'male', '1979-10-16', 'national_id', '1000000110', null, null, null, true),
-  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '0500010011', 'female', '1992-03-27', 'national_id', '1000000111', null, null, null, true),
-  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '0500010012', 'female', '2005-08-10', 'national_id', '1000000112', null, null, null, true),
-  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '0500010013', 'female', '1982-01-21', 'national_id', '1000000113', null, null, null, true),
-  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '0500010014', 'female', '1995-06-04', 'iqama', '2000000114', null, null, null, true),
-  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '0500010015', 'female', '1972-11-15', 'national_id', '1000000115', null, null, null, true),
-  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '0500010016', 'female', '1985-04-26', 'national_id', '1000000116', null, null, null, true),
-  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '0500010017', 'female', '1998-09-09', 'national_id', '1000000117', null, null, null, true),
-  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500010018', 'male', '1975-02-20', 'national_id', '1000000118', null, null, null, true),
-  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500010019', 'male', '1988-07-03', 'national_id', '1000000119', null, null, null, true),
-  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500010020', 'male', '2001-12-14', 'national_id', '1000000120', null, null, null, true),
-  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500010021', 'female', '1978-05-25', 'national_id', '1000000121', null, null, null, true),
-  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500010022', 'female', '1991-10-08', 'national_id', '1000000122', null, null, null, true),
-  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500010023', 'female', '2004-03-19', 'iqama', '2000000123', null, null, null, true),
-  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500010024', 'female', '1981-08-02', 'national_id', '1000000124', null, null, null, true),
-  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500010025', 'female', '1994-01-13', 'national_id', '1000000125', null, null, null, true),
-  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '0500010026', 'female', '1971-06-24', 'national_id', '1000000126', null, null, null, true),
-  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '0500010027', 'female', '1984-11-07', 'national_id', '1000000127', null, null, null, true),
-  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '0500010028', 'male', '1997-04-18', 'national_id', '1000000128', null, null, null, true),
-  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '0500010029', 'male', '1974-09-01', 'national_id', '1000000129', null, null, null, true),
-  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '0500010030', 'male', '1987-02-12', 'national_id', '1000000130', null, null, null, true),
-  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '0500010031', 'female', '2000-07-23', 'national_id', '1000000131', null, null, null, true),
-  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '0500010032', 'female', '1977-12-06', 'iqama', '2000000132', null, null, null, true),
-  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '0500010033', 'female', '1990-05-17', 'national_id', '1000000133', null, null, null, true),
-  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '0500010034', 'female', '2003-10-28', 'national_id', '1000000134', null, null, null, true),
-  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '0500010035', 'female', '1980-03-11', 'national_id', '1000000135', null, null, null, true),
-  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '0500010036', 'female', '1993-08-22', 'national_id', '1000000136', null, null, null, true),
-  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '0500010037', 'female', '1970-01-05', 'national_id', '1000000137', null, null, null, true),
-  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '0500010038', 'male', '1983-06-16', 'national_id', '1000000138', null, null, null, true),
-  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ليان بندر الغامدي', 'Layan Bandar Al-Ghamdi', '0500010039', 'female', '2014-03-09', 'national_id', '1000000139', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابنة', 'Daughter', true),
-  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'سلمان بندر الغامدي', 'Salman Bandar Al-Ghamdi', '0500010040', 'male', '2011-11-20', 'national_id', '1000000140', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابن', 'Son', true);
+insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake, whatsapp_opt_in_at, whatsapp_opt_in_source, whatsapp_opted_out_at) values
+  ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', 'national_id', '1000000101', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', 'national_id', '1000000102', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('e17f8ccb-c0d6-5ea2-acdc-130e54a9738d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0003', 'ريم صالح الجهني', 'Reem Saleh Al-Juhani', '0500010003', 'female', '1996-11-23', 'national_id', '1000000103', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('df796466-c642-5bad-a390-ce372c145876', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0004', 'لمى إبراهيم المطيري', 'Lama Ibrahim Al-Mutairi', '0500010004', 'female', '1973-04-06', 'national_id', '1000000104', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('3604e597-9d7a-556d-8fda-c421d5eee09f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0005', 'جود علي التميمي', 'Joud Ali Al-Tamimi', '0500010005', 'female', '1986-09-17', 'iqama', '2000000105', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('e5a6936e-d013-5b42-a13a-2f69f172f7a2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0006', 'هيا يوسف الزهراني', 'Haya Yousef Al-Zahrani', '0500010006', 'female', '1999-02-28', 'national_id', '1000000106', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('b848630c-5546-5f5c-aa8e-24f101175b35', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0007', 'العنود سليمان الرشيد', 'Alanoud Sulaiman Al-Rasheed', '0500010007', 'female', '1976-07-11', 'national_id', '1000000107', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0008', 'بندر حمد الغامدي', 'Bandar Hamad Al-Ghamdi', '0500010008', 'male', '1989-12-22', 'national_id', '1000000108', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('b6083414-377a-5ce3-b37d-5faaf2988ce4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0009', 'يزيد عبدالرحمن البقمي', 'Yazeed Abdulrahman Al-Buqami', '0500010009', 'male', '2002-05-05', 'national_id', '1000000109', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('f73fb753-4dd1-5fd7-b5b8-4ed0f7ab0d80', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0010', 'مشعل أحمد الشهري', 'Mishal Ahmed Al-Shehri', '0500010010', 'male', '1979-10-16', 'national_id', '1000000110', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('7676bea7-643c-5867-af2b-a8d8c9fb95d8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0011', 'غادة صالح السبيعي', 'Ghada Saleh Al-Subaie', '0500010011', 'female', '1992-03-27', 'national_id', '1000000111', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('e19c3a44-59bc-5ca8-95c9-16e765e672fb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0012', 'منيرة إبراهيم الدوسري', 'Munira Ibrahim Al-Dosari', '0500010012', 'female', '2005-08-10', 'national_id', '1000000112', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('5f737b56-5bee-54f6-b3a7-095e399e958a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0013', 'أروى علي الشمري', 'Arwa Ali Al-Shammari', '0500010013', 'female', '1982-01-21', 'national_id', '1000000113', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('eba9236f-5fc8-580b-863f-4c385c83b3a4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0014', 'لجين يوسف العتيبي', 'Lujain Yousef Al-Otaibi', '0500010014', 'female', '1995-06-04', 'iqama', '2000000114', null, null, null, true, now() - interval '60 days', 'demo', now() - interval '5 days'),
+  ('e172214f-c582-5cbb-9687-66298cf4d2c9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0015', 'مها سليمان العنزي', 'Maha Sulaiman Al-Anazi', '0500010015', 'female', '1972-11-15', 'national_id', '1000000115', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('6da3c84d-b21a-518f-a656-be957c5b0247', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0016', 'وعد حمد القحطاني', 'Waad Hamad Al-Qahtani', '0500010016', 'female', '1985-04-26', 'national_id', '1000000116', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('d141affc-93d5-521c-ae7f-81724efa6efd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0017', 'بشاير عبدالرحمن الحربي', 'Bashayer Abdulrahman Al-Harbi', '0500010017', 'female', '1998-09-09', 'national_id', '1000000117', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('7c704206-bb3b-50a7-ac75-65910b0c9211', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0018', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500010018', 'male', '1975-02-20', 'national_id', '1000000118', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0019', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500010019', 'male', '1988-07-03', 'national_id', '1000000119', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('00d9afe3-4897-52fd-b204-4ce81167c101', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0020', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500010020', 'male', '2001-12-14', 'national_id', '1000000120', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('8f896380-cce7-5b07-8a3c-83368787969f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0021', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500010021', 'female', '1978-05-25', 'national_id', '1000000121', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('98a24ab8-4ab7-5753-9b10-126dfcd66167', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0022', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500010022', 'female', '1991-10-08', 'national_id', '1000000122', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('f9e1c90e-eaeb-5afd-920e-340b57d17eb3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0023', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500010023', 'female', '2004-03-19', 'iqama', '2000000123', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('02f1b81e-f57d-5e40-bf45-765237208db4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0024', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500010024', 'female', '1981-08-02', 'national_id', '1000000124', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('dac08cea-8ab1-55f5-b636-91120331fac9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0025', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500010025', 'female', '1994-01-13', 'national_id', '1000000125', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('0747bf43-549f-56f7-8165-734648bf1653', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0026', 'سارة أحمد السبيعي', 'Sarah Ahmed Al-Subaie', '0500010026', 'female', '1971-06-24', 'national_id', '1000000126', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('2c336e9a-1d9e-5145-ac59-0067ce5f2b93', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0027', 'ريم صالح الدوسري', 'Reem Saleh Al-Dosari', '0500010027', 'female', '1984-11-07', 'national_id', '1000000127', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('806eba8f-60e3-5ab2-bf6b-eb465031aefd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0028', 'عمر إبراهيم الشمري', 'Omar Ibrahim Al-Shammari', '0500010028', 'male', '1997-04-18', 'national_id', '1000000128', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('fa096d95-0efb-5474-bf05-4ade2b49fbe2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0029', 'سعود علي العتيبي', 'Saud Ali Al-Otaibi', '0500010029', 'male', '1974-09-01', 'national_id', '1000000129', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('2b1dac79-3fe4-5ae3-8511-f44af931068f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0030', 'زياد يوسف العنزي', 'Ziyad Yousef Al-Anazi', '0500010030', 'male', '1987-02-12', 'national_id', '1000000130', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('a4688791-1058-583c-80de-2e5c850750de', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0031', 'العنود سليمان القحطاني', 'Alanoud Sulaiman Al-Qahtani', '0500010031', 'female', '2000-07-23', 'national_id', '1000000131', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('1deab004-8246-5eae-8675-ea2b5e463b09', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0032', 'دانة حمد الحربي', 'Dana Hamad Al-Harbi', '0500010032', 'female', '1977-12-06', 'iqama', '2000000132', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('67c6fcae-aa72-52a7-a7dc-35a9c9203fd3', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0033', 'رهف عبدالرحمن الجهني', 'Rahaf Abdulrahman Al-Juhani', '0500010033', 'female', '1990-05-17', 'national_id', '1000000133', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('bed5093f-d3f1-5cc6-9b0f-8b2f3fd73b3f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0034', 'شهد أحمد المطيري', 'Shahad Ahmed Al-Mutairi', '0500010034', 'female', '2003-10-28', 'national_id', '1000000134', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('2b64a3e7-af37-5312-87ea-49fb6df6084d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0035', 'غادة صالح التميمي', 'Ghada Saleh Al-Tamimi', '0500010035', 'female', '1980-03-11', 'national_id', '1000000135', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('7af5d6b7-2ad1-5e45-be3a-51af068416db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0036', 'منيرة إبراهيم الزهراني', 'Munira Ibrahim Al-Zahrani', '0500010036', 'female', '1993-08-22', 'national_id', '1000000136', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('d00f78da-ba6d-516c-97eb-2e10c22ecb3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0037', 'أروى علي الرشيد', 'Arwa Ali Al-Rasheed', '0500010037', 'female', '1970-01-05', 'national_id', '1000000137', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('8c6e4a92-5030-559e-a231-c336ddc2e409', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0038', 'خالد يوسف الغامدي', 'Khaled Yousef Al-Ghamdi', '0500010038', 'male', '1983-06-16', 'national_id', '1000000138', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('96d64a3d-5b03-59e3-a3da-8230714c1eac', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0039', 'ليان بندر الغامدي', 'Layan Bandar Al-Ghamdi', '0500010039', 'female', '2014-03-09', 'national_id', '1000000139', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابنة', 'Daughter', true, now() - interval '60 days', 'demo', null),
+  ('83d07fdb-6c0f-5f52-bb7c-31d91c6b9736', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0040', 'سلمان بندر الغامدي', 'Salman Bandar Al-Ghamdi', '0500010040', 'male', '2011-11-20', 'national_id', '1000000140', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ابن', 'Son', true, now() - interval '60 days', 'demo', null);
 
 insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, note) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'allergy', 'ليدوكايين (مخدر موضعي) · Lidocaine', 'طفح جلدي سابق'),
@@ -1091,6 +1175,25 @@ insert into public.package_templates (id, tenant_id, service_id, name_ar, name_e
 insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, demo_anchor_day) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false, true, false, true, (select demo_anchor from pg_temp.setup_params));
 
+insert into public.message_templates (tenant_id, kind, enabled, body_ar, body_en, meta_name, category) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'booking_confirmation', true, 'مرحبًا {patient_first_name}، تم حجز {appointment} يوم {date} الساعة {time} مع {doctor} في {branch}.
+الموقع: {map_link}
+مواعيدك والموافقات: {my_link}', 'Hello {patient_first_name}, {appointment} is booked for {date} at {time} with {doctor} at {branch}.
+Location: {map_link}
+Your appointments and consents: {my_link}', 'booking_confirmation', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'reminder', true, 'مرحبًا {patient_first_name}، نذكّرك بـ{appointment} غدًا {date} الساعة {time} مع {doctor} في {branch}.
+{instructions}
+{consent_note}
+هل ستحضر؟', 'Hello {patient_first_name}, a reminder of {appointment} tomorrow {date} at {time} with {doctor} at {branch}.
+{instructions}
+{consent_note}
+Will you come?', 'appointment_reminder', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'running_late', true, 'مرحبًا {patient_first_name}، نعتذر: {doctor} متأخر اليوم حوالي {minutes} دقيقة. موعدك الساعة {time} قد يتأخر قليلًا. شكرًا لتفهّمك.', 'Hello {patient_first_name}, we''re sorry: {doctor} is running about {minutes} minutes late today. Your {time} appointment may start a little later. Thank you for your patience.', 'doctor_running_late', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'post_care', true, 'مرحبًا {patient_first_name}، {question}', 'Hello {patient_first_name}, {question}', 'post_care_check_in', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'no_show', true, 'مرحبًا {patient_first_name}، افتقدناك في موعدك اليوم. نتمنى أن تكون بخير. يمكنك حجز موعد جديد من هنا: {booking_link}', 'Hello {patient_first_name}, we missed you at your appointment today. We hope you''re well. You can book a new time here: {booking_link}', 'missed_appointment', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
+
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, '2026-09-23', 'اليوم الوطني السعودي', 'Saudi National Day'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, '2027-02-22', 'يوم التأسيس', 'Founding Day');
@@ -1102,8 +1205,8 @@ insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, en
 insert into public.tenants (id, slug, name_ar, name_en, brand_color) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'lamsa', 'عيادة لمسة', 'Lamsa Clinic', '#8a4f9e');
 
-insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, sort_order) values
-  ('582af1ea-4eca-5c50-bef7-54515ca85695', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'فرع الدمام', 'Dammam Branch', 'الدمام', 'Dammam', 0);
+insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, map_url, sort_order) values
+  ('582af1ea-4eca-5c50-bef7-54515ca85695', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'فرع الدمام', 'Dammam Branch', 'الدمام', 'Dammam', 'https://maps.google.com/?q=Lamsa%20Clinic%20Dammam', 0);
 
 insert into public.departments (id, tenant_id, code, name_ar, name_en, is_active, sort_order) values
   ('a7669099-a791-51b7-a6c3-8c0137a796dd', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dermatology', 'الجلدية والتجميل', 'Dermatology & Aesthetics', true, 0);
@@ -1142,21 +1245,21 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, sort_order) values
-  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, 0),
-  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, false, 1),
-  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, false, 2),
-  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, 3);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, pre_visit_ar, pre_visit_en, post_care_ar, post_care_en, recall_after_days, sort_order) values
+  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, 'أحضر قائمة بأي أدوية أو منتجات تستخدمها حاليًا.', 'Bring a list of any medicines or skin products you use now.', null, null, null, 0),
+  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, false, 'قبل الجلسة: تجنّب الأسبرين والكحول ومميّعات الدم قبل 48 ساعة إن أمكن.', 'Before the session: avoid aspirin, alcohol and blood thinners for 48 hours if possible.', 'كيف تشعر بعد جلسة البوتوكس؟ تذكّر ألا تستلقي 4 ساعات بعد الحقن.', 'How do you feel after your Botox session? Remember not to lie down for 4 hours after the injection.', 120, 1),
+  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, false, 'قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.', 'Before the session: avoid blood thinners for 48 hours, and tell us about any infection.', 'كيف تشعر بعد حقن الفيلر؟ التورّم الخفيف طبيعي في الأيام الأولى.', 'How do you feel after the filler? Mild swelling is normal in the first days.', 270, 2),
+  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, 'قبل الجلسة: تعال بوجه نظيف بدون مكياج إن أمكن.', 'Before the session: come with a clean face, no make-up if possible.', 'كيف حال بشرتك بعد جلسة التنظيف؟', 'How is your skin after the facial?', 30, 3);
 
-insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake) values
-  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', 'national_id', '1000000201', null, null, null, true),
-  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500020002', 'male', '1988-07-03', 'national_id', '1000000202', null, null, null, true),
-  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500020003', 'male', '2001-12-14', 'national_id', '1000000203', null, null, null, true),
-  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500020004', 'female', '1978-05-25', 'national_id', '1000000204', null, null, null, true),
-  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500020005', 'female', '1991-10-08', 'national_id', '1000000205', null, null, null, true),
-  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', 'iqama', '2000000206', null, null, null, true),
-  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', 'national_id', '1000000207', null, null, null, true),
-  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', 'national_id', '1000000208', null, null, null, true);
+insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake, whatsapp_opt_in_at, whatsapp_opt_in_source, whatsapp_opted_out_at) values
+  ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', 'national_id', '1000000201', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0002', 'فهد صالح المطيري', 'Fahad Saleh Al-Mutairi', '0500020002', 'male', '1988-07-03', 'national_id', '1000000202', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('7c4bfad0-d7ea-5716-8caf-2a4d9cf519e1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0003', 'سلطان إبراهيم التميمي', 'Sultan Ibrahim Al-Tamimi', '0500020003', 'male', '2001-12-14', 'national_id', '1000000203', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('30a185df-a97f-51c5-a0ff-d60f7432d9e7', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0004', 'أسيل علي الزهراني', 'Aseel Ali Al-Zahrani', '0500020004', 'female', '1978-05-25', 'national_id', '1000000204', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('40667f38-5e32-5102-bd3f-a09cd4495c3f', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0005', 'ريناد يوسف الرشيد', 'Renad Yousef Al-Rasheed', '0500020005', 'female', '1991-10-08', 'national_id', '1000000205', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('b7ec5b94-b18d-5fed-805e-66711fad6aa3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0006', 'خلود سليمان الغامدي', 'Kholoud Sulaiman Al-Ghamdi', '0500020006', 'female', '2004-03-19', 'iqama', '2000000206', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('13710ba4-fee0-5bfd-b0fa-d4d958de8806', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0007', 'فاطمة حمد البقمي', 'Fatimah Hamad Al-Buqami', '0500020007', 'female', '1981-08-02', 'national_id', '1000000207', null, null, null, true, now() - interval '60 days', 'demo', null),
+  ('930b5730-fea7-5ab4-8dd3-112d241dc186', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0008', 'نورة عبدالرحمن الشهري', 'Noura Abdulrahman Al-Shehri', '0500020008', 'female', '1994-01-13', 'national_id', '1000000208', null, null, null, true, now() - interval '60 days', 'demo', null);
 
 insert into public.patient_medical_flags (tenant_id, patient_id, kind, label, note) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '47976cc3-ac45-5a95-a2c5-056e158e9ee2', 'allergy', 'الأسبرين · Aspirin', null);
@@ -1219,6 +1322,25 @@ insert into public.package_templates (id, tenant_id, service_id, name_ar, name_e
 
 insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, demo_anchor_day) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', true, true, true, false, (select demo_anchor from pg_temp.setup_params));
+
+insert into public.message_templates (tenant_id, kind, enabled, body_ar, body_en, meta_name, category) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'booking_confirmation', true, 'مرحبًا {patient_first_name}، تم حجز {appointment} يوم {date} الساعة {time} مع {doctor} في {branch}.
+الموقع: {map_link}
+مواعيدك والموافقات: {my_link}', 'Hello {patient_first_name}, {appointment} is booked for {date} at {time} with {doctor} at {branch}.
+Location: {map_link}
+Your appointments and consents: {my_link}', 'booking_confirmation', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'reminder', true, 'مرحبًا {patient_first_name}، نذكّرك بـ{appointment} غدًا {date} الساعة {time} مع {doctor} في {branch}.
+{instructions}
+{consent_note}
+هل ستحضر؟', 'Hello {patient_first_name}, a reminder of {appointment} tomorrow {date} at {time} with {doctor} at {branch}.
+{instructions}
+{consent_note}
+Will you come?', 'appointment_reminder', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'running_late', true, 'مرحبًا {patient_first_name}، نعتذر: {doctor} متأخر اليوم حوالي {minutes} دقيقة. موعدك الساعة {time} قد يتأخر قليلًا. شكرًا لتفهّمك.', 'Hello {patient_first_name}, we''re sorry: {doctor} is running about {minutes} minutes late today. Your {time} appointment may start a little later. Thank you for your patience.', 'doctor_running_late', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'post_care', true, 'مرحبًا {patient_first_name}، {question}', 'Hello {patient_first_name}, {question}', 'post_care_check_in', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'no_show', true, 'مرحبًا {patient_first_name}، افتقدناك في موعدك اليوم. نتمنى أن تكون بخير. يمكنك حجز موعد جديد من هنا: {booking_link}', 'Hello {patient_first_name}, we missed you at your appointment today. We hope you''re well. You can book a new time here: {booking_link}', 'missed_appointment', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', null, '2026-09-23', 'اليوم الوطني السعودي', 'Saudi National Day'),
@@ -1607,8 +1729,17 @@ insert into public.rate_limit_hits (tenant_id, bucket, created_at) values
 insert into public.patient_sessions (tenant_id, patient_id, token_hash, expires_at, revoked_at, created_at) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'd800c92f216020ea5a31da66be09ae00cb03d2ac32594f6a190a8f88acafd1bb', now() - interval '12 hours', now() - interval '12 hours', now() - interval '12 hours');
 
-insert into public.outbound_messages (tenant_id, channel, to_phone, template, body, status, created_at) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'demo', '0500010007', 'portal_code', 'رمز الدخول (تجريبي): ******', 'demo_logged', now() - interval '12 hours');
+insert into public.conversations (id, tenant_id, phone, patient_id, last_inbound_at, last_message_at) values
+  ('a28af538-0464-58ce-9ac7-950dd0faf68c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010007', 'b848630c-5546-5f5c-aa8e-24f101175b35', null, now() - interval '12 hours');
+
+insert into public.messages (tenant_id, conversation_id, patient_id, direction, kind, body, channel, status, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'a28af538-0464-58ce-9ac7-950dd0faf68c', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'out', 'verification_code', 'رمز التحقق: ****** (صالح 10 دقائق). لا تشاركه مع أحد.', 'demo', 'read', now() - interval '12 hours');
+
+insert into public.message_dispatches (tenant_id, dedupe_key, kind, patient_id, outcome, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'demo:seed:derma', 'verification_code', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'sent', now() - interval '12 hours');
+
+insert into public.webhook_events (tenant_id, event_key, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'demo-event-derma', now() - interval '12 hours');
 
 insert into public.notification_prefs (tenant_id, user_id, enabled) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-admin', true);
@@ -1625,14 +1756,49 @@ insert into public.rate_limit_hits (tenant_id, bucket, created_at) values
 insert into public.patient_sessions (tenant_id, patient_id, token_hash, expires_at, revoked_at, created_at) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'f1dbc43c1cbdbe3454ad2ad8df8baae776c49dc5a828ab6689d07a487a97c338', now() - interval '12 hours', now() - interval '12 hours', now() - interval '12 hours');
 
-insert into public.outbound_messages (tenant_id, channel, to_phone, template, body, status, created_at) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'demo', '0500020002', 'portal_code', 'رمز الدخول (تجريبي): ******', 'demo_logged', now() - interval '12 hours');
+insert into public.conversations (id, tenant_id, phone, patient_id, last_inbound_at, last_message_at) values
+  ('27b91291-c60f-516c-aec0-c61693cc12bb', '55d937e8-cf0c-583b-871e-f90fbc8af348', '0500020002', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', null, now() - interval '12 hours');
+
+insert into public.messages (tenant_id, conversation_id, patient_id, direction, kind, body, channel, status, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '27b91291-c60f-516c-aec0-c61693cc12bb', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'out', 'verification_code', 'رمز التحقق: ****** (صالح 10 دقائق). لا تشاركه مع أحد.', 'demo', 'read', now() - interval '12 hours');
+
+insert into public.message_dispatches (tenant_id, dedupe_key, kind, patient_id, outcome, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'demo:seed:lamsa', 'verification_code', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'sent', now() - interval '12 hours');
+
+insert into public.webhook_events (tenant_id, event_key, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'demo-event-lamsa', now() - interval '12 hours');
 
 insert into public.notification_prefs (tenant_id, user_id, enabled) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', true);
 
 insert into public.push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth, user_agent) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', 'https://push.invalid/demo-device/lamsa', 'demo', 'demo', 'Demo device (never receives anything)');
+
+insert into public.conversations (id, tenant_id, phone, patient_id, profile_name, needs_reply, last_inbound_at, last_message_at, opted_out_at) values
+  ('f425ddd7-2c9e-5137-92c9-6993b47d7feb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010001', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', null, false, now() - interval '20 hours', now() - interval '20 hours', null),
+  ('4c427865-069d-57d8-a38a-ada3e03bf470', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010011', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, true, now() - interval '3 hours', now() - interval '3 hours', null),
+  ('089ce7a7-bf08-5c03-bdca-a79550bf7632', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010014', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', null, false, now() - interval '120 hours', now() - interval '120 hours', null),
+  ('2fe0ea24-181b-5563-88d1-bf6f4704506b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0555123456', null, 'Noura', true, now() - interval '1 hours', now() - interval '1 hours', null);
+
+insert into public.messages (tenant_id, conversation_id, patient_id, appointment_id, direction, kind, body, buttons, button_id, channel, status, flag, language, created_at, status_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f425ddd7-2c9e-5137-92c9-6993b47d7feb', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'out', 'reminder', 'مرحبًا نورة، نذكّرك بـموعد فيلر غدًا اليوم الساعة 15:30 مع د. سارة العتيبي في فرع الرياض.
+قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.
+هل ستحضر؟', '[{"id":"confirm","title":"تأكيد"},{"id":"reschedule","title":"تغيير الموعد"},{"id":"cancel","title":"إلغاء"}]'::jsonb, null, 'demo', 'read', null, 'ar', now() - interval '22 hours', now() - interval '22 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f425ddd7-2c9e-5137-92c9-6993b47d7feb', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'in', 'inbound_button', 'تأكيد', null, 'confirm', 'demo', 'received', null, 'ar', now() - interval '20 hours', now() - interval '20 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f425ddd7-2c9e-5137-92c9-6993b47d7feb', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'out', 'confirm_ack', 'شكرًا، تم تأكيد حضورك ✓ نراك في الموعد.', null, null, 'demo', 'read', null, 'ar', now() - interval '20 hours', now() - interval '20 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'out', 'post_care', 'مرحبًا غادة، كيف حال بشرتك بعد جلسة الليزر؟', '[{"id":"all_good","title":"كل شيء جيد"},{"id":"concern","title":"لدي استفسار/قلق"}]'::jsonb, null, 'demo', 'read', null, 'ar', now() - interval '5 hours', now() - interval '5 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'in', 'inbound_button', 'لدي استفسار/قلق', null, 'concern', 'demo', 'received', 'concern', 'ar', now() - interval '3 hours', now() - interval '3 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'in', 'inbound_text', 'يوجد احمرار خفيف في منطقة الساق، هل هذا طبيعي؟', null, null, 'demo', 'received', null, 'ar', now() - interval '3 hours', now() - interval '3 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'out', 'concern_ack', 'شكرًا لإخبارنا. ستتواصل معك العيادة قريبًا.', null, null, 'demo', 'delivered', null, 'ar', now() - interval '3 hours', now() - interval '3 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '089ce7a7-bf08-5c03-bdca-a79550bf7632', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', null, 'in', 'inbound_text', 'إيقاف', null, null, 'demo', 'received', null, 'ar', now() - interval '120 hours', now() - interval '120 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '089ce7a7-bf08-5c03-bdca-a79550bf7632', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', null, 'out', 'stop_ack', 'تم إيقاف رسائل التذكير والمتابعة. لإعادة تفعيلها أرسل «تفعيل».', null, null, 'demo', 'read', null, 'ar', now() - interval '120 hours', now() - interval '120 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '2fe0ea24-181b-5563-88d1-bf6f4704506b', null, null, 'in', 'inbound_text', 'السلام عليكم، كم سعر جلسة ليزر إزالة الشعر للساقين؟', null, null, 'demo', 'received', null, 'ar', now() - interval '1 hours', now() - interval '1 hours');
+
+insert into public.message_dispatches (tenant_id, dedupe_key, kind, appointment_id, patient_id, outcome, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'reminder:bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'reminder', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'sent', now() - interval '22 hours');
+
+insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, source, created_by) values
+  ('6cb8e300-9258-5346-a5b6-b2a191792506', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'f81befe7-9561-50af-adc9-2553e96b6277', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', null, date_trunc('day', now() - interval '125 days') + interval '8 hours', date_trunc('day', now() - interval '125 days') + interval '8 hours 30 minutes', date_trunc('day', now() - interval '125 days') + interval '8 hours 40 minutes', 'completed', null, null, null, 'reception', 'usr_derma-rec-ruh1');
 
 
 -- ─── STEP 4: RESTRICTED APP LOGIN (clinic_app) ──────────────────────────────
@@ -1752,7 +1918,11 @@ grant update (body, status, signed_at, updated_at) on public.clinical_notes to c
 -- Phase 2a: codes, rate limits, patient sessions, message log, push.
 grant select, insert, update on public.verification_codes, public.patient_sessions to clinic_app;
 grant select, insert, delete on public.rate_limit_hits to clinic_app;
-grant select, insert on public.outbound_messages to clinic_app;
+-- Phase 2b: WhatsApp. Messages are a record: never deleted by the app; only their status changes.
+grant select, insert, update on public.conversations, public.message_templates to clinic_app;
+grant select, insert on public.messages, public.message_dispatches to clinic_app;
+grant update (status, status_at, provider_message_id, error_code, error_text) on public.messages to clinic_app;
+grant select, insert, delete on public.webhook_events to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
 
@@ -1777,7 +1947,8 @@ begin
     'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
     'patient_packages', 'package_payments', 'package_session_events', 'files',
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
-    'verification_codes', 'rate_limit_hits', 'patient_sessions', 'outbound_messages',
+    'verification_codes', 'rate_limit_hits', 'patient_sessions',
+    'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_subscriptions', 'notification_prefs'
   ] loop
     execute format('alter table public.%I enable row level security', t);
@@ -1864,7 +2035,8 @@ begin
     'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
     'patient_packages', 'package_payments', 'package_session_events', 'files',
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
-    'verification_codes', 'rate_limit_hits', 'patient_sessions', 'outbound_messages',
+    'verification_codes', 'rate_limit_hits', 'patient_sessions',
+    'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_subscriptions', 'notification_prefs',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop

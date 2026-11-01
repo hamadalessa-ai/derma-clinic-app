@@ -8,10 +8,10 @@
  * A real clinic never gets the demo sender, even with the flag on. If no real sender is configured,
  * getMessageSender() returns null and verification fails safely with "messaging_unavailable".
  */
-import { sql } from "drizzle-orm";
-import { outboundMessages } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
 import { maskPhone } from "@/lib/phone";
+import { fill } from "@/lib/whatsapp/catalog";
+import { ensureConversation, recordMessage } from "@/lib/whatsapp/store";
 
 export interface OutboundMessage {
   to: string; // 05XXXXXXXX
@@ -56,14 +56,17 @@ const demoSender: MessageSender = {
   channel: "demo",
   showsOnScreen: true,
   async send(tx, msg) {
-    await tx.insert(outboundMessages).values({
-      // The clinic comes from the transaction itself (like audit()).
-      tenantId: sql`public.app_current_tenant()`,
+    // Demo only: the full text (with the code) goes to the WhatsApp simulator. Real senders
+    // store the redacted text; codes expire after 10 minutes either way.
+    const convo = await ensureConversation(tx, { phone: msg.to });
+    await recordMessage(tx, {
+      conversationId: convo.id,
+      patientId: convo.patientId,
+      direction: "out",
+      kind: "verification_code",
+      body: fill(msg.body, msg.secrets ?? {}),
       channel: "demo",
-      toPhone: msg.to,
-      template: msg.template,
-      body: redacted(msg),
-      status: "demo_logged",
+      status: "delivered",
     });
     console.info(`[demo message] ${msg.template} → ${maskPhone(msg.to)} (not sent, demo mode)`);
   },
