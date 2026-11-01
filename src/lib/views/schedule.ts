@@ -8,6 +8,7 @@ import type { TenantTx } from "@/db/tenant";
 import {
   appointments,
   devices,
+  messages,
   patients,
   rescheduleRequests,
   rooms,
@@ -48,6 +49,8 @@ export interface ApptView {
   pendingRequest: { proposedStartsAt: string } | null;
   /** The consent this service needs (current version), and whether it's signed already. */
   consent: { signed: boolean; viaPatientPage: boolean } | null;
+  /** WhatsApp messages sent about this appointment (type, delivery status, error). */
+  whatsapp: { kind: string; status: string; errorCode: string | null; createdAt: string }[];
 }
 
 export interface BlockView {
@@ -147,7 +150,28 @@ export async function loadAppointments(
     )
     .orderBy(asc(appointments.startsAt));
   const patientIds = rows.map((r) => r.p.id);
-  const [consents, alerts, pkgs, requests] = await Promise.all([
+  const [waMessages, consents, alerts, pkgs, requests] = await Promise.all([
+    rows.length
+      ? tx
+          .select({
+            appointmentId: messages.appointmentId,
+            kind: messages.kind,
+            status: messages.status,
+            errorCode: messages.errorCode,
+            createdAt: messages.createdAt,
+          })
+          .from(messages)
+          .where(
+            and(
+              eq(messages.direction, "out"),
+              inArray(
+                messages.appointmentId,
+                rows.map((r) => r.a.id),
+              ),
+            ),
+          )
+          .orderBy(asc(messages.createdAt))
+      : Promise.resolve([]),
     consentStatusFor(
       tx,
       rows.map((r) => ({ id: r.a.id, patientId: r.p.id, serviceId: r.s.id })),
@@ -199,6 +223,14 @@ export async function loadAppointments(
       balance: bal ? { remaining: bal.remaining, total: bal.total } : null,
       note: a.receptionNote,
       pendingRequest: req ? { proposedStartsAt: req.proposedStartsAt.toISOString() } : null,
+      whatsapp: waMessages
+        .filter((m) => m.appointmentId === a.id)
+        .map((m) => ({
+          kind: m.kind,
+          status: m.status,
+          errorCode: m.errorCode,
+          createdAt: m.createdAt.toISOString(),
+        })),
       consent: (() => {
         const c = consents.get(a.id);
         return c ? { signed: c.signed, viaPatientPage: c.signedVia === "patient_portal" } : null;

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { AlertBadge, BalanceBadge, SourceBadge } from "./badges";
 import { AppointmentDialog, type AppointmentPermissions } from "./appointment-dialog";
 import { BookingDialog, type PickOption, type ServiceOption } from "./booking-dialog";
+import { RunningLateButton } from "@/components/whatsapp/running-late";
 import { BLOCKED_CLASSES, STATUS_CLASSES } from "./status";
 import { hhmm, riyadhParts, todayRiyadh } from "./time";
 
@@ -78,6 +79,7 @@ export function CalendarBoard({
   const [booking, setBooking] = useState<{ day: string; time?: string; doctorId?: string } | null>(
     preselectPatient && canBook ? { day: columns[0]?.day ?? "" } : null,
   );
+  const weekView = new Set(columns.map((c) => c.day)).size > 1;
   const height = (endMin - startMin) * PX_PER_MIN;
   const hours = Array.from(
     { length: Math.ceil((endMin - startMin) / 60) + 1 },
@@ -151,7 +153,16 @@ export function CalendarBoard({
               data-column={col.title}
             >
               <div className="bg-card sticky top-0 flex h-12 flex-col justify-center border-b px-2">
-                <div className="truncate text-sm font-semibold">{col.title}</div>
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 truncate text-sm font-semibold">{col.title}</div>
+                  {canManage && !weekView && col.doctorId && col.day >= todayRiyadh() && (
+                    <RunningLateButton
+                      memberId={col.doctorId}
+                      day={col.day}
+                      doctorName={col.title}
+                    />
+                  )}
+                </div>
                 {col.subtitle && (
                   <div className="text-muted-foreground truncate text-xs">{col.subtitle}</div>
                 )}

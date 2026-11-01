@@ -28,6 +28,7 @@ type Slot = { startsAt: string; practitionerId: string };
 export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; days: string[] }) {
   const t = useTranslations("book");
   const te = useTranslations("errors");
+  const tw = useTranslations("whatsapp");
   const locale = useLocale() as Locale;
   const name = (o: { nameAr: string; nameEn: string | null }) =>
     locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
@@ -46,6 +47,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
     phone: "",
     patientGender: "",
     website: "",
+    whatsappOptIn: false,
   });
   const [codeStage, setCodeStage] = useState<{ demoCode: string | null } | null>(null);
   const [code, setCode] = useState("");
@@ -116,6 +118,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
     phone: details.phone,
     patientGender: details.patientGender as "male" | "female",
     website: details.website,
+    whatsappOptIn: details.whatsappOptIn,
   });
 
   const sendCode = () => {
@@ -456,6 +459,17 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
                 ))}
               </div>
             </fieldset>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="accent-brand mt-0.5 size-4 shrink-0"
+                checked={details.whatsappOptIn}
+                disabled={!!codeStage}
+                onChange={(e) => setDetails({ ...details, whatsappOptIn: e.target.checked })}
+                data-testid="whatsapp-opt-in"
+              />
+              {tw("optInLabel")}
+            </label>
             {/* Honeypot: invisible to people, bots fill it in. */}
             <div aria-hidden className="absolute -start-[9999px] h-0 w-0 overflow-hidden">
               <label htmlFor="website">{t("website")}</label>

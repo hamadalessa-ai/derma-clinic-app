@@ -22,7 +22,8 @@ import {
   PackagesPanel,
   type PackageView,
 } from "@/components/clinic/patient-panels";
-import { patientMedicalFlags } from "@/db/schema";
+import { conversations, patientMedicalFlags } from "@/db/schema";
+import { WhatsAppConsentCard } from "@/components/whatsapp/consent-card";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
@@ -59,6 +60,7 @@ export default async function PatientProfilePage({
   if (!UUID_RE.test(id)) notFound();
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("patientsX");
+  const tw = await getTranslations("whatsapp");
   const tp = await getTranslations("patients");
   const ts = await getTranslations("statuses");
   const tc = await getTranslations("calendar");
@@ -104,7 +106,13 @@ export default async function PatientProfilePage({
         pkgs.map((p) => p.id),
       ),
     ]);
+    const [convo] = await tx
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(eq(conversations.phone, patient.phone))
+      .limit(1);
     return {
+      conversationId: convo?.id ?? null,
       patient,
       alerts: alerts.get(id),
       flags,
@@ -235,6 +243,30 @@ export default async function PatientProfilePage({
                   note: f.note,
                 }))}
                 canEdit={can(ctx.roles, "patients:edit") || can(ctx.roles, "notes:write")}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>{tw("consentTitle")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WhatsAppConsentCard
+                patientId={id}
+                optInAt={p.whatsappOptInAt?.toISOString() ?? null}
+                optInSource={p.whatsappOptInSource}
+                optedOutAt={p.whatsappOptedOutAt?.toISOString() ?? null}
+                language={p.preferredLanguage === "en" ? "en" : "ar"}
+                conversationId={data.conversationId}
+                canEdit={can(ctx.roles, "whatsapp:inbox")}
+                formatDate={Object.fromEntries(
+                  [p.whatsappOptInAt, p.whatsappOptedOutAt]
+                    .filter((d): d is Date => !!d)
+                    .map((d) => [
+                      d.toISOString(),
+                      formatDualDate(d, locale, "medium").split(" · ")[0],
+                    ]),
+                )}
               />
             </CardContent>
           </Card>
