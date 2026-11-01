@@ -66,7 +66,7 @@ export async function ensureConversation(
   return row;
 }
 
-export type NewMessage = Omit<typeof messages.$inferInsert, "tenantId" | "id">;
+export type NewMessage = Omit<typeof messages.$inferInsert, "tenantId">;
 
 /** Saves a message and updates the chat (last activity, 24-hour window, "needs reply"). */
 export async function recordMessage(tx: TenantTx, msg: NewMessage & { needsReply?: boolean }) {

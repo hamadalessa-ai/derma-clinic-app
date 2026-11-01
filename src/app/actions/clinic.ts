@@ -12,6 +12,7 @@ import {
   blockTime,
   bookAppointment,
   changeStatus,
+  getAppointment,
   findFreeSlots,
   moveAppointment,
   removeTimeBlock,
@@ -24,6 +25,8 @@ import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
 import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
 import { notifyLater, sendTestPush } from "@/lib/push/notify";
+import { whatsappLater } from "@/lib/whatsapp/later";
+import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
@@ -188,7 +191,7 @@ const booking = z.object({
 });
 
 export async function bookAction(input: z.input<typeof booking>) {
-  return staffAction("appointments:manage", async (_ctx, actor) => {
+  return staffAction("appointments:manage", async (ctx, actor) => {
     const v = parse(booking, input);
     const a = await withActor(actor, (tx) =>
       bookAppointment(tx, actor, {
@@ -204,6 +207,7 @@ export async function bookAction(input: z.input<typeof booking>) {
     notifyLater(actor.tenantId, [
       { type: "new_booking", appointmentId: a.id, actorUserId: actor.userId },
     ]);
+    whatsappLater(() => sendBookingConfirmation(ctx.tenant, a.id));
     return { id: a.id };
   });
 }
@@ -269,7 +273,7 @@ export async function moveAction(input: {
 }
 
 export async function statusAction(input: { appointmentId: string; to: string; reason?: string }) {
-  return staffAction(["appointments:manage", "appointments:own"], async (_ctx, actor) => {
+  return staffAction(["appointments:manage", "appointments:own"], async (ctx, actor) => {
     const v = parse(
       z.object({
         appointmentId: uuid,
@@ -278,10 +282,16 @@ export async function statusAction(input: { appointmentId: string; to: string; r
       }),
       input,
     );
-    await withActor(actor, (tx) =>
-      changeStatus(tx, actor, v.appointmentId, v.to, { reason: v.reason }),
-    );
+    const before = await withActor(actor, async (tx) => {
+      const prev = await getAppointment(tx, v.appointmentId);
+      await changeStatus(tx, actor, v.appointmentId, v.to, { reason: v.reason });
+      return prev.status;
+    });
     refreshScreens();
+    // An approved online request: now the patient gets the booking confirmation.
+    if (before === "pending" && v.to === "confirmed") {
+      whatsappLater(() => sendBookingConfirmation(ctx.tenant, v.appointmentId));
+    }
     if (v.to === "cancelled") {
       notifyLater(actor.tenantId, [
         { type: "cancelled", appointmentId: v.appointmentId, actorUserId: actor.userId },

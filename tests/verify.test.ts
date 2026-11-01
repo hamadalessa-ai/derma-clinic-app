@@ -87,7 +87,7 @@ describe("DEMO safety", () => {
 
   it("a NON-demo clinic never shows the code, even with the flag on — it fails safely", async () => {
     const phone = freshPhone();
-    expect(getMessageSender({ isDemo: false }, { MESSAGE_DEMO_MODE: "on" })).toBeNull();
+    expect(getMessageSender({ id: DERMA, isDemo: false }, { MESSAGE_DEMO_MODE: "on" })).toBeNull();
     expect(await errorOf(send(phone, { tenant: realClinic }))).toBe("messaging_unavailable");
     // …and no code was created.
     const rows = await withTenant(DERMA, (tx) =>

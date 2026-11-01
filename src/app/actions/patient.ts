@@ -32,6 +32,8 @@ import {
   revokePatientSession,
 } from "@/lib/portal/session";
 import { notifyLater } from "@/lib/push/notify";
+import { whatsappLater } from "@/lib/whatsapp/later";
+import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { clientIp } from "@/lib/request-info";
 import { checkCode, sendCode } from "@/lib/verify/codes";
 
@@ -142,6 +144,7 @@ export async function confirmBookingAction(input: z.input<typeof bookingConfirm>
       { type: "new_booking", appointmentId: result.appt.id },
       { type: "online_booking", appointmentId: result.appt.id },
     ]);
+    whatsappLater(() => sendBookingConfirmation(tenant, result.appt.id));
     return {
       appointmentId: result.appt.id,
       status: result.appt.status,
