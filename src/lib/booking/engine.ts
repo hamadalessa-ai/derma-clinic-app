@@ -64,10 +64,14 @@ export type Appointment = typeof appointments.$inferSelect;
 type Service = typeof services.$inferSelect;
 type Member = typeof tenantMembers.$inferSelect;
 
-/** Turns the database's "overlap" refusal into a friendly error. */
+/**
+ * Turns the database's "overlap" refusal into a friendly error. When many bookings race for the
+ * same slot, Postgres may also stop one of them as a "deadlock" (40P01): it lost the race too.
+ */
+const SLOT_RACE_CODES = ["23P01", "40P01"];
 function isOverlapError(err: unknown): boolean {
   const e = err as { code?: string; cause?: { code?: string } };
-  return e?.code === "23P01" || e?.cause?.code === "23P01";
+  return SLOT_RACE_CODES.includes(e?.code ?? "") || SLOT_RACE_CODES.includes(e?.cause?.code ?? "");
 }
 
 async function rethrowOverlap<T>(fn: () => Promise<T>): Promise<T> {
