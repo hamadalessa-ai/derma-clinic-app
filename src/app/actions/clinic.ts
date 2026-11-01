@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { patientMedicalFlags, patients } from "@/db/schema";
+import { conversations, messages, patientMedicalFlags, patients } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { withTenant } from "@/db/tenant";
 import { withActor } from "@/lib/auth/db";
@@ -25,7 +26,26 @@ import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
 import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
 import { notifyLater, sendTestPush } from "@/lib/push/notify";
+import { normalizeSaudiMobile } from "@/lib/phone";
+import {
+  runScheduledNow,
+  sendTestMessage,
+  updateServiceTexts,
+  updateTemplate,
+} from "@/lib/whatsapp/admin";
+import { TEMPLATE_KINDS } from "@/lib/whatsapp/catalog";
+import { whatsappMode } from "@/lib/whatsapp/config";
+import { handleInbound } from "@/lib/whatsapp/inbound";
 import { whatsappLater } from "@/lib/whatsapp/later";
+import {
+  createPatientFromConversation,
+  doctorRunningLate,
+  linkConversation,
+  markDemoThreadRead,
+  markHandled,
+  setWhatsappConsent,
+  staffReply,
+} from "@/lib/whatsapp/staff";
 import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
@@ -644,6 +664,7 @@ const settingsInput = z.object({
     .optional(),
   onlineRequiresApproval: z.boolean().optional(),
   showPricesOnline: z.boolean().optional(),
+  showServiceInMessages: z.boolean().optional(),
 });
 
 export async function updateSettingsAction(input: z.input<typeof settingsInput>) {
@@ -735,4 +756,236 @@ export async function testPushAction() {
   return staffAction("account:manage", async (_ctx, actor) =>
     sendTestPush(actor.tenantId, actor.userId),
   );
+}
+
+// ─── WhatsApp (inbox, simulator, settings) ──────────────────────────────────
+
+const conversationId = z.object({ conversationId: uuid });
+
+export async function whatsappReplyAction(input: { conversationId: string; text: string }) {
+  return staffAction("whatsapp:inbox", async (ctx, actor) => {
+    const v = parse(conversationId.extend({ text: text(4000).min(1) }), input);
+    const r = await staffReply(ctx.tenant, actor, v.conversationId, v.text);
+    revalidatePath("/whatsapp", "layout");
+    return { outcome: r.outcome, error: r.outcome === "failed" ? r.error : null };
+  });
+}
+
+export async function whatsappHandledAction(input: { conversationId: string }) {
+  return staffAction("whatsapp:inbox", async (_ctx, actor) => {
+    const v = parse(conversationId, input);
+    await withActor(actor, (tx) => markHandled(tx, actor, v.conversationId));
+    revalidatePath("/whatsapp", "layout");
+    return null;
+  });
+}
+
+export async function whatsappLinkAction(input: { conversationId: string; patientId: string }) {
+  return staffAction("whatsapp:inbox", async (_ctx, actor) => {
+    const v = parse(conversationId.extend({ patientId: uuid }), input);
+    await withActor(actor, (tx) => linkConversation(tx, actor, v.conversationId, v.patientId));
+    revalidatePath("/whatsapp", "layout");
+    return null;
+  });
+}
+
+export async function whatsappCreatePatientAction(input: {
+  conversationId: string;
+  fullNameAr: string;
+  gender: "male" | "female";
+}) {
+  return staffAction("whatsapp:inbox", async (ctx, actor) => {
+    const v = parse(
+      conversationId.extend({ fullNameAr: text(120).min(3), gender: z.enum(["male", "female"]) }),
+      input,
+    );
+    const p = await withActor(actor, (tx) =>
+      createPatientFromConversation(tx, actor, {
+        ...v,
+        filePrefix: ctx.tenant.slug.charAt(0).toUpperCase(),
+      }),
+    );
+    revalidatePath("/whatsapp", "layout");
+    return { id: p.id, fileNumber: p.fileNumber };
+  });
+}
+
+export async function whatsappConsentAction(input: {
+  patientId: string;
+  optIn: boolean;
+  language?: "ar" | "en";
+}) {
+  return staffAction("whatsapp:inbox", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ patientId: uuid, optIn: z.boolean(), language: z.enum(["ar", "en"]).optional() }),
+      input,
+    );
+    await withActor(actor, (tx) => setWhatsappConsent(tx, actor, v.patientId, v));
+    revalidatePath(`/patients/${v.patientId}`);
+    return null;
+  });
+}
+
+export async function runningLateAction(input: { memberId: string; day: string; minutes: number }) {
+  return staffAction("appointments:manage", async (ctx, actor) => {
+    const v = parse(
+      z.object({ memberId: uuid, day, minutes: z.number().int().min(5).max(240) }),
+      input,
+    );
+    return doctorRunningLate(ctx.tenant, actor, v);
+  });
+}
+
+/** Simulator (demo only): the patient taps a button in a message. Same handler as real WhatsApp. */
+export async function simulatorTapAction(input: { messageId: string; buttonIndex: number }) {
+  return staffAction("whatsapp:simulator", async (ctx, actor) => {
+    const v = parse(
+      z.object({ messageId: uuid, buttonIndex: z.number().int().min(0).max(9) }),
+      input,
+    );
+    if (whatsappMode(ctx.tenant) !== "demo") throw new ValidationError("not demo");
+    const target = await withActor(actor, async (tx) => {
+      const [m] = await tx
+        .select({ m: messages, phone: conversations.phone })
+        .from(messages)
+        .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+        .where(eq(messages.id, v.messageId));
+      return m ?? null;
+    });
+    const button = target?.m.buttons?.[v.buttonIndex];
+    if (!target || !button) throw new ValidationError("no such button");
+    await handleInbound(ctx.tenant, [
+      {
+        type: "message",
+        eventId: `sim-${randomUUID()}`,
+        from: target.phone,
+        kind: "button",
+        buttonPayload: button.id,
+        buttonTitle: button.title,
+      },
+    ]);
+    refreshScreens();
+    revalidatePath("/whatsapp", "layout");
+    return null;
+  });
+}
+
+/** Simulator (demo only): the patient types a message — also from a brand-new number. */
+export async function simulatorTypeAction(input: {
+  phone: string;
+  text: string;
+  profileName?: string;
+}) {
+  return staffAction("whatsapp:simulator", async (ctx) => {
+    const v = parse(
+      z.object({
+        phone: z.string().trim().max(30),
+        text: text(1000).min(1),
+        profileName: text(60).optional(),
+      }),
+      input,
+    );
+    if (whatsappMode(ctx.tenant) !== "demo") throw new ValidationError("not demo");
+    const phone = normalizeSaudiMobile(v.phone);
+    if (!phone) throw new ValidationError("bad phone");
+    await handleInbound(ctx.tenant, [
+      {
+        type: "message",
+        eventId: `sim-${randomUUID()}`,
+        from: phone,
+        profileName: v.profileName || null,
+        kind: "text",
+        text: v.text,
+      },
+    ]);
+    revalidatePath("/whatsapp", "layout");
+    const convo = await withTenant(ctx.tenant.id, async (tx) => {
+      const [c] = await tx.select().from(conversations).where(eq(conversations.phone, phone));
+      return c;
+    });
+    return { conversationId: convo?.id ?? null };
+  });
+}
+
+/** Simulator (demo only): the patient opened the chat → messages show as read. */
+export async function simulatorReadAction(input: { conversationId: string }) {
+  return staffAction("whatsapp:simulator", async (ctx, actor) => {
+    const v = parse(conversationId, input);
+    if (whatsappMode(ctx.tenant) !== "demo") return null;
+    await withActor(actor, (tx) => markDemoThreadRead(tx, v.conversationId));
+    return null;
+  });
+}
+
+export async function runScheduledNowAction(input: {
+  fastForward: boolean;
+  ignoreQuietHours: boolean;
+}) {
+  return staffAction("whatsapp:manage", async (ctx, actor) => {
+    const v = parse(z.object({ fastForward: z.boolean(), ignoreQuietHours: z.boolean() }), input);
+    const summary = await runScheduledNow(ctx.tenant, actor, v);
+    if (!summary) throw new ValidationError("not demo");
+    revalidatePath("/whatsapp", "layout");
+    return summary;
+  });
+}
+
+export async function updateTemplateAction(input: {
+  kind: string;
+  enabled: boolean;
+  bodyAr: string;
+  bodyEn: string;
+}) {
+  return staffAction("whatsapp:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        kind: z.enum(TEMPLATE_KINDS),
+        enabled: z.boolean(),
+        bodyAr: text(1024),
+        bodyEn: text(1024),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => updateTemplate(tx, actor, v));
+    revalidatePath("/settings/whatsapp");
+    return null;
+  });
+}
+
+export async function updateServiceTextsAction(input: {
+  serviceId: string;
+  preVisitAr: string;
+  preVisitEn: string;
+  postCareAr: string;
+  postCareEn: string;
+  recallAfterDays: number | null;
+}) {
+  return staffAction("whatsapp:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        serviceId: uuid,
+        preVisitAr: text(500),
+        preVisitEn: text(500),
+        postCareAr: text(500),
+        postCareEn: text(500),
+        recallAfterDays: z.number().int().min(1).max(730).nullable(),
+      }),
+      input,
+    );
+    const row = await withActor(actor, (tx) => updateServiceTexts(tx, actor, v));
+    if (!row) throw new ValidationError("service not found");
+    revalidatePath("/settings/whatsapp");
+    return null;
+  });
+}
+
+export async function sendTestWhatsappAction(input: { phone: string }) {
+  return staffAction("whatsapp:manage", async (ctx, actor) => {
+    const v = parse(z.object({ phone: z.string().max(30) }), input);
+    const phone = normalizeSaudiMobile(v.phone);
+    if (!phone) throw new ValidationError("bad phone");
+    const r = await sendTestMessage(ctx.tenant, actor, phone);
+    revalidatePath("/settings/whatsapp/status");
+    return r.ok ? { ok: true, errorCode: null } : { ok: false, errorCode: r.errorCode };
+  });
 }

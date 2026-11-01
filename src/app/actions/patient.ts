@@ -9,7 +9,9 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { withTenant } from "@/db/tenant";
+import { withTenant, type TenantTx } from "@/db/tenant";
+import { getLocale } from "next-intl/server";
+import { audit } from "@/lib/audit";
 import { patients } from "@/db/schema";
 import {
   bookOnline,
@@ -79,6 +81,8 @@ const bookingRequest = z.object({
   patientGender: gender,
   /** Honeypot: hidden from people; bots fill it in. */
   website: z.string().max(200).optional(),
+  /** The patient ticked "send me confirmations and reminders on WhatsApp". */
+  whatsappOptIn: z.boolean().optional(),
 });
 
 /** Step 1 of confirming: sends a code to the mobile (in demo mode: shows it on screen). */
@@ -122,6 +126,7 @@ export async function confirmBookingAction(input: z.input<typeof bookingConfirm>
         fullName: v.fullName,
         gender: v.patientGender,
       });
+      await recordWhatsappChoice(tx, patient.id, !!v.whatsappOptIn, await getLocale());
       const appt = await bookOnline(tx, {
         tenantId: tenant.id,
         branchId: v.branchId,
@@ -321,5 +326,61 @@ export async function portalSignConsentAction(input: z.input<typeof portalSign>)
     );
     revalidatePath("/my");
     return { id: c.id };
+  });
+}
+
+/**
+ * The patient's WhatsApp choice (online booking tick box, or /my): ticked = agreed (source + time
+ * recorded); not ticked = nothing changes (an earlier "yes" stays until they say STOP or untick on /my).
+ * Their language for messages is the page language they used.
+ */
+async function recordWhatsappChoice(
+  tx: TenantTx,
+  patientId: string,
+  optIn: boolean,
+  locale: string,
+  source: "online" | "patient_page" = "online",
+) {
+  const language = locale === "en" ? "en" : "ar";
+  if (!optIn && source === "online") {
+    await tx
+      .update(patients)
+      .set({ preferredLanguage: language })
+      .where(eq(patients.id, patientId));
+    return;
+  }
+  await tx
+    .update(patients)
+    .set(
+      optIn
+        ? {
+            whatsappOptInAt: sql`now()`,
+            whatsappOptInSource: source,
+            whatsappOptedOutAt: null,
+            preferredLanguage: language,
+          }
+        : { whatsappOptedOutAt: sql`now()`, preferredLanguage: language },
+    )
+    .where(eq(patients.id, patientId));
+  await audit(tx, {
+    actorUserId: null,
+    action: optIn ? "whatsapp.opt_in" : "whatsapp.opt_out",
+    entityType: "patient",
+    entityId: patientId,
+    metadata: { source, language },
+  });
+}
+
+/** /my: the patient switches WhatsApp messages on or off for themselves. */
+export async function portalWhatsappAction(input: { optIn: boolean }) {
+  return publicAction(async (tenant) => {
+    const v = parse(z.object({ optIn: z.boolean() }), input);
+    const patientId = await requirePatient(tenant.id);
+    const locale = await getLocale();
+    await withTenant(tenant.id, (tx) =>
+      recordWhatsappChoice(tx, patientId, v.optIn, locale, "patient_page"),
+    );
+    revalidatePath("/my");
+    return null;
   });
 }

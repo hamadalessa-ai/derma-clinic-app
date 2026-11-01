@@ -125,6 +125,24 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: true,
     receptionist: true,
   },
+  "whatsapp:inbox": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+  },
+  "whatsapp:simulator": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+  },
+  "whatsapp:manage": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: false,
+  },
   "platform:keys": {
     platform_owner: true,
     clinic_admin: false,

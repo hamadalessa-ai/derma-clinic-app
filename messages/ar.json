@@ -32,7 +32,9 @@
     "settings": "الإعدادات",
     "more": "المزيد",
     "mainMenu": "القائمة الرئيسية",
-    "account": "حسابي"
+    "account": "حسابي",
+    "whatsapp": "رسائل واتساب",
+    "simulator": "محاكي واتساب"
   },
   "roles": {
     "platform_owner": "مالك المنصة",

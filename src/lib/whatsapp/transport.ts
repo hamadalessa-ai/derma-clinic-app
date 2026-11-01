@@ -11,7 +11,8 @@ import { createMetaTransport } from "./meta";
 export interface OutgoingWhatsApp {
   /** 05XXXXXXXX */
   to: string;
-  language: "ar" | "en";
+  /** "ar", "en" (or a Meta language code such as "en_US" for Meta's own test template). */
+  language: string;
   /** The finished text (what the patient reads). */
   body: string;
   /** Reply buttons; `id` is the signed payload that comes back when tapped. */

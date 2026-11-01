@@ -38,6 +38,14 @@ export const PERMISSIONS = {
   "account:manage": ALL_CLINIC_STAFF,
   /** Create the push (VAPID) keys for the platform. Never patient data. */
   "platform:keys": ["platform_owner"],
+
+  // ── Phase 2b: WhatsApp ──
+  /** Inbox: read chats, reply, link new contacts, "doctor running late", record WhatsApp consent. */
+  "whatsapp:inbox": ["clinic_admin", "receptionist"],
+  /** Demo simulator (demo clinics with MESSAGE_DEMO_MODE=on only). */
+  "whatsapp:simulator": ["clinic_admin", "receptionist"],
+  /** "Run scheduled messages now" (demo), message wording, WhatsApp status page. */
+  "whatsapp:manage": ["clinic_admin"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -78,9 +86,22 @@ export const NAV_ITEMS = [
   { href: "/clinical-notes", key: "clinicalNotes", permission: "clinical_notes:read" },
   { href: "/services", key: "services", permission: "services:read" },
   { href: "/settings", key: "settings", permission: "settings:manage" },
+  { href: "/whatsapp", key: "whatsapp", permission: "whatsapp:inbox" },
+  {
+    href: "/whatsapp/simulator",
+    key: "simulator",
+    permission: "whatsapp:simulator",
+    demoOnly: true,
+  },
   { href: "/account", key: "account", permission: "account:manage" },
   { href: "/platform", key: "platform", permission: "platform:read" },
-] as const satisfies readonly { href: string; key: string; permission: Permission }[];
+] as const satisfies readonly {
+  href: string;
+  key: string;
+  permission: Permission;
+  /** Only shown when the clinic is in WhatsApp demo mode. */
+  demoOnly?: boolean;
+}[];
 
 /** Pages that matter most on a phone, in order. The first ones a role may see go in the bottom bar. */
 export const MOBILE_PRIORITY = [
@@ -93,6 +114,8 @@ export const MOBILE_PRIORITY = [
   "platform",
   "services",
   "settings",
+  "whatsapp",
+  "simulator",
   "account",
 ] as const;
 

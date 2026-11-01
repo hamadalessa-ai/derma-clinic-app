@@ -32,7 +32,9 @@
     "settings": "Settings",
     "more": "More",
     "mainMenu": "Main menu",
-    "account": "My account"
+    "account": "My account",
+    "whatsapp": "WhatsApp messages",
+    "simulator": "WhatsApp simulator"
   },
   "roles": {
     "platform_owner": "Platform owner",
