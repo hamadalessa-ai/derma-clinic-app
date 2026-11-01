@@ -146,6 +146,7 @@ test.describe("online booking and the patient page", () => {
     await expect(toSign).toBeVisible();
     await toSign.getByTestId("sign-consent").click();
     const pad = patient.getByTestId("signature-pad");
+    await pad.scrollIntoViewIfNeeded();
     const box = (await pad.boundingBox())!;
     await patient.mouse.move(box.x + 20, box.y + box.height * 0.7);
     await patient.mouse.down();

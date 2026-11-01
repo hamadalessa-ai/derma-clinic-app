@@ -51,6 +51,7 @@ async function choose(select: Locator, text: RegExp) {
 
 async function drawSignature(page: Page) {
   const pad = page.getByTestId("signature-pad");
+  await pad.scrollIntoViewIfNeeded();
   const box = (await pad.boundingBox())!;
   await page.mouse.move(box.x + 20, box.y + box.height * 0.7);
   await page.mouse.down();

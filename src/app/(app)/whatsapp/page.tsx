@@ -59,7 +59,7 @@ export default async function WhatsAppInboxPage({
         active={filter}
         tabs={FILTERS.map((f) => ({ key: f, label: label[f], href: `/whatsapp?f=${f}` }))}
       />
-      <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
         <Card className={thread ? "hidden lg:block" : ""}>
           <CardContent className="max-h-[75dvh] overflow-y-auto p-0">
             <ConversationList

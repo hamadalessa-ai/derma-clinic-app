@@ -134,6 +134,12 @@ describe("who gets what", () => {
     expect(users).toEqual(new Set(["usr_derma-rec-ruh1", "usr_derma-rec-ruh2"]));
   });
 
+  it("a WhatsApp 'concern' goes to the appointment's doctor AND the branch's reception", async () => {
+    const a = await book("11:30");
+    const users = await usersFor("patient_concern", a.id);
+    expect(users).toEqual(new Set([SARA, "usr_derma-rec-ruh1", "usr_derma-rec-ruh2"]));
+  });
+
   it("nobody is notified about their own action", async () => {
     const a = await book("12:00");
     const users = await usersFor("reschedule_request", a.id, "usr_derma-rec-ruh1");
