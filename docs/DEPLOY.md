@@ -224,6 +224,155 @@ can't send a code and asks the patient to contact the clinic.
 
 ---
 
+## Part E — Updating the live demo to Phase 2b (WhatsApp messages, demo mode)
+
+About 15 minutes, all in the browser. Real WhatsApp is **not** needed: everything works in the
+**WhatsApp simulator** inside the app. (Real WhatsApp comes later: Part F.)
+
+### E1. Merge and reset the database (5 minutes)
+
+Same as last time (everything is fake demo data):
+
+1. GitHub → the Phase 2b pull request → **Merge pull request → Confirm merge**.
+2. Supabase → **SQL Editor** → **+ New query** → paste **`db/reset.sql`** (branch `main`) → **Run** → confirm.
+   Expected: _"Reset complete. Now run db/setup.sql."_
+3. **+ New query** → paste **`db/setup.sql`** (branch `main`). In **STEP 1** put the **same app database
+   password as before** and your demo staff password → **Run**. Expected: _"Setup complete…"_
+4. Close both tabs **without saving**.
+
+### E2. Vercel settings (nothing new)
+
+Nothing to add: demo mode uses the settings from Phase 2a. Check that these exist in Vercel →
+**Settings → Environment Variables**:
+
+| Name                | Value                                                       |
+| ------------------- | ----------------------------------------------------------- |
+| `MESSAGE_DEMO_MODE` | `on` (messages go to the simulator; nothing is sent)        |
+| `CRON_SECRET`       | the random string you added in Phase 2a (you need it in E3) |
+
+If you want links in messages to always use your main address, you can also add `APP_PUBLIC_URL` =
+your main link (e.g. `https://derma-clinic-app.vercel.app`, no slash at the end). Optional.
+
+### E3. Hourly schedule on GitHub (5 minutes, no terminal)
+
+Reminders, post-care check-ins, no-show follow-ups and recalls are sent by a schedule that runs **every
+hour**. Vercel's free plan only allows one run a day, so GitHub calls the app every hour instead
+(free). GitHub needs two secrets:
+
+1. Open your repository on GitHub → **Settings** (top bar) → left menu **Secrets and variables** →
+   **Actions** → **New repository secret**.
+2. **Name:** `APP_URL` · **Secret:** your main link, e.g. `https://derma-clinic-app.vercel.app`
+   (no slash at the end) → **Add secret**.
+3. **New repository secret** again → **Name:** `CRON_SECRET` · **Secret:** the **same value** as
+   `CRON_SECRET` in Vercel (open it in Vercel → Settings → Environment Variables → ⋯ → Edit to copy it) →
+   **Add secret**.
+4. Check it works: GitHub → **Actions** (top bar) → **Scheduled WhatsApp messages** → **Run workflow** →
+   **Run workflow**. After ~30 seconds the run shows a green ✓. (A red ✗ usually means a secret is
+   missing or different from Vercel's.)
+
+From now on it runs every hour by itself. It never sends the same message twice, and if a run is late
+or missed, the next one catches up. Nothing is sent between 22:00 and 08:00 (Riyadh). The daily Vercel
+job also runs it once a day as a safety net.
+
+> GitHub pauses scheduled workflows after 60 days without any commits to the repository. If that ever
+> happens, GitHub → Actions → Scheduled WhatsApp messages → **Enable workflow**.
+
+### E4. Try it (the "done when" check, about 5 minutes)
+
+Use your phone (patient) and your laptop (staff).
+
+1. **Phone:** open `…vercel.app/book` → book with **Dr. Sarah Al-Otaibi** (د. سارة العتيبي) for **tomorrow**,
+   e.g. **Facial Treatment** (جلسة تنظيف البشرة). Use a fake mobile like `0598000222`, and **tick**
+   _"Send me the booking confirmation and reminders on WhatsApp"_ (no tick = no WhatsApp messages,
+   as the rules require).
+2. **Laptop:** sign in as `admin@derma.demo` → **WhatsApp simulator** (under **More** on a phone) →
+   tap the chat with that number: the **booking confirmation** is there, with date, time, branch,
+   doctor, map link and a link to /my.
+3. In **Run scheduled messages now**, tick **Ignore quiet hours** (if it's late) and, if the visit is more
+   than 24 hours away, **Fast-forward 24 hours** → **Run now**. The **reminder** appears in the chat,
+   with the pre-visit instructions and three buttons.
+4. Tap **تأكيد (Confirm)** in the simulator. The chat answers "confirmed". Sign in as
+   `reception.riyadh1@derma.demo` → **Calendar** → tomorrow: the appointment shows **Confirmed**, and
+   inside it the WhatsApp messages and their status.
+5. Reception: open the appointment → **Check in** → **Start** → **Complete**.
+6. Admin: **Run scheduled messages now** with **Fast-forward 24 hours** → the **post-care check-in**
+   ("How is your skin after the facial?") appears in the simulator → tap **لدي استفسار/قلق
+   (I have a concern)**.
+7. **Dr. Sara's phone** (with notifications on from Phase 2a) gets a push: _"Patient concern"_ with
+   initials, service and time. Reception sees the chat in **WhatsApp messages** marked
+   **Concern after procedure** and can reply.
+
+More to show:
+
+- **Patient view:** in the simulator, **Patient view (full screen)** → open that page on your phone for a
+  WhatsApp-like screen.
+- **A new number:** in the simulator, **Simulate a message from a new number** → it appears in **WhatsApp
+  messages → New numbers** as "Not a patient yet"; reception can link it to a patient or create one.
+- **Running late:** Calendar → a doctor's column → **Running late** → 20 min → their remaining
+  patients today get a message.
+- **STOP:** type `إيقاف` in a chat → that patient gets no more reminders (shown in the inbox and on the
+  patient file). `تفعيل` switches them back on.
+- **Wording:** **Settings → WhatsApp message settings**: switch each message type on/off, edit the Arabic
+  and English text, pre-visit / post-care texts per service, recall delays, and **Show the service name
+  in WhatsApp messages**.
+
+Ready-made demo chats: **D-0001** (reminder confirmed with the button), **D-0011** (concern after laser),
+**D-0014** (sent STOP), **D-0019** (Botox recall due — appears after "Run now"), and the new number
+**0555123456** asking about prices.
+
+---
+
+## Part F — When Meta verification is done (real WhatsApp)
+
+Do this only after Meta has verified the business (it needs the Commercial Registration). Until then
+Meta refuses messages with error **131031**, and the status page explains that.
+
+### F1. In Meta (developers.facebook.com → your app "Derma Clinic Demo")
+
+1. **WhatsApp → API Setup:** note the **Phone number ID** and the **WhatsApp Business Account ID**.
+2. **Permanent access token:** business.facebook.com → **Settings → Users → System users** → add a system
+   user (Admin) → **Add assets** → your app and WhatsApp account (full control) → **Generate new token** →
+   choose the app, tick `whatsapp_business_messaging` and `whatsapp_business_management`, expiry
+   **Never** → copy it straight into Vercel (F2), not into a chat or a document.
+3. **App secret:** your app → **App settings → Basic → App secret → Show**.
+4. **Templates:** submit every template in **docs/WHATSAPP_TEMPLATES.md** (WhatsApp Manager → Message
+   templates), Arabic and English, with exactly those names. Approval usually takes minutes to a day.
+
+### F2. In Vercel (Settings → Environment Variables)
+
+| Name                           | Value                                                            | Secret? |
+| ------------------------------ | ---------------------------------------------------------------- | ------- |
+| `WHATSAPP_PROVIDER`            | `meta`                                                           | no      |
+| `WHATSAPP_CLINIC`              | `derma` (the clinic this WhatsApp number belongs to)             | no      |
+| `WHATSAPP_PHONE_NUMBER_ID`     | from F1                                                          | no      |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID` | from F1                                                          | no      |
+| `WHATSAPP_ACCESS_TOKEN`        | the permanent token from F1                                      | **yes** |
+| `WHATSAPP_APP_SECRET`          | the app secret from F1                                           | **yes** |
+| `WHATSAPP_VERIFY_TOKEN`        | a new random string from <https://generate-secret.vercel.app/32> | **yes** |
+
+For the three secrets, tick **Sensitive** when adding them. Then **change** `MESSAGE_DEMO_MODE` to `off`
+(or delete it): while it is `on`, a demo clinic keeps using the simulator. **Redeploy**
+(Deployments → latest → ⋯ → Redeploy).
+
+### F3. Connect the webhook (Meta → your app → WhatsApp → Configuration)
+
+1. **Callback URL:** `https://<your main link>/api/whatsapp/webhook`
+2. **Verify token:** the same value as `WHATSAPP_VERIFY_TOKEN` → **Verify and save**.
+3. **Webhook fields → messages → Subscribe**.
+4. In the app: **Settings → WhatsApp message settings → WhatsApp status and errors**: mode **Live**,
+   webhook **Verified**. Use **Send test message** with your own number (Meta's `hello_world` test).
+
+Failures and their meaning (e.g. 131047 "more than 24 hours", 190 "token expired") are listed on that
+status page in plain words.
+
+### Using a WhatsApp provider instead (Unifonic, Taqnyat, Twilio, 360dialog…)
+
+The app is built so a provider is **one new file** (`src/lib/whatsapp/<provider>.ts`) plus one line in
+`src/lib/whatsapp/transport.ts`, then `WHATSAPP_PROVIDER=<provider>` and that provider's keys in Vercel.
+Ask for it when you've chosen one.
+
+---
+
 ## Demo accounts (Derma Clinics)
 
 All use your demo staff password.

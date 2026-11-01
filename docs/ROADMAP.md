@@ -32,7 +32,7 @@ and the database moves to Saudi-hosted Postgres.
 - Clinical notes: draft → signed → addenda, practitioners only (database-enforced)
 - Central theme tokens + shared components (ready for the redesign)
 
-## Phase 2a — Online booking, patient page, staff push ✅ (current)
+## Phase 2a — Online booking, patient page, staff push ✅
 
 - Public booking page `/book`: branch → service → doctor / any / female / male doctor → day → time →
   mobile verified with a code; same booking engine (no double-booking); source "online" everywhere
@@ -44,10 +44,20 @@ and the database moves to Saudi-hosted Postgres.
   iPhone Home Screen guide, VAPID keys made in the browser; daily cleanup cron
 - DEMO safety: codes shown on screen only for demo clinics with `MESSAGE_DEMO_MODE=on`
 
-## Phase 2b — WhatsApp & AI scribe (proposed)
+## Phase 2b — WhatsApp messaging ✅ (current; demo mode until Meta verification)
 
-- Real WhatsApp/SMS sender behind the same MessageSender (codes, confirmations)
-- Hourly reminders: needs GitHub Actions (free) or Vercel Pro, since Vercel's free cron runs once a day
+- One send path: demo simulator / Meta WhatsApp Cloud API (provider = one file), by settings only
+- Messages (Arabic / English): booking confirmation, reminder with Confirm / Reschedule / Cancel,
+  pre-visit instructions, consent link, doctor running late, post-care check-in (concern → push),
+  no-show follow-up, recalls; editable wording; "show service name" setting; Meta template list
+- One inbound handler for simulator + webhook (signature, repeats, unknown types, STOP / START,
+  new numbers → inbox); reception inbox with the 24-hour rule; delivery statuses with errors explained
+- Hourly GitHub Actions schedule: at most once, catch-up, quiet hours 22:00–08:00
+- Opt-in per patient (online, /my, reception); status page; demo "Run scheduled messages now"
+
+## Phase 2c — AI receptionist & AI scribe (proposed)
+
+- AI receptionist answers free-text WhatsApp messages (plugs into the inbox handler), staff approval
 - WhatsApp reminders and confirmations (Business API, Arabic templates), no-show follow-up
 - AI scribe: **draft-only** notes from dictation into the existing draft → sign flow; practitioner must review
 - Before/after photos via the FileStore
