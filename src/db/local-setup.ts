@@ -18,6 +18,8 @@ export async function createLocalDatabase(opts: {
   dbName: string;
   demoPassword: string;
   appPassword?: string;
+  /** Build from this setup.sql text instead of today's (e.g. an earlier phase's). */
+  setupSql?: string;
 }) {
   if (!/^[a-z0-9_]+$/.test(opts.dbName)) throw new Error("bad database name");
   const su = postgres(opts.adminUrl, { max: 1, onnotice: () => {} });
@@ -44,7 +46,7 @@ export async function createLocalDatabase(opts: {
   url.password = LOCAL_ADMIN_PASSWORD;
   const db = postgres(url.toString(), { max: 1, onnotice: () => {} });
   try {
-    const sql = buildSetupSql()
+    const sql = (opts.setupSql ?? buildSetupSql())
       .replace(APP_PASSWORD_PLACEHOLDER, opts.appPassword ?? LOCAL_APP_PASSWORD)
       .replace(DEMO_PASSWORD_PLACEHOLDER, opts.demoPassword);
     await db.unsafe(sql).simple();
