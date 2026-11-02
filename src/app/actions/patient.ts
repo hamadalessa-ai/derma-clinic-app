@@ -17,10 +17,10 @@ import {
   bookOnline,
   cancelByPatient,
   findOnlineSlots,
-  getAppointment,
   moveByPatient,
-  patientFamilyIds,
+  rescheduleOptions,
 } from "@/lib/booking/engine";
+import { doctorNames } from "@/lib/booking/doctor-names";
 import { signConsentByPatient } from "@/lib/consents/consents";
 import { isDay } from "@/lib/booking/time";
 import { parse, publicAction, PublicError } from "@/lib/actions";
@@ -253,31 +253,48 @@ export async function portalCancelAction(input: { appointmentId: string }) {
   });
 }
 
-/** Free times for moving an appointment (same doctor, same service). */
+/**
+ * Where an appointment can move on a day: the same doctor's free times, other doctors' free times,
+ * or the reason it can't move online (e.g. within the cancellation window) — never a silent "full".
+ */
 export async function portalSlotsAction(input: { appointmentId: string; day: string }) {
   return publicAction(async (tenant) => {
     const v = parse(z.object({ appointmentId: uuid, day: z.string().refine(isDay) }), input);
     const patientId = await requirePatient(tenant.id);
     return withTenant(tenant.id, async (tx) => {
-      const appt = await getAppointment(tx, v.appointmentId);
-      if (!(await patientFamilyIds(tx, patientId)).includes(appt.patientId)) {
-        throw new PublicError("not_found");
-      }
-      const slots = await findOnlineSlots(tx, {
-        branchId: appt.branchId,
-        serviceId: appt.serviceId,
-        practitionerId: appt.practitionerId,
-        day: v.day,
-      });
-      return slots.map((s) => s.startsAt.toISOString());
+      const r = await rescheduleOptions(tx, { ...v, patientId });
+      if (!r.ok) return r;
+      const names = await doctorNames(tx, [
+        r.practitionerId,
+        ...r.otherDoctors.map((d) => d.practitionerId),
+      ]);
+      const iso = (slots: { startsAt: Date }[]) => slots.map((s) => s.startsAt.toISOString());
+      return {
+        ok: true as const,
+        doctor: names.get(r.practitionerId) ?? null,
+        sameDoctor: iso(r.sameDoctor),
+        otherDoctors: r.otherDoctors.map((d) => ({
+          practitionerId: d.practitionerId,
+          doctor: names.get(d.practitionerId) ?? null,
+          slots: iso(d.slots),
+        })),
+      };
     });
   });
 }
 
-export async function portalMoveAction(input: { appointmentId: string; startsAt: string }) {
+export async function portalMoveAction(input: {
+  appointmentId: string;
+  startsAt: string;
+  practitionerId?: string;
+}) {
   return publicAction(async (tenant) => {
     const v = parse(
-      z.object({ appointmentId: uuid, startsAt: z.string().datetime({ offset: true }) }),
+      z.object({
+        appointmentId: uuid,
+        startsAt: z.string().datetime({ offset: true }),
+        practitionerId: uuid.optional(),
+      }),
       input,
     );
     const patientId = await requirePatient(tenant.id);
@@ -286,6 +303,7 @@ export async function portalMoveAction(input: { appointmentId: string; startsAt:
         patientId,
         appointmentId: v.appointmentId,
         startsAt: new Date(v.startsAt),
+        practitionerId: v.practitionerId,
       }),
     );
     revalidatePath("/my");

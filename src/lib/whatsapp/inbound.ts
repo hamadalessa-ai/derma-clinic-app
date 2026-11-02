@@ -18,13 +18,14 @@ import {
   BookingError,
   cancelByPatient,
   confirmByPatient,
-  findOnlineSlots,
+  rescheduleOptions,
   getAppointment,
   getSettings,
   moveByPatient,
   patientFamilyIds,
 } from "@/lib/booking/engine";
 import { addDays, riyadhDay } from "@/lib/booking/time";
+import { doctorNames } from "@/lib/booking/doctor-names";
 import { sendPushEvents, type PushEvent } from "@/lib/push/notify";
 import { parseButtonPayload, type ParsedButton } from "./buttons";
 import { START_WORDS, STOP_WORDS, type ReplyKind } from "./catalog";
@@ -62,6 +63,8 @@ export interface InboundOptions {
   env?: Env;
   /** Push notifications (default: send them now). Tests can collect them instead. */
   notify?: (events: PushEvent[]) => Promise<unknown>;
+  /** Tests: the moment to act at (default: now). */
+  now?: Date;
 }
 
 const STATUS_RANK: Record<string, number> = { queued: 0, sent: 1, delivered: 2, read: 3 };
@@ -93,7 +96,10 @@ export async function handleInbound(
   const results: { eventId: string; outcome: string }[] = [];
   for (const ev of events) {
     try {
-      results.push({ eventId: ev.eventId, outcome: await handleOne(tenant, ev, env, notify) });
+      results.push({
+        eventId: ev.eventId,
+        outcome: await handleOne(tenant, ev, env, notify, options.now),
+      });
     } catch (err) {
       // Never crash the webhook: log and move on (Meta would otherwise retry for days).
       console.warn("whatsapp inbound failed", ev.type, err);
@@ -108,6 +114,7 @@ async function handleOne(
   ev: InboundEvent,
   env: Env,
   notify: (e: PushEvent[]) => Promise<unknown>,
+  now?: Date,
 ): Promise<string> {
   if (ev.type === "status") {
     return withTenant(tenant.id, async (tx) => {
@@ -187,7 +194,7 @@ async function handleOne(
     }
     if (!button) return { replies: [] as Reply[], push: [] as PushEvent[], convo };
     if (!convo.patientId) return { replies: [{ kind: "not_found" } as Reply], push: [], convo };
-    const outcome = await handleButton(tx, tenant, convo.patientId, button, env);
+    const outcome = await handleButton(tx, tenant, convo.patientId, button, env, now);
     if (outcome.needsReply) {
       await tx
         .update(conversations)
@@ -244,11 +251,18 @@ async function setOptOut(
 }
 
 /** Weekday dd/MM HH:mm in Riyadh, short enough for a WhatsApp button (max 20 characters). */
-function slotTitle(date: Date, lang: "ar" | "en") {
+/** "د. ريم الشهري" → "ريم" (fits a 20-character button with the time). */
+function shortDoctor(name: string) {
+  return name.replace(/^(د\.|Dr\.)\s*/, "").split(/\s+/)[0] ?? "";
+}
+
+function slotTitle(date: Date, lang: "ar" | "en", short = false) {
   const tag = lang === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB";
   const f = (o: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(tag, { timeZone: "Asia/Riyadh", ...o }).format(date);
-  return `${f({ weekday: "short" })} ${f({ day: "2-digit", month: "2-digit" })} ${f({ hour: "2-digit", minute: "2-digit", hour12: false })}`.slice(
+  const time = f({ hour: "2-digit", minute: "2-digit", hour12: false });
+  if (short) return `${f({ day: "2-digit", month: "2-digit" })} ${time}`;
+  return `${f({ weekday: "short" })} ${f({ day: "2-digit", month: "2-digit" })} ${time}`.slice(
     0,
     20,
   );
@@ -260,6 +274,7 @@ async function handleButton(
   patientId: string,
   button: ParsedButton,
   env: Env,
+  now: Date = new Date(),
 ): Promise<{ replies: Reply[]; push: PushEvent[]; needsReply?: boolean }> {
   const apptId = button.appointmentId;
   if (!apptId) return { replies: [{ kind: "not_found" }], push: [] };
@@ -293,7 +308,7 @@ async function handleButton(
     }
     case "cancel": {
       const r = await run(() =>
-        cancelByPatient(tx, { patientId, appointmentId: apptId, via: "whatsapp" }),
+        cancelByPatient(tx, { patientId, appointmentId: apptId, via: "whatsapp", now }),
       );
       if (r.ok) {
         return {
@@ -318,54 +333,127 @@ async function handleButton(
       };
     }
     case "reschedule": {
+      // The same rules as the patient page (rescheduleOptions): the appointment never blocks its
+      // own new time; if the doctor is full, other doctors are offered; refusals are explained.
+      const [p] = await tx.select().from(patients).where(eq(patients.id, patientId));
+      const lang = p?.preferredLanguage === "en" ? "en" : "ar";
+      const same: Date[] = [];
+      const others: { startsAt: Date; practitionerId: string }[] = [];
+      const today = riyadhDay(now);
+      for (let d = 0; d <= settings.onlineHorizonDays && same.length < 3; d++) {
+        const r = await rescheduleOptions(tx, {
+          appointmentId: apptId,
+          day: addDays(today, d),
+          patientId,
+          now,
+        });
+        if (!r.ok) {
+          if (r.reason === "too_soon") continue;
+          if (r.reason === "too_far") break;
+          if (r.reason === "outside_window") {
+            return {
+              replies: [{ kind: "change_too_late", vars: { hours }, appointmentId: apptId }],
+              push: [],
+            };
+          }
+          return {
+            replies: [
+              {
+                kind: "reschedule_unavailable",
+                vars: { my_link: `${base}/my` },
+                appointmentId: apptId,
+              },
+            ],
+            push: [],
+          };
+        }
+        same.push(...r.sameDoctor.slice(0, 3 - same.length).map((x) => x.startsAt));
+        for (const o of r.otherDoctors) {
+          for (const x of o.slots) {
+            if (
+              others.length < 3 &&
+              !others.some((y) => y.startsAt.getTime() === x.startsAt.getTime())
+            ) {
+              others.push({ startsAt: x.startsAt, practitionerId: o.practitionerId });
+            }
+          }
+        }
+      }
       const appt = await getAppointment(tx, apptId);
-      if (appt.startsAt.getTime() - Date.now() < settings.cancellationWindowHours * 3600_000) {
+      const names = await doctorNames(tx, [
+        appt.practitionerId,
+        ...others.map((o) => o.practitionerId),
+      ]);
+      const nameOf = (id: string) => {
+        const n = names.get(id);
+        return n ? (lang === "en" && n.nameEn ? n.nameEn : n.nameAr) : "";
+      };
+      if (same.length) {
         return {
-          replies: [{ kind: "change_too_late", vars: { hours }, appointmentId: apptId }],
+          replies: [
+            {
+              kind: "reschedule_offer",
+              appointmentId: apptId,
+              vars: { my_link: `${base}/my` },
+              buttons: same.map((x) => ({
+                action: "slot",
+                appointmentId: apptId,
+                extra: String(Math.round(x.getTime() / 60_000)),
+                title: slotTitle(x, lang),
+              })),
+            },
+          ],
           push: [],
         };
       }
-      // The next 3 free times with the same doctor (online rules: notice, horizon, hours).
-      const slots: Date[] = [];
-      const today = riyadhDay(new Date());
-      for (let d = 0; d <= settings.onlineHorizonDays && slots.length < 3; d++) {
-        const found = await run(() =>
-          findOnlineSlots(tx, {
-            branchId: appt.branchId,
-            serviceId: appt.serviceId,
-            practitionerId: appt.practitionerId,
-            day: addDays(today, d),
-          }),
-        );
-        if (!found.ok) break;
-        for (const s of found.value) {
-          if (slots.length < 3 && s.startsAt.getTime() !== appt.startsAt.getTime())
-            slots.push(s.startsAt);
-        }
+      if (others.length) {
+        return {
+          replies: [
+            {
+              kind: "reschedule_offer_other",
+              appointmentId: apptId,
+              vars: { doctor: nameOf(appt.practitionerId), my_link: `${base}/my` },
+              buttons: others.map((x) => ({
+                action: "slot",
+                appointmentId: apptId,
+                extra: `${Math.round(x.startsAt.getTime() / 60_000)}-${x.practitionerId}`,
+                title:
+                  `${shortDoctor(nameOf(x.practitionerId))} ${slotTitle(x.startsAt, lang, true)}`.slice(
+                    0,
+                    20,
+                  ),
+              })),
+            },
+          ],
+          push: [],
+        };
       }
-      const [p] = await tx.select().from(patients).where(eq(patients.id, patientId));
-      const lang = p?.preferredLanguage === "en" ? "en" : "ar";
       return {
         replies: [
           {
-            kind: "reschedule_offer",
+            kind: "reschedule_none",
             appointmentId: apptId,
-            vars: { my_link: `${base}/my` },
-            buttons: slots.map((s) => ({
-              action: "slot",
-              appointmentId: apptId,
-              extra: String(Math.round(s.getTime() / 60_000)),
-              title: slotTitle(s, lang),
-            })),
+            vars: { doctor: nameOf(appt.practitionerId), my_link: `${base}/my` },
           },
         ],
         push: [],
       };
     }
     case "slot": {
-      const startsAt = new Date(Number(button.extra) * 60_000);
+      // extra = "<minutes>" (same doctor) or "<minutes>-<doctor id>" (another doctor).
+      const dash = (button.extra ?? "").indexOf("-");
+      const minutes = dash === -1 ? button.extra : button.extra!.slice(0, dash);
+      const otherDoctor = dash === -1 ? undefined : button.extra!.slice(dash + 1);
+      const startsAt = new Date(Number(minutes) * 60_000);
       const r = await run(() =>
-        moveByPatient(tx, { patientId, appointmentId: apptId, startsAt, via: "whatsapp" }),
+        moveByPatient(tx, {
+          patientId,
+          appointmentId: apptId,
+          startsAt,
+          practitionerId: otherDoctor,
+          via: "whatsapp",
+          now,
+        }),
       );
       if (!r.ok) {
         return {

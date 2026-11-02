@@ -142,7 +142,8 @@
     "already_linked": "This number is already linked to a patient.",
     "not_configured": "WhatsApp isn't set up for this clinic.",
     "unknown_placeholder": "The text has an unknown placeholder.",
-    "cannot_disable": "Verification codes can't be switched off."
+    "cannot_disable": "Verification codes can't be switched off.",
+    "doctor_busy": "The doctor has another appointment or blocked time then. Choose another time or doctor."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -250,7 +251,10 @@
     "needsCompletion": "Online booking by a new patient: complete their details (ID, date of birth) on arrival.",
     "consentSigned": "Consent already signed ✓",
     "consentSignedOnline": "Consent already signed on the patient page ✓",
-    "consentNeeded": "This service needs a signed consent at check-in."
+    "consentNeeded": "This service needs a signed consent at check-in.",
+    "freeTimesThatDay": "Free times that day",
+    "doctorFullThatDay": "{doctor} has no free times that day. Other doctors:",
+    "nobodyFreeThatDay": "No doctor has free times that day."
   },
   "consent": {
     "sign": "Sign consent",
@@ -546,7 +550,18 @@
     "agree": "I have read the full text and agree",
     "signedOk": "Signature saved. You won't need to sign on arrival.",
     "family": "Family",
-    "forPerson": "For {name}"
+    "forPerson": "For {name}",
+    "doctorFull": "{doctor} has no free times on this day.",
+    "otherDoctors": "Free times with other doctors on the same day (the doctor will change):",
+    "nobodyFree": "No doctor has free times on this day. Try another day.",
+    "refusal": {
+      "outside_window": "You can't change or cancel within {hours} hours of your visit. Please contact the clinic.",
+      "online_disabled": "Changing appointments online isn't available right now. Please contact the clinic.",
+      "not_online": "This service can't be changed online. Please contact the clinic.",
+      "bad_status": "This appointment can't be changed now (e.g. after check-in).",
+      "too_far": "This day is too far ahead. You can only pick a day within the booking period.",
+      "too_soon": "This day is too soon. Choose a time at least 2 hours from now."
+    }
   },
   "account": {
     "title": "My account & notifications",
@@ -660,7 +675,10 @@
       "all_good_ack": "Auto-reply",
       "stop_ack": "Auto-reply",
       "start_ack": "Auto-reply",
-      "not_found": "Auto-reply"
+      "not_found": "Auto-reply",
+      "reschedule_offer_other": "Auto-reply",
+      "reschedule_none": "Auto-reply",
+      "reschedule_unavailable": "Auto-reply"
     },
     "simChats": "Chats",
     "simNewNumber": "Simulate a message from a new number",

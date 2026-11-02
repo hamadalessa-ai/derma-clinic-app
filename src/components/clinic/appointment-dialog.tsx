@@ -31,6 +31,7 @@ import { AlertBadge, BalanceBadge, SourceBadge, StatusBadge } from "./badges";
 import { ConsentSignDialog, type ConsentTemplateView } from "./consent-sign-dialog";
 import { FormError, FormSuccess } from "./form-message";
 import { riyadhParts, timeOptions } from "./time";
+import { MoveFreeTimes } from "./move-free-times";
 import { useAction } from "./use-action";
 import type { PickOption } from "./booking-dialog";
 
@@ -347,6 +348,15 @@ export function AppointmentDialog({
                 </Select>
               </div>
             )}
+            <MoveFreeTimes
+              key={moveDay}
+              appointmentId={appt.id}
+              day={moveDay}
+              onPick={(time, doctorId) => {
+                setMoveTime(time);
+                if (doctorId) setMoveDoctor(doctorId);
+              }}
+            />
             {canRequest && !perms.doctorsManageOwnSchedule && (
               <div className="flex flex-col gap-1.5 sm:col-span-3">
                 <Label htmlFor="move-reason">

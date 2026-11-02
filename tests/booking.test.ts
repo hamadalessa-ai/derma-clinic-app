@@ -248,7 +248,7 @@ describe("statuses, cancelling and moving", () => {
           moveAppointment(tx, reception, a.id, { startsAt: riyadhAt("17:15", day) }),
         ),
       ),
-    ).toBe("slot_taken");
+    ).toBe("doctor_busy"); // the doctor has b then (said clearly, not just "taken")
     const moved = await withActor(reception, (tx) =>
       moveAppointment(tx, reception, a.id, { startsAt: riyadhAt("18:00", day) }),
     );
