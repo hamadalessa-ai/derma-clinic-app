@@ -11,12 +11,13 @@ import "server-only";
  * without them nothing is sent.
  */
 import { after } from "next/server";
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { eq, inArray, isNull, or } from "drizzle-orm";
 import webpush from "web-push";
 import {
   appointments,
   notificationPrefs,
   patients,
+  pushLog,
   pushSubscriptions,
   services,
   tenantMembers,
@@ -68,29 +69,42 @@ export async function recipientsFor(
   return reception();
 }
 
-/** Applies each person's on/off switch and muted types. No row = everything on. */
-export async function filterByPrefs(tx: TenantTx, userIds: string[], type: PushType) {
-  if (!userIds.length) return [];
-  const prefs = await tx
-    .select()
-    .from(notificationPrefs)
-    .where(inArray(notificationPrefs.userId, userIds));
-  return userIds.filter((u) => {
+/** Splits recipients by their own choices. No row = everything on. */
+export async function applyPrefs(tx: TenantTx, userIds: string[], type: PushType) {
+  const prefs = userIds.length
+    ? await tx.select().from(notificationPrefs).where(inArray(notificationPrefs.userId, userIds))
+    : [];
+  const allowed: string[] = [];
+  const blocked: { userId: string; outcome: "switched_off" | "type_muted" }[] = [];
+  for (const u of userIds) {
     const p = prefs.find((x) => x.userId === u);
-    return !p || (p.enabled && !p.mutedTypes.includes(type));
-  });
+    if (p && !p.enabled) blocked.push({ userId: u, outcome: "switched_off" });
+    else if (p && p.mutedTypes.includes(type)) blocked.push({ userId: u, outcome: "type_muted" });
+    else allowed.push(u);
+  }
+  return { allowed, blocked };
+}
+
+export async function filterByPrefs(tx: TenantTx, userIds: string[], type: PushType) {
+  return (await applyPrefs(tx, userIds, type)).allowed;
 }
 
 export interface PlannedPush {
   subscriptionId: string;
+  userId: string;
+  type: PushType;
+  appointmentId: string;
   endpoint: string;
   keys: { p256dh: string; auth: string };
   payload: ReturnType<typeof buildPayload>;
 }
 
-/** Works out every notification to send for these events (no sending). */
-export async function planPushes(tx: TenantTx, events: PushEvent[]): Promise<PlannedPush[]> {
-  const out: PlannedPush[] = [];
+export type PushLogEntry = Omit<typeof pushLog.$inferInsert, "id" | "tenantId" | "createdAt">;
+
+/** Works out every notification to send for these events (no sending), and who gets none and why. */
+export async function planPushes(tx: TenantTx, events: PushEvent[]) {
+  const planned: PlannedPush[] = [];
+  const skipped: PushLogEntry[] = [];
   for (const ev of events) {
     const [row] = await tx
       .select({
@@ -105,62 +119,132 @@ export async function planPushes(tx: TenantTx, events: PushEvent[]): Promise<Pla
       .innerJoin(services, eq(services.id, appointments.serviceId))
       .where(eq(appointments.id, ev.appointmentId));
     if (!row) continue;
-    const users = (await filterByPrefs(tx, await recipientsFor(tx, row, ev.type), ev.type)).filter(
-      (u) => u !== ev.actorUserId,
-    );
-    if (!users.length) continue;
+    const recipients = (await recipientsFor(tx, row, ev.type)).filter((u) => u !== ev.actorUserId);
+    const base = { type: ev.type, appointmentId: ev.appointmentId };
+    if (!recipients.length) {
+      skipped.push({ ...base, userId: null, outcome: "no_recipient" });
+      continue;
+    }
+    const { allowed, blocked } = await applyPrefs(tx, recipients, ev.type);
+    for (const b of blocked) skipped.push({ ...base, userId: b.userId, outcome: b.outcome });
+    if (!allowed.length) continue;
     const subs = await tx
       .select()
       .from(pushSubscriptions)
-      .where(inArray(pushSubscriptions.userId, users));
+      .where(inArray(pushSubscriptions.userId, allowed));
+    for (const u of allowed) {
+      if (!subs.some((s) => s.userId === u)) {
+        skipped.push({ ...base, userId: u, outcome: "no_device" });
+      }
+    }
     const payload = buildPayload({ type: ev.type, appointmentId: ev.appointmentId, ...row });
     for (const s of subs) {
-      out.push({
+      planned.push({
         subscriptionId: s.id,
+        userId: s.userId,
+        type: ev.type,
+        appointmentId: ev.appointmentId,
         endpoint: s.endpoint,
         keys: { p256dh: s.p256dh, auth: s.auth },
         payload,
       });
     }
   }
-  return out;
+  return { planned, skipped };
 }
 
-/** Plans and sends. Gone subscriptions (404/410) are removed. Returns counts (for tests/logs). */
+/** One device: send, and say what happened (for the log). */
+async function sendOne(
+  p: { endpoint: string; keys: { p256dh: string; auth: string } },
+  payload: unknown,
+  vapid: NonNullable<ReturnType<typeof vapidConfig>>,
+): Promise<{
+  outcome: "sent" | "failed" | "device_gone" | "demo_device";
+  statusCode: number | null;
+  reason: string | null;
+}> {
+  // The seeded demo device never receives anything.
+  if (new URL(p.endpoint).hostname === DEMO_PUSH_HOST) {
+    return { outcome: "demo_device", statusCode: null, reason: "demo device (never contacted)" };
+  }
+  try {
+    const res = await webpush.sendNotification(
+      { endpoint: p.endpoint, keys: p.keys },
+      JSON.stringify(payload),
+      { vapidDetails: vapid, TTL: 60 * 60, urgency: "high" },
+    );
+    return { outcome: "sent", statusCode: res.statusCode, reason: null };
+  } catch (err) {
+    const e = err as { statusCode?: number; body?: string; message?: string };
+    const status = e.statusCode ?? null;
+    return {
+      outcome: status === 404 || status === 410 ? "device_gone" : "failed",
+      statusCode: status,
+      reason: (e.body || e.message || String(err)).slice(0, 300),
+    };
+  }
+}
+
+/** Where the push went is the push service's host (e.g. web.push.apple.com) — never the full URL. */
+const serviceOf = (endpoint: string) => {
+  try {
+    return new URL(endpoint).hostname;
+  } catch {
+    return "?";
+  }
+};
+
+async function writeLog(tenantId: string, entries: PushLogEntry[]) {
+  if (!entries.length) return;
+  await withTenant(tenantId, (tx) =>
+    tx.insert(pushLog).values(entries.map((e) => ({ ...e, tenantId }))),
+  ).catch((err) => console.warn("push log failed", err));
+}
+
+/**
+ * Plans and sends. Gone subscriptions (404/410) are removed. Every outcome — sent, failed (with
+ * the push service's answer), no device, switched off, no keys — goes to the push log.
+ */
 export async function sendPushEvents(
   tenantId: string,
   events: PushEvent[],
   env: Env = process.env,
 ) {
   const vapid = vapidConfig(env);
-  const planned = await withTenant(tenantId, (tx) => planPushes(tx, events));
+  const { planned, skipped } = await withTenant(tenantId, (tx) => planPushes(tx, events));
   const result = { planned: planned.length, sent: 0, removed: 0, skipped: 0 };
+  const log: PushLogEntry[] = [...skipped];
   if (!vapid) {
     result.skipped = planned.length;
+    for (const p of planned) {
+      log.push({
+        type: p.type,
+        appointmentId: p.appointmentId,
+        userId: p.userId,
+        outcome: "no_keys",
+        reason: "VAPID keys are not set in Vercel",
+      });
+    }
+    await writeLog(tenantId, log);
     return result;
   }
+  const outcomes = await Promise.all(planned.map((p) => sendOne(p, p.payload, vapid)));
   const gone: string[] = [];
-  await Promise.all(
-    planned.map(async (p) => {
-      // The seeded demo device never receives anything.
-      if (new URL(p.endpoint).hostname === DEMO_PUSH_HOST) {
-        result.skipped++;
-        return;
-      }
-      try {
-        await webpush.sendNotification(
-          { endpoint: p.endpoint, keys: p.keys },
-          JSON.stringify(p.payload),
-          { vapidDetails: vapid, TTL: 60 * 60, urgency: "high" },
-        );
-        result.sent++;
-      } catch (err) {
-        const status = (err as { statusCode?: number }).statusCode;
-        if (status === 404 || status === 410) gone.push(p.subscriptionId);
-        else console.warn("push failed", status ?? err);
-      }
-    }),
-  );
+  planned.forEach((p, i) => {
+    const o = outcomes[i];
+    if (o.outcome === "sent") result.sent++;
+    if (o.outcome === "demo_device") result.skipped++;
+    if (o.outcome === "device_gone") gone.push(p.subscriptionId);
+    if (o.outcome === "failed") console.warn("push failed", o.statusCode, o.reason);
+    log.push({
+      type: p.type,
+      appointmentId: p.appointmentId,
+      userId: p.userId,
+      outcome: o.outcome,
+      statusCode: o.statusCode,
+      reason: o.outcome === "sent" ? serviceOf(p.endpoint) : o.reason,
+    });
+  });
   if (gone.length) {
     await withTenant(tenantId, (tx) =>
       tx.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone)),
@@ -168,16 +252,17 @@ export async function sendPushEvents(
     result.removed = gone.length;
   }
   const sentIds = planned
-    .filter((p) => !gone.includes(p.subscriptionId))
+    .filter((p, i) => outcomes[i].outcome === "sent")
     .map((p) => p.subscriptionId);
-  if (result.sent && sentIds.length) {
+  if (sentIds.length) {
     await withTenant(tenantId, (tx) =>
       tx
         .update(pushSubscriptions)
         .set({ lastUsedAt: new Date() })
-        .where(and(inArray(pushSubscriptions.id, sentIds))),
+        .where(inArray(pushSubscriptions.id, sentIds)),
     );
   }
+  await writeLog(tenantId, log);
   return result;
 }
 
@@ -189,38 +274,51 @@ export function notifyLater(tenantId: string, events: PushEvent[]) {
   );
 }
 
-/** A test notification to the user's own devices (from "My account"). */
+/** A test notification to the user's own devices (from "My account"). Logged like the others. */
 export async function sendTestPush(tenantId: string, userId: string, env: Env = process.env) {
   const vapid = vapidConfig(env);
   const subs = await withTenant(tenantId, (tx) =>
     tx.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)),
   );
-  if (!vapid) return { sent: 0, devices: subs.length };
-  let sent = 0;
-  const gone: string[] = [];
-  for (const s of subs) {
-    if (new URL(s.endpoint).hostname === DEMO_PUSH_HOST) continue;
-    try {
-      await webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        JSON.stringify({
-          title: "إشعار تجريبي · Test notification",
-          body: "الإشعارات تعمل على هذا الجهاز ✓",
-          url: "/account",
-          tag: "test",
-        }),
-        { vapidDetails: vapid, TTL: 600 },
-      );
-      sent++;
-    } catch (err) {
-      const status = (err as { statusCode?: number }).statusCode;
-      if (status === 404 || status === 410) gone.push(s.id);
-    }
+  const base = { type: "test", appointmentId: null, userId };
+  if (!subs.length) {
+    await writeLog(tenantId, [{ ...base, outcome: "no_device" }]);
+    return { sent: 0, devices: 0 };
   }
+  if (!vapid) {
+    await writeLog(tenantId, [
+      { ...base, outcome: "no_keys", reason: "VAPID keys are not set in Vercel" },
+    ]);
+    return { sent: 0, devices: subs.length };
+  }
+  const payload = {
+    title: "إشعار تجريبي · Test notification",
+    body: "الإشعارات تعمل على هذا الجهاز ✓",
+    url: "/account",
+    tag: `test-${Date.now()}`,
+  };
+  const outcomes = await Promise.all(
+    subs.map((s) =>
+      sendOne({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, vapid),
+    ),
+  );
+  const gone = subs.filter((_, i) => outcomes[i].outcome === "device_gone").map((s) => s.id);
   if (gone.length) {
     await withTenant(tenantId, (tx) =>
       tx.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone)),
     );
   }
-  return { sent, devices: subs.length - gone.length };
+  await writeLog(
+    tenantId,
+    outcomes.map((o, i) => ({
+      ...base,
+      outcome: o.outcome,
+      statusCode: o.statusCode,
+      reason: o.outcome === "sent" ? serviceOf(subs[i].endpoint) : o.reason,
+    })),
+  );
+  return {
+    sent: outcomes.filter((o) => o.outcome === "sent").length,
+    devices: subs.length - gone.length,
+  };
 }

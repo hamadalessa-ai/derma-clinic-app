@@ -400,7 +400,7 @@ function AppointmentCard({
                   })}
                 </p>
               )}
-              {options.sameDoctor.length === 0 && options.otherDoctors.length > 0 && (
+              {options.otherDoctors.length > 0 && (
                 <div className="flex flex-col gap-2" data-testid="other-doctors">
                   <p className="text-muted-foreground text-xs">{t("otherDoctors")}</p>
                   {options.otherDoctors.map((d) => (

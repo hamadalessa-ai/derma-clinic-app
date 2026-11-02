@@ -568,6 +568,18 @@ function phase2aRows(): string {
           created_at: hoursAgo(12),
         },
       ]),
+      insert("push_log", [
+        {
+          tenant_id: tenant,
+          type: "test",
+          appointment_id: null,
+          user_id: `usr_${adminKey}`,
+          outcome: "demo_device",
+          status_code: null,
+          reason: "demo device (never contacted)",
+          created_at: hoursAgo(12),
+        },
+      ]),
       insert("webhook_events", [
         { tenant_id: tenant, event_key: `demo-event-${slug}`, created_at: hoursAgo(12) },
       ]),

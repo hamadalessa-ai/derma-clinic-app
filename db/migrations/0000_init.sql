@@ -381,6 +381,18 @@ CREATE TABLE "patients" (
 	CONSTRAINT "patients_not_own_guardian" CHECK ("patients"."guardian_id" is null or "patients"."guardian_id" <> "patients"."id")
 );
 --> statement-breakpoint
+CREATE TABLE "push_log" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"type" text NOT NULL,
+	"appointment_id" uuid,
+	"user_id" text,
+	"outcome" text NOT NULL,
+	"status_code" integer,
+	"reason" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "push_subscriptions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -654,6 +666,7 @@ ALTER TABLE "patient_sessions" ADD CONSTRAINT "patient_sessions_tenant_id_tenant
 ALTER TABLE "patient_sessions" ADD CONSTRAINT "patient_sessions_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "patients" ADD CONSTRAINT "patients_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "patients" ADD CONSTRAINT "patients_guardian_fk" FOREIGN KEY ("tenant_id","guardian_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "push_log" ADD CONSTRAINT "push_log_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rate_limit_hits" ADD CONSTRAINT "rate_limit_hits_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -699,6 +712,7 @@ CREATE INDEX "patient_consents_patient_idx" ON "patient_consents" USING btree ("
 CREATE INDEX "patient_medical_flags_patient_idx" ON "patient_medical_flags" USING btree ("tenant_id","patient_id");--> statement-breakpoint
 CREATE INDEX "patient_packages_patient_idx" ON "patient_packages" USING btree ("tenant_id","patient_id");--> statement-breakpoint
 CREATE INDEX "patients_phone_idx" ON "patients" USING btree ("tenant_id","phone");--> statement-breakpoint
+CREATE INDEX "push_log_created_idx" ON "push_log" USING btree ("tenant_id","created_at");--> statement-breakpoint
 CREATE INDEX "rate_limit_hits_bucket_idx" ON "rate_limit_hits" USING btree ("tenant_id","bucket","created_at");--> statement-breakpoint
 CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "tenant_members_user_id_idx" ON "tenant_members" USING btree ("user_id");--> statement-breakpoint

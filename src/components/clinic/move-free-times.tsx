@@ -91,29 +91,28 @@ export function MoveFreeTimes({
               {t("doctorFullThatDay", { doctor: name(options.doctor) })}
             </p>
           )}
-          {options.sameDoctor.length === 0 &&
-            options.otherDoctors.map((d) => (
-              <div
-                key={d.practitionerId}
-                className="flex flex-col gap-1"
-                data-testid="other-doctor-times"
-              >
-                <span className="text-muted-foreground text-xs">{name(d.doctor)}</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {d.times.map((time) => (
-                    <button
-                      key={time}
-                      type="button"
-                      className={chip}
-                      dir="ltr"
-                      onClick={() => onPick(time, d.practitionerId)}
-                    >
-                      {time}
-                    </button>
-                  ))}
-                </div>
+          {options.otherDoctors.map((d) => (
+            <div
+              key={d.practitionerId}
+              className="flex flex-col gap-1"
+              data-testid="other-doctor-times"
+            >
+              <span className="text-muted-foreground text-xs">{name(d.doctor)}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {d.times.map((time) => (
+                  <button
+                    key={time}
+                    type="button"
+                    className={chip}
+                    dir="ltr"
+                    onClick={() => onPick(time, d.practitionerId)}
+                  >
+                    {time}
+                  </button>
+                ))}
               </div>
-            ))}
+            </div>
+          ))}
           {options.sameDoctor.length === 0 && options.otherDoctors.length === 0 && (
             <p className="text-muted-foreground text-sm">{t("nobodyFreeThatDay")}</p>
           )}

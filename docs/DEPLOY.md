@@ -320,6 +320,17 @@ Ready-made demo chats: **D-0001** (reminder confirmed with the button), **D-0011
 **D-0014** (sent STOP), **D-0019** (Botox recall due — appears after "Run now"), and the new number
 **0555123456** asking about prices.
 
+### E5. Update: push log, reschedule and tablet signature fixes (5 minutes)
+
+1. GitHub → the pull request → **Merge pull request → Confirm merge**.
+2. Supabase → reset the database exactly as in **E1** (paste `db/reset.sql`, then `db/setup.sql` with the
+   **same app database password**). This adds the new **push log** table. Nothing changes in Vercel.
+3. Dr. Sara: open the app → **My account** → turn notifications on again if they show as off
+   (a reset removes saved devices) → **Send a test notification**.
+4. In the WhatsApp simulator, tap **"I have a concern"** on a post-care message. Then, as admin:
+   **Settings → WhatsApp → WhatsApp status → Push notification log**. Each line says _sent_, _failed_
+   (with the reason), _no device_, _switched off_ or _type muted_.
+
 ---
 
 ## Part F — When Meta verification is done (real WhatsApp)

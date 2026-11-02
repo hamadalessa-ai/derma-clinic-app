@@ -414,6 +414,17 @@ CREATE TABLE "patients" (
 	CONSTRAINT "patients_preferred_language" CHECK ("patients"."preferred_language" in ('ar', 'en')),
 	CONSTRAINT "patients_not_own_guardian" CHECK ("patients"."guardian_id" is null or "patients"."guardian_id" <> "patients"."id")
 );
+CREATE TABLE "push_log" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"type" text NOT NULL,
+	"appointment_id" uuid,
+	"user_id" text,
+	"outcome" text NOT NULL,
+	"status_code" integer,
+	"reason" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
 CREATE TABLE "push_subscriptions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -671,6 +682,7 @@ ALTER TABLE "patient_sessions" ADD CONSTRAINT "patient_sessions_tenant_id_tenant
 ALTER TABLE "patient_sessions" ADD CONSTRAINT "patient_sessions_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "patients" ADD CONSTRAINT "patients_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "patients" ADD CONSTRAINT "patients_guardian_fk" FOREIGN KEY ("tenant_id","guardian_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "push_log" ADD CONSTRAINT "push_log_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "rate_limit_hits" ADD CONSTRAINT "rate_limit_hits_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
@@ -716,6 +728,7 @@ CREATE INDEX "patient_consents_patient_idx" ON "patient_consents" USING btree ("
 CREATE INDEX "patient_medical_flags_patient_idx" ON "patient_medical_flags" USING btree ("tenant_id","patient_id");
 CREATE INDEX "patient_packages_patient_idx" ON "patient_packages" USING btree ("tenant_id","patient_id");
 CREATE INDEX "patients_phone_idx" ON "patients" USING btree ("tenant_id","phone");
+CREATE INDEX "push_log_created_idx" ON "push_log" USING btree ("tenant_id","created_at");
 CREATE INDEX "rate_limit_hits_bucket_idx" ON "rate_limit_hits" USING btree ("tenant_id","bucket","created_at");
 CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");
 CREATE INDEX "tenant_members_user_id_idx" ON "tenant_members" USING btree ("user_id");
@@ -1739,6 +1752,9 @@ insert into public.messages (tenant_id, conversation_id, patient_id, direction, 
 insert into public.message_dispatches (tenant_id, dedupe_key, kind, patient_id, outcome, created_at) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'demo:seed:derma', 'verification_code', 'b848630c-5546-5f5c-aa8e-24f101175b35', 'sent', now() - interval '12 hours');
 
+insert into public.push_log (tenant_id, type, appointment_id, user_id, outcome, status_code, reason, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'test', null, 'usr_derma-admin', 'demo_device', null, 'demo device (never contacted)', now() - interval '12 hours');
+
 insert into public.webhook_events (tenant_id, event_key, created_at) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'demo-event-derma', now() - interval '12 hours');
 
@@ -1765,6 +1781,9 @@ insert into public.messages (tenant_id, conversation_id, patient_id, direction, 
 
 insert into public.message_dispatches (tenant_id, dedupe_key, kind, patient_id, outcome, created_at) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'demo:seed:lamsa', 'verification_code', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'sent', now() - interval '12 hours');
+
+insert into public.push_log (tenant_id, type, appointment_id, user_id, outcome, status_code, reason, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'test', null, 'usr_lamsa-admin', 'demo_device', null, 'demo device (never contacted)', now() - interval '12 hours');
 
 insert into public.webhook_events (tenant_id, event_key, created_at) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'demo-event-lamsa', now() - interval '12 hours');
@@ -1924,6 +1943,7 @@ grant select, insert, update on public.conversations, public.message_templates t
 grant select, insert on public.messages, public.message_dispatches to clinic_app;
 grant update (status, status_at, provider_message_id, error_code, error_text) on public.messages to clinic_app;
 grant select, insert, delete on public.webhook_events to clinic_app;
+grant select, insert, delete on public.push_log to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
 
@@ -1950,6 +1970,7 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
+    'push_log',
     'push_subscriptions', 'notification_prefs'
   ] loop
     execute format('alter table public.%I enable row level security', t);
@@ -2038,6 +2059,7 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
+    'push_log',
     'push_subscriptions', 'notification_prefs',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop

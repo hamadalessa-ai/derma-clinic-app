@@ -78,7 +78,7 @@ describe("privacy of the notification text", () => {
         startsAt: riyadhAt("10:00", "2031-08-03"),
       }),
     );
-    const planned = await system((tx) =>
+    const { planned } = await system((tx) =>
       planPushes(tx, [{ type: "new_booking", appointmentId: appt.id }]),
     );
     const mine = planned.filter((x) => x.endpoint === sub.endpoint);
@@ -103,7 +103,9 @@ describe("who gets what", () => {
       }),
     );
   const usersFor = async (type: PushType, appointmentId: string, actorUserId?: string) => {
-    const planned = await system((tx) => planPushes(tx, [{ type, appointmentId, actorUserId }]));
+    const { planned } = await system((tx) =>
+      planPushes(tx, [{ type, appointmentId, actorUserId }]),
+    );
     const subs = await system((tx) => tx.select().from(pushSubscriptions));
     return new Set(planned.map((p) => subs.find((s) => s.id === p.subscriptionId)!.userId));
   };

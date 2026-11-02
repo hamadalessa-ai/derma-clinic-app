@@ -440,6 +440,7 @@ export const TENANT_TABLES = [
   "message_templates",
   "message_dispatches",
   "webhook_events",
+  "push_log",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1271,4 +1272,26 @@ export const webhookEvents = pgTable(
     createdAt: createdAt(),
   },
   (t) => [unique("webhook_events_key").on(t.tenantId, t.eventKey)],
+);
+
+/**
+ * What happened to each staff push notification (admin status page): sent, failed (with the push
+ * service's answer), device gone, or why nobody got it (no device, switched off, no keys…).
+ */
+export const pushLog = pgTable(
+  "push_log",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // e.g. patient_concern, new_booking, test
+    appointmentId: uuid("appointment_id"),
+    /** The staff member it was for (null: nobody, e.g. no recipient at all). */
+    userId: text("user_id"),
+    /** sent | failed | device_gone | no_device | switched_off | type_muted | no_keys | demo_device | no_recipient */
+    outcome: text("outcome").notNull(),
+    statusCode: integer("status_code"),
+    reason: text("reason"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("push_log_created_idx").on(t.tenantId, t.createdAt)],
 );

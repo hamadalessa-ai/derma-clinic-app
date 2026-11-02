@@ -190,6 +190,12 @@ test.describe("WhatsApp in demo mode", () => {
     await chat.locator('[data-testid=chat-button][data-button="لدي استفسار/قلق"]').last().click();
     await expect(chat.locator("[data-kind=concern_ack]")).toBeVisible();
 
+    // The admin status page shows what happened to the concern push (sent / no device / no keys…).
+    await admin.goto("/settings/whatsapp/status");
+    await expect(
+      admin.locator("[data-testid=push-log-row][data-type=patient_concern]").first(),
+    ).toBeVisible();
+
     // Reception's inbox: needs reply, flagged as a concern.
     const inbox = await staff(browser, "reception.riyadh1@derma.demo", isMobile);
     await inbox.goto("/whatsapp?f=needs_reply");

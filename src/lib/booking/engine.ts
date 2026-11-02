@@ -987,7 +987,8 @@ export type RescheduleRefusal =
   | "not_online" // this service can't be changed online
   | "bad_status" // e.g. already checked in or cancelled
   | "too_far" // beyond the online booking horizon
-  | "too_soon"; // that day is entirely inside the minimum notice
+  | "too_soon" // that day is entirely inside the minimum notice
+  | "closed"; // no doctor works that day at this branch (e.g. Friday, a holiday)
 
 export type RescheduleOptions =
   | { ok: false; reason: RescheduleRefusal; hours?: number }
@@ -1049,6 +1050,15 @@ export async function rescheduleOptions(
     return { ok: true, practitionerId: appt.practitionerId, sameDoctor: [], otherDoctors: [] };
   }
   const ids = [...new Set([appt.practitionerId, ...doctors.map((d) => d.id)])];
+  // Closed that day (weekend, holiday, nobody scheduled)? Say so instead of "no free times".
+  let anyoneWorks = false;
+  for (const id of ids) {
+    if (typeof (await workDay(tx, id, appt.branchId, input.day)) !== "string") {
+      anyoneWorks = true;
+      break;
+    }
+  }
+  if (!anyoneWorks) return { ok: false, reason: "closed" };
   const slots = (
     await findFreeSlots(tx, {
       branchId: appt.branchId,
