@@ -78,6 +78,8 @@ any role that allows something grants it. Clinical notes need the `practitioner`
 
 - Edit `src/db/schema.ts` → `pnpm db:generate` (Drizzle SQL) → `pnpm db:build-setup` regenerates
   `db/setup.sql` (schema + seed + RLS + roles in one transaction). A test fails if it is stale.
+- Removing or renaming a table: add the old name to `RETIRED_TABLES` (`src/db/reset-sql.ts`). When a phase
+  is released, copy its `db/setup.sql` into `tests/released-setup/` — a test runs today's `reset.sql` on each.
 - Supabase is set up by pasting `db/setup.sql` into the Supabase SQL Editor (no admin password leaves Supabase).
   Later phases add numbered `db/upgrades/NNNN_*.sql` files to paste in order. Founder guide: `docs/DEPLOY.md`.
 - Supabase's `postgres` user is NOT a superuser. SQL we ship must work without superuser rights

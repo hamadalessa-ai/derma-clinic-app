@@ -22,6 +22,7 @@ drop table if exists
   public.message_templates,
   public.messages,
   public.notification_prefs,
+  public.outbound_messages,
   public.package_payments,
   public.package_session_events,
   public.package_templates,
