@@ -68,6 +68,10 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   or a patient session (`src/lib/portal/session.ts`) decides what the visitor may do; patient reads run with
   role `patient` + `app.patient_id` (RLS patient walls: own + family rows only, never notes, no writes).
 - Codes are shown on screen ONLY for `is_demo` clinics with `MESSAGE_DEMO_MODE=on` (`src/lib/messaging/sender.ts`).
+- WhatsApp: every message goes through `src/lib/whatsapp/send.ts` (dedupe key claimed before sending →
+  at most once; consent rules; demo simulator / live provider chosen by settings in `config.ts`).
+  Everything patients send goes through `handleInbound()` (`inbound.ts`) — simulator and webhook alike.
+  Wording lives in `catalog.ts`; after changing it run `pnpm docs:whatsapp` (a test checks the doc).
 - Business logic also checks permissions (`assertCan`), not only the screens.
 
 ## Database changes

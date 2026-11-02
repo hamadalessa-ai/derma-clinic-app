@@ -22,7 +22,7 @@ import {
   tenantMembers,
 } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
-import { buildPayload, DEMO_PUSH_HOST, DOCTOR_TYPES, type PushType } from "./payload";
+import { buildPayload, DEMO_PUSH_HOST, DOCTOR_TYPES, SHARED_TYPES, type PushType } from "./payload";
 
 export interface PushEvent {
   type: PushType;
@@ -47,18 +47,25 @@ export async function recipientsFor(
   appt: { practitionerId: string; branchId: string },
   type: PushType,
 ): Promise<string[]> {
-  if ((DOCTOR_TYPES as readonly string[]).includes(type)) {
+  const doctor = async () => {
     const [doc] = await tx
       .select({ userId: tenantMembers.userId })
       .from(tenantMembers)
       .where(eq(tenantMembers.id, appt.practitionerId));
     return doc ? [doc.userId] : [];
+  };
+  const reception = async () => {
+    const members = await tx
+      .select({ userId: tenantMembers.userId, roles: tenantMembers.roles })
+      .from(tenantMembers)
+      .where(or(isNull(tenantMembers.branchId), eq(tenantMembers.branchId, appt.branchId)));
+    return members.filter((m) => m.roles.includes("receptionist")).map((m) => m.userId);
+  };
+  if ((DOCTOR_TYPES as readonly string[]).includes(type)) return doctor();
+  if ((SHARED_TYPES as readonly string[]).includes(type)) {
+    return [...new Set([...(await doctor()), ...(await reception())])];
   }
-  const members = await tx
-    .select({ userId: tenantMembers.userId, roles: tenantMembers.roles })
-    .from(tenantMembers)
-    .where(or(isNull(tenantMembers.branchId), eq(tenantMembers.branchId, appt.branchId)));
-  return members.filter((m) => m.roles.includes("receptionist")).map((m) => m.userId);
+  return reception();
 }
 
 /** Applies each person's on/off switch and muted types. No row = everything on. */

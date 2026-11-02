@@ -64,10 +64,14 @@ export type Appointment = typeof appointments.$inferSelect;
 type Service = typeof services.$inferSelect;
 type Member = typeof tenantMembers.$inferSelect;
 
-/** Turns the database's "overlap" refusal into a friendly error. */
+/**
+ * Turns the database's "overlap" refusal into a friendly error. When many bookings race for the
+ * same slot, Postgres may also stop one of them as a "deadlock" (40P01): it lost the race too.
+ */
+const SLOT_RACE_CODES = ["23P01", "40P01"];
 function isOverlapError(err: unknown): boolean {
   const e = err as { code?: string; cause?: { code?: string } };
-  return e?.code === "23P01" || e?.cause?.code === "23P01";
+  return SLOT_RACE_CODES.includes(e?.code ?? "") || SLOT_RACE_CODES.includes(e?.cause?.code ?? "");
 }
 
 async function rethrowOverlap<T>(fn: () => Promise<T>): Promise<T> {
@@ -113,6 +117,8 @@ const DEFAULT_SETTINGS: Settings = {
   cancellationWindowHours: 24,
   onlineRequiresApproval: false,
   showPricesOnline: true,
+  showServiceInMessages: true,
+  whatsappWebhookVerifiedAt: null,
 };
 
 export async function getSettings(tx: TenantTx): Promise<Settings> {
@@ -876,9 +882,17 @@ async function patientOwnedForChange(
   return { appt, settings };
 }
 
+/** Where a patient's own change came from: the patient page (/my) or a WhatsApp button. */
+type PatientChannel = "online" | "whatsapp";
+
+const PATIENT_CANCEL_REASON: Record<PatientChannel, string> = {
+  online: "ألغاه المريض من صفحة المريض · Cancelled by the patient (patient page)",
+  whatsapp: "ألغاه المريض عبر واتساب · Cancelled by the patient (WhatsApp)",
+};
+
 export async function cancelByPatient(
   tx: TenantTx,
-  input: { patientId: string; appointmentId: string; now?: Date },
+  input: { patientId: string; appointmentId: string; now?: Date; via?: PatientChannel },
 ) {
   const { appt } = await patientOwnedForChange(
     tx,
@@ -888,16 +902,44 @@ export async function cancelByPatient(
   );
   return applyStatus(
     tx,
-    { userId: null, source: "online", patientId: input.patientId },
+    { userId: null, source: input.via ?? "online", patientId: input.patientId },
     appt,
     "cancelled",
-    "ألغاه المريض من صفحة المريض · Cancelled by the patient (patient page)",
+    PATIENT_CANCEL_REASON[input.via ?? "online"],
+  );
+}
+
+/**
+ * The patient confirms they will come (WhatsApp "Confirm" button). Own or family appointments only;
+ * "booked" → "confirmed"; already confirmed = nothing to do. No cancellation window applies.
+ */
+export async function confirmByPatient(
+  tx: TenantTx,
+  input: { patientId: string; appointmentId: string; via?: PatientChannel },
+) {
+  const appt = await getAppointment(tx, input.appointmentId, true);
+  if (!(await patientFamilyIds(tx, input.patientId)).includes(appt.patientId)) {
+    throw new BookingError("not_found", "appointment");
+  }
+  if (appt.status === "confirmed") return appt;
+  if (appt.status !== "booked") throw new BookingError("bad_status");
+  return applyStatus(
+    tx,
+    { userId: null, source: input.via ?? "whatsapp", patientId: input.patientId },
+    appt,
+    "confirmed",
   );
 }
 
 export async function moveByPatient(
   tx: TenantTx,
-  input: { patientId: string; appointmentId: string; startsAt: Date; now?: Date },
+  input: {
+    patientId: string;
+    appointmentId: string;
+    startsAt: Date;
+    now?: Date;
+    via?: PatientChannel;
+  },
 ) {
   const now = input.now ?? new Date();
   const { appt, settings } = await patientOwnedForChange(
@@ -911,9 +953,12 @@ export async function moveByPatient(
   if (!service.onlineBookable) throw new BookingError("not_online");
   const problem = onlineWindowProblem(settings, input.startsAt, now);
   if (problem) throw new BookingError(problem);
-  return applyMove(tx, { userId: null, source: "online", patientId: input.patientId }, appt, {
-    startsAt: input.startsAt,
-  });
+  return applyMove(
+    tx,
+    { userId: null, source: input.via ?? "online", patientId: input.patientId },
+    appt,
+    { startsAt: input.startsAt },
+  );
 }
 
 /** Appointments for a set of ids (used by request approval). */

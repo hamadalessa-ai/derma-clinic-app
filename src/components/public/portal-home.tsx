@@ -11,6 +11,7 @@ import {
   portalSignConsentAction,
   portalSignOutAction,
   portalSlotsAction,
+  portalWhatsappAction,
 } from "@/app/actions/patient";
 import { StatusBadge } from "@/components/clinic/badges";
 import { FormError, FormSuccess } from "@/components/clinic/form-message";
@@ -82,6 +83,8 @@ export function PortalHome({ data }: { data: PortalData }) {
           {t("signOut")}
         </Button>
       </div>
+
+      <WhatsAppSwitch on={!!me.whatsappOptInAt && !me.whatsappOptedOutAt} />
 
       {data.pendingConsents.length > 0 && (
         <section className="flex flex-col gap-2" data-testid="consents-to-sign">
@@ -465,5 +468,32 @@ function ConsentToSign({
         </div>
       )}
     </div>
+  );
+}
+
+function WhatsAppSwitch({ on }: { on: boolean }) {
+  const t = useTranslations("whatsapp");
+  const { run, pending, error } = useRun();
+  return (
+    <section
+      className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm"
+      data-testid="my-whatsapp"
+      data-on={on}
+    >
+      <div>
+        <div className="font-semibold">{t("myOptInTitle")}</div>
+        <div className="text-muted-foreground">{on ? t("myOptInOn") : t("myOptInOff")}</div>
+      </div>
+      <Button
+        size="sm"
+        variant={on ? "outline" : "default"}
+        disabled={pending}
+        onClick={() => run(() => portalWhatsappAction({ optIn: !on }))}
+        data-testid="my-whatsapp-toggle"
+      >
+        {on ? t("myTurnOff") : t("myTurnOn")}
+      </Button>
+      <FormError message={error} />
+    </section>
   );
 }

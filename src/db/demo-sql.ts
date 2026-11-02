@@ -9,6 +9,7 @@ import { DEMO_SIGNATURE_PNG_BASE64, DEMO_TIME_BLOCKS, generateDemoWeek } from ".
 import { CONSENT_TEMPLATES, DERMA, demoId, LAMSA, PACKAGE_TEMPLATES } from "./seed-data";
 import { DEMO_PUSH_HOST } from "../lib/push/payload";
 import { insert, raw } from "./sql-render";
+import { BUTTON_TITLES, fill, REPLIES, SERVICE_TEXTS, TEMPLATES } from "../lib/whatsapp/catalog";
 
 const ANCHOR = "(select demo_anchor from pg_temp.setup_params)";
 const at = (dayIndex: number, time: string, plusMinutes = 0) =>
@@ -487,6 +488,7 @@ export function demoSql(): string {
     ]),
   );
   out.push(phase2aRows());
+  out.push(phase2bRows(week));
   return out.filter(Boolean).join("\n");
 }
 
@@ -532,16 +534,42 @@ function phase2aRows(): string {
           created_at: hoursAgo(12),
         },
       ]),
-      insert("outbound_messages", [
+      insert("conversations", [
+        {
+          id: demoId(`${slug}:conversation:${patientFile}`),
+          tenant_id: tenant,
+          phone,
+          patient_id: patient,
+          last_inbound_at: null,
+          last_message_at: hoursAgo(12),
+        },
+      ]),
+      insert("messages", [
         {
           tenant_id: tenant,
+          conversation_id: demoId(`${slug}:conversation:${patientFile}`),
+          patient_id: patient,
+          direction: "out",
+          kind: "verification_code",
+          // Old, used-up code: shown masked.
+          body: fill(TEMPLATES.verification_code.bodyAr, { code: "******" }),
           channel: "demo",
-          to_phone: phone,
-          template: "portal_code",
-          body: "رمز الدخول (تجريبي): ******",
-          status: "demo_logged",
+          status: "read",
           created_at: hoursAgo(12),
         },
+      ]),
+      insert("message_dispatches", [
+        {
+          tenant_id: tenant,
+          dedupe_key: `demo:seed:${slug}`,
+          kind: "verification_code",
+          patient_id: patient,
+          outcome: "sent",
+          created_at: hoursAgo(12),
+        },
+      ]),
+      insert("webhook_events", [
+        { tenant_id: tenant, event_key: `demo-event-${slug}`, created_at: hoursAgo(12) },
       ]),
       insert("notification_prefs", [
         { tenant_id: tenant, user_id: `usr_${adminKey}`, enabled: true },
@@ -558,5 +586,267 @@ function phase2aRows(): string {
       ]),
     );
   }
+  return out.join("\n");
+}
+
+/**
+ * Phase 2b WhatsApp story (Derma, all FAKE):
+ *  - D-0001: yesterday's reminder for today's 15:30 visit, confirmed with the button;
+ *  - D-0011: post-care check-in after a laser session, answered "I have a concern" (needs reply);
+ *  - D-0014: sent STOP (opted out);
+ *  - D-0019: Botox 125 days ago → a recall is due (the scheduler sends it);
+ *  - 0555123456: a new number that isn't a patient yet, asking about prices (needs reply).
+ */
+function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
+  const tenant = demoId("tenant:derma");
+  const ref = (kind: string, key: string) => demoId(`derma:${kind}:${key}`);
+  const p = (file: string) => DERMA.patients.find((x) => x.fileNumber === file)!;
+  const first = (file: string) => p(file).fullNameAr.split(" ")[0];
+  const out: string[] = [];
+  const convo = (key: string) => ref("conversation", key);
+  const ago = (h: number) => raw(`now() - interval '${h} hours'`);
+  const buttons = (ids: ("confirm" | "reschedule" | "cancel" | "all_good" | "concern")[]) =>
+    raw(`'${JSON.stringify(ids.map((id) => ({ id, title: BUTTON_TITLES[id].ar })))}'::jsonb`);
+
+  const reminderAppt = week.find(
+    (a) => a.patientFile === "D-0001" && a.dayIndex === 0 && a.time === "15:30",
+  );
+  const apptId = reminderAppt ? ref("appointment", reminderAppt.key) : null;
+
+  out.push(
+    insert("conversations", [
+      {
+        id: convo("D-0001"),
+        tenant_id: tenant,
+        phone: p("D-0001").phone,
+        patient_id: ref("patient", "D-0001"),
+        profile_name: null,
+        needs_reply: false,
+        last_inbound_at: ago(20),
+        last_message_at: ago(20),
+        opted_out_at: null,
+      },
+      {
+        id: convo("D-0011"),
+        tenant_id: tenant,
+        phone: p("D-0011").phone,
+        patient_id: ref("patient", "D-0011"),
+        profile_name: null,
+        needs_reply: true,
+        last_inbound_at: ago(3),
+        last_message_at: ago(3),
+        opted_out_at: null,
+      },
+      {
+        id: convo("D-0014"),
+        tenant_id: tenant,
+        phone: p("D-0014").phone,
+        patient_id: ref("patient", "D-0014"),
+        profile_name: null,
+        needs_reply: false,
+        last_inbound_at: ago(120),
+        last_message_at: ago(120),
+        opted_out_at: null,
+      },
+      {
+        id: convo("new-0555123456"),
+        tenant_id: tenant,
+        phone: "0555123456",
+        patient_id: null,
+        profile_name: "Noura",
+        needs_reply: true,
+        last_inbound_at: ago(1),
+        last_message_at: ago(1),
+        opted_out_at: null,
+      },
+    ]),
+  );
+  const m = (o: {
+    c: string;
+    patient: string | null;
+    appt?: string | null;
+    dir: "in" | "out";
+    kind: string;
+    body: string;
+    buttons?: ReturnType<typeof raw> | null;
+    buttonId?: string | null;
+    status: string;
+    h: number;
+    flag?: string | null;
+  }) => ({
+    tenant_id: tenant,
+    conversation_id: convo(o.c),
+    patient_id: o.patient ? ref("patient", o.patient) : null,
+    appointment_id: o.appt ?? null,
+    direction: o.dir,
+    kind: o.kind,
+    body: o.body,
+    buttons: o.buttons ?? null,
+    button_id: o.buttonId ?? null,
+    channel: "demo",
+    status: o.status,
+    flag: o.flag ?? null,
+    language: "ar",
+    created_at: ago(o.h),
+    status_at: ago(o.h),
+  });
+  const laser = SERVICE_TEXTS.laser_hair_removal;
+  out.push(
+    insert("messages", [
+      m({
+        c: "D-0001",
+        patient: "D-0001",
+        appt: apptId,
+        dir: "out",
+        kind: "reminder",
+        status: "read",
+        h: 22,
+        buttons: buttons(["confirm", "reschedule", "cancel"]),
+        body: fill(TEMPLATES.reminder.bodyAr, {
+          patient_first_name: first("D-0001"),
+          appointment: "موعد فيلر",
+          date: "اليوم",
+          time: "15:30",
+          doctor: "د. سارة العتيبي",
+          branch: "فرع الرياض",
+          instructions: SERVICE_TEXTS.fillers.preVisitAr,
+          consent_note: "",
+        }),
+      }),
+      m({
+        c: "D-0001",
+        patient: "D-0001",
+        appt: apptId,
+        dir: "in",
+        kind: "inbound_button",
+        buttonId: "confirm",
+        body: BUTTON_TITLES.confirm.ar,
+        status: "received",
+        h: 20,
+      }),
+      m({
+        c: "D-0001",
+        patient: "D-0001",
+        appt: apptId,
+        dir: "out",
+        kind: "confirm_ack",
+        body: REPLIES.confirm_ack.ar,
+        status: "read",
+        h: 20,
+      }),
+      m({
+        c: "D-0011",
+        patient: "D-0011",
+        dir: "out",
+        kind: "post_care",
+        status: "read",
+        h: 5,
+        buttons: buttons(["all_good", "concern"]),
+        body: fill(TEMPLATES.post_care.bodyAr, {
+          patient_first_name: first("D-0011"),
+          question: laser.postCareAr,
+        }),
+      }),
+      m({
+        c: "D-0011",
+        patient: "D-0011",
+        dir: "in",
+        kind: "inbound_button",
+        buttonId: "concern",
+        body: BUTTON_TITLES.concern.ar,
+        status: "received",
+        h: 3,
+        flag: "concern",
+      }),
+      m({
+        c: "D-0011",
+        patient: "D-0011",
+        dir: "in",
+        kind: "inbound_text",
+        body: "يوجد احمرار خفيف في منطقة الساق، هل هذا طبيعي؟",
+        status: "received",
+        h: 3,
+      }),
+      m({
+        c: "D-0011",
+        patient: "D-0011",
+        dir: "out",
+        kind: "concern_ack",
+        body: REPLIES.concern_ack.ar,
+        status: "delivered",
+        h: 3,
+      }),
+      m({
+        c: "D-0014",
+        patient: "D-0014",
+        dir: "in",
+        kind: "inbound_text",
+        body: "إيقاف",
+        status: "received",
+        h: 120,
+      }),
+      m({
+        c: "D-0014",
+        patient: "D-0014",
+        dir: "out",
+        kind: "stop_ack",
+        body: REPLIES.stop_ack.ar,
+        status: "read",
+        h: 120,
+      }),
+      m({
+        c: "new-0555123456",
+        patient: null,
+        dir: "in",
+        kind: "inbound_text",
+        body: "السلام عليكم، كم سعر جلسة ليزر إزالة الشعر للساقين؟",
+        status: "received",
+        h: 1,
+      }),
+    ]),
+  );
+  if (apptId) {
+    out.push(
+      insert("message_dispatches", [
+        {
+          tenant_id: tenant,
+          dedupe_key: `reminder:${apptId}`,
+          kind: "reminder",
+          appointment_id: apptId,
+          patient_id: ref("patient", "D-0001"),
+          outcome: "sent",
+          created_at: ago(22),
+        },
+      ]),
+    );
+  }
+  // D-0019: Botox with Dr. Sara 125 days ago (completed) → recall due (120 days).
+  out.push(
+    insert("appointments", [
+      {
+        id: ref("appointment", "d0019-botox-past"),
+        tenant_id: tenant,
+        branch_id: ref("branch", "riyadh"),
+        patient_id: ref("patient", "D-0019"),
+        service_id: ref("service", "botox"),
+        practitioner_id: ref("member", "derma-dr-sara"),
+        room_id: ref("room", "ruh-4"),
+        device_id: null,
+        starts_at: raw("date_trunc('day', now() - interval '125 days') + interval '8 hours'"),
+        ends_at: raw(
+          "date_trunc('day', now() - interval '125 days') + interval '8 hours 30 minutes'",
+        ),
+        blocked_until: raw(
+          "date_trunc('day', now() - interval '125 days') + interval '8 hours 40 minutes'",
+        ),
+        status: "completed",
+        reception_note: null,
+        cancel_reason: null,
+        demo_day_index: null,
+        source: "reception",
+        created_by: "usr_derma-rec-ruh1",
+      },
+    ]),
+  );
   return out.join("\n");
 }

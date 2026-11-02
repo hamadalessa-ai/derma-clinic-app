@@ -13,6 +13,7 @@ export interface SettingsInput {
   cancellationWindowHours?: number;
   onlineRequiresApproval?: boolean;
   showPricesOnline?: boolean;
+  showServiceInMessages?: boolean;
 }
 
 /** Changes clinic settings (only the fields given). Admins only; audited. */

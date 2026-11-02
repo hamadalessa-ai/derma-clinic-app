@@ -90,6 +90,8 @@ export const branches = pgTable(
     nameEn: text("name_en").notNull(),
     cityAr: text("city_ar").notNull(),
     cityEn: text("city_en").notNull(),
+    /** Map link sent in WhatsApp confirmations. */
+    mapUrl: text("map_url"),
     sortOrder: smallint("sort_order").notNull().default(0),
     createdAt: createdAt(),
   },
@@ -275,6 +277,13 @@ export const services = pgTable(
     requiredDeviceType: text("required_device_type"),
     consentCode: text("consent_code"), // which consent template the patient must sign, if any
     onlineBookable: boolean("online_bookable").notNull().default(false),
+    // ── WhatsApp texts per service (editable by the clinic admin; empty = not sent) ──
+    preVisitAr: text("pre_visit_ar"),
+    preVisitEn: text("pre_visit_en"),
+    postCareAr: text("post_care_ar"),
+    postCareEn: text("post_care_en"),
+    /** Recall (e.g. Botox follow-up) this many days after a completed visit; null = no recall. */
+    recallAfterDays: smallint("recall_after_days"),
     isDemoValue: boolean("is_demo_value").notNull().default(true),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: smallint("sort_order").notNull().default(0),
@@ -349,11 +358,20 @@ export const patients = pgTable(
     /** "online" = created by the patient on /book; reception completes the details later. */
     createdVia: bookingSource("created_via").notNull().default("reception"),
     needsCompletion: boolean("needs_completion").notNull().default(false),
+    // ── WhatsApp ──
+    /** Language for messages: "ar" (default) or "en". */
+    preferredLanguage: text("preferred_language").notNull().default("ar"),
+    /** When and how the patient agreed to WhatsApp messages (null = not agreed). */
+    whatsappOptInAt: timestamp("whatsapp_opt_in_at", { withTimezone: true }),
+    whatsappOptInSource: text("whatsapp_opt_in_source"), // online | patient_page | reception | demo
+    /** Patient sent STOP: no more non-essential messages. */
+    whatsappOptedOutAt: timestamp("whatsapp_opted_out_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (t) => [
     unique("patients_tenant_id_id_key").on(t.tenantId, t.id),
+    check("patients_preferred_language", sql`${t.preferredLanguage} in ('ar', 'en')`),
     index("patients_phone_idx").on(t.tenantId, t.phone),
     unique("patients_tenant_file_key").on(t.tenantId, t.fileNumber),
     check("patients_not_own_guardian", sql`${t.guardianId} is null or ${t.guardianId} <> ${t.id}`),
@@ -415,9 +433,13 @@ export const TENANT_TABLES = [
   "verification_codes",
   "rate_limit_hits",
   "patient_sessions",
-  "outbound_messages",
   "push_subscriptions",
   "notification_prefs",
+  "conversations",
+  "messages",
+  "message_templates",
+  "message_dispatches",
+  "webhook_events",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -446,6 +468,10 @@ export const tenantSettings = pgTable("tenant_settings", {
   /** ON: online bookings start as "pending" until reception approves. */
   onlineRequiresApproval: boolean("online_requires_approval").notNull().default(false),
   showPricesOnline: boolean("show_prices_online").notNull().default(true),
+  /** WhatsApp: name the service in confirmations, reminders and recalls (off → "your appointment"). */
+  showServiceInMessages: boolean("show_service_in_messages").notNull().default(true),
+  /** When Meta last verified our webhook (WhatsApp status page). */
+  whatsappWebhookVerifiedAt: timestamp("whatsapp_webhook_verified_at", { withTimezone: true }),
   updatedAt: updatedAt(),
 });
 
@@ -1033,22 +1059,6 @@ export const patientSessions = pgTable(
   ],
 );
 
-/** Every message to a patient (codes, confirmations). DEMO mode only logs here. */
-export const outboundMessages = pgTable(
-  "outbound_messages",
-  {
-    id: id(),
-    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
-    channel: text("channel").notNull(), // "demo" | "whatsapp" | "sms"
-    toPhone: text("to_phone").notNull(),
-    template: text("template").notNull(),
-    body: text("body").notNull(),
-    status: text("status").notNull().default("sent"),
-    createdAt: createdAt(),
-  },
-  (t) => [index("outbound_messages_created_idx").on(t.tenantId, t.createdAt)],
-);
-
 /** Web Push subscriptions (one per staff device). */
 export const pushSubscriptions = pgTable(
   "push_subscriptions",
@@ -1112,3 +1122,153 @@ export const BRANCH_SCOPED_TABLES = [
 
 /** Readable and writable only with the practitioner role (database-enforced). */
 export const PRACTITIONER_ONLY_TABLES = ["clinical_notes", "clinical_note_addenda"] as const;
+
+// ════════════════════════════════════════════════════════════════════════════
+// PHASE 2b — WhatsApp messaging
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * One WhatsApp chat per phone number in a clinic. The patient may be unknown ("not a patient yet"):
+ * reception links the number to a patient later. A family sharing a number has one chat.
+ */
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    phone: text("phone").notNull(), // 05XXXXXXXX
+    patientId: uuid("patient_id"),
+    /** Name from the person's WhatsApp profile (for numbers that aren't a patient yet). */
+    profileName: text("profile_name"),
+    /** Reception should answer (free text, a concern, a new contact). */
+    needsReply: boolean("needs_reply").notNull().default(false),
+    /** Last message FROM the person: free replies are allowed for 24 hours after it. */
+    lastInboundAt: timestamp("last_inbound_at", { withTimezone: true }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    /** STOP from a number that isn't a patient yet. */
+    optedOutAt: timestamp("opted_out_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("conversations_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("conversations_tenant_phone_key").on(t.tenantId, t.phone),
+    index("conversations_inbox_idx").on(t.tenantId, t.needsReply, t.lastMessageAt),
+    foreignKey({
+      name: "conversations_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("set null"),
+  ],
+);
+
+/** Every WhatsApp message, in and out (also the demo simulator's). */
+export const messages = pgTable(
+  "messages",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    conversationId: uuid("conversation_id").notNull(),
+    /** The patient the message is about (may be a child in a family chat). */
+    patientId: uuid("patient_id"),
+    appointmentId: uuid("appointment_id"),
+    direction: text("direction").notNull(), // in | out
+    /** Message type, e.g. booking_confirmation, reminder, inbound_text, staff_reply. */
+    kind: text("kind").notNull(),
+    body: text("body").notNull(),
+    /** Reply buttons [{id, title}] (outgoing) or the tapped button id (incoming, in buttonId). */
+    buttons: jsonb("buttons").$type<{ id: string; title: string }[]>(),
+    buttonId: text("button_id"),
+    channel: text("channel").notNull(), // demo | meta
+    /** queued | sent | delivered | read | failed | received */
+    status: text("status").notNull(),
+    providerMessageId: text("provider_message_id"),
+    errorCode: text("error_code"),
+    errorText: text("error_text"),
+    templateName: text("template_name"),
+    language: text("language"),
+    /** Marked for reception, e.g. "concern" after a post-care check-in. */
+    flag: text("flag"),
+    sentBy: text("sent_by"), // staff user for replies; null = system / patient
+    createdAt: createdAt(),
+    statusAt: timestamp("status_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("messages_tenant_id_id_key").on(t.tenantId, t.id),
+    uniqueIndex("messages_provider_id_key")
+      .on(t.tenantId, t.providerMessageId)
+      .where(sql`${t.providerMessageId} is not null`),
+    index("messages_conversation_idx").on(t.tenantId, t.conversationId, t.createdAt),
+    index("messages_appointment_idx").on(t.tenantId, t.appointmentId),
+    check("messages_direction", sql`${t.direction} in ('in', 'out')`),
+    check(
+      "messages_status",
+      sql`${t.status} in ('queued', 'sent', 'delivered', 'read', 'failed', 'received')`,
+    ),
+    foreignKey({
+      name: "messages_conversation_fk",
+      columns: [t.tenantId, t.conversationId],
+      foreignColumns: [conversations.tenantId, conversations.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "messages_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "messages_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }).onDelete("set null"),
+  ],
+);
+
+/** Each message type's switch and wording (Arabic + English) per clinic, plus its Meta template. */
+export const messageTemplates = pgTable(
+  "message_templates",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    bodyAr: text("body_ar").notNull(),
+    bodyEn: text("body_en").notNull(),
+    /** Name of the approved template at Meta (needed outside the 24-hour window). */
+    metaName: text("meta_name").notNull(),
+    category: text("category").notNull().default("utility"),
+    updatedAt: updatedAt(),
+  },
+  (t) => [unique("message_templates_kind_key").on(t.tenantId, t.kind)],
+);
+
+/**
+ * "Already sent" keys: one row per scheduled message (e.g. "reminder:<appointment>"). Inserting the
+ * key BEFORE sending, in the same transaction, makes double sends impossible (runs twice, at once).
+ */
+export const messageDispatches = pgTable(
+  "message_dispatches",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    dedupeKey: text("dedupe_key").notNull(),
+    kind: text("kind").notNull(),
+    appointmentId: uuid("appointment_id"),
+    patientId: uuid("patient_id"),
+    messageId: uuid("message_id"),
+    /** sent | skipped (e.g. opted out, type switched off) */
+    outcome: text("outcome").notNull().default("sent"),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("message_dispatches_key").on(t.tenantId, t.dedupeKey)],
+);
+
+/** Deliveries already handled from Meta's webhook (Meta may deliver the same event again). */
+export const webhookEvents = pgTable(
+  "webhook_events",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    eventKey: text("event_key").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [unique("webhook_events_key").on(t.tenantId, t.eventKey)],
+);

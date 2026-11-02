@@ -24,6 +24,7 @@ export default async function SettingsPage() {
   const ctx = await requirePermission("settings:manage");
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("settings");
+  const tw = await getTranslations("whatsapp");
   const { settings, templates, serviceRows, doctors } = await withActor(
     actorOf(ctx),
     async (tx) => ({
@@ -60,6 +61,13 @@ export default async function SettingsPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <PageHeader title={t("title")} />
+      <Link
+        href="/settings/whatsapp"
+        className="text-brand self-start text-sm font-medium underline"
+        data-testid="whatsapp-settings-link"
+      >
+        {tw("settingsLink")}
+      </Link>
       <Card>
         <CardContent className="pt-5">
           <ScheduleSettingForm initial={settings.doctorsManageOwnSchedule} />

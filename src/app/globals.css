@@ -35,6 +35,16 @@
   --danger-foreground: #9b2a20;
 
   /* Appointment statuses (calendar blocks, badges). */
+  /* WhatsApp simulator and inbox (chat look). */
+  --chat-bg: #efeae2;
+  --chat-header: #008069;
+  --chat-header-foreground: #ffffff;
+  --chat-in: #ffffff;
+  --chat-out: #d9fdd3;
+  --chat-meta: #667781;
+  --chat-read: #53bdeb;
+  --chat-button: #027eb5;
+
   --status-pending: #fff6e0;
   --status-pending-foreground: #7a4b00;
   --status-booked: #e4eefb;
@@ -86,6 +96,14 @@
   --color-info-foreground: var(--info-foreground);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
+  --color-chat-bg: var(--chat-bg);
+  --color-chat-header: var(--chat-header);
+  --color-chat-header-foreground: var(--chat-header-foreground);
+  --color-chat-in: var(--chat-in);
+  --color-chat-out: var(--chat-out);
+  --color-chat-meta: var(--chat-meta);
+  --color-chat-read: var(--chat-read);
+  --color-chat-button: var(--chat-button);
   --color-status-pending: var(--status-pending);
   --color-status-pending-foreground: var(--status-pending-foreground);
   --color-status-booked: var(--status-booked);

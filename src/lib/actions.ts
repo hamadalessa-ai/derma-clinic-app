@@ -8,6 +8,8 @@ import { actorOf, getStaffContext, type StaffContext } from "@/lib/auth/session"
 import type { Actor } from "@/lib/auth/db";
 import { getCurrentTenant, type Tenant } from "@/lib/tenant/current";
 import { VerifyError } from "@/lib/verify/codes";
+import { TemplateError } from "@/lib/whatsapp/admin";
+import { WhatsAppError } from "@/lib/whatsapp/staff";
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -33,6 +35,9 @@ export async function staffAction<T>(
       err instanceof ConsentError ||
       err instanceof NoteError
     ) {
+      return { ok: false, error: err.code };
+    }
+    if (err instanceof WhatsAppError || err instanceof TemplateError) {
       return { ok: false, error: err.code };
     }
     if (err instanceof PermissionError) return { ok: false, error: "not_allowed" };

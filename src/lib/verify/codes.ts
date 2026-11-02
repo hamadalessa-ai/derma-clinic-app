@@ -11,7 +11,7 @@ import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { verificationCodes } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
-import { getMessageSender } from "@/lib/messaging/sender";
+import { getMessageSender, MessagingUnavailableError } from "@/lib/messaging/sender";
 import { takeRateLimit, type Limit } from "./rate-limit";
 
 export const CODE_RULES = {
@@ -72,7 +72,7 @@ const BODIES: Record<CodePurpose, string> = {
 export async function sendCode(
   tx: TenantTx,
   input: {
-    tenant: { id: string; isDemo: boolean };
+    tenant: { id: string; isDemo: boolean; slug?: string };
     phone: string; // normalized 05XXXXXXXX
     purpose: CodePurpose;
     ip: string | null;
@@ -113,12 +113,18 @@ export async function sendCode(
     expiresAt: sql`now() + make_interval(mins => ${CODE_RULES.ttlMinutes})`,
     ip: input.ip,
   });
-  await sender.send(tx, {
-    to: input.phone,
-    template: `${input.purpose}_code`,
-    body: BODIES[input.purpose],
-    secrets: { code },
-  });
+  try {
+    await sender.send(tx, {
+      to: input.phone,
+      template: `${input.purpose}_code`,
+      body: BODIES[input.purpose],
+      secrets: { code },
+    });
+  } catch (err) {
+    // WhatsApp refused it (e.g. Meta error 131031): no code is kept, the patient sees a clear message.
+    if (err instanceof MessagingUnavailableError) throw new VerifyError("messaging_unavailable");
+    throw err;
+  }
   return { demoCode: sender.showsOnScreen ? code : null };
 }
 

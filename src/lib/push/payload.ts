@@ -21,8 +21,15 @@ export const RECEPTION_TYPES = [
   "patient_rescheduled",
   "reschedule_request",
 ] as const;
-export type PushType = (typeof DOCTOR_TYPES)[number] | (typeof RECEPTION_TYPES)[number];
-export const ALL_PUSH_TYPES: readonly PushType[] = [...DOCTOR_TYPES, ...RECEPTION_TYPES];
+/** Both the appointment's doctor AND that branch's reception (e.g. a WhatsApp "concern"). */
+export const SHARED_TYPES = ["patient_concern"] as const;
+export type PushType =
+  (typeof DOCTOR_TYPES)[number] | (typeof RECEPTION_TYPES)[number] | (typeof SHARED_TYPES)[number];
+export const ALL_PUSH_TYPES: readonly PushType[] = [
+  ...DOCTOR_TYPES,
+  ...RECEPTION_TYPES,
+  ...SHARED_TYPES,
+];
 
 const TITLES: Record<PushType, string> = {
   new_booking: "حجز جديد · New booking",
@@ -34,6 +41,7 @@ const TITLES: Record<PushType, string> = {
   patient_cancelled: "ألغى المريض من صفحته · Patient cancelled",
   patient_rescheduled: "غيّر المريض موعده · Patient moved",
   reschedule_request: "طلب تغيير من الطبيب · Doctor's request",
+  patient_concern: "مريض لديه قلق بعد الإجراء · Patient concern",
 };
 
 const URLS: Record<PushType, string> = {
@@ -46,6 +54,7 @@ const URLS: Record<PushType, string> = {
   patient_cancelled: "/calendar",
   patient_rescheduled: "/calendar",
   reschedule_request: "/requests",
+  patient_concern: "/whatsapp",
 };
 
 /** "العنود سليمان الرشيد" → "ع. ر." ; "Sara Ahmed" → "S. A." (first and last name only). */

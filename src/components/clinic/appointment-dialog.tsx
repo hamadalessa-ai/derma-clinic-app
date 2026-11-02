@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   LogIn,
+  MessageCircle,
   Play,
   UserX,
   XCircle,
@@ -54,6 +55,7 @@ export function AppointmentDialog({
   const tc = useTranslations("common");
   const ts = useTranslations("statuses");
   const tsrc = useTranslations("sources");
+  const tw = useTranslations("whatsapp");
   const tm = useTranslations("myDay");
   const locale = useLocale() as Locale;
   const name = (o: { nameAr: string; nameEn: string | null }) =>
@@ -162,6 +164,36 @@ export function AppointmentDialog({
                   ? t("consentSignedOnline")
                   : t("consentSigned")
                 : t("consentNeeded")}
+            </div>
+          )}
+          {appt.whatsapp.length > 0 && (
+            <div className="flex flex-col gap-1" data-testid="appointment-whatsapp">
+              <div className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
+                <MessageCircle className="size-3.5" />
+                {tw("messagesOnAppointment")}
+              </div>
+              <ul className="flex flex-col gap-0.5 text-xs">
+                {appt.whatsapp.map((m, i) => (
+                  <li
+                    key={i}
+                    className="flex flex-wrap items-center gap-x-2"
+                    data-status={m.status}
+                  >
+                    <span>{tw.has(`kinds.${m.kind}`) ? tw(`kinds.${m.kind}`) : m.kind}</span>
+                    <span
+                      className={
+                        m.status === "failed" ? "text-destructive" : "text-muted-foreground"
+                      }
+                    >
+                      {tw(`status.${m.status}`)}
+                      {m.errorCode ? ` #${m.errorCode}` : ""}
+                    </span>
+                    <span className="text-muted-foreground" dir="ltr">
+                      {riyadhParts(m.createdAt).day.slice(5)} {riyadhParts(m.createdAt).time}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           {appt.needsCompletion && (

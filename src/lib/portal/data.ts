@@ -31,6 +31,8 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
         nameAr: patients.fullNameAr,
         nameEn: patients.fullNameEn,
         guardianId: patients.guardianId,
+        whatsappOptInAt: patients.whatsappOptInAt,
+        whatsappOptedOutAt: patients.whatsappOptedOutAt,
       })
       .from(patients)
       .orderBy(asc(patients.fileNumber));

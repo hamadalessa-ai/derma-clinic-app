@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { can, NAV_ITEMS } from "@/lib/auth/permissions";
 import { requireStaff } from "@/lib/auth/session";
 import { brandStyle, pick } from "@/lib/brand";
+import { whatsappMode } from "@/lib/whatsapp/config";
 import type { Locale } from "@/i18n/config";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -18,7 +19,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const t = await getTranslations("nav");
   const tRoles = await getTranslations("roles");
 
-  const items = NAV_ITEMS.filter((i) => can(ctx.roles, i.permission)).map((i) => ({
+  const demo = whatsappMode(ctx.tenant) === "demo";
+  const items = NAV_ITEMS.filter(
+    (i) => can(ctx.roles, i.permission) && (!("demoOnly" in i) || demo),
+  ).map((i) => ({
     href: i.href,
     key: i.key,
     label: t(i.key),

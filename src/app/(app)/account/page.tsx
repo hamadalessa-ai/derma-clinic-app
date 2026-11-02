@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { NotificationPrefsForm, PushDeviceSettings } from "@/components/clinic/push-settings";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
-import { DOCTOR_TYPES, RECEPTION_TYPES, type PushType } from "@/lib/push/payload";
+import { DOCTOR_TYPES, RECEPTION_TYPES, SHARED_TYPES, type PushType } from "@/lib/push/payload";
 import { vapidConfig } from "@/lib/push/notify";
 import { countDevices, getPrefs } from "@/lib/push/subscriptions";
 
@@ -19,6 +19,9 @@ export default async function AccountPage() {
   const types: PushType[] = [
     ...(ctx.roles.includes("practitioner") ? DOCTOR_TYPES : []),
     ...(ctx.roles.includes("receptionist") ? RECEPTION_TYPES : []),
+    ...(ctx.roles.includes("practitioner") || ctx.roles.includes("receptionist")
+      ? SHARED_TYPES
+      : []),
   ];
   return (
     <div className="flex max-w-2xl flex-col gap-4">

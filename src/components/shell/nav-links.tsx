@@ -8,6 +8,8 @@ import {
   Inbox,
   LayoutDashboard,
   BellRing,
+  MessageCircle,
+  Smartphone,
   Settings,
   Shield,
   Sparkles,
@@ -26,6 +28,8 @@ export const NAV_ICONS = {
   calendar: CalendarDays,
   requests: Inbox,
   settings: Settings,
+  whatsapp: MessageCircle,
+  simulator: Smartphone,
   account: BellRing,
 } as const;
 
