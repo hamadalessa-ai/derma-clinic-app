@@ -27,6 +27,9 @@ export const REPLY_KINDS = [
   "cancel_too_late",
   "change_too_late",
   "reschedule_offer",
+  "reschedule_offer_other",
+  "reschedule_none",
+  "reschedule_unavailable",
   "reschedule_done",
   "reschedule_failed",
   "concern_ack",
@@ -183,6 +186,18 @@ export const REPLIES: Record<Exclude<ReplyKind, "staff_reply">, { ar: string; en
   reschedule_offer: {
     ar: "اختر وقتًا جديدًا مع نفس الطبيب، أو اختر يومًا آخر من صفحتك: {my_link}",
     en: "Choose a new time with the same doctor, or pick another day on your page: {my_link}",
+  },
+  reschedule_offer_other: {
+    ar: "لا توجد أوقات متاحة قريبًا مع {doctor}. هذه أوقات متاحة مع أطباء آخرين (سيتغير الطبيب)، أو اختر من صفحتك: {my_link}",
+    en: "{doctor} has no free times soon. Here are free times with other doctors (the doctor will change), or choose on your page: {my_link}",
+  },
+  reschedule_none: {
+    ar: "لا توجد أوقات متاحة للحجز الإلكتروني خلال الفترة القادمة مع {doctor} أو غيره. فضلًا تواصل مع العيادة، أو راجع صفحتك لاحقًا: {my_link}",
+    en: "There are no free online times in the coming period with {doctor} or other doctors. Please contact the clinic, or check your page later: {my_link}",
+  },
+  reschedule_unavailable: {
+    ar: "لا يمكن تغيير هذا الموعد عبر واتساب. فضلًا تواصل مع العيادة. مواعيدك: {my_link}",
+    en: "This appointment can't be changed on WhatsApp. Please contact the clinic. Your appointments: {my_link}",
   },
   reschedule_done: {
     ar: "تم تغيير موعدك إلى {date} الساعة {time} ✓",

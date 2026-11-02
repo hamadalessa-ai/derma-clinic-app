@@ -56,7 +56,7 @@ export function parseButtonPayload(
   payload: string,
   env: Env = process.env,
 ): ParsedButton | null {
-  const m = /^v1\.([a-z_]+)\.([0-9a-f-]{36}|-)\.([A-Za-z0-9_-]{1,40}|-)\.([A-Za-z0-9_-]{22})$/.exec(
+  const m = /^v1\.([a-z_]+)\.([0-9a-f-]{36}|-)\.([A-Za-z0-9_-]{1,60}|-)\.([A-Za-z0-9_-]{22})$/.exec(
     payload.trim(),
   );
   if (!m || !ACTIONS.includes(m[1])) return null;

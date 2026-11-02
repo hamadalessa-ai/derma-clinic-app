@@ -26,6 +26,15 @@ import type { PortalData } from "@/lib/portal/data";
 import { Choice } from "./choice";
 
 type Appt = PortalData["upcoming"][number];
+type Doctor = { nameAr: string; nameEn: string | null } | null;
+type SlotOptions =
+  | { ok: false; reason: string }
+  | {
+      ok: true;
+      doctor: Doctor;
+      sameDoctor: string[];
+      otherDoctors: { practitionerId: string; doctor: Doctor; slots: string[] }[];
+    };
 
 function useRun() {
   const te = useTranslations("errors");
@@ -199,6 +208,7 @@ function AppointmentCard({
   forName,
   horizonDays,
   muted,
+  windowHours,
 }: {
   a: Appt;
   forName: string | null;
@@ -215,7 +225,35 @@ function AppointmentCard({
   const [msg, setMsg] = useState<string | null>(null);
   const { run, pending, error } = useRun();
   const [day, setDay] = useState<string | null>(null);
-  const [slots, setSlots] = useState<string[] | null>(null);
+  const [options, setOptions] = useState<SlotOptions | null>(null);
+  const te = useTranslations("errors");
+  const loadDay = (d: string) => {
+    setDay(d);
+    setOptions(null);
+    portalSlotsAction({ appointmentId: a.id, day: d }).then((r) => {
+      if (!r.ok) {
+        // A real problem (e.g. signed out after 30 minutes) — say so, never "all full".
+        setOptions({ ok: false, reason: te.has(r.error) ? te(r.error) : te("unexpected") });
+        return;
+      }
+      if (!r.data.ok) {
+        setOptions({
+          ok: false,
+          reason: t(`refusal.${r.data.reason}`, { hours: r.data.hours ?? windowHours }),
+        });
+        return;
+      }
+      setOptions(r.data);
+    });
+  };
+  const move = (startsAt: string, practitionerId?: string) =>
+    run(
+      () => portalMoveAction({ appointmentId: a.id, startsAt, practitionerId }),
+      () => {
+        setMode("none");
+        setMsg(t("moved"));
+      },
+    );
   const today = todayRiyadh();
   const days = Array.from({ length: Math.min(horizonDays, 30) + 1 }, (_, i) => {
     const d = new Date(`${today}T12:00:00+03:00`);
@@ -270,7 +308,16 @@ function AppointmentCard({
           </Button>
         </div>
       )}
-      {!muted && !a.canChange && <p className="text-muted-foreground text-xs">{t("tooLate")}</p>}
+      {!muted && !a.canChange && (
+        <p className="text-muted-foreground text-xs" data-testid="portal-too-late">
+          {t("refusal.outside_window", { hours: windowHours })}
+        </p>
+      )}
+      {!muted && a.canChange && !a.canReschedule && (
+        <p className="text-muted-foreground text-xs" data-testid="portal-not-online">
+          {t("refusal.not_online")}
+        </p>
+      )}
       {mode === "cancel" && (
         <div className="bg-muted flex flex-col gap-2 rounded-md p-3">
           <p>{t("cancelConfirm")}</p>
@@ -308,13 +355,7 @@ function AppointmentCard({
                 selected={d === day}
                 className="items-center px-1 text-center text-xs"
                 data-day={d}
-                onClick={() => {
-                  setDay(d);
-                  setSlots(null);
-                  portalSlotsAction({ appointmentId: a.id, day: d }).then((r) =>
-                    setSlots(r.ok ? r.data : []),
-                  );
-                }}
+                onClick={() => loadDay(d)}
               >
                 {new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA", {
                   weekday: "short",
@@ -325,31 +366,72 @@ function AppointmentCard({
               </Choice>
             ))}
           </div>
-          {day && slots && (
-            <div className="grid grid-cols-4 gap-1.5">
-              {slots.map((s) => (
-                <Choice
-                  key={s}
-                  className="items-center"
-                  disabled={pending}
-                  data-time={riyadhParts(s).time}
-                  onClick={() =>
-                    run(
-                      () => portalMoveAction({ appointmentId: a.id, startsAt: s }),
-                      () => {
-                        setMode("none");
-                        setMsg(t("moved"));
-                      },
-                    )
-                  }
-                >
-                  <span dir="ltr">{riyadhParts(s).time}</span>
-                </Choice>
-              ))}
-            </div>
+          {day && !options && <p className="text-muted-foreground text-sm">{tb("loadingTimes")}</p>}
+          {day && options && !options.ok && (
+            <p
+              className="bg-warning text-warning-foreground rounded-md px-3 py-2 text-sm"
+              data-testid="move-refusal"
+            >
+              {options.reason}
+            </p>
           )}
-          {day && slots?.length === 0 && (
-            <p className="text-muted-foreground text-sm">{tb("noTimes")}</p>
+          {day && options?.ok && (
+            <div className="flex flex-col gap-3" data-testid="move-options">
+              {options.sameDoctor.length > 0 ? (
+                <div className="grid grid-cols-4 gap-1.5" data-testid="same-doctor-times">
+                  {options.sameDoctor.map((s) => (
+                    <Choice
+                      key={s}
+                      className="items-center"
+                      disabled={pending}
+                      data-time={riyadhParts(s).time}
+                      onClick={() => move(s)}
+                    >
+                      <span dir="ltr">{riyadhParts(s).time}</span>
+                    </Choice>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm" data-testid="doctor-full">
+                  {t("doctorFull", {
+                    doctor: options.doctor
+                      ? pick(options.doctor.nameAr, options.doctor.nameEn)
+                      : "",
+                  })}
+                </p>
+              )}
+              {options.sameDoctor.length === 0 && options.otherDoctors.length > 0 && (
+                <div className="flex flex-col gap-2" data-testid="other-doctors">
+                  <p className="text-muted-foreground text-xs">{t("otherDoctors")}</p>
+                  {options.otherDoctors.map((d) => (
+                    <div key={d.practitionerId} className="flex flex-col gap-1">
+                      <span className="text-xs font-medium">
+                        {d.doctor ? pick(d.doctor.nameAr, d.doctor.nameEn) : ""}
+                      </span>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {d.slots.map((s) => (
+                          <Choice
+                            key={s}
+                            className="items-center"
+                            disabled={pending}
+                            data-time={riyadhParts(s).time}
+                            data-doctor={d.practitionerId}
+                            onClick={() => move(s, d.practitionerId)}
+                          >
+                            <span dir="ltr">{riyadhParts(s).time}</span>
+                          </Choice>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {options.sameDoctor.length === 0 && options.otherDoctors.length === 0 && (
+                <p className="text-muted-foreground text-sm" data-testid="nobody-free">
+                  {t("nobodyFree")}
+                </p>
+              )}
+            </div>
           )}
           <Button size="sm" variant="ghost" className="self-start" onClick={() => setMode("none")}>
             {t("keep")}

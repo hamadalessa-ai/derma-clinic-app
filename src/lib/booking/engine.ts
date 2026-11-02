@@ -29,6 +29,7 @@ import { addMinutes, atRiyadh, minutesOf, overlaps, riyadhDay, weekdayOf } from 
 
 export type BookingErrorCode =
   | "slot_taken" // the doctor, room or device is already reserved
+  | "doctor_busy" // the doctor has another appointment or blocked time then
   | "closed" // branch holiday
   | "not_working" // doctor doesn't work that day at that branch
   | "outside_hours"
@@ -436,6 +437,9 @@ async function applyMove(tx: TenantTx, by: ChangedBy, appt: Appointment, input: 
   if (typeof wd === "string") throw new BookingError(wd);
   const problem = hoursProblem(wd, start, until);
   if (problem) throw new BookingError(problem);
+  // Say clearly when it's the doctor who is busy (not a room or device).
+  const doctorBusy = await busyResources(tx, start, until, appt.id);
+  if (doctorBusy.has(`practitioner:${practitionerId}`)) throw new BookingError("doctor_busy");
 
   // Prefer the same room and device; otherwise any free one.
   let picked: { roomId: string; deviceId: string | null };
@@ -616,6 +620,8 @@ export async function findFreeSlots(
     from: Date;
     days?: number;
     limit?: number;
+    /** Rescheduling: the appointment being moved doesn't block its own new time. */
+    ignoreAppointmentId?: string;
   },
 ): Promise<FreeSlot[]> {
   const service = await getService(tx, opts.serviceId);
@@ -653,7 +659,12 @@ export async function findFreeSlots(
     })
     .from(reservations)
     .where(
-      sql`${reservations.during} && tstzrange(${opts.from.toISOString()}::timestamptz, ${horizon.toISOString()}::timestamptz, '[)')`,
+      and(
+        sql`${reservations.during} && tstzrange(${opts.from.toISOString()}::timestamptz, ${horizon.toISOString()}::timestamptz, '[)')`,
+        opts.ignoreAppointmentId
+          ? sql`${reservations.appointmentId} is distinct from ${opts.ignoreAppointmentId}::uuid`
+          : undefined,
+      ),
     );
   const busy = resv.map((r) => ({
     key: `${r.kind}:${r.id}`,
@@ -937,6 +948,8 @@ export async function moveByPatient(
     patientId: string;
     appointmentId: string;
     startsAt: Date;
+    /** Another doctor (offered when the patient's doctor has no free time). */
+    practitionerId?: string;
     now?: Date;
     via?: PatientChannel;
   },
@@ -953,12 +966,120 @@ export async function moveByPatient(
   if (!service.onlineBookable) throw new BookingError("not_online");
   const problem = onlineWindowProblem(settings, input.startsAt, now);
   if (problem) throw new BookingError(problem);
+  if (input.practitionerId && input.practitionerId !== appt.practitionerId) {
+    // Only doctors a patient could pick online at this branch.
+    const allowed = await onlineDoctors(tx, appt.branchId);
+    if (!allowed.some((d) => d.id === input.practitionerId)) throw new BookingError("no_doctor");
+  }
   return applyMove(
     tx,
     { userId: null, source: input.via ?? "online", patientId: input.patientId },
     appt,
-    { startsAt: input.startsAt },
+    { startsAt: input.startsAt, practitionerId: input.practitionerId },
   );
+}
+
+// ─── Reschedule options (patient page, WhatsApp, reception) ────────────────
+
+export type RescheduleRefusal =
+  | "outside_window" // closer to the visit than the cancellation window
+  | "online_disabled"
+  | "not_online" // this service can't be changed online
+  | "bad_status" // e.g. already checked in or cancelled
+  | "too_far" // beyond the online booking horizon
+  | "too_soon"; // that day is entirely inside the minimum notice
+
+export type RescheduleOptions =
+  | { ok: false; reason: RescheduleRefusal; hours?: number }
+  | {
+      ok: true;
+      practitionerId: string;
+      /** Free times with the same doctor that day (the appointment never blocks itself). */
+      sameDoctor: FreeSlot[];
+      /** Free times with other doctors that day, per doctor. */
+      otherDoctors: { practitionerId: string; slots: FreeSlot[] }[];
+    };
+
+/**
+ * Where an appointment can move on one day — and if it can't, WHY (so screens can say so).
+ *  - as a patient (/my, WhatsApp): own/family only, the cancellation window, the clinic's online
+ *    rules (switched on, service online, notice, horizon), doctors patients may pick online;
+ *  - as staff (reception calendar): any doctor of the branch, from now on.
+ */
+export async function rescheduleOptions(
+  tx: TenantTx,
+  input: {
+    appointmentId: string;
+    day: string;
+    patientId?: string;
+    now?: Date;
+  },
+): Promise<RescheduleOptions> {
+  const now = input.now ?? new Date();
+  const asPatient = !!input.patientId;
+  const appt = await getAppointment(tx, input.appointmentId);
+  const settings = await getSettings(tx);
+  if (asPatient) {
+    if (!(await patientFamilyIds(tx, input.patientId!)).includes(appt.patientId)) {
+      throw new BookingError("not_found", "appointment");
+    }
+  }
+  if (!MOVABLE_STATUSES.includes(appt.status)) return { ok: false, reason: "bad_status" };
+  let from = new Date(Math.max(atRiyadh(input.day, "00:00").getTime(), now.getTime()));
+  let latest: Date | null = null;
+  let doctors: Member[];
+  if (asPatient) {
+    const hours = settings.cancellationWindowHours;
+    if (appt.startsAt < addMinutes(now, hours * 60)) {
+      return { ok: false, reason: "outside_window", hours };
+    }
+    if (!settings.onlineBookingEnabled) return { ok: false, reason: "online_disabled" };
+    const service = await getService(tx, appt.serviceId);
+    if (!service.onlineBookable) return { ok: false, reason: "not_online" };
+    const earliest = addMinutes(now, settings.onlineMinNoticeMinutes);
+    latest = addMinutes(now, settings.onlineHorizonDays * 24 * 60);
+    if (atRiyadh(input.day, "00:00") > latest) return { ok: false, reason: "too_far" };
+    if (earliest > from) from = earliest;
+    if (riyadhDay(from) > input.day) return { ok: false, reason: "too_soon" };
+    doctors = await onlineDoctors(tx, appt.branchId);
+  } else {
+    doctors = await branchPractitioners(tx, appt.branchId);
+  }
+  if (riyadhDay(from) !== input.day) {
+    return { ok: true, practitionerId: appt.practitionerId, sameDoctor: [], otherDoctors: [] };
+  }
+  const ids = [...new Set([appt.practitionerId, ...doctors.map((d) => d.id)])];
+  const slots = (
+    await findFreeSlots(tx, {
+      branchId: appt.branchId,
+      serviceId: appt.serviceId,
+      practitionerIds: ids,
+      from,
+      days: 1,
+      limit: 1000,
+      ignoreAppointmentId: appt.id,
+    })
+  ).filter(
+    (s) =>
+      riyadhDay(s.startsAt) === input.day &&
+      (!latest || s.startsAt <= latest) &&
+      !(
+        s.practitionerId === appt.practitionerId && s.startsAt.getTime() === appt.startsAt.getTime()
+      ),
+  );
+  const others = new Map<string, FreeSlot[]>();
+  for (const s of slots) {
+    if (s.practitionerId === appt.practitionerId) continue;
+    others.set(s.practitionerId, [...(others.get(s.practitionerId) ?? []), s]);
+  }
+  return {
+    ok: true,
+    practitionerId: appt.practitionerId,
+    sameDoctor: slots.filter((s) => s.practitionerId === appt.practitionerId),
+    otherDoctors: doctors
+      .filter((d) => others.has(d.id))
+      .map((d) => ({ practitionerId: d.id, slots: others.get(d.id)! })),
+  };
 }
 
 /** Appointments for a set of ids (used by request approval). */

@@ -17,9 +17,12 @@ import {
   findFreeSlots,
   moveAppointment,
   removeTimeBlock,
+  rescheduleOptions,
 } from "@/lib/booking/engine";
+import { doctorNames } from "@/lib/booking/doctor-names";
+import { can } from "@/lib/auth/permissions";
 import { APPOINTMENT_STATUSES } from "@/lib/booking/status";
-import { atRiyadh } from "@/lib/booking/time";
+import { atRiyadh, riyadhTime } from "@/lib/booking/time";
 import { saveTemplateVersion, signConsent } from "@/lib/consents/consents";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
@@ -987,5 +990,33 @@ export async function sendTestWhatsappAction(input: { phone: string }) {
     const r = await sendTestMessage(ctx.tenant, actor, phone);
     revalidatePath("/settings/whatsapp/status");
     return r.ok ? { ok: true, errorCode: null } : { ok: false, errorCode: r.errorCode };
+  });
+}
+
+/** Move dialog: free times that day — same doctor first, then (for reception) other doctors. */
+export async function rescheduleOptionsAction(input: { appointmentId: string; day: string }) {
+  return staffAction(["appointments:manage", "appointments:own"], async (ctx, actor) => {
+    const v = parse(z.object({ appointmentId: uuid, day }), input);
+    return withActor(actor, async (tx) => {
+      const r = await rescheduleOptions(tx, v);
+      if (!r.ok) return { ok: false as const, reason: r.reason };
+      const canChangeDoctor = can(ctx.roles, "appointments:manage");
+      const others = canChangeDoctor ? r.otherDoctors : [];
+      const names = await doctorNames(tx, [
+        r.practitionerId,
+        ...others.map((o) => o.practitionerId),
+      ]);
+      const time = (slots: { startsAt: Date }[]) => slots.map((s) => riyadhTime(s.startsAt));
+      return {
+        ok: true as const,
+        doctor: names.get(r.practitionerId) ?? null,
+        sameDoctor: time(r.sameDoctor),
+        otherDoctors: others.map((o) => ({
+          practitionerId: o.practitionerId,
+          doctor: names.get(o.practitionerId) ?? null,
+          times: time(o.slots),
+        })),
+      };
+    });
   });
 }
