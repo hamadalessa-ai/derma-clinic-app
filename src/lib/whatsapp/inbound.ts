@@ -348,7 +348,7 @@ async function handleButton(
           now,
         });
         if (!r.ok) {
-          if (r.reason === "too_soon") continue;
+          if (r.reason === "too_soon" || r.reason === "closed") continue;
           if (r.reason === "too_far") break;
           if (r.reason === "outside_window") {
             return {

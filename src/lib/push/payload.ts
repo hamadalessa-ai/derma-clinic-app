@@ -77,7 +77,7 @@ export interface PushPayload {
   title: string;
   body: string;
   url: string;
-  /** Same tag replaces an older notification about the same appointment. */
+  /** Same tag replaces an older notification of the same type about the same appointment. */
   tag: string;
 }
 
@@ -98,6 +98,8 @@ export function buildPayload(input: {
     title: TITLES[input.type],
     body: `${initials(input.patientName)} · ${input.serviceName} · ${when(input.startsAt)}`,
     url: URLS[input.type],
-    tag: `appt-${input.appointmentId}`,
+    // One tag per type AND appointment: a "concern" must not silently replace an earlier
+    // "patient arrived" for the same visit (iPhone replaces same-tag notifications without alert).
+    tag: `${input.type}-${input.appointmentId}`,
   };
 }

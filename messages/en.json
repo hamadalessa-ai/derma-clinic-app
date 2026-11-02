@@ -552,7 +552,7 @@
     "family": "Family",
     "forPerson": "For {name}",
     "doctorFull": "{doctor} has no free times on this day.",
-    "otherDoctors": "Free times with other doctors on the same day (the doctor will change):",
+    "otherDoctors": "Times with other doctors on the same day (the doctor will change):",
     "nobodyFree": "No doctor has free times on this day. Try another day.",
     "refusal": {
       "outside_window": "You can't change or cancel within {hours} hours of your visit. Please contact the clinic.",
@@ -560,7 +560,8 @@
       "not_online": "This service can't be changed online. Please contact the clinic.",
       "bad_status": "This appointment can't be changed now (e.g. after check-in).",
       "too_far": "This day is too far ahead. You can only pick a day within the booking period.",
-      "too_soon": "This day is too soon. Choose a time at least 2 hours from now."
+      "too_soon": "This day is too soon. Choose a time at least 2 hours from now.",
+      "closed": "The clinic is closed on this day (holiday or no doctor working). Choose another day."
     }
   },
   "account": {
@@ -767,5 +768,22 @@
     "testFailed": "Failed: {error}",
     "scheduleTitle": "Scheduled sending",
     "scheduleHint": "Runs every hour via GitHub Actions, and once a day via Vercel as a safety net. Quiet hours: 22:00–08:00."
+  },
+  "pushLog": {
+    "title": "Staff phone notifications (last 30)",
+    "hint": "What happened to each notification: sent, failed (with the push service's answer), or why it wasn't sent.",
+    "empty": "Nothing yet.",
+    "test": "Test notification",
+    "outcomes": {
+      "sent": "Sent",
+      "failed": "Failed",
+      "device_gone": "Device no longer registered",
+      "no_device": "No device turned on",
+      "switched_off": "Notifications switched off by this person",
+      "type_muted": "This type switched off by this person",
+      "no_keys": "Push keys not set",
+      "demo_device": "Demo device",
+      "no_recipient": "No recipient"
+    }
   }
 }

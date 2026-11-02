@@ -306,3 +306,33 @@ describe("WhatsApp Reschedule button", () => {
     expect((await lastOut(phone)).kind).toBe("reschedule_unavailable");
   });
 });
+
+describe("live data shape (Dr. Sara almost full)", () => {
+  const day = "2031-10-19"; // Sunday
+  const now = riyadhAt("08:00", "2031-10-15");
+
+  it("other doctors are listed even when Dr. Sara still has a time or two", async () => {
+    const a = await book("D-0021", riyadhAt("11:00", day));
+    // Sara is busy all day except 18:00–18:30.
+    await block(riyadhAt("09:00", day), riyadhAt("11:00", day));
+    await block(riyadhAt("11:30", day), riyadhAt("18:00", day));
+    await block(riyadhAt("18:30", day), riyadhAt("21:00", day));
+    const r = await system((tx) =>
+      rescheduleOptions(tx, { appointmentId: a.id, day, patientId: patient("D-0021"), now }),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.sameDoctor.map((s) => time(s.startsAt))).toEqual(["18:00"]);
+    expect(r.otherDoctors.length).toBeGreaterThan(0); // the screen lists them too (not only 18:00)
+  });
+
+  it("a closed day (Friday) says 'closed', not 'no free times'", async () => {
+    const a = await book("D-0022", riyadhAt("12:00", "2031-10-20"), "consultation", REEM);
+    for (const patientId of [patient("D-0022"), undefined]) {
+      const r = await system((tx) =>
+        rescheduleOptions(tx, { appointmentId: a.id, day: "2031-10-24", patientId, now }),
+      );
+      expect(r).toEqual({ ok: false, reason: "closed" });
+    }
+  });
+});

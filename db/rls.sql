@@ -100,6 +100,7 @@ grant select, insert, update on public.conversations, public.message_templates t
 grant select, insert on public.messages, public.message_dispatches to clinic_app;
 grant update (status, status_at, provider_message_id, error_code, error_text) on public.messages to clinic_app;
 grant select, insert, delete on public.webhook_events to clinic_app;
+grant select, insert, delete on public.push_log to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
 
@@ -126,6 +127,7 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
+    'push_log',
     'push_subscriptions', 'notification_prefs'
   ] loop
     execute format('alter table public.%I enable row level security', t);
@@ -214,6 +216,7 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
+    'push_log',
     'push_subscriptions', 'notification_prefs',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop

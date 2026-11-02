@@ -245,7 +245,8 @@ test.describe("online booking and the patient page", () => {
     await page.getByLabel("رمز التحقق").fill(code);
     await page.getByTestId("verify").click();
     await expect(page.getByTestId("portal-home")).toBeVisible();
-    await expect(page.getByTestId("upcoming")).toContainText(isMobile ? "استشارة" : "بوتوكس");
+    // (Upcoming or already past, depending on the time of day the tests run.)
+    await expect(page.getByTestId("portal-home")).toContainText(isMobile ? "استشارة" : "بوتوكس");
     await noSidewaysScroll(page);
     await page.getByTestId("sign-out").click();
     await expect(page.getByTestId("portal-sign-in")).toBeVisible();

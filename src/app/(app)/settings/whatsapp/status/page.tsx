@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { SendTestMessage } from "@/components/whatsapp/settings-forms";
-import { conversations, messages } from "@/db/schema";
+import { conversations, messages, pushLog, users } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { getSettings } from "@/lib/booking/engine";
@@ -17,6 +17,8 @@ import type { Locale } from "@/i18n/config";
 export default async function WhatsAppStatusPage() {
   const ctx = await requirePermission("whatsapp:manage");
   const t = await getTranslations("whatsapp");
+  const tp = await getTranslations("pushLog");
+  const ta = await getTranslations("account");
   const locale = (await getLocale()) as Locale;
   const mode = whatsappMode(ctx.tenant);
   const live = liveConfig();
@@ -25,7 +27,14 @@ export default async function WhatsAppStatusPage() {
       .select({ m: messages, phone: conversations.phone })
       .from(messages)
       .innerJoin(conversations, eq(conversations.id, messages.conversationId));
+    const pushRows = await tx
+      .select({ l: pushLog, name: users.name, nameEn: users.nameEn })
+      .from(pushLog)
+      .leftJoin(users, eq(users.id, pushLog.userId))
+      .orderBy(desc(pushLog.createdAt))
+      .limit(30);
     return {
+      pushRows,
       settings: await getSettings(tx),
       recent: await base.orderBy(desc(messages.createdAt)).limit(15),
       failures: await tx
@@ -87,6 +96,52 @@ export default async function WhatsAppStatusPage() {
             <Notice tone="warning" className="mt-3">
               {t("missing", { names: live.missing.join(", ") })}
             </Notice>
+          )}
+        </CardContent>
+      </Card>
+      <Card data-testid="push-log">
+        <CardHeader>
+          <CardTitle>{tp("title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-muted-foreground text-sm">{tp("hint")}</p>
+          {data.pushRows.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{tp("empty")}</p>
+          ) : (
+            <ul className="flex flex-col divide-y">
+              {data.pushRows.map(({ l, name, nameEn }) => (
+                <li
+                  key={l.id}
+                  className="flex flex-col gap-0.5 py-2 text-sm"
+                  data-testid="push-log-row"
+                  data-type={l.type}
+                  data-outcome={l.outcome}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">
+                      {ta.has(`types.${l.type}`) ? ta(`types.${l.type}`) : tp("test")}
+                    </span>
+                    <span>→ {name ? (locale === "en" && nameEn ? nameEn : name) : "—"}</span>
+                    <span
+                      className={
+                        l.outcome === "sent"
+                          ? "bg-success text-success-foreground rounded px-1.5 text-xs"
+                          : "bg-warning text-warning-foreground rounded px-1.5 text-xs"
+                      }
+                    >
+                      {tp(`outcomes.${l.outcome}`)}
+                    </span>
+                    <span className="text-muted-foreground text-xs">{when(l.createdAt)}</span>
+                  </div>
+                  {(l.reason || l.statusCode) && (
+                    <div className="text-muted-foreground text-xs" dir="auto">
+                      {l.statusCode ? `HTTP ${l.statusCode} · ` : ""}
+                      {l.reason}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>

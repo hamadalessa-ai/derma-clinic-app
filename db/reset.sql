@@ -31,6 +31,7 @@ drop table if exists
   public.patient_packages,
   public.patient_sessions,
   public.patients,
+  public.push_log,
   public.push_subscriptions,
   public.rate_limit_hits,
   public.reschedule_requests,

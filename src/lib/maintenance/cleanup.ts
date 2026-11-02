@@ -4,12 +4,15 @@
  */
 import { and, isNotNull, lt, or, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { patientSessions, rateLimitHits, tenants, verificationCodes } from "@/db/schema";
+import { patientSessions, pushLog, rateLimitHits, tenants, verificationCodes } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 
 export async function dailyCleanup() {
   const clinics = await getDb().select({ id: tenants.id, slug: tenants.slug }).from(tenants);
-  const out: Record<string, { codes: number; rateLimits: number; sessions: number }> = {};
+  const out: Record<
+    string,
+    { codes: number; rateLimits: number; sessions: number; pushLog: number }
+  > = {};
   for (const c of clinics) {
     out[c.slug] = await withTenant(c.id, async (tx) => {
       const codes = await tx
@@ -32,7 +35,16 @@ export async function dailyCleanup() {
           ),
         )
         .returning({ id: patientSessions.id });
-      return { codes: codes.length, rateLimits: rateLimits.length, sessions: sessions.length };
+      const pushes = await tx
+        .delete(pushLog)
+        .where(lt(pushLog.createdAt, sql`now() - interval '30 days'`))
+        .returning({ id: pushLog.id });
+      return {
+        codes: codes.length,
+        rateLimits: rateLimits.length,
+        sessions: sessions.length,
+        pushLog: pushes.length,
+      };
     });
   }
   return out;
