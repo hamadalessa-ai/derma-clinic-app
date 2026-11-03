@@ -1,16 +1,20 @@
-import { desc, eq } from "drizzle-orm";
+import Link from "next/link";
+import { desc, eq, inArray } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { SendTestMessage } from "@/components/whatsapp/settings-forms";
-import { conversations, messages, pushLog, users } from "@/db/schema";
+import { appointments, conversations, messages, pushLog, users } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { getSettings } from "@/lib/booking/engine";
 import { formatDualDate, formatTime } from "@/lib/format";
 import { liveConfig, whatsappMode } from "@/lib/whatsapp/config";
 import { explainError } from "@/lib/whatsapp/errors";
+import { linkContext, rolesOf } from "@/lib/push/notify";
+import { pushLink } from "@/lib/push/links";
+import { ALL_PUSH_TYPES, type PushType } from "@/lib/push/payload";
 import type { Locale } from "@/i18n/config";
 
 /** Admin: is WhatsApp working? Mode, sender, webhook, latest messages and failures explained. */
@@ -33,8 +37,29 @@ export default async function WhatsAppStatusPage() {
       .leftJoin(users, eq(users.id, pushLog.userId))
       .orderBy(desc(pushLog.createdAt))
       .limit(30);
+    // Where each notification opens for that person (the same rule the sender uses).
+    const apptIds = [...new Set(pushRows.flatMap((r) => r.l.appointmentId ?? []))];
+    const appts = apptIds.length
+      ? await tx
+          .select({
+            id: appointments.id,
+            patientId: appointments.patientId,
+            startsAt: appointments.startsAt,
+          })
+          .from(appointments)
+          .where(inArray(appointments.id, apptIds))
+      : [];
+    const contexts = new Map(
+      await Promise.all(appts.map(async (a) => [a.id, await linkContext(tx, a.id, a)] as const)),
+    );
+    const roles = await rolesOf(tx, [...new Set(pushRows.flatMap((r) => r.l.userId ?? []))]);
+    const linkOf = (l: (typeof pushRows)[number]["l"]) => {
+      const c = l.appointmentId ? contexts.get(l.appointmentId) : null;
+      if (!c || !l.userId || !(ALL_PUSH_TYPES as readonly string[]).includes(l.type)) return null;
+      return pushLink(l.type as PushType, roles.get(l.userId) ?? [], c);
+    };
     return {
-      pushRows,
+      pushRows: pushRows.map((r) => ({ ...r, link: linkOf(r.l) })),
       settings: await getSettings(tx),
       recent: await base.orderBy(desc(messages.createdAt)).limit(15),
       failures: await tx
@@ -109,13 +134,15 @@ export default async function WhatsAppStatusPage() {
             <p className="text-muted-foreground text-sm">{tp("empty")}</p>
           ) : (
             <ul className="flex flex-col divide-y">
-              {data.pushRows.map(({ l, name, nameEn }) => (
+              {data.pushRows.map(({ l, name, nameEn, link }) => (
                 <li
                   key={l.id}
                   className="flex flex-col gap-0.5 py-2 text-sm"
                   data-testid="push-log-row"
                   data-type={l.type}
                   data-outcome={l.outcome}
+                  data-user={l.userId ?? undefined}
+                  data-link={link ?? undefined}
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">
@@ -137,6 +164,14 @@ export default async function WhatsAppStatusPage() {
                     <div className="text-muted-foreground text-xs" dir="auto">
                       {l.statusCode ? `HTTP ${l.statusCode} · ` : ""}
                       {l.reason}
+                    </div>
+                  )}
+                  {link && (
+                    <div className="text-muted-foreground text-xs">
+                      {tp("opens")}{" "}
+                      <Link href={link} className="text-brand underline" dir="ltr">
+                        {link.split(/[?#]/)[0]}
+                      </Link>
                     </div>
                   )}
                 </li>

@@ -49,6 +49,7 @@ describe("privacy of the notification text", () => {
       patientName: "العنود سليمان الرشيد",
       serviceName: "بوتوكس",
       startsAt: riyadhAt("11:30", "2031-03-02"),
+      url: "/my-day",
     });
     const text = JSON.stringify(p);
     expect(p.body).toBe("ع. ر. · بوتوكس · 02/03 11:30");

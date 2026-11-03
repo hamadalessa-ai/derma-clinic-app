@@ -6,15 +6,18 @@ import "server-only";
  * Who gets what:
  *  - the doctor of the appointment: new booking, cancellation, reschedule, check-in, request answer;
  *  - receptionists of that branch: new online booking, patient-page cancel/reschedule, doctor requests.
+ * Tapping opens a page the recipient's roles allow (src/lib/push/links.ts) — never "no permission".
  * Each staff member can switch notifications off, or switch off single types (notification_prefs).
  * Nobody is notified about their own action. Keys come from VAPID_* environment variables;
  * without them nothing is sent.
  */
 import { after } from "next/server";
-import { eq, inArray, isNull, or } from "drizzle-orm";
+import { desc, eq, inArray, isNull, or } from "drizzle-orm";
 import webpush from "web-push";
 import {
   appointments,
+  conversations,
+  messages,
   notificationPrefs,
   patients,
   pushLog,
@@ -23,6 +26,9 @@ import {
   tenantMembers,
 } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
+import type { Role } from "@/lib/auth/permissions";
+import { riyadhDay } from "@/lib/booking/time";
+import { pushLink, type LinkContext } from "./links";
 import { buildPayload, DEMO_PUSH_HOST, DOCTOR_TYPES, SHARED_TYPES, type PushType } from "./payload";
 
 export interface PushEvent {
@@ -101,6 +107,45 @@ export interface PlannedPush {
 
 export type PushLogEntry = Omit<typeof pushLog.$inferInsert, "id" | "tenantId" | "createdAt">;
 
+/** Each staff member's roles in this clinic. */
+export async function rolesOf(tx: TenantTx, userIds: string[]) {
+  const rows = userIds.length
+    ? await tx
+        .select({ userId: tenantMembers.userId, roles: tenantMembers.roles })
+        .from(tenantMembers)
+        .where(inArray(tenantMembers.userId, userIds))
+    : [];
+  return new Map(rows.map((r) => [r.userId, r.roles as Role[]]));
+}
+
+/** What a notification link needs: the patient, the day, and the patient's WhatsApp chat. */
+export async function linkContext(
+  tx: TenantTx,
+  appointmentId: string,
+  appt: { patientId: string; startsAt: Date },
+): Promise<LinkContext> {
+  // The chat the appointment's messages are in; otherwise the patient's own chat.
+  const [byMessage] = await tx
+    .select({ id: messages.conversationId })
+    .from(messages)
+    .where(eq(messages.appointmentId, appointmentId))
+    .orderBy(desc(messages.createdAt))
+    .limit(1);
+  const [byPatient] = byMessage
+    ? []
+    : await tx
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(eq(conversations.patientId, appt.patientId))
+        .limit(1);
+  return {
+    appointmentId,
+    patientId: appt.patientId,
+    day: riyadhDay(appt.startsAt),
+    conversationId: byMessage?.id ?? byPatient?.id ?? null,
+  };
+}
+
 /** Works out every notification to send for these events (no sending), and who gets none and why. */
 export async function planPushes(tx: TenantTx, events: PushEvent[]) {
   const planned: PlannedPush[] = [];
@@ -110,6 +155,7 @@ export async function planPushes(tx: TenantTx, events: PushEvent[]) {
       .select({
         practitionerId: appointments.practitionerId,
         branchId: appointments.branchId,
+        patientId: appointments.patientId,
         startsAt: appointments.startsAt,
         patientName: patients.fullNameAr,
         serviceName: services.nameAr,
@@ -137,8 +183,16 @@ export async function planPushes(tx: TenantTx, events: PushEvent[]) {
         skipped.push({ ...base, userId: u, outcome: "no_device" });
       }
     }
-    const payload = buildPayload({ type: ev.type, appointmentId: ev.appointmentId, ...row });
+    const link = await linkContext(tx, ev.appointmentId, row);
+    const roles = await rolesOf(tx, allowed);
     for (const s of subs) {
+      // The link depends on who taps it (a doctor and a receptionist open different pages).
+      const payload = buildPayload({
+        type: ev.type,
+        appointmentId: ev.appointmentId,
+        ...row,
+        url: pushLink(ev.type, roles.get(s.userId) ?? [], link),
+      });
       planned.push({
         subscriptionId: s.id,
         userId: s.userId,

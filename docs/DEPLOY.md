@@ -331,6 +331,15 @@ Ready-made demo chats: **D-0001** (reminder confirmed with the button), **D-0011
    **Settings → WhatsApp → WhatsApp status → Push notification log**. Each line says _sent_, _failed_
    (with the reason), _no device_, _switched off_ or _type muted_.
 
+### E6. Update: notification links per role, concerns on My Day (2 minutes)
+
+1. GitHub → the pull request → **Merge pull request → Confirm merge**. Vercel updates by itself.
+2. **No database reset** and nothing new in Vercel or Supabase.
+3. Try it: in the simulator tap **"I have a concern"** on a post-care message. Dr. Sara's notification
+   now opens the patient's file with a red **Concern** card (the conversation, read-only); the same
+   concern is listed at the top of her **My Day** until reception answers it. Reception's
+   notification still opens the WhatsApp chat. The push log shows where each notification opens.
+
 ---
 
 ## Part F — When Meta verification is done (real WhatsApp)

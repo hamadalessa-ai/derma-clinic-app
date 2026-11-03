@@ -136,6 +136,7 @@ describe("the concern push from the simulator path", () => {
       patientName: "سارة أحمد",
       serviceName: "بوتوكس",
       startsAt: new Date(),
+      url: "/",
     };
     const tags = new Set(
       (["new_booking", "checked_in", "patient_concern"] as const).map(

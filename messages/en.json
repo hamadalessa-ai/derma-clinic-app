@@ -784,6 +784,17 @@
       "no_keys": "Push keys not set",
       "demo_device": "Demo device",
       "no_recipient": "No recipient"
-    }
+    },
+    "opens": "Tapping opens:"
+  },
+  "concerns": {
+    "title": "Your patients' post-care concerns ({count})",
+    "badge": "Concern",
+    "open": "Waiting for a reply",
+    "answered": "Answered",
+    "afterVisit": "After {service} · {date}",
+    "raised": "The patient raised a concern on WhatsApp {when} · Doctor: {doctor}",
+    "readOnly": "Read-only: reception answers the patient from the WhatsApp inbox.",
+    "openInbox": "Open the chat in the WhatsApp inbox"
   }
 }
