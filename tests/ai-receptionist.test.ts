@@ -35,7 +35,7 @@ const ENV = { ...process.env, MESSAGE_DEMO_MODE: "on" };
 const derma = { id: DERMA, slug: "derma", isDemo: true };
 const system = <T>(fn: Parameters<typeof withTenant<T>>[1]) => withTenant(DERMA, fn);
 /** "Now" for these tests: far from the demo week and other tests' bookings. */
-const NOW = riyadhAt("08:00", "2034-05-07");
+const NOW = riyadhAt("08:00", "2035-03-04");
 
 let n = 0;
 const sim = () => `sim-ai-${Date.now()}-${n++}`;
@@ -189,7 +189,7 @@ describe("booking through the AI", () => {
         use("find_times", {
           branch_id: RIYADH,
           service_id: service("consultation"),
-          date: "2034-05-08",
+          date: "2035-03-05",
         }),
       ],
       (_req, [r]) => {
@@ -279,7 +279,7 @@ describe("booking through the AI", () => {
         use("find_times", {
           branch_id: RIYADH,
           service_id: service("consultation"),
-          date: "2034-05-09",
+          date: "2035-03-06",
         }),
       ],
       (_req, [r]) => {
@@ -337,7 +337,7 @@ describe("booking through the AI", () => {
         patientId: patient("D-0033"),
         serviceId: service("consultation"),
         practitionerId: member("derma-dr-reem"),
-        startsAt: riyadhAt("11:00", "2034-05-21"),
+        startsAt: riyadhAt("11:00", "2035-03-18"),
       }),
     );
     const turn = scripted([
@@ -352,7 +352,7 @@ describe("booking through the AI", () => {
         return say("I can't find that visit.");
       },
     ]);
-    await write(phone, "cancel my visit on the 21st", turn.client);
+    await write(phone, "cancel my visit on the 18th", turn.client);
     expect(
       (await system((tx) => tx.select().from(appointments).where(eq(appointments.id, other.id))))[0]
         .status,
