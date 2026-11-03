@@ -279,6 +279,8 @@ interface RunState {
   confirmations: string[]; // appointment ids to send a booking confirmation for
   handedOff: boolean;
   actions: string[];
+  /** The patient's language for the fixed fallback reply. */
+  lang: "ar" | "en";
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -324,8 +326,24 @@ async function runTool(name: string, input: Record<string, unknown>, s: RunState
     }
   } catch (err) {
     if (err instanceof BookingError) return { error: err.code };
-    throw err;
+    // Anything unexpected: logged, and the model is told to pass the chat to the team.
+    console.warn(`ai tool ${name} failed`, err instanceof Error ? err.message : err);
+    if (name !== "hand_off_to_staff") {
+      return { error: "internal_error", next_step: "Call hand_off_to_staff." };
+    }
+    s.handedOff = true;
+    await markNeedsStaff(s).catch(() => {});
+    return { done: true, next_step: "Tell the person a team member will reply soon." };
   }
+}
+
+async function markNeedsStaff(s: RunState) {
+  await withTenant(s.tenant.id, (tx) =>
+    tx
+      .update(conversations)
+      .set({ needsReply: true, aiPendingAction: null })
+      .where(eq(conversations.id, s.conversationId)),
+  );
 }
 
 async function clinicInfo(tx: TenantTx): Promise<ToolResult> {
@@ -889,11 +907,18 @@ async function handOff(
       .limit(1);
     const last = await latestInbound(tx, s.conversationId);
     if (visit && last) {
-      await tx
-        .update(messages)
-        .set({ flag: "concern", appointmentId: visit.id })
-        .where(eq(messages.id, last.id));
-      s.push.push({ type: "patient_concern", appointmentId: visit.id });
+      try {
+        // In a savepoint: if marking fails, the hand-off itself still stands.
+        await tx.transaction((sp) =>
+          sp
+            .update(messages)
+            .set({ flag: "concern", appointmentId: visit.id })
+            .where(eq(messages.id, last.id)),
+        );
+        s.push.push({ type: "patient_concern", appointmentId: visit.id });
+      } catch (err) {
+        console.warn("ai concern not marked", err instanceof Error ? err.message : err);
+      }
     }
   }
   await audit(tx, {
@@ -935,6 +960,7 @@ export async function runReceptionist(
     confirmations: [],
     handedOff: false,
     actions: [],
+    lang: "ar",
   };
   const needsStaff = () =>
     withTenant(tenant.id, (tx) =>
@@ -962,6 +988,7 @@ export async function runReceptionist(
     if (!ctx) return { outcome: "failed", reply: null, actions: [] };
     state.phone = ctx.c.phone;
     state.patientId = ctx.c.patientId;
+    state.lang = ctx.p?.preferredLanguage === "en" ? "en" : "ar";
     const turns = historyTurns(ctx.recent);
     if (!turns.length || turns.at(-1)!.role !== "user") {
       await needsStaff();
@@ -1016,8 +1043,9 @@ export async function runReceptionist(
         },
         env,
       );
-    } else if (!state.handedOff) {
-      await needsStaff();
+    } else {
+      await sendFallback(tenant, state, env);
+      if (!state.handedOff) await needsStaff();
     }
     for (const apptId of state.confirmations) {
       await sendBookingConfirmation(tenant, apptId, env).catch((err) =>
@@ -1034,7 +1062,27 @@ export async function runReceptionist(
     // Any failure (no credit, network, timeout): a person answers instead. Never silence.
     console.warn("ai receptionist failed", err instanceof Error ? err.message : err);
     await needsStaff().catch(() => {});
+    if (state.phone) await sendFallback(tenant, state, env).catch(() => {});
     if (state.push.length) await opts.notify(state.push).catch(() => {});
     return { outcome: "failed", reply: null, actions: state.actions };
   }
+}
+
+/** When the AI can't answer: a short, fixed "the team will reply" so the patient isn't left waiting. */
+export const FALLBACK_REPLY = {
+  ar: "شكرًا لتواصلك، سيرد عليك أحد أفراد فريقنا قريبًا.",
+  en: "Thank you for your message. A member of our team will reply soon.",
+};
+
+async function sendFallback(tenant: Tenant, s: RunState, env: Env) {
+  await sendMessage(
+    tenant,
+    {
+      kind: "ai_reply",
+      phone: s.phone,
+      patientId: s.patientId,
+      text: FALLBACK_REPLY[s.lang],
+    },
+    env,
+  );
 }
