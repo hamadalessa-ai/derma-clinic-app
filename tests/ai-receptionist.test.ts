@@ -23,7 +23,7 @@ import {
   type ClaudeRequest,
   type ContentBlock,
 } from "@/lib/ai/claude";
-import { historyTurns, TOOLS } from "@/lib/ai/receptionist";
+import { historyTurns, systemPrompt, TOOLS } from "@/lib/ai/receptionist";
 import type { PushEvent } from "@/lib/push/notify";
 import { handleInbound } from "@/lib/whatsapp/inbound";
 import { setAiPaused } from "@/lib/whatsapp/staff";
@@ -469,5 +469,141 @@ describe("hand-off and staying quiet", () => {
     ]);
     expect((await convoOf(phone)).needsReply).toBe(true);
     expect(await outgoing(phone, "ai_reply")).toHaveLength(0);
+  });
+});
+
+// ─── Regression: "yes" after the AI re-checks the same proposal ─────────────
+
+describe("confirming after a re-check", () => {
+  it("books when the AI proposes the SAME booking again before confirming", async () => {
+    const phone = "0590007712";
+    const turn1 = scripted([
+      () => [
+        use("find_times", {
+          branch_id: RIYADH,
+          service_id: service("consultation"),
+          date: "2035-03-07",
+        }),
+      ],
+      (_req, [r]) => {
+        memo.recheck = (r.times as { starts_at: string }[])[0].starts_at;
+        return [
+          use("propose_action", {
+            action: "book",
+            branch_id: RIYADH,
+            service_id: service("consultation"),
+            starts_at: memo.recheck,
+            full_name: "حمد الاختبار",
+            gender: "male",
+          }),
+        ];
+      },
+      () => say("أرسل نعم للتأكيد."),
+    ]);
+    await write(phone, "أبغى استشارة، اسمي حمد الاختبار، ذكر", turn1.client);
+
+    // What happened live: on "نعم" the model proposed the same booking again, then confirmed.
+    let reproposed: Record<string, unknown> = {};
+    let confirmed: Record<string, unknown> = {};
+    const turn2 = scripted([
+      (req) => {
+        expect(req.system).toContain("call confirm_action right away");
+        return [
+          use("propose_action", {
+            action: "book",
+            branch_id: RIYADH,
+            service_id: service("consultation"),
+            starts_at: memo.recheck,
+            full_name: "حمد الاختبار",
+            gender: "male",
+          }),
+        ];
+      },
+      (_req, [r]) => {
+        reproposed = r;
+        return [use("confirm_action")];
+      },
+      (_req, [r]) => {
+        confirmed = r;
+        return say("تم الحجز ✓");
+      },
+    ]);
+    await write(phone, "نعم", turn2.client);
+    expect(String(reproposed.next_step)).toContain("call confirm_action now");
+    expect(confirmed).toMatchObject({ done: true, status: "booked" });
+    const c = await convoOf(phone);
+    const [appt] = await system((tx) =>
+      tx
+        .select()
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.patientId, c.patientId!),
+            eq(appointments.startsAt, new Date(memo.recheck)),
+          ),
+        ),
+    );
+    expect(appt?.status).toBe("booked");
+  });
+
+  it("a DIFFERENT proposal still needs a new yes", async () => {
+    const phone = "0590007713";
+    const turn1 = scripted([
+      () => [
+        use("find_times", {
+          branch_id: RIYADH,
+          service_id: service("consultation"),
+          date: "2035-03-08",
+        }),
+      ],
+      (_req, [r]) => {
+        const times = r.times as { starts_at: string }[];
+        memo.firstChoice = times[0].starts_at;
+        memo.secondChoice = times[1].starts_at;
+        return [
+          use("propose_action", {
+            action: "book",
+            branch_id: RIYADH,
+            service_id: service("consultation"),
+            starts_at: memo.firstChoice,
+            full_name: "ريم الاختبار",
+            gender: "female",
+          }),
+        ];
+      },
+      () => say("أرسلي نعم للتأكيد."),
+    ]);
+    await write(phone, "أبغى استشارة، اسمي ريم الاختبار، أنثى", turn1.client);
+    let confirmed: Record<string, unknown> = {};
+    const turn2 = scripted([
+      () => [
+        use("propose_action", {
+          action: "book",
+          branch_id: RIYADH,
+          service_id: service("consultation"),
+          starts_at: memo.secondChoice,
+          full_name: "ريم الاختبار",
+          gender: "female",
+        }),
+      ],
+      () => [use("confirm_action")],
+      (_req, [r]) => {
+        confirmed = r;
+        return say("هل أؤكد الوقت الجديد؟");
+      },
+    ]);
+    await write(phone, "الوقت اللي بعده أحسن", turn2.client);
+    expect(confirmed).toEqual({ error: "ask_the_person_first" });
+  });
+
+  it("tells the model never to guess gender", async () => {
+    const text = systemPrompt({
+      clinicAr: "عيادة",
+      clinicEn: "Clinic",
+      now: NOW,
+      patientFirstName: null,
+      preferredLanguage: "ar",
+    });
+    expect(text).toContain("Never guess gender");
   });
 });
