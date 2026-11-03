@@ -182,7 +182,7 @@ describe("one handler for the simulator and real WhatsApp", () => {
     expect(acks).toHaveLength(1);
   });
 
-  it("never crashes on unknown message types or odd JSON; images go to the inbox", async () => {
+  it("never crashes on unknown message types or odd JSON; photos and audio go to the inbox", async () => {
     expect(parseMetaWebhook(null)).toEqual([]);
     expect(parseMetaWebhook({ entry: "nope" })).toEqual([]);
     expect(
@@ -196,6 +196,7 @@ describe("one handler for the simulator and real WhatsApp", () => {
               value: {
                 messages: [
                   { id: `wamid.img-${Date.now()}`, from: "966597771234", type: "image", image: {} },
+                  { id: `wamid.aud-${Date.now()}`, from: "966597771234", type: "audio", audio: {} },
                 ],
               },
             },
@@ -203,13 +204,11 @@ describe("one handler for the simulator and real WhatsApp", () => {
         },
       ],
     });
-    expect(events[0]).toMatchObject({
-      kind: "unsupported",
-      unsupportedType: "image",
-      from: "0597771234",
-    });
+    expect(events[0]).toMatchObject({ kind: "image", from: "0597771234" });
+    expect(events[1]).toMatchObject({ kind: "unsupported", unsupportedType: "audio" });
+    // No WhatsApp connection here: the photo can't be downloaded, but the message is kept.
     const r = await handleInbound(derma, events, { env: ENV, notify: async () => {} });
-    expect(r[0].outcome).toBe("stored");
+    expect(r.map((x) => x.outcome)).toEqual(["stored", "stored"]);
     const [c] = await system((tx) =>
       tx.select().from(conversations).where(eq(conversations.phone, "0597771234")),
     );

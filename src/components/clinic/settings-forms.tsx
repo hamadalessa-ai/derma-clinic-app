@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
-import { refreshDemoAction, saveTemplateAction, updateSettingsAction } from "@/app/actions/clinic";
+import {
+  refreshDemoAction,
+  saveConsentRuleAction,
+  saveTemplateAction,
+  updateSettingsAction,
+} from "@/app/actions/clinic";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,6 +137,77 @@ export function TemplateEditor({
         }
       >
         {t("saveVersion")}
+      </Button>
+    </div>
+  );
+}
+
+const RULES = ["every_visit", "per_package", "months", "template_change"] as const;
+
+/** Admin: when does this consent need a NEW signature? */
+export function ConsentRuleEditor({
+  code,
+  initial,
+}: {
+  code: string;
+  initial: { rule: (typeof RULES)[number]; months: number | null };
+}) {
+  const t = useTranslations("consentRules");
+  const [rule, setRule] = useState(initial.rule);
+  const [months, setMonths] = useState(String(initial.months ?? 12));
+  const [msg, setMsg] = useState<string | null>(null);
+  const { run, pending, error } = useAction();
+  return (
+    <div className="flex flex-col gap-3" data-testid="consent-rule">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="consent-rule">{t("label")}</Label>
+        <Select
+          id="consent-rule"
+          value={rule}
+          onChange={(e) => setRule(e.target.value as (typeof RULES)[number])}
+        >
+          {RULES.map((r) => (
+            <option key={r} value={r}>
+              {t(`rules.${r}`)}
+            </option>
+          ))}
+        </Select>
+        <p className="text-muted-foreground text-sm">{t(`hints.${rule}`)}</p>
+      </div>
+      {rule === "months" && (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="consent-months">{t("months")}</Label>
+          <Input
+            id="consent-months"
+            type="number"
+            min={1}
+            max={120}
+            inputMode="numeric"
+            className="w-28"
+            value={months}
+            onChange={(e) => setMonths(e.target.value)}
+          />
+        </div>
+      )}
+      <p className="text-muted-foreground text-xs">{t("alwaysNewText")}</p>
+      <FormError message={error} />
+      <FormSuccess message={msg} />
+      <Button
+        className="self-end"
+        disabled={pending}
+        onClick={() =>
+          run(
+            () =>
+              saveConsentRuleAction({
+                code,
+                rule,
+                months: rule === "months" ? Number(months) : null,
+              }),
+            () => setMsg(t("saved")),
+          )
+        }
+      >
+        {t("save")}
       </Button>
     </div>
   );

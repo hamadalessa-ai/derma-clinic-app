@@ -616,6 +616,8 @@ const DEMO_NOTICE_EN = "Notice: demo wording for demonstration only — NOT lega
 
 export interface SeedConsentTemplate {
   code: string;
+  /** When a new signature is needed (src/lib/consents/rules.ts). */
+  rule: "every_visit" | "per_package";
   titleAr: string;
   titleEn: string;
   bodyAr: string;
@@ -625,6 +627,7 @@ export interface SeedConsentTemplate {
 export const CONSENT_TEMPLATES: SeedConsentTemplate[] = [
   {
     code: "laser_hair_removal",
+    rule: "per_package",
     titleAr: "نموذج موافقة على جلسات ليزر إزالة الشعر",
     titleEn: "Consent for Laser Hair Removal sessions",
     bodyAr: [
@@ -644,6 +647,7 @@ export const CONSENT_TEMPLATES: SeedConsentTemplate[] = [
   },
   {
     code: "injectables",
+    rule: "every_visit",
     titleAr: "نموذج موافقة على حقن البوتوكس والفيلر",
     titleEn: "Consent for Botox and Filler injections",
     bodyAr: [
@@ -663,6 +667,7 @@ export const CONSENT_TEMPLATES: SeedConsentTemplate[] = [
   },
   {
     code: "chemical_peel",
+    rule: "every_visit",
     titleAr: "نموذج موافقة على التقشير الكيميائي",
     titleEn: "Consent for Chemical Peeling",
     bodyAr: [

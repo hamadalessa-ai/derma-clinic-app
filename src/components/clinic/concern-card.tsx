@@ -4,30 +4,37 @@ import { Flag, MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChatThread } from "@/components/whatsapp/chat";
+import { ChatThread, type ConcernEventView } from "@/components/whatsapp/chat";
 import { pick } from "@/lib/brand";
 import { formatDualDate } from "@/lib/format";
 import type { ChatMessageView } from "@/lib/whatsapp/view";
 import type { Concern } from "@/lib/whatsapp/concerns";
 import type { Locale } from "@/i18n/config";
+import { ConcernActions } from "./concern-actions";
 
 /**
- * A patient's post-care concern with the WhatsApp conversation around it. Always read-only here:
- * reception answers in the WhatsApp inbox (the button is shown only to those who may use it).
+ * A patient's post-care concern: the WhatsApp conversation around it, staff notes, follow-ups and
+ * the resolution — everything stays on the patient's file. Staff who handle concerns act from here
+ * (reply on WhatsApp, ask for a photo, internal note, book follow-up, mark resolved).
  */
 export async function ConcernCard({
   concern,
   thread,
+  events,
   locale,
   inboxHref,
   highlighted,
+  actions,
 }: {
   concern: Concern;
   thread: ChatMessageView[];
+  events: ConcernEventView[];
   locale: Locale;
   /** Set only for staff who may open the WhatsApp inbox. */
   inboxHref: string | null;
   highlighted: boolean;
+  /** Set for staff who may handle concerns. */
+  actions: Omit<Parameters<typeof ConcernActions>[0], "appointmentId" | "open"> | null;
 }) {
   const t = await getTranslations("concerns");
   return (
@@ -51,7 +58,7 @@ export async function ConcernCard({
               date: formatDualDate(concern.visitAt, locale, "medium"),
             })}
           </span>
-          <Badge variant={concern.open ? "outline" : "secondary"}>
+          <Badge variant={concern.open ? "outline" : "secondary"} data-testid="concern-state">
             {concern.open ? t("open") : t("answered")}
           </Badge>
         </CardTitle>
@@ -64,19 +71,24 @@ export async function ConcernCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="bg-muted max-h-[60dvh] overflow-y-auto rounded-md">
-          <ChatThread messages={thread} perspective="clinic" showKinds />
+          <ChatThread messages={thread} events={events} perspective="clinic" showKinds />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        {actions ? (
+          <ConcernActions appointmentId={concern.appointmentId} open={concern.open} {...actions} />
+        ) : (
           <p className="text-muted-foreground text-xs" data-testid="concern-read-only">
             {t("readOnly")}
           </p>
-          {inboxHref && (
-            <Link href={inboxHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
-              <MessageCircle />
-              {t("openInbox")}
-            </Link>
-          )}
-        </div>
+        )}
+        {inboxHref && (
+          <Link
+            href={inboxHref}
+            className={buttonVariants({ variant: "ghost", size: "sm", className: "self-start" })}
+          >
+            <MessageCircle />
+            {t("openInbox")}
+          </Link>
+        )}
       </CardContent>
     </Card>
   );

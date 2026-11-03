@@ -23,7 +23,8 @@ import { doctorNames } from "@/lib/booking/doctor-names";
 import { can } from "@/lib/auth/permissions";
 import { APPOINTMENT_STATUSES } from "@/lib/booking/status";
 import { atRiyadh, riyadhTime } from "@/lib/booking/time";
-import { saveTemplateVersion, signConsent } from "@/lib/consents/consents";
+import { saveConsentRule, saveTemplateVersion, signConsent } from "@/lib/consents/consents";
+import { CONSENT_RULES } from "@/db/schema";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
@@ -40,6 +41,14 @@ import { TEMPLATE_KINDS } from "@/lib/whatsapp/catalog";
 import { whatsappMode } from "@/lib/whatsapp/config";
 import { handleInbound } from "@/lib/whatsapp/inbound";
 import { whatsappLater } from "@/lib/whatsapp/later";
+import {
+  addConcernNote,
+  askForPhoto,
+  bookFollowUpRequest,
+  followUpConcern,
+  replyToConcern,
+  resolveConcern,
+} from "@/lib/whatsapp/concern-actions";
 import {
   createPatientFromConversation,
   doctorRunningLate,
@@ -595,6 +604,29 @@ export async function saveTemplateAction(input: {
   });
 }
 
+/** Admin: when a consent needs a new signature (every visit, per package, N months, new text). */
+export async function saveConsentRuleAction(input: {
+  code: string;
+  rule: string;
+  months?: number | null;
+}) {
+  return staffAction("consents:templates", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        code: z.string().regex(/^[a-z_]{2,40}$/),
+        rule: z.enum(CONSENT_RULES),
+        months: z.coerce.number().int().min(1).max(120).nullish(),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) =>
+      saveConsentRule(tx, actor, { code: v.code, rule: v.rule, months: v.months ?? null }),
+    );
+    revalidatePath("/settings", "layout");
+    return null;
+  });
+}
+
 // ─── Notes ──────────────────────────────────────────────────────────────────
 
 export async function openDraftAction(input: { patientId: string; appointmentId?: string | null }) {
@@ -1018,5 +1050,181 @@ export async function rescheduleOptionsAction(input: { appointmentId: string; da
         })),
       };
     });
+  });
+}
+
+// ─── Post-care concerns (doctor's Concern card; reception too) ──────────────
+
+const concernId = z.object({ appointmentId: uuid });
+
+function refreshConcern() {
+  for (const p of ["/patients", "/my-day", "/whatsapp", "/requests"]) revalidatePath(p, "layout");
+}
+
+/** Reply to the patient on WhatsApp, signed with the sender's name (24-hour window). */
+export async function concernReplyAction(input: { appointmentId: string; text: string }) {
+  return staffAction("concerns:handle", async (ctx, actor) => {
+    const v = parse(concernId.extend({ text: text(3500).min(1) }), input);
+    await replyToConcern(ctx.tenant, actor, v.appointmentId, v.text);
+    refreshConcern();
+    return null;
+  });
+}
+
+/** "Please send a photo of the area" (ready-made wording). */
+export async function concernAskPhotoAction(input: { appointmentId: string }) {
+  return staffAction("concerns:handle", async (ctx, actor) => {
+    const v = parse(concernId, input);
+    await askForPhoto(ctx.tenant, actor, v.appointmentId);
+    refreshConcern();
+    return null;
+  });
+}
+
+/** Internal note (never sent to the patient); notifies the other side. */
+export async function concernNoteAction(input: { appointmentId: string; text: string }) {
+  return staffAction("concerns:handle", async (_ctx, actor) => {
+    const v = parse(concernId.extend({ text: text(2000).min(1) }), input);
+    const push = await withActor(actor, (tx) => addConcernNote(tx, actor, v.appointmentId, v.text));
+    notifyLater(actor.tenantId, push);
+    refreshConcern();
+    return null;
+  });
+}
+
+export async function concernResolveAction(input: { appointmentId: string; note?: string }) {
+  return staffAction("concerns:handle", async (_ctx, actor) => {
+    const v = parse(concernId.extend({ note: text(2000).optional() }), input);
+    await withActor(actor, (tx) => resolveConcern(tx, actor, v.appointmentId, v.note));
+    refreshConcern();
+    return null;
+  });
+}
+
+/** Free times with the treated visit's doctor on a day (for "Book follow-up"). */
+export async function concernFollowUpTimesAction(input: {
+  appointmentId: string;
+  serviceId: string;
+  day: string;
+}) {
+  return staffAction("concerns:handle", async (_ctx, actor) => {
+    const v = parse(concernId.extend({ serviceId: uuid, day }), input);
+    return withActor(actor, async (tx) => {
+      const appt = await getAppointment(tx, v.appointmentId);
+      const from = new Date(Math.max(atRiyadh(v.day, "00:00").getTime(), Date.now()));
+      const until = atRiyadh(v.day, "23:59");
+      const slots = await findFreeSlots(tx, {
+        branchId: appt.branchId,
+        serviceId: v.serviceId,
+        practitionerId: appt.practitionerId,
+        from,
+        days: 1,
+        limit: 24,
+      });
+      return slots
+        .filter((s) => s.startsAt <= until)
+        .map((s) => ({ startsAt: s.startsAt.toISOString(), time: riyadhTime(s.startsAt) }));
+    });
+  });
+}
+
+/**
+ * "Book follow-up": booked now (reception/admin, or the doctor when doctors manage their own
+ * schedule), otherwise sent to reception as a ready request.
+ */
+export async function concernFollowUpAction(input: {
+  appointmentId: string;
+  serviceId: string;
+  day: string;
+  time: string;
+  note?: string;
+}) {
+  return staffAction("concerns:handle", async (ctx, actor) => {
+    const v = parse(
+      concernId.extend({ serviceId: uuid, day, time, note: text(1000).optional() }),
+      input,
+    );
+    const r = await withActor(actor, (tx) =>
+      followUpConcern(tx, actor, v.appointmentId, {
+        serviceId: v.serviceId,
+        startsAt: atRiyadh(v.day, v.time),
+        note: v.note,
+      }),
+    );
+    if (r.mode === "book") {
+      notifyLater(actor.tenantId, [
+        { type: "new_booking", appointmentId: r.appointmentId, actorUserId: actor.userId },
+      ]);
+      whatsappLater(() => sendBookingConfirmation(ctx.tenant, r.appointmentId));
+    } else {
+      notifyLater(actor.tenantId, r.push);
+    }
+    refreshScreens();
+    refreshConcern();
+    return { mode: r.mode };
+  });
+}
+
+/** Reception books a doctor's follow-up request (suggested time, or another day/time). */
+export async function bookFollowUpRequestAction(input: {
+  requestId: string;
+  day?: string;
+  time?: string;
+}) {
+  return staffAction("appointments:manage", async (ctx, actor) => {
+    const v = parse(
+      z.object({ requestId: uuid, day: day.optional(), time: time.optional() }),
+      input,
+    );
+    const r = await withActor(actor, (tx) =>
+      bookFollowUpRequest(tx, actor, v.requestId, v.day && v.time ? atRiyadh(v.day, v.time) : null),
+    );
+    if (r.mode === "book") {
+      notifyLater(actor.tenantId, [
+        { type: "new_booking", appointmentId: r.appointmentId, actorUserId: actor.userId },
+      ]);
+      whatsappLater(() => sendBookingConfirmation(ctx.tenant, r.appointmentId));
+    }
+    refreshScreens();
+    refreshConcern();
+    return null;
+  });
+}
+
+const IMAGE_DATA_URL = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/;
+
+/** Simulator (demo only): the patient sends a photo. Same handler as real WhatsApp. */
+export async function simulatorPhotoAction(input: {
+  phone: string;
+  dataUrl: string;
+  caption?: string;
+}) {
+  return staffAction("whatsapp:simulator", async (ctx) => {
+    const v = parse(
+      z.object({
+        phone: z.string().trim().max(30),
+        // Shrunk in the browser first (server actions accept up to 1 MB).
+        dataUrl: z.string().max(1_000_000).regex(IMAGE_DATA_URL),
+        caption: text(500).optional(),
+      }),
+      input,
+    );
+    if (whatsappMode(ctx.tenant) !== "demo") throw new ValidationError("not demo");
+    const phone = normalizeSaudiMobile(v.phone);
+    if (!phone) throw new ValidationError("bad phone");
+    const [, mimeType, base64] = v.dataUrl.match(IMAGE_DATA_URL)!;
+    await handleInbound(ctx.tenant, [
+      {
+        type: "message",
+        eventId: `sim-${randomUUID()}`,
+        from: phone,
+        kind: "image",
+        text: v.caption ?? "",
+        media: { mimeType, dataBase64: base64 },
+      },
+    ]);
+    revalidatePath("/whatsapp", "layout");
+    refreshConcern();
+    return null;
   });
 }

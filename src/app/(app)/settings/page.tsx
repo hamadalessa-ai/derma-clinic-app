@@ -16,7 +16,7 @@ import { mainAppUrl } from "@/lib/app-url";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { getSettings } from "@/lib/booking/engine";
-import { currentTemplates } from "@/lib/consents/consents";
+import { consentRulesByCode, currentTemplates } from "@/lib/consents/consents";
 import { pick } from "@/lib/brand";
 import type { Locale } from "@/i18n/config";
 
@@ -25,11 +25,13 @@ export default async function SettingsPage() {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("settings");
   const tw = await getTranslations("whatsapp");
-  const { settings, templates, serviceRows, doctors } = await withActor(
+  const tr = await getTranslations("consentRules");
+  const { settings, templates, rules, serviceRows, doctors } = await withActor(
     actorOf(ctx),
     async (tx) => ({
       settings: await getSettings(tx),
       templates: await currentTemplates(tx),
+      rules: await consentRulesByCode(tx),
       serviceRows: await tx
         .select({
           id: services.id,
@@ -125,6 +127,16 @@ export default async function SettingsPage() {
                 <span>
                   {pick(locale, tpl.titleAr, tpl.titleEn)}{" "}
                   <span className="text-muted-foreground text-xs">· v{tpl.version}</span>
+                  <span
+                    className="text-muted-foreground block text-xs"
+                    data-testid="consent-rule-summary"
+                    data-code={tpl.code}
+                  >
+                    {(() => {
+                      const r = rules.get(tpl.code) ?? { rule: "every_visit", months: null };
+                      return tr(`summary.${r.rule}`, { months: r.months ?? 0 });
+                    })()}
+                  </span>
                 </span>
                 <Link
                   href={`/settings/consents/${tpl.code}`}

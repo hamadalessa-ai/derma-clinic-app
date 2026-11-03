@@ -61,6 +61,15 @@ export function parseMetaWebhook(body: unknown): InboundEvent[] {
             buttonPayload: str(reply.id),
             buttonTitle: str(reply.title),
           });
+        } else if (type === "image") {
+          // A photo (e.g. of the treated area). Downloaded with the access token when handled.
+          const image = obj(m.image);
+          events.push({
+            ...base,
+            kind: "image",
+            text: str(image.caption) ?? "",
+            media: { id: str(image.id), mimeType: str(image.mime_type) ?? "image/jpeg" },
+          });
         } else {
           events.push({ ...base, kind: "unsupported", unsupportedType: type ?? "unknown" });
         }

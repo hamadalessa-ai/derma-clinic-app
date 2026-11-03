@@ -2,13 +2,14 @@
  * Post-care concerns ("I have a concern" on a post-care WhatsApp message), for the clinical side:
  *  - My Day: the doctor's OPEN concerns about their own patients' visits;
  *  - the patient's file: the concern and the post-care conversation, read-only.
- * Reception answers in the WhatsApp inbox. A concern is OPEN until reception has replied after it
- * or marked the chat handled, for up to 14 days.
+ * Doctors and reception act on it (src/lib/whatsapp/concern-actions.ts). A concern is OPEN until
+ * someone marks it resolved, for up to 14 days.
  * Reads only: nothing here changes a record.
  */
 import { and, asc, desc, eq, gte, inArray } from "drizzle-orm";
 import {
   appointments,
+  concernEvents,
   conversations,
   messages,
   patients,
@@ -25,6 +26,8 @@ export interface Concern {
   conversationId: string;
   appointmentId: string;
   patientId: string;
+  practitionerId: string;
+  serviceId: string;
   patientNameAr: string;
   patientNameEn: string | null;
   fileNumber: string;
@@ -47,6 +50,7 @@ export async function findConcerns(
     practitionerId?: string;
     patientId?: string;
     appointmentId?: string;
+    conversationId?: string;
     openOnly?: boolean;
   },
   now = new Date(),
@@ -55,10 +59,11 @@ export async function findConcerns(
   const rows = await tx
     .select({
       m: messages,
-      needsReply: conversations.needsReply,
       a: {
         id: appointments.id,
         patientId: appointments.patientId,
+        practitionerId: appointments.practitionerId,
+        serviceId: appointments.serviceId,
         startsAt: appointments.startsAt,
       },
       p: {
@@ -84,19 +89,20 @@ export async function findConcerns(
         where.practitionerId ? eq(appointments.practitionerId, where.practitionerId) : undefined,
         where.patientId ? eq(appointments.patientId, where.patientId) : undefined,
         where.appointmentId ? eq(appointments.id, where.appointmentId) : undefined,
+        where.conversationId ? eq(messages.conversationId, where.conversationId) : undefined,
       ),
     )
     .orderBy(desc(messages.createdAt));
   if (!rows.length) return [];
 
-  // Reception's replies close a concern (marking the chat handled clears needs_reply).
-  const replies = await tx
-    .select({ conversationId: messages.conversationId, createdAt: messages.createdAt })
-    .from(messages)
+  // "Mark resolved" closes a concern (a resolution after the patient's latest concern tap).
+  const resolved = await tx
+    .select({ appointmentId: concernEvents.appointmentId, createdAt: concernEvents.createdAt })
+    .from(concernEvents)
     .where(
       and(
-        inArray(messages.conversationId, [...new Set(rows.map((r) => r.m.conversationId))]),
-        eq(messages.kind, "staff_reply"),
+        eq(concernEvents.kind, "resolved"),
+        inArray(concernEvents.appointmentId, [...new Set(rows.map((r) => r.a.id))]),
       ),
     );
   const seen = new Set<string>();
@@ -104,19 +110,19 @@ export async function findConcerns(
   for (const r of rows) {
     if (seen.has(r.a.id)) continue;
     seen.add(r.a.id);
-    const answered = replies.some(
-      (x) => x.conversationId === r.m.conversationId && x.createdAt > r.m.createdAt,
-    );
+    const resolution = resolved
+      .filter((x) => x.appointmentId === r.a.id && x.createdAt >= r.m.createdAt)
+      .sort((x, y) => y.createdAt.getTime() - x.createdAt.getTime())[0];
     const open =
-      r.needsReply &&
-      !answered &&
-      now.getTime() - r.m.createdAt.getTime() < CONCERN_OPEN_DAYS * 86_400_000;
+      !resolution && now.getTime() - r.m.createdAt.getTime() < CONCERN_OPEN_DAYS * 86_400_000;
     if (where.openOnly && !open) continue;
     out.push({
       messageId: r.m.id,
       conversationId: r.m.conversationId,
       appointmentId: r.a.id,
       patientId: r.a.patientId,
+      practitionerId: r.a.practitionerId,
+      serviceId: r.a.serviceId,
       patientNameAr: r.p.nameAr,
       patientNameEn: r.p.nameEn,
       fileNumber: r.p.fileNumber,

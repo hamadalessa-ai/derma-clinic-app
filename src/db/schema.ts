@@ -441,6 +441,8 @@ export const TENANT_TABLES = [
   "message_dispatches",
   "webhook_events",
   "push_log",
+  "consent_rules",
+  "concern_events",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -887,6 +889,36 @@ export const consentTemplates = pgTable(
   ],
 );
 
+/** When a consent template needs a NEW signature. One row per template code; no row = every visit. */
+export const CONSENT_RULES = ["every_visit", "per_package", "months", "template_change"] as const;
+export type ConsentRule = (typeof CONSENT_RULES)[number];
+
+export const consentRules = pgTable(
+  "consent_rules",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    code: text("code").notNull(), // consent template code, e.g. "injectables"
+    rule: text("rule").$type<ConsentRule>().notNull().default("every_visit"),
+    /** Only for "months": how long a signature stays valid. */
+    months: integer("months"),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("consent_rules_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("consent_rules_code_key").on(t.tenantId, t.code),
+    check(
+      "consent_rules_rule",
+      sql`${t.rule} in ('every_visit', 'per_package', 'months', 'template_change')`,
+    ),
+    check(
+      "consent_rules_months",
+      sql`(${t.rule} = 'months' and ${t.months} between 1 and 120) or (${t.rule} <> 'months' and ${t.months} is null)`,
+    ),
+  ],
+);
+
 /**
  * THE OFFICIAL SIGNED CONSENT RECORD. Holds a snapshot of the exact text that was signed,
  * the signature image, who signed, who witnessed, and when. Append-only (no update/delete).
@@ -1110,6 +1142,7 @@ export const PATIENT_READABLE_TABLES = [
   "rooms",
   "tenant_members",
   "consent_templates",
+  "consent_rules",
   "tenant_settings",
 ] as const;
 
@@ -1189,6 +1222,8 @@ export const messages = pgTable(
     language: text("language"),
     /** Marked for reception, e.g. "concern" after a post-care check-in. */
     flag: text("flag"),
+    /** A photo the patient sent (stored through the FileStore). Clinical: doctors and admins only. */
+    fileId: uuid("file_id"),
     sentBy: text("sent_by"), // staff user for replies; null = system / patient
     createdAt: createdAt(),
     statusAt: timestamp("status_at", { withTimezone: true }).notNull().defaultNow(),
@@ -1220,6 +1255,69 @@ export const messages = pgTable(
       columns: [t.tenantId, t.appointmentId],
       foreignColumns: [appointments.tenantId, appointments.id],
     }).onDelete("set null"),
+    foreignKey({
+      name: "messages_file_fk",
+      columns: [t.tenantId, t.fileId],
+      foreignColumns: [files.tenantId, files.id],
+    }),
+  ],
+);
+
+/**
+ * What staff did about a post-care concern that ISN'T a WhatsApp message: internal notes to
+ * reception (never sent to the patient), follow-up booked/requested, resolved. Append-only.
+ */
+export const concernEvents = pgTable(
+  "concern_events",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id").notNull(),
+    conversationId: uuid("conversation_id").notNull(),
+    patientId: uuid("patient_id").notNull(),
+    /** note | follow_up_request | follow_up | resolved */
+    kind: text("kind").notNull(),
+    body: text("body"),
+    /** follow_up_request (doctor → reception): the suggested service and time. */
+    serviceId: uuid("service_id"),
+    proposedStartsAt: timestamp("proposed_starts_at", { withTimezone: true }),
+    /** follow_up: the booked appointment. */
+    followUpAppointmentId: uuid("follow_up_appointment_id"),
+    actorUserId: text("actor_user_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("concern_events_tenant_id_id_key").on(t.tenantId, t.id),
+    index("concern_events_appointment_idx").on(t.tenantId, t.appointmentId, t.createdAt),
+    check(
+      "concern_events_kind",
+      sql`${t.kind} in ('note', 'follow_up_request', 'follow_up', 'resolved')`,
+    ),
+    foreignKey({
+      name: "concern_events_service_fk",
+      columns: [t.tenantId, t.serviceId],
+      foreignColumns: [services.tenantId, services.id],
+    }),
+    foreignKey({
+      name: "concern_events_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+    foreignKey({
+      name: "concern_events_conversation_fk",
+      columns: [t.tenantId, t.conversationId],
+      foreignColumns: [conversations.tenantId, conversations.id],
+    }),
+    foreignKey({
+      name: "concern_events_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }),
+    foreignKey({
+      name: "concern_events_follow_up_fk",
+      columns: [t.tenantId, t.followUpAppointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
   ],
 );
 

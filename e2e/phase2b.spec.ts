@@ -7,8 +7,10 @@
  *  2. "Run scheduled messages now" → the reminder appears → tap Confirm → reception's calendar
  *     shows the appointment as confirmed.
  *  3. Complete a visit → run (fast-forward 24 h) → post-care check-in → tap "I have a concern" →
- *     Dr. Sara follows her notification's link (from the push log) to the patient's file: concern
- *     + chat, read-only; it is also on her My Day. Reception's inbox has it flagged as a concern.
+ *     Dr. Sara follows her notification's link (from the push log) to the patient's file, replies
+ *     (signed, seen in the simulator), asks for a photo (the patient sends one), leaves reception a
+ *     note and a follow-up request, then marks it resolved. Reception sees her reply, note and
+ *     "photo received" in the inbox, and books the follow-up from Requests.
  *     (A browser can't receive a real push: sending is tested in tests/push-log.test.ts.)
  *  4. A message from a number that isn't a patient → inbox "new numbers" → create the patient.
  */
@@ -37,6 +39,10 @@ async function staff(browser: Browser, email: string, isMobile: boolean) {
   await expect(page).toHaveURL(/\/$/);
   return page;
 }
+
+/** A small fake "photo of the area" (32×32 PNG, skin-coloured). */
+const PHOTO_PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAO0lEQVRIie3WywkAMBBCwdRuEVZnMakikMPA3oXFzztrnt4hUC8KF03QoiqmTWtwZjKLKgK8Ch3zNV1fOs/QanH4UegAAAAASUVORK5CYII=";
 
 let seq = 0;
 const freshPhone = () => `0597${String((Date.now() + seq++ * 7919) % 1_000_000).padStart(6, "0")}`;
@@ -155,7 +161,7 @@ test.describe("WhatsApp in demo mode", () => {
     await expect(reception.getByTestId("appointment-whatsapp")).toContainText("تذكير");
   });
 
-  test("completed visit → post-care check-in → 'I have a concern' → flagged in the inbox", async ({
+  test("post-care concern: doctor opens it from the push, replies, gets a photo, follow-up, resolves", async ({
     browser,
     isMobile,
   }) => {
@@ -198,7 +204,7 @@ test.describe("WhatsApp in demo mode", () => {
     ).toBeVisible();
 
     // Dr. Sara taps her concern notification: it opens the patient's file (not "no permission")
-    // with a "Concern" badge, the concern and the post-care conversation, read-only.
+    // with a "Concern" badge, the concern and the post-care conversation.
     const sentToSara = admin
       .locator(
         "[data-testid=push-log-row][data-type=patient_concern][data-user='usr_derma-dr-sara']",
@@ -216,32 +222,98 @@ test.describe("WhatsApp in demo mode", () => {
     await expect(concern.locator("[data-kind=inbound_button]").last()).toContainText(
       "لدي استفسار/قلق",
     );
-    await expect(concern.getByTestId("concern-read-only")).toBeVisible();
-    await expect(doctor.getByTestId("reply-text")).toHaveCount(0); // doctors can't answer here
     await noSidewaysScroll(doctor);
-    // …and it is on her My Day, not only in the notification.
+
+    // She replies from the card: the patient gets it from the clinic, signed with her name.
+    await concern
+      .getByTestId("concern-reply-text")
+      .fill("الاحمرار الخفيف طبيعي، ضعي كمادات باردة.");
+    await concern.getByTestId("concern-reply-send").click();
+    await expect(concern.getByText("تم إرسال الرد.")).toBeVisible();
+    const reply = concern.locator("[data-testid=chat-message][data-kind=staff_reply]").last();
+    await expect(reply).toContainText("كمادات باردة");
+    await expect(reply.getByTestId("chat-sender")).toContainText("سارة العتيبي");
+    await concern.getByTestId("concern-ask-photo").click();
+    await expect(concern.locator("[data-kind=photo_request]")).toBeVisible();
+
+    // The patient's phone (simulator): the reply from the clinic, signed; then sends a photo.
+    const phoneChat = await openSimulatorChat(admin, phone);
+    await expect(phoneChat.locator("[data-kind=staff_reply]").last()).toContainText(
+      "— د. سارة العتيبي",
+    );
+    await expect(phoneChat.locator("[data-kind=photo_request]")).toContainText("صورة واضحة");
+    await phoneChat.getByTestId("simulator-photo").setInputFiles({
+      name: "area.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(PHOTO_PNG, "base64"),
+    });
+    await expect(phoneChat.locator("[data-kind=inbound_image]")).toBeVisible();
+
+    // Dr. Sara sees the photo on the file; leaves reception a note; sends a follow-up request
+    // (this clinic: doctors don't manage their own schedule).
+    await doctor.reload();
+    await expect(concern.getByTestId("chat-photo")).toBeVisible();
+    await concern.getByTestId("concern-note-open").click();
+    await concern.getByTestId("concern-note-text").fill("نرجو الاتصال بالمريضة للاطمئنان.");
+    await concern.getByTestId("concern-note-save").click();
+    await expect(concern.locator("[data-testid=concern-event][data-kind=note]")).toBeVisible();
+    await concern.getByTestId("concern-followup-open").click();
+    const fu = concern.getByTestId("concern-followup");
+    await expect(fu).toHaveAttribute("data-mode", "request");
+    await fu.getByTestId("followup-day").fill(booked.day);
+    await fu.getByTestId("followup-find").click();
+    await fu.locator("[data-testid=followup-times] [data-time]").last().click();
+    await fu.getByTestId("followup-confirm").click();
+    await expect(
+      concern.locator("[data-testid=concern-event][data-kind=follow_up_request]"),
+    ).toBeVisible();
+
+    // It is on her My Day too (open until resolved).
     await doctor.goto("/my-day");
     const onMyDay = doctor.locator(`[data-testid=my-concern][data-patient="${booked.fileNumber}"]`);
     await expect(onMyDay).toBeVisible();
-    await onMyDay.click();
-    await expect(doctor.locator("#concern[data-testid=patient-concern]")).toBeVisible();
 
-    // Reception's inbox: needs reply, flagged as a concern.
+    // Reception: the inbox shows the doctor's reply (with her name), her note, and only
+    // "photo received" (medical photos are for doctors); the follow-up request is ready to book.
     const inbox = await staff(browser, "reception.riyadh1@derma.demo", isMobile);
     await inbox.goto("/whatsapp?f=needs_reply");
     const row = inbox.locator(`[data-testid=conversation][data-phone="${phone}"]`);
     await expect(row).toContainText("قلق بعد الإجراء");
     await row.click();
-    await expect(inbox.getByTestId("inbox-thread")).toBeVisible();
+    const thread = inbox.getByTestId("inbox-thread");
+    await expect(thread).toBeVisible();
     await expect(
-      inbox.locator("[data-testid=chat-message][data-kind=inbound_button]").last(),
-    ).toContainText("لدي استفسار/قلق");
+      thread
+        .locator("[data-testid=chat-message][data-kind=staff_reply]")
+        .first()
+        .getByTestId("chat-sender"),
+    ).toContainText("سارة العتيبي");
+    await expect(thread.locator("[data-testid=concern-event][data-kind=note]")).toContainText(
+      "نرجو الاتصال",
+    );
+    await expect(thread.getByTestId("chat-photo-hidden")).toBeVisible();
+    await expect(thread.getByTestId("chat-photo")).toHaveCount(0);
     await inbox.getByTestId("reply-text").fill("مرحبًا، سنتصل بك خلال ساعة.");
     await inbox.getByTestId("reply-send").click();
-    await expect(inbox.locator("[data-testid=chat-message][data-kind=staff_reply]")).toBeVisible();
+    await expect(
+      thread.locator("[data-kind=staff_reply] [data-testid=chat-sender]").last(),
+    ).toBeVisible();
     await noSidewaysScroll(inbox);
+    await inbox.goto("/requests");
+    const request = inbox
+      .getByTestId("followup-request")
+      .filter({ hasText: "مريضة متابعة تجريبية" })
+      .first();
+    await request.getByTestId("followup-request-book").click();
+    await expect(request).toHaveCount(0);
 
-    // Answered → no longer an open concern on Dr. Sara's My Day.
+    // Dr. Sara marks it resolved → no longer on her My Day.
+    await onMyDay.click();
+    const card = doctor.locator("#concern[data-testid=patient-concern]");
+    await card.getByTestId("concern-resolve-open").click();
+    await card.getByTestId("concern-resolve-note").fill("تحسّنت الحالة.");
+    await card.getByTestId("concern-resolve-confirm").click();
+    await expect(card.locator("[data-testid=concern-event][data-kind=resolved]")).toBeVisible();
     await doctor.goto("/my-day");
     await expect(
       doctor.locator(`[data-testid=my-concern][data-patient="${booked.fileNumber}"]`),

@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, ArrowRight, Play, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, Paperclip, Play, Send } from "lucide-react";
 import {
   runScheduledNowAction,
+  simulatorPhotoAction,
   simulatorReadAction,
   simulatorTapAction,
   simulatorTypeAction,
@@ -27,6 +28,20 @@ function useActionError() {
     clear: () => setError(null),
     fail: (code: string) => setError(te.has(code) ? te(code) : te("unexpected")),
   };
+}
+
+/**
+ * Shrinks a picked photo in the browser (max 1280 px, JPEG) so it fits the
+ * server's upload limit — like WhatsApp itself compresses photos.
+ */
+async function photoToDataUrl(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.75);
 }
 
 /** The patient's phone: WhatsApp-style chat with the clinic. Taps and typing go through the
@@ -117,6 +132,34 @@ export function SimulatorPhone({
           run(() => simulatorTypeAction({ phone, text: value }));
         }}
       >
+        <label
+          className="text-chat-meta hover:text-foreground flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full"
+          aria-label={t("simAttachPhoto")}
+          title={t("simAttachPhoto")}
+        >
+          <Paperclip className="size-5" aria-hidden />
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            data-testid="simulator-photo"
+            disabled={pending}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              const caption = text.trim();
+              setText("");
+              run(async () =>
+                simulatorPhotoAction({
+                  phone,
+                  dataUrl: await photoToDataUrl(file),
+                  caption: caption || undefined,
+                }),
+              );
+            }}
+          />
+        </label>
         <Input
           value={text}
           onChange={(e) => setText(e.target.value)}

@@ -110,6 +110,37 @@ CREATE TABLE "clinical_notes" (
 	CONSTRAINT "clinical_notes_signed" CHECK (("clinical_notes"."status" = 'signed') = ("clinical_notes"."signed_at" is not null))
 );
 --> statement-breakpoint
+CREATE TABLE "concern_events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"conversation_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"body" text,
+	"service_id" uuid,
+	"proposed_starts_at" timestamp with time zone,
+	"follow_up_appointment_id" uuid,
+	"actor_user_id" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "concern_events_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "concern_events_kind" CHECK ("concern_events"."kind" in ('note', 'follow_up_request', 'follow_up', 'resolved'))
+);
+--> statement-breakpoint
+CREATE TABLE "consent_rules" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"code" text NOT NULL,
+	"rule" text DEFAULT 'every_visit' NOT NULL,
+	"months" integer,
+	"updated_by" text,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "consent_rules_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "consent_rules_code_key" UNIQUE("tenant_id","code"),
+	CONSTRAINT "consent_rules_rule" CHECK ("consent_rules"."rule" in ('every_visit', 'per_package', 'months', 'template_change')),
+	CONSTRAINT "consent_rules_months" CHECK (("consent_rules"."rule" = 'months' and "consent_rules"."months" between 1 and 120) or ("consent_rules"."rule" <> 'months' and "consent_rules"."months" is null))
+);
+--> statement-breakpoint
 CREATE TABLE "consent_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -225,6 +256,7 @@ CREATE TABLE "messages" (
 	"template_name" text,
 	"language" text,
 	"flag" text,
+	"file_id" uuid,
 	"sent_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"status_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -628,6 +660,13 @@ ALTER TABLE "clinical_note_addenda" ADD CONSTRAINT "clinical_note_addenda_note_f
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_conversation_fk" FOREIGN KEY ("tenant_id","conversation_id") REFERENCES "public"."conversations"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_follow_up_fk" FOREIGN KEY ("tenant_id","follow_up_appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "consent_rules" ADD CONSTRAINT "consent_rules_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "consent_templates" ADD CONSTRAINT "consent_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -642,6 +681,7 @@ ALTER TABLE "messages" ADD CONSTRAINT "messages_tenant_id_tenants_id_fk" FOREIGN
 ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_fk" FOREIGN KEY ("tenant_id","conversation_id") REFERENCES "public"."conversations"("tenant_id","id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_file_fk" FOREIGN KEY ("tenant_id","file_id") REFERENCES "public"."files"("tenant_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -702,6 +742,7 @@ CREATE INDEX "appointments_practitioner_start_idx" ON "appointments" USING btree
 CREATE INDEX "appointments_patient_idx" ON "appointments" USING btree ("tenant_id","patient_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_tenant_created_idx" ON "audit_logs" USING btree ("tenant_id","created_at");--> statement-breakpoint
 CREATE INDEX "clinical_notes_patient_idx" ON "clinical_notes" USING btree ("tenant_id","patient_id");--> statement-breakpoint
+CREATE INDEX "concern_events_appointment_idx" ON "concern_events" USING btree ("tenant_id","appointment_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "consent_templates_one_current" ON "consent_templates" USING btree ("tenant_id","code") WHERE "consent_templates"."is_current";--> statement-breakpoint
 CREATE INDEX "conversations_inbox_idx" ON "conversations" USING btree ("tenant_id","needs_reply","last_message_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "messages_provider_id_key" ON "messages" USING btree ("tenant_id","provider_message_id") WHERE "messages"."provider_message_id" is not null;--> statement-breakpoint

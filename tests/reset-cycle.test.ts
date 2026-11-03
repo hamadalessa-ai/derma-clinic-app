@@ -58,7 +58,13 @@ describe("reset works on a database from every released phase", () => {
     .sort();
 
   it("has the released phases to test", () => {
-    expect(released).toEqual(["phase-0.sql", "phase-1.sql", "phase-2a.sql", "phase-2b.sql"]);
+    expect(released).toEqual([
+      "phase-0.sql",
+      "phase-1.sql",
+      "phase-2a.sql",
+      "phase-2b-push-log.sql", // live since PR #8 (push log)
+      "phase-2b.sql",
+    ]);
   });
 
   it.each(released)(

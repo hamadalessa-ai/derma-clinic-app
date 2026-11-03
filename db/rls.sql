@@ -101,6 +101,9 @@ grant select, insert on public.messages, public.message_dispatches to clinic_app
 grant update (status, status_at, provider_message_id, error_code, error_text) on public.messages to clinic_app;
 grant select, insert, delete on public.webhook_events to clinic_app;
 grant select, insert, delete on public.push_log to clinic_app;
+-- Consent renewal rules (admin setting). Concern notes/follow-ups/resolutions: append-only.
+grant select, insert, update on public.consent_rules to clinic_app;
+grant select, insert on public.concern_events to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
 
@@ -127,7 +130,7 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
-    'push_log',
+    'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs'
   ] loop
     execute format('alter table public.%I enable row level security', t);
@@ -216,14 +219,14 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
-    'push_log',
+    'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
       when t in ('appointments', 'patient_packages', 'patient_consents') then 'public.app_patient_scope(patient_id)'
-      when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'tenant_settings') then 'true'
+      when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'consent_rules', 'tenant_settings') then 'true'
       else 'false'
     end;
     execute format(

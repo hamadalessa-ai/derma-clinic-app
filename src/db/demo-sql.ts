@@ -81,7 +81,7 @@ export const DEMO_CONSENTS = [
     patientFile: "D-0011",
     code: "laser_hair_removal",
     signer: signerOf("D-0011"),
-    daysAgo: 90,
+    daysAgo: 89, // signed at the first session, after the package was bought (90 days ago)
   },
   {
     key: "d0015-peel",
@@ -488,6 +488,21 @@ export function demoSql(): string {
     ]),
   );
   out.push(phase2aRows());
+  // An internal concern note in Lamsa too (so the isolation tests cover concern_events).
+  out.push(
+    insert("concern_events", [
+      {
+        tenant_id: lamsa,
+        appointment_id: lref("appointment", "today-1"),
+        conversation_id: demoId("lamsa:conversation:L-0002"),
+        patient_id: lref("patient", "L-0002"),
+        kind: "note",
+        body: "ملاحظة داخلية تجريبية",
+        actor_user_id: "usr_lamsa-dr-mona",
+        created_at: daysAgo(1),
+      },
+    ]),
+  );
   out.push(phase2bRows(week));
   return out.filter(Boolean).join("\n");
 }
@@ -623,7 +638,8 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
   const reminderAppt = week.find(
     (a) => a.patientFile === "D-0001" && a.dayIndex === 0 && a.time === "15:30",
   );
-  const apptId = reminderAppt ? ref("appointment", reminderAppt.key) : null;
+  if (!reminderAppt) throw new Error("demo week: D-0001's 15:30 visit today is missing");
+  const apptId = ref("appointment", reminderAppt.key);
 
   out.push(
     insert("conversations", [
@@ -703,6 +719,34 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
     status_at: ago(o.h),
   });
   const laser = SERVICE_TEXTS.laser_hair_removal;
+  // D-0011: laser with Dr. Sara yesterday (completed) → the post-care concern below is about it.
+  const d0011Visit = ref("appointment", "d0011-laser-past");
+  const yesterdayAt = (hm: string) =>
+    raw(`date_trunc('day', now() - interval '1 day') + interval '${hm}'`);
+  out.push(
+    insert("appointments", [
+      {
+        id: d0011Visit,
+        tenant_id: tenant,
+        branch_id: ref("branch", "riyadh"),
+        patient_id: ref("patient", "D-0011"),
+        service_id: ref("service", "laser_hair_removal"),
+        practitioner_id: ref("member", "derma-dr-sara"),
+        room_id: ref("room", "ruh-3"),
+        device_id: null,
+        // 08:00–08:45 Riyadh (05:00 UTC), before the clinic's demo appointments start.
+        starts_at: yesterdayAt("5 hours"),
+        ends_at: yesterdayAt("5 hours 45 minutes"),
+        blocked_until: yesterdayAt("5 hours 55 minutes"),
+        status: "completed",
+        reception_note: null,
+        cancel_reason: null,
+        demo_day_index: null,
+        source: "reception",
+        created_by: "usr_derma-rec-ruh1",
+      },
+    ]),
+  );
   out.push(
     insert("messages", [
       m({
@@ -749,6 +793,7 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
       m({
         c: "D-0011",
         patient: "D-0011",
+        appt: d0011Visit,
         dir: "out",
         kind: "post_care",
         status: "read",
@@ -762,6 +807,7 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
       m({
         c: "D-0011",
         patient: "D-0011",
+        appt: d0011Visit,
         dir: "in",
         kind: "inbound_button",
         buttonId: "concern",
@@ -773,6 +819,7 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
       m({
         c: "D-0011",
         patient: "D-0011",
+        appt: d0011Visit,
         dir: "in",
         kind: "inbound_text",
         body: "يوجد احمرار خفيف في منطقة الساق، هل هذا طبيعي؟",
@@ -782,6 +829,7 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
       m({
         c: "D-0011",
         patient: "D-0011",
+        appt: d0011Visit,
         dir: "out",
         kind: "concern_ack",
         body: REPLIES.concern_ack.ar,
@@ -832,6 +880,21 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
       ]),
     );
   }
+  // Reception's internal note on D-0011's concern (never sent to the patient).
+  out.push(
+    insert("concern_events", [
+      {
+        tenant_id: tenant,
+        appointment_id: d0011Visit,
+        conversation_id: convo("D-0011"),
+        patient_id: ref("patient", "D-0011"),
+        kind: "note",
+        body: "اتصلنا بالمريضة ولم ترد. نرجو من الدكتورة الاطلاع على الاحمرار.",
+        actor_user_id: "usr_derma-rec-ruh1",
+        created_at: ago(2),
+      },
+    ]),
+  );
   // D-0019: Botox with Dr. Sara 125 days ago (completed) → recall due (120 days).
   out.push(
     insert("appointments", [

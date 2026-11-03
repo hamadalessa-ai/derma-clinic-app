@@ -37,6 +37,7 @@ export const REPLY_KINDS = [
   "stop_ack",
   "start_ack",
   "not_found",
+  "photo_request",
   "staff_reply",
 ] as const;
 export type ReplyKind = (typeof REPLY_KINDS)[number];
@@ -222,6 +223,10 @@ export const REPLIES: Record<Exclude<ReplyKind, "staff_reply">, { ar: string; en
   start_ack: {
     ar: "تم تفعيل رسائل العيادة مجددًا ✓",
     en: "Clinic messages are switched back on ✓",
+  },
+  photo_request: {
+    ar: "طلب من {doctor}: نرجو إرسال صورة واضحة للمنطقة المعالَجة في إضاءة جيدة، هنا في هذه المحادثة، للاطمئنان على حالتك.",
+    en: "A request from {doctor}: please send a clear photo of the treated area in good light, here in this chat, so we can check on you.",
   },
   not_found: {
     ar: "لم نجد هذا الموعد أو لم يعد بالإمكان تغييره. فضلًا تواصل مع العيادة.",

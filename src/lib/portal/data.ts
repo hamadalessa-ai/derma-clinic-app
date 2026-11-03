@@ -19,6 +19,7 @@ import { withTenant } from "@/db/tenant";
 import { getSettings } from "@/lib/booking/engine";
 import { MOVABLE_STATUSES } from "@/lib/booking/status";
 import { consentStatusFor } from "@/lib/consents/consents";
+import { reasonView, type ConsentReasonView } from "@/lib/consents/rules";
 import { patientDbContext } from "./session";
 
 export async function loadPortal(tenantId: string, patientId: string, now = new Date()) {
@@ -96,6 +97,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       patientId: string;
       appointmentId: string;
       template: (typeof templates)[number];
+      reason: ConsentReasonView;
     }[] = [];
     for (const a of upcoming) {
       const c = status.get(a.id);
@@ -105,7 +107,14 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       )
         continue;
       const template = templates.find((t) => t.id === c.templateId);
-      if (template) pendingConsents.push({ patientId: a.patientId, appointmentId: a.id, template });
+      if (template) {
+        pendingConsents.push({
+          patientId: a.patientId,
+          appointmentId: a.id,
+          template,
+          reason: reasonView(c),
+        });
+      }
     }
     return { settings, family, appts, packages, signed, pendingConsents };
   });
@@ -169,6 +178,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       bodyAr: p.template.bodyAr,
       bodyEn: p.template.bodyEn,
       version: p.template.version,
+      reason: p.reason,
     })),
     cancellationWindowHours: data.settings.cancellationWindowHours,
     horizonDays: data.settings.onlineHorizonDays,

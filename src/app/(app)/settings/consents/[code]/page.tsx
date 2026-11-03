@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { TemplateEditor } from "@/components/clinic/settings-forms";
+import { ConsentRuleEditor, TemplateEditor } from "@/components/clinic/settings-forms";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
-import { currentTemplate } from "@/lib/consents/consents";
+import { consentRulesByCode, currentTemplate } from "@/lib/consents/consents";
 
 export default async function EditConsentTemplatePage({
   params,
@@ -16,7 +16,14 @@ export default async function EditConsentTemplatePage({
   const { code } = await params;
   if (!/^[a-z_]{2,40}$/.test(code)) notFound();
   const t = await getTranslations("settings");
-  const tpl = await withActor(actorOf(ctx), (tx) => currentTemplate(tx, code));
+  const tr = await getTranslations("consentRules");
+  const { tpl, rule } = await withActor(actorOf(ctx), async (tx) => ({
+    tpl: await currentTemplate(tx, code),
+    rule: (await consentRulesByCode(tx)).get(code) ?? {
+      rule: "every_visit" as const,
+      months: null,
+    },
+  }));
   if (!tpl) notFound();
   return (
     <div className="flex flex-col gap-4">
@@ -24,6 +31,14 @@ export default async function EditConsentTemplatePage({
         title={t("editTemplate")}
         subtitle={t("currentVersion", { version: tpl.version })}
       />
+      <Card>
+        <CardHeader>
+          <CardTitle>{tr("title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ConsentRuleEditor key={`${rule.rule}-${rule.months}`} code={code} initial={rule} />
+        </CardContent>
+      </Card>
       <Card>
         <CardContent className="pt-5">
           <TemplateEditor

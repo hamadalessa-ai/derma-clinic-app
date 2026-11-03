@@ -46,6 +46,13 @@ export const PERMISSIONS = {
   "whatsapp:simulator": ["clinic_admin", "receptionist"],
   /** "Run scheduled messages now" (demo), message wording, WhatsApp status page. */
   "whatsapp:manage": ["clinic_admin"],
+  /**
+   * Post-care concerns: reply to the patient (24-hour window), ask for a photo, internal note,
+   * follow-up, resolve. Doctors from the Concern card; reception/admin also from the inbox.
+   */
+  "concerns:handle": ["clinic_admin", "practitioner", "receptionist"],
+  /** Photos patients send (medical): doctors and admins. Reception sees "photo received". */
+  "photos:view": ["clinic_admin", "practitioner"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

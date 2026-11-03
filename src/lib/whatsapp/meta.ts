@@ -112,3 +112,34 @@ export function createMetaTransport(
     },
   };
 }
+
+/**
+ * A photo a patient sent: Meta gives a media id; its URL needs the access token. Returns the
+ * bytes, or null if it can't be fetched (too big, expired, network). Max 10 MB.
+ */
+export async function downloadMetaMedia(
+  config: LiveConfig,
+  mediaId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ data: Buffer; mimeType: string } | null> {
+  const auth = { Authorization: `Bearer ${config.accessToken}` };
+  try {
+    const meta = await fetchImpl(
+      `https://graph.facebook.com/${config.apiVersion}/${encodeURIComponent(mediaId)}`,
+      { headers: auth, signal: AbortSignal.timeout(10_000) },
+    );
+    const info = (await meta.json().catch(() => ({}))) as {
+      url?: string;
+      mime_type?: string;
+      file_size?: number;
+    };
+    if (!meta.ok || !info.url || (info.file_size ?? 0) > 10 * 1024 * 1024) return null;
+    const res = await fetchImpl(info.url, { headers: auth, signal: AbortSignal.timeout(20_000) });
+    if (!res.ok) return null;
+    const data = Buffer.from(await res.arrayBuffer());
+    if (!data.length || data.length > 10 * 1024 * 1024) return null;
+    return { data, mimeType: info.mime_type ?? res.headers.get("content-type") ?? "image/jpeg" };
+  } catch {
+    return null;
+  }
+}

@@ -10,6 +10,7 @@ import { getCurrentTenant, type Tenant } from "@/lib/tenant/current";
 import { VerifyError } from "@/lib/verify/codes";
 import { TemplateError } from "@/lib/whatsapp/admin";
 import { WhatsAppError } from "@/lib/whatsapp/staff";
+import { ConcernError } from "@/lib/whatsapp/concern-actions";
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -37,7 +38,11 @@ export async function staffAction<T>(
     ) {
       return { ok: false, error: err.code };
     }
-    if (err instanceof WhatsAppError || err instanceof TemplateError) {
+    if (
+      err instanceof WhatsAppError ||
+      err instanceof TemplateError ||
+      err instanceof ConcernError
+    ) {
       return { ok: false, error: err.code };
     }
     if (err instanceof PermissionError) return { ok: false, error: "not_allowed" };

@@ -160,6 +160,35 @@ CREATE TABLE "clinical_notes" (
 	CONSTRAINT "clinical_notes_tenant_id_id_key" UNIQUE("tenant_id","id"),
 	CONSTRAINT "clinical_notes_signed" CHECK (("clinical_notes"."status" = 'signed') = ("clinical_notes"."signed_at" is not null))
 );
+CREATE TABLE "concern_events" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"conversation_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"kind" text NOT NULL,
+	"body" text,
+	"service_id" uuid,
+	"proposed_starts_at" timestamp with time zone,
+	"follow_up_appointment_id" uuid,
+	"actor_user_id" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "concern_events_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "concern_events_kind" CHECK ("concern_events"."kind" in ('note', 'follow_up_request', 'follow_up', 'resolved'))
+);
+CREATE TABLE "consent_rules" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"code" text NOT NULL,
+	"rule" text DEFAULT 'every_visit' NOT NULL,
+	"months" integer,
+	"updated_by" text,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "consent_rules_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "consent_rules_code_key" UNIQUE("tenant_id","code"),
+	CONSTRAINT "consent_rules_rule" CHECK ("consent_rules"."rule" in ('every_visit', 'per_package', 'months', 'template_change')),
+	CONSTRAINT "consent_rules_months" CHECK (("consent_rules"."rule" = 'months' and "consent_rules"."months" between 1 and 120) or ("consent_rules"."rule" <> 'months' and "consent_rules"."months" is null))
+);
 CREATE TABLE "consent_templates" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"tenant_id" uuid NOT NULL,
@@ -268,6 +297,7 @@ CREATE TABLE "messages" (
 	"template_name" text,
 	"language" text,
 	"flag" text,
+	"file_id" uuid,
 	"sent_by" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"status_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -644,6 +674,13 @@ ALTER TABLE "clinical_note_addenda" ADD CONSTRAINT "clinical_note_addenda_note_f
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "clinical_notes" ADD CONSTRAINT "clinical_notes_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_conversation_fk" FOREIGN KEY ("tenant_id","conversation_id") REFERENCES "public"."conversations"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "concern_events" ADD CONSTRAINT "concern_events_follow_up_fk" FOREIGN KEY ("tenant_id","follow_up_appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "consent_rules" ADD CONSTRAINT "consent_rules_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "consent_templates" ADD CONSTRAINT "consent_templates_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;
@@ -658,6 +695,7 @@ ALTER TABLE "messages" ADD CONSTRAINT "messages_tenant_id_tenants_id_fk" FOREIGN
 ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_fk" FOREIGN KEY ("tenant_id","conversation_id") REFERENCES "public"."conversations"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "messages" ADD CONSTRAINT "messages_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "messages" ADD CONSTRAINT "messages_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "messages" ADD CONSTRAINT "messages_file_fk" FOREIGN KEY ("tenant_id","file_id") REFERENCES "public"."files"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "notification_prefs" ADD CONSTRAINT "notification_prefs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "package_payments" ADD CONSTRAINT "package_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
@@ -718,6 +756,7 @@ CREATE INDEX "appointments_practitioner_start_idx" ON "appointments" USING btree
 CREATE INDEX "appointments_patient_idx" ON "appointments" USING btree ("tenant_id","patient_id");
 CREATE INDEX "audit_logs_tenant_created_idx" ON "audit_logs" USING btree ("tenant_id","created_at");
 CREATE INDEX "clinical_notes_patient_idx" ON "clinical_notes" USING btree ("tenant_id","patient_id");
+CREATE INDEX "concern_events_appointment_idx" ON "concern_events" USING btree ("tenant_id","appointment_id","created_at");
 CREATE UNIQUE INDEX "consent_templates_one_current" ON "consent_templates" USING btree ("tenant_id","code") WHERE "consent_templates"."is_current";
 CREATE INDEX "conversations_inbox_idx" ON "conversations" USING btree ("tenant_id","needs_reply","last_message_at");
 CREATE UNIQUE INDEX "messages_provider_id_key" ON "messages" USING btree ("tenant_id","provider_message_id") WHERE "messages"."provider_message_id" is not null;
@@ -1180,6 +1219,11 @@ I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
 
 I consent to the procedure and will use SPF 50 sunscreen daily.');
 
+insert into public.consent_rules (tenant_id, code, rule, months) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'laser_hair_removal', 'per_package', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'injectables', 'every_visit', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'chemical_peel', 'every_visit', null);
+
 insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
   ('e3f5912c-34e3-5c06-ad82-859640083596', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '901925ea-47ec-5bdd-bc69-bab97d91b50b', 'باقة ليزر إزالة الشعر — 6 جلسات', 'Laser Hair Removal — 6 sessions', 6, 360000, 365),
   ('2ba9840c-7b0b-5c2d-aa4f-a45beb511d57', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', 'باقة التقشير الكيميائي — 4 جلسات', 'Chemical Peeling — 4 sessions', 4, 200000, 180),
@@ -1330,6 +1374,11 @@ I understand my skin may be red and peel for several days, and sun exposure may 
 I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
 
 I consent to the procedure and will use SPF 50 sunscreen daily.');
+
+insert into public.consent_rules (tenant_id, code, rule, months) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'laser_hair_removal', 'per_package', null),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'injectables', 'every_visit', null),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'chemical_peel', 'every_visit', null);
 
 insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
   ('baa4e36f-c509-587a-ab60-06c22bf3188a', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, 180);
@@ -1642,7 +1691,7 @@ I understand common side effects include temporary redness and swelling, and rar
 
 I confirm I told the clinic about my medications, pregnancy, and sun exposure in the last 14 days.
 
-I consent to the session and will follow the aftercare instructions.', '7632119da4e88d6349aa1cd333da3c7df707cb2134ade66a63946d341c69821e', 'غادة صالح السبيعي', 'self', '3c056d0a-e6fb-5597-ad27-af8aa49cbbc1', 'usr_derma-rec-ruh1', now() - interval '90 days'),
+I consent to the session and will follow the aftercare instructions.', '7632119da4e88d6349aa1cd333da3c7df707cb2134ade66a63946d341c69821e', 'غادة صالح السبيعي', 'self', '3c056d0a-e6fb-5597-ad27-af8aa49cbbc1', 'usr_derma-rec-ruh1', now() - interval '89 days'),
   ('d9a62288-5402-54d6-8057-bab03c53fe8b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e172214f-c582-5cbb-9687-66298cf4d2c9', 'b020a4a7-5411-58e7-9ae3-b3c4a0084017', 'chemical_peel', 1, 'نموذج موافقة على التقشير الكيميائي', 'Consent for Chemical Peeling', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
 
 أقرّ بأن الطبيب/ة شرح لي التقشير الكيميائي ودرجة التقشير المناسبة لبشرتي.
@@ -1794,11 +1843,17 @@ insert into public.notification_prefs (tenant_id, user_id, enabled) values
 insert into public.push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth, user_agent) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', 'https://push.invalid/demo-device/lamsa', 'demo', 'demo', 'Demo device (never receives anything)');
 
+insert into public.concern_events (tenant_id, appointment_id, conversation_id, patient_id, kind, body, actor_user_id, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '5be574b8-8c14-5b75-af31-fd4fb861b805', '27b91291-c60f-516c-aec0-c61693cc12bb', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'note', 'ملاحظة داخلية تجريبية', 'usr_lamsa-dr-mona', now() - interval '1 days');
+
 insert into public.conversations (id, tenant_id, phone, patient_id, profile_name, needs_reply, last_inbound_at, last_message_at, opted_out_at) values
   ('f425ddd7-2c9e-5137-92c9-6993b47d7feb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010001', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', null, false, now() - interval '20 hours', now() - interval '20 hours', null),
   ('4c427865-069d-57d8-a38a-ada3e03bf470', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010011', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, true, now() - interval '3 hours', now() - interval '3 hours', null),
   ('089ce7a7-bf08-5c03-bdca-a79550bf7632', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0500010014', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', null, false, now() - interval '120 hours', now() - interval '120 hours', null),
   ('2fe0ea24-181b-5563-88d1-bf6f4704506b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '0555123456', null, 'Noura', true, now() - interval '1 hours', now() - interval '1 hours', null);
+
+insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, source, created_by) values
+  ('36d73468-d0f8-52e5-928e-e6808845964f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '901925ea-47ec-5bdd-bc69-bab97d91b50b', '56811db4-8b1a-522c-9015-7dce6ade7d82', '1695ce36-16b8-58e2-b068-e31ca6285fd4', null, date_trunc('day', now() - interval '1 day') + interval '5 hours', date_trunc('day', now() - interval '1 day') + interval '5 hours 45 minutes', date_trunc('day', now() - interval '1 day') + interval '5 hours 55 minutes', 'completed', null, null, null, 'reception', 'usr_derma-rec-ruh1');
 
 insert into public.messages (tenant_id, conversation_id, patient_id, appointment_id, direction, kind, body, buttons, button_id, channel, status, flag, language, created_at, status_at) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f425ddd7-2c9e-5137-92c9-6993b47d7feb', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'out', 'reminder', 'مرحبًا نورة، نذكّرك بـموعد فيلر غدًا اليوم الساعة 15:30 مع د. سارة العتيبي في فرع الرياض.
@@ -1806,16 +1861,19 @@ insert into public.messages (tenant_id, conversation_id, patient_id, appointment
 هل ستحضر؟', '[{"id":"confirm","title":"تأكيد"},{"id":"reschedule","title":"تغيير الموعد"},{"id":"cancel","title":"إلغاء"}]'::jsonb, null, 'demo', 'read', null, 'ar', now() - interval '22 hours', now() - interval '22 hours'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f425ddd7-2c9e-5137-92c9-6993b47d7feb', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'in', 'inbound_button', 'تأكيد', null, 'confirm', 'demo', 'received', null, 'ar', now() - interval '20 hours', now() - interval '20 hours'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'f425ddd7-2c9e-5137-92c9-6993b47d7feb', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'out', 'confirm_ack', 'شكرًا، تم تأكيد حضورك ✓ نراك في الموعد.', null, null, 'demo', 'read', null, 'ar', now() - interval '20 hours', now() - interval '20 hours'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'out', 'post_care', 'مرحبًا غادة، كيف حال بشرتك بعد جلسة الليزر؟', '[{"id":"all_good","title":"كل شيء جيد"},{"id":"concern","title":"لدي استفسار/قلق"}]'::jsonb, null, 'demo', 'read', null, 'ar', now() - interval '5 hours', now() - interval '5 hours'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'in', 'inbound_button', 'لدي استفسار/قلق', null, 'concern', 'demo', 'received', 'concern', 'ar', now() - interval '3 hours', now() - interval '3 hours'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'in', 'inbound_text', 'يوجد احمرار خفيف في منطقة الساق، هل هذا طبيعي؟', null, null, 'demo', 'received', null, 'ar', now() - interval '3 hours', now() - interval '3 hours'),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', null, 'out', 'concern_ack', 'شكرًا لإخبارنا. ستتواصل معك العيادة قريبًا.', null, null, 'demo', 'delivered', null, 'ar', now() - interval '3 hours', now() - interval '3 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '36d73468-d0f8-52e5-928e-e6808845964f', 'out', 'post_care', 'مرحبًا غادة، كيف حال بشرتك بعد جلسة الليزر؟', '[{"id":"all_good","title":"كل شيء جيد"},{"id":"concern","title":"لدي استفسار/قلق"}]'::jsonb, null, 'demo', 'read', null, 'ar', now() - interval '5 hours', now() - interval '5 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '36d73468-d0f8-52e5-928e-e6808845964f', 'in', 'inbound_button', 'لدي استفسار/قلق', null, 'concern', 'demo', 'received', 'concern', 'ar', now() - interval '3 hours', now() - interval '3 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '36d73468-d0f8-52e5-928e-e6808845964f', 'in', 'inbound_text', 'يوجد احمرار خفيف في منطقة الساق، هل هذا طبيعي؟', null, null, 'demo', 'received', null, 'ar', now() - interval '3 hours', now() - interval '3 hours'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '36d73468-d0f8-52e5-928e-e6808845964f', 'out', 'concern_ack', 'شكرًا لإخبارنا. ستتواصل معك العيادة قريبًا.', null, null, 'demo', 'delivered', null, 'ar', now() - interval '3 hours', now() - interval '3 hours'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '089ce7a7-bf08-5c03-bdca-a79550bf7632', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', null, 'in', 'inbound_text', 'إيقاف', null, null, 'demo', 'received', null, 'ar', now() - interval '120 hours', now() - interval '120 hours'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '089ce7a7-bf08-5c03-bdca-a79550bf7632', 'eba9236f-5fc8-580b-863f-4c385c83b3a4', null, 'out', 'stop_ack', 'تم إيقاف رسائل التذكير والمتابعة. لإعادة تفعيلها أرسل «تفعيل».', null, null, 'demo', 'read', null, 'ar', now() - interval '120 hours', now() - interval '120 hours'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '2fe0ea24-181b-5563-88d1-bf6f4704506b', null, null, 'in', 'inbound_text', 'السلام عليكم، كم سعر جلسة ليزر إزالة الشعر للساقين؟', null, null, 'demo', 'received', null, 'ar', now() - interval '1 hours', now() - interval '1 hours');
 
 insert into public.message_dispatches (tenant_id, dedupe_key, kind, appointment_id, patient_id, outcome, created_at) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'reminder:bca1934b-ac68-5e6a-be9c-0b4a8d17854c', 'reminder', 'bca1934b-ac68-5e6a-be9c-0b4a8d17854c', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', 'sent', now() - interval '22 hours');
+
+insert into public.concern_events (tenant_id, appointment_id, conversation_id, patient_id, kind, body, actor_user_id, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '36d73468-d0f8-52e5-928e-e6808845964f', '4c427865-069d-57d8-a38a-ada3e03bf470', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', 'note', 'اتصلنا بالمريضة ولم ترد. نرجو من الدكتورة الاطلاع على الاحمرار.', 'usr_derma-rec-ruh1', now() - interval '2 hours');
 
 insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, source, created_by) values
   ('6cb8e300-9258-5346-a5b6-b2a191792506', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'f81befe7-9561-50af-adc9-2553e96b6277', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', null, date_trunc('day', now() - interval '125 days') + interval '8 hours', date_trunc('day', now() - interval '125 days') + interval '8 hours 30 minutes', date_trunc('day', now() - interval '125 days') + interval '8 hours 40 minutes', 'completed', null, null, null, 'reception', 'usr_derma-rec-ruh1');
@@ -1944,6 +2002,9 @@ grant select, insert on public.messages, public.message_dispatches to clinic_app
 grant update (status, status_at, provider_message_id, error_code, error_text) on public.messages to clinic_app;
 grant select, insert, delete on public.webhook_events to clinic_app;
 grant select, insert, delete on public.push_log to clinic_app;
+-- Consent renewal rules (admin setting). Concern notes/follow-ups/resolutions: append-only.
+grant select, insert, update on public.consent_rules to clinic_app;
+grant select, insert on public.concern_events to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
 
@@ -1970,7 +2031,7 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
-    'push_log',
+    'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs'
   ] loop
     execute format('alter table public.%I enable row level security', t);
@@ -2059,14 +2120,14 @@ begin
     'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
-    'push_log',
+    'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
       when t in ('appointments', 'patient_packages', 'patient_consents') then 'public.app_patient_scope(patient_id)'
-      when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'tenant_settings') then 'true'
+      when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'consent_rules', 'tenant_settings') then 'true'
       else 'false'
     end;
     execute format(

@@ -28,6 +28,7 @@ import type { ApptView } from "@/lib/views/schedule";
 import { formatDualDate } from "@/lib/format";
 import type { Locale } from "@/i18n/config";
 import { AlertBadge, BalanceBadge, SourceBadge, StatusBadge } from "./badges";
+import { ConsentReason } from "./consent-reason";
 import { ConsentSignDialog, type ConsentTemplateView } from "./consent-sign-dialog";
 import { FormError, FormSuccess } from "./form-message";
 import { riyadhParts, timeOptions } from "./time";
@@ -160,11 +161,8 @@ export function AppointmentDialog({
               data-testid="consent-status"
               data-signed={appt.consent.signed}
             >
-              {appt.consent.signed
-                ? appt.consent.viaPatientPage
-                  ? t("consentSignedOnline")
-                  : t("consentSigned")
-                : t("consentNeeded")}
+              <ConsentReason reason={appt.consent.reason} />
+              {!appt.consent.signed && <span className="block text-xs">{t("consentNeeded")}</span>}
             </div>
           )}
           {appt.whatsapp.length > 0 && (

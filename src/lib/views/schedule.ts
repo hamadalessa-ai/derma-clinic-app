@@ -19,6 +19,7 @@ import {
   users,
 } from "@/db/schema";
 import { consentStatusFor } from "@/lib/consents/consents";
+import { reasonView, type ConsentReasonView } from "@/lib/consents/rules";
 import { getPatientAlerts, type PatientAlerts } from "@/lib/patients/queries";
 import { balanceFor, packagesForPatients } from "@/lib/packages/packages";
 import type { AppointmentStatus } from "@/lib/booking/status";
@@ -48,7 +49,7 @@ export interface ApptView {
   note: string | null;
   pendingRequest: { proposedStartsAt: string } | null;
   /** The consent this service needs (current version), and whether it's signed already. */
-  consent: { signed: boolean; viaPatientPage: boolean } | null;
+  consent: { signed: boolean; viaPatientPage: boolean; reason: ConsentReasonView } | null;
   /** WhatsApp messages sent about this appointment (type, delivery status, error). */
   whatsapp: { kind: string; status: string; errorCode: string | null; createdAt: string }[];
 }
@@ -233,7 +234,13 @@ export async function loadAppointments(
         })),
       consent: (() => {
         const c = consents.get(a.id);
-        return c ? { signed: c.signed, viaPatientPage: c.signedVia === "patient_portal" } : null;
+        return c
+          ? {
+              signed: c.signed,
+              viaPatientPage: c.signedVia === "patient_portal",
+              reason: reasonView(c),
+            }
+          : null;
       })(),
     };
   });

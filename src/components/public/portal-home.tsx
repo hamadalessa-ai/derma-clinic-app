@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/clinic/badges";
 import { FormError, FormSuccess } from "@/components/clinic/form-message";
 import { SignaturePad, type SignaturePadHandle } from "@/components/clinic/signature-pad";
 import { riyadhParts, todayRiyadh } from "@/components/clinic/time";
+import { ConsentReason } from "@/components/clinic/consent-reason";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -475,6 +476,9 @@ function ConsentToSign({
           <div className="text-muted-foreground text-xs">
             {tc("version", { version: consent.version })}
             {!isMe && ` · ${t("forPerson", { name: personName })}`}
+          </div>
+          <div className="text-muted-foreground text-xs">
+            <ConsentReason reason={consent.reason} />
           </div>
         </div>
         {!open && (
