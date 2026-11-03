@@ -80,8 +80,14 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   `db/setup.sql` (schema + seed + RLS + roles in one transaction). A test fails if it is stale.
 - Removing or renaming a table: add the old name to `RETIRED_TABLES` (`src/db/reset-sql.ts`). When a phase
   is released, copy its `db/setup.sql` into `tests/released-setup/` — a test runs today's `reset.sql` on each.
-- Supabase is set up by pasting `db/setup.sql` into the Supabase SQL Editor (no admin password leaves Supabase).
-  Later phases add numbered `db/upgrades/NNNN_*.sql` files to paste in order. Founder guide: `docs/DEPLOY.md`.
+- The live demo database is updated automatically: the GitHub workflow "Update demo database" runs
+  `db/reset.sql` + `db/setup.sql` as ONE transaction (`src/db/demo-update.ts`) whenever a merge to main
+  changes either file (secrets: `SUPABASE_ADMIN_URL`, `APP_DB_PASSWORD`, `DEMO_STAFF_PASSWORD`). Both files
+  must keep exactly one `begin;` and one `commit;` line. The SQL Editor paste still works as a fallback.
+  Once real clinics exist, this reset must stop: use numbered `db/upgrades/NNNN_*.sql` files instead.
+  Founder guide: `docs/DEPLOY.md` (Part G).
+- GitHub workflow "Tests" runs `pnpm check` on every pull request; merge only when it is green.
+  When a phase is released, also update `latest` in `tests/demo-update.test.ts`.
 - Supabase's `postgres` user is NOT a superuser. SQL we ship must work without superuser rights
   (e.g. never `ALTER ROLE ... NOBYPASSRLS`, never `DROP OWNED BY clinic_app`). Local databases are
   built by the non-superuser `local_admin` to catch this.

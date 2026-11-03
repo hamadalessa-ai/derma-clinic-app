@@ -1,0 +1,47 @@
+# Updates the live DEMO database on Supabase automatically, so nobody has to paste
+# db/reset.sql and db/setup.sql into the SQL Editor any more.
+#
+# Runs when a merge to main changes db/setup.sql or db/reset.sql, and from the
+# "Run workflow" button. Reset + setup run as ONE transaction: it either fully works
+# or changes nothing. DEMO ONLY: it deletes all app data and rebuilds the fake clinics.
+#
+# Needs three repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_ADMIN_URL   Supabase → Connect → "Session pooler" string, user postgres.<project-ref>,
+#                        with the database password filled in
+#   APP_DB_PASSWORD      the clinic_app password inside Vercel's DATABASE_URL
+#   DEMO_STAFF_PASSWORD  the password demo staff accounts sign in with
+name: Update demo database
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - db/setup.sql
+      - db/reset.sql
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-database
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Reset and set up the demo database
+        env:
+          SUPABASE_ADMIN_URL: ${{ secrets.SUPABASE_ADMIN_URL }}
+          APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+          DEMO_STAFF_PASSWORD: ${{ secrets.DEMO_STAFF_PASSWORD }}
+        run: pnpm exec tsx scripts/update-demo-db.ts
