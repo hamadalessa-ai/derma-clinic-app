@@ -77,8 +77,9 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   answers typed WhatsApp text from `handleInbound()` ONLY through its tools; it never takes a patient id
   (always the chat's own patient + family). Book / cancel / move = `propose_action`, then `confirm_action`
   only after a NEWER patient message. Never medical advice → `hand_off_to_staff`. It stays quiet when the
-  clinic switched it off, no key, staff took over (`conversations.ai_paused_at`), the chat already needs
-  staff, or the daily limit is reached; any failure → "needs reply". Tests use a scripted fake client.
+  clinic switched it off, no key, staff took over or replied (`conversations.ai_paused_at`), or the daily
+  limit is reached. After a hand-off the chat stays "needs reply" but the AI still helps with other things
+  (never the handed-off topic). Any failure → "needs reply" + a fixed reply. Tests use a scripted fake client.
 
 ## Database changes
 
