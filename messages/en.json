@@ -143,7 +143,8 @@
     "not_configured": "WhatsApp isn't set up for this clinic.",
     "unknown_placeholder": "The text has an unknown placeholder.",
     "cannot_disable": "Verification codes can't be switched off.",
-    "doctor_busy": "The doctor has another appointment or blocked time then. Choose another time or doctor."
+    "doctor_busy": "The doctor has another appointment or blocked time then. Choose another time or doctor.",
+    "empty_message": "Write a message first."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -411,7 +412,14 @@
     "rejectedOk": "Request rejected",
     "note": "Note (optional)",
     "pendingBookings": "Online bookings awaiting approval",
-    "rescheduleRequests": "Doctors' reschedule requests"
+    "rescheduleRequests": "Doctors' reschedule requests",
+    "followUps": "Follow-up booking requests from doctors",
+    "withDoctor": "with {doctor}",
+    "bookSuggested": "Book the suggested time ({time})",
+    "otherTime": "Another time",
+    "day": "Day",
+    "time": "Time",
+    "bookThis": "Book"
   },
   "settings": {
     "title": "Clinic settings",
@@ -596,7 +604,10 @@
       "patient_cancelled": "Cancelled on the patient page",
       "patient_rescheduled": "Moved on the patient page",
       "reschedule_request": "Doctor's reschedule request",
-      "patient_concern": "Patient concern after a procedure (WhatsApp)"
+      "patient_concern": "Patient concern after a procedure (WhatsApp)",
+      "concern_photo": "A patient with a concern sent a photo",
+      "concern_note": "Internal note on a patient concern",
+      "follow_up_request": "Doctor asks to book a follow-up"
     }
   },
   "pushKeys": {
@@ -679,7 +690,9 @@
       "not_found": "Auto-reply",
       "reschedule_offer_other": "Auto-reply",
       "reschedule_none": "Auto-reply",
-      "reschedule_unavailable": "Auto-reply"
+      "reschedule_unavailable": "Auto-reply",
+      "inbound_image": "Photo",
+      "photo_request": "Photo request"
     },
     "simChats": "Chats",
     "simNewNumber": "Simulate a message from a new number",
@@ -767,7 +780,12 @@
     "testOk": "Sent ✓",
     "testFailed": "Failed: {error}",
     "scheduleTitle": "Scheduled sending",
-    "scheduleHint": "Runs every hour via GitHub Actions, and once a day via Vercel as a safety net. Quiet hours: 22:00–08:00."
+    "scheduleHint": "Runs every hour via GitHub Actions, and once a day via Vercel as a safety net. Quiet hours: 22:00–08:00.",
+    "photoAlt": "Photo from the patient",
+    "photoHidden": "📷 Photo received — visible to doctors and admins only",
+    "photoSent": "📷 Photo",
+    "sentBy": "Sent by {name}",
+    "simAttachPhoto": "Send a photo (as the patient)"
   },
   "pushLog": {
     "title": "Staff phone notifications (last 30)",
@@ -790,11 +808,83 @@
   "concerns": {
     "title": "Your patients' post-care concerns ({count})",
     "badge": "Concern",
-    "open": "Waiting for a reply",
-    "answered": "Answered",
+    "open": "Open",
+    "answered": "Resolved",
     "afterVisit": "After {service} · {date}",
     "raised": "The patient raised a concern on WhatsApp {when} · Doctor: {doctor}",
-    "readOnly": "Read-only: reception answers the patient from the WhatsApp inbox.",
-    "openInbox": "Open the chat in the WhatsApp inbox"
+    "readOnly": "Read-only.",
+    "openInbox": "Open the chat in the WhatsApp inbox",
+    "events": {
+      "note": "Internal note from {name} (not sent to the patient)",
+      "follow_up_request": "{name} asked to book a follow-up {when}",
+      "follow_up": "{name} booked a follow-up {when}",
+      "resolved": "{name} marked the concern resolved"
+    },
+    "replyLabel": "Reply to the patient on WhatsApp",
+    "replyHint": "The patient receives it from the clinic, signed with your name.",
+    "windowEnds": "Free replies are possible until {time}.",
+    "send": "Send",
+    "replySent": "Reply sent.",
+    "askPhoto": "Ask for a photo",
+    "photoAsked": "Photo request sent.",
+    "outsideWindow": "It has been more than 24 hours since the patient's last message, so WhatsApp doesn't allow a free reply. You can book a follow-up, or leave reception a note to call the patient.",
+    "noteButton": "Note to reception",
+    "noteLabel": "Internal note (not sent to the patient)",
+    "noteSave": "Save note",
+    "noteSaved": "Note saved and the team notified.",
+    "followUpButton": "Book follow-up",
+    "followUpBookHint": "Booked straight away, with the same doctor.",
+    "followUpRequestHint": "Reception gets a ready request (patient, doctor, service, suggested time) and confirms the booking.",
+    "service": "Service",
+    "day": "Day",
+    "findTimes": "Show free times",
+    "noTimes": "No free times with the doctor that day.",
+    "followUpBook": "Book follow-up at {time}",
+    "followUpRequest": "Send request to reception: {time}",
+    "followUpBooked": "Follow-up booked.",
+    "followUpRequested": "Follow-up request sent to reception.",
+    "resolveButton": "Mark resolved",
+    "resolveNote": "Note (optional)",
+    "resolveConfirm": "Close the concern",
+    "resolved": "Concern closed."
+  },
+  "consentRules": {
+    "title": "When is a new signature needed?",
+    "label": "Consent renewal rule",
+    "rules": {
+      "every_visit": "Every visit",
+      "per_package": "Once per package/course",
+      "months": "Valid for a number of months",
+      "template_change": "Until the template changes"
+    },
+    "hints": {
+      "every_visit": "The patient signs for each appointment (at reception, or on their patient page before the visit).",
+      "per_package": "One signature covers every session of the package they bought. A visit without a package needs a signature each visit.",
+      "months": "A signature stays valid for this many months after it was signed.",
+      "template_change": "A signature stays valid until the consent text is edited."
+    },
+    "months": "Months",
+    "alwaysNewText": "Whatever the rule: when the consent text is edited (new version), a new signature is needed.",
+    "save": "Save rule",
+    "saved": "Rule saved.",
+    "summary": {
+      "every_visit": "New signature every visit",
+      "per_package": "Signed once per package",
+      "months": "Valid for {months} months",
+      "template_change": "Valid until the text changes"
+    }
+  },
+  "consentReason": {
+    "ago": "{days, plural, =0 {today} =1 {yesterday} other {# days ago}}",
+    "signed_this_visit": "Signed {ago} for this visit ✓",
+    "signed_this_package": "Signed {ago}, valid for this package ✓",
+    "signed_within": "Signed {ago}, valid until {until} ✓",
+    "signed_current_version": "Signed {ago}, valid until the consent text changes ✓",
+    "never_signed": "Consent needed: the patient hasn't signed it yet.",
+    "text_changed": "New signature needed: the consent text changed after the last signature.",
+    "previous_visit": "New signature needed: the last signature ({ago}) was for a previous visit, and the rule is every visit.",
+    "before_package": "New signature needed: the last signature ({ago}) was before this package was bought.",
+    "expired": "New signature needed: the last signature ({ago}) expired on {until} (valid {months} months).",
+    "onPatientPage": "on the patient page"
   }
 }

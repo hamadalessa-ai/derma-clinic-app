@@ -263,14 +263,11 @@ describe("consents", () => {
   });
 
   it("a new template version means patients must sign again", async () => {
-    const before = await as(reception, (tx) =>
-      missingConsent(tx, patient("D-0027"), service("fillers")),
-    );
+    const appt = await newAppointment("fillers", "D-0027");
+    const before = await as(reception, (tx) => missingConsent(tx, appt));
     expect(before?.code).toBe("injectables");
-    await sign(reception, "D-0027", "injectables");
-    expect(
-      await as(reception, (tx) => missingConsent(tx, patient("D-0027"), service("fillers"))),
-    ).toBeNull();
+    await sign(reception, "D-0027", "injectables", appt.id);
+    expect(await as(reception, (tx) => missingConsent(tx, appt))).toBeNull();
 
     // Admin edits the template → version 2 becomes current; old versions stay unchanged.
     const v1 = await as(admin, (tx) => currentTemplate(tx, "injectables"));
@@ -281,10 +278,7 @@ describe("consents", () => {
       }),
     );
     expect(v2.version).toBe(v1!.version + 1);
-    expect(
-      (await as(reception, (tx) => missingConsent(tx, patient("D-0027"), service("fillers"))))
-        ?.version,
-    ).toBe(v2.version);
+    expect((await as(reception, (tx) => missingConsent(tx, appt)))?.version).toBe(v2.version);
     expect(
       await dbError(() =>
         as(admin, (tx) =>

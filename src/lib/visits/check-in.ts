@@ -27,7 +27,7 @@ export async function checkIn(
     return { status: "already_checked_in" };
   if (!["booked", "confirmed"].includes(appt.status)) throw new BookingError("bad_status");
 
-  const template = await missingConsent(tx, appt.patientId, appt.serviceId);
+  const template = await missingConsent(tx, appt);
   if (template) return { status: "consent_required", template };
 
   const deduction = await deductForAppointment(tx, actor, appt);

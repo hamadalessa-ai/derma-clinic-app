@@ -6,16 +6,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
-import { ChatThread } from "@/components/whatsapp/chat";
+import { ChatThread, type ConcernEventView } from "@/components/whatsapp/chat";
 import { ConversationList } from "@/components/whatsapp/conversation-list";
 import { LinkOrCreatePatient, MarkHandled, ReplyBox } from "@/components/whatsapp/inbox-actions";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { pick } from "@/lib/brand";
-import { formatTime } from "@/lib/format";
+
 import { whatsappMode } from "@/lib/whatsapp/config";
 import { getThread, listConversations, type InboxFilter } from "@/lib/whatsapp/staff";
-import { messageView } from "@/lib/whatsapp/view";
+import { messageView, senderNames } from "@/lib/whatsapp/view";
+import { concernEventsFor, followUpMode } from "@/lib/whatsapp/concern-actions";
+import { findConcerns } from "@/lib/whatsapp/concerns";
+import { ConcernActions } from "@/components/clinic/concern-actions";
+import { can } from "@/lib/auth/permissions";
+import { riyadhDay } from "@/lib/booking/time";
+import { formatDualDate, formatTime } from "@/lib/format";
+import { services } from "@/db/schema";
+import { asc, eq } from "drizzle-orm";
 import type { Locale } from "@/i18n/config";
 
 const FILTERS: InboxFilter[] = ["needs_reply", "new_contacts", "all"];
@@ -29,15 +37,55 @@ export default async function WhatsAppInboxPage({
 }) {
   const ctx = await requirePermission("whatsapp:inbox");
   const t = await getTranslations("whatsapp");
+  const tc = await getTranslations("concerns");
   const locale = (await getLocale()) as Locale;
   const sp = await searchParams;
   const filter: InboxFilter = FILTERS.includes(sp.f as InboxFilter)
     ? (sp.f as InboxFilter)
     : "needs_reply";
   const activeId = sp.c && UUID.test(sp.c) ? sp.c : null;
-  const { items, thread } = await withActor(actorOf(ctx), async (tx) => ({
-    items: await listConversations(tx, filter),
-    thread: activeId ? await getThread(tx, activeId) : null,
+  const actor = actorOf(ctx);
+  const { items, thread, names, events, concerns } = await withActor(actor, async (tx) => {
+    const thread = activeId ? await getThread(tx, activeId) : null;
+    return {
+      items: await listConversations(tx, filter),
+      thread,
+      names: thread ? await senderNames(tx, thread.messages, locale) : new Map<string, string>(),
+      events: thread ? await concernEventsFor(tx, { conversationId: thread.conversation.id }) : [],
+      // Open concerns in this chat: note to the doctor, follow-up, resolve.
+      concerns: thread
+        ? await Promise.all(
+            (
+              await findConcerns(tx, { conversationId: thread.conversation.id, openOnly: true })
+            ).map(async (c) => ({
+              concern: c,
+              mode: await followUpMode(tx, actor, c.practitionerId),
+            })),
+          )
+        : [],
+    };
+  });
+  const serviceList = concerns.length
+    ? await withActor(actor, (tx) =>
+        tx
+          .select({
+            id: services.id,
+            code: services.code,
+            nameAr: services.nameAr,
+            nameEn: services.nameEn,
+          })
+          .from(services)
+          .where(eq(services.isActive, true))
+          .orderBy(asc(services.sortOrder)),
+      )
+    : [];
+  const eventViews: ConcernEventView[] = events.map(({ e, name, nameEn }) => ({
+    id: e.id,
+    kind: e.kind as ConcernEventView["kind"],
+    body: e.body,
+    actorName: (locale === "en" && nameEn ? nameEn : name) ?? "—",
+    createdAt: e.createdAt.toISOString(),
+    at: e.proposedStartsAt?.toISOString() ?? null,
   }));
   const mode = whatsappMode(ctx.tenant);
   const label = {
@@ -123,11 +171,48 @@ export default async function WhatsAppInboxPage({
               )}
               <div className="bg-chat-bg max-h-[55dvh] overflow-y-auto rounded-md">
                 <ChatThread
-                  messages={thread.messages.map((m) => messageView(m, locale))}
+                  messages={thread.messages.map((m) =>
+                    messageView(m, locale, { names, canSeePhotos: can(ctx.roles, "photos:view") }),
+                  )}
+                  events={eventViews}
                   perspective="clinic"
                   showKinds
                 />
               </div>
+              {concerns.map(({ concern: c, mode }) => (
+                <div
+                  key={c.appointmentId}
+                  className="border-destructive flex flex-col gap-2 rounded-md border p-3"
+                  data-testid="inbox-concern"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                    <Flag className="text-destructive size-4" />
+                    {tc("afterVisit", {
+                      service: pick(locale, c.serviceNameAr, c.serviceNameEn),
+                      date: formatDualDate(c.visitAt, locale, "medium").split(" · ")[0],
+                    })}
+                    <span className="text-muted-foreground font-normal">
+                      · {pick(locale, c.doctorNameAr, c.doctorNameEn)}
+                    </span>
+                  </div>
+                  <ConcernActions
+                    compact
+                    appointmentId={c.appointmentId}
+                    open={c.open}
+                    canReplyFreely={thread.canReplyFreely}
+                    windowEndsAt={windowEnds}
+                    followUpMode={mode}
+                    services={serviceList.map((x) => ({
+                      id: x.id,
+                      name: locale === "en" ? x.nameEn : x.nameAr,
+                    }))}
+                    defaultServiceId={
+                      serviceList.find((x) => x.code === "consultation")?.id ?? c.serviceId
+                    }
+                    today={riyadhDay(new Date())}
+                  />
+                </div>
+              ))}
               <ReplyBox
                 conversationId={thread.conversation.id}
                 canReplyFreely={thread.canReplyFreely}

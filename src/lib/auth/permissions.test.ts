@@ -137,6 +137,18 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: true,
   },
+  "concerns:handle": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: true,
+    receptionist: true,
+  },
+  "photos:view": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: true,
+    receptionist: false,
+  },
   "whatsapp:manage": {
     platform_owner: false,
     clinic_admin: true,

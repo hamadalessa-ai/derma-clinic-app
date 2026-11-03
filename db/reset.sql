@@ -13,6 +13,8 @@ drop table if exists
   public.branches,
   public.clinical_note_addenda,
   public.clinical_notes,
+  public.concern_events,
+  public.consent_rules,
   public.consent_templates,
   public.conversations,
   public.departments,

@@ -327,6 +327,26 @@ export async function bookAppointment(tx: TenantTx, actor: Actor, input: BookInp
   );
 }
 
+/**
+ * A follow-up visit from a concern. Reception/admin may always book it. A doctor may book their
+ * OWN follow-up only when the clinic lets doctors manage their own schedule; otherwise the
+ * doctor sends reception a ready request instead (src/lib/whatsapp/concern-actions.ts).
+ */
+export async function bookFollowUp(tx: TenantTx, actor: Actor, input: BookInput) {
+  if (!can(actor.roles, "appointments:manage")) {
+    const own = can(actor.roles, "appointments:own") && actor.memberId === input.practitionerId;
+    if (!own || !(await getSettings(tx)).doctorsManageOwnSchedule) {
+      throw new BookingError("not_allowed");
+    }
+  }
+  return insertAppointment(
+    tx,
+    actor.tenantId,
+    { userId: actor.userId, source: "reception" },
+    input,
+  );
+}
+
 /** The booking itself (rules + insert + audit). Callers check who may book first. */
 async function insertAppointment(
   tx: TenantTx,

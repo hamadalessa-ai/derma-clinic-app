@@ -3,15 +3,21 @@ import { inArray } from "drizzle-orm";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
-import { PendingBookingActions, RequestActions } from "@/components/clinic/request-actions";
+import {
+  FollowUpRequestActions,
+  PendingBookingActions,
+  RequestActions,
+} from "@/components/clinic/request-actions";
 import { SourceBadge } from "@/components/clinic/badges";
-import { users } from "@/db/schema";
+import { patients, services, users } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { formatDualDate, formatTime } from "@/lib/format";
 import { pick } from "@/lib/brand";
-import { addDays, dayRange, riyadhDay } from "@/lib/booking/time";
+import { addDays, dayRange, riyadhDay, riyadhTime } from "@/lib/booking/time";
 import { pendingRequests } from "@/lib/visits/reschedule";
+import { doctorNames } from "@/lib/booking/doctor-names";
+import { openFollowUpRequests } from "@/lib/whatsapp/concern-actions";
 import { loadAppointments } from "@/lib/views/schedule";
 import type { Locale } from "@/i18n/config";
 
@@ -44,7 +50,56 @@ export default async function RequestsPage() {
             ),
           )
       : [];
-    return { reqs, appts, requesters, pendingBookings };
+    // Doctors' follow-up requests from post-care concerns (when doctors don't book themselves).
+    const followUps = await openFollowUpRequests(tx);
+    const [fuPatients, fuServices, fuDoctors, fuBy] = followUps.length
+      ? await Promise.all([
+          tx
+            .select()
+            .from(patients)
+            .where(
+              inArray(
+                patients.id,
+                followUps.map((f) => f.patientId),
+              ),
+            ),
+          tx
+            .select()
+            .from(services)
+            .where(
+              inArray(
+                services.id,
+                followUps.flatMap((f) => f.serviceId ?? []),
+              ),
+            ),
+          doctorNames(
+            tx,
+            followUps.map((f) => f.practitionerId),
+          ),
+          tx
+            .select()
+            .from(users)
+            .where(
+              inArray(
+                users.id,
+                followUps.map((f) => f.actorUserId),
+              ),
+            ),
+        ])
+      : [[], [], new Map<string, { nameAr: string; nameEn: string | null }>(), []];
+    return {
+      reqs,
+      appts,
+      requesters,
+      pendingBookings,
+      followUps: followUps.map((f) => ({
+        ...f,
+        patient: fuPatients.find((p) => p.id === f.patientId),
+        service: fuServices.find((x) => x.id === f.serviceId),
+        doctor: fuDoctors.get(f.practitionerId),
+        by: fuBy.find((u) => u.id === f.actorUserId),
+      })),
+    };
   });
   const today = riyadhDay(new Date());
   const windowFrom = dayRange(today)[0];
@@ -80,9 +135,46 @@ export default async function RequestsPage() {
       {data.reqs.length > 0 && data.pendingBookings.length > 0 && (
         <h2 className="text-base font-semibold">{t("rescheduleRequests")}</h2>
       )}
-      {data.reqs.length === 0 && data.pendingBookings.length === 0 && (
-        <p className="text-muted-foreground py-8 text-center">{t("empty")}</p>
-      )}
+      {data.followUps.length > 0 && <h2 className="text-base font-semibold">{t("followUps")}</h2>}
+      {data.followUps.map((f) => (
+        <Card key={f.id} data-testid="followup-request">
+          <CardContent className="flex flex-col gap-2 pt-4 text-sm">
+            <div className="text-base font-semibold">
+              {f.patient ? pick(locale, f.patient.fullNameAr, f.patient.fullNameEn) : "—"} ·{" "}
+              {f.service ? pick(locale, f.service.nameAr, f.service.nameEn) : "—"}
+            </div>
+            <div>
+              {t("requestedBy")}: {f.by ? pick(locale, f.by.name, f.by.nameEn) : "—"} ·{" "}
+              {t("withDoctor", {
+                doctor: f.doctor ? pick(locale, f.doctor.nameAr, f.doctor.nameEn) : "—",
+              })}
+              {f.body && ` — ${f.body}`}
+            </div>
+            <div>
+              {t("proposed")}:{" "}
+              <strong>{f.proposedStartsAt ? when(f.proposedStartsAt) : "—"}</strong>
+              {f.patient && (
+                <span className="text-muted-foreground" dir="ltr">
+                  {" "}
+                  · {f.patient.fileNumber} · {f.patient.phone}
+                </span>
+              )}
+            </div>
+            {f.proposedStartsAt && (
+              <FollowUpRequestActions
+                requestId={f.id}
+                day={riyadhDay(f.proposedStartsAt)}
+                time={riyadhTime(f.proposedStartsAt)}
+              />
+            )}
+          </CardContent>
+        </Card>
+      ))}
+      {data.reqs.length === 0 &&
+        data.pendingBookings.length === 0 &&
+        data.followUps.length === 0 && (
+          <p className="text-muted-foreground py-8 text-center">{t("empty")}</p>
+        )}
       {data.reqs.map((r) => {
         const a = data.appts.find((x) => x.id === r.appointmentId);
         const who = data.requesters.find((u) => u.id === r.requestedBy);

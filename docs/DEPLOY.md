@@ -340,6 +340,23 @@ Ready-made demo chats: **D-0001** (reminder confirmed with the button), **D-0011
    concern is listed at the top of her **My Day** until reception answers it. Reception's
    notification still opens the WhatsApp chat. The push log shows where each notification opens.
 
+### E7. Update: consent renewal rules, doctors handle concerns (10 minutes)
+
+1. GitHub → the pull request → **Merge pull request → Confirm merge**.
+2. **Database reset needed** (new tables for consent rules and concern notes, photos on messages):
+   Supabase → paste `db/reset.sql` → Run, then `db/setup.sql` with the **same app database
+   password** → Run (exactly as in **E1**). Nothing changes in Vercel.
+3. Dr. Sara: open the app → **My account** → turn notifications on again (a reset removes devices).
+4. Try the consent rules: **Settings → Consent templates → Edit** shows "When is a new signature
+   needed?". Open any Botox/peel appointment in the calendar: it says why a signature is or isn't
+   needed (e.g. "Signed 3 days ago, valid for this package").
+5. Try a concern: Dr. Sara's **My Day** shows D-0011's open concern (demo). Open it → reply, "Ask
+   for a photo", note to reception, "Book follow-up", "Mark resolved". In the **WhatsApp simulator**
+   the patient sees the reply signed with her name and can attach a photo (📎).
+   - "Book follow-up" follows **Settings → Doctors manage their own schedule**: ON = booked
+     directly; OFF = reception gets a ready request under **Requests**.
+   - Patient photos are visible to doctors and admins only; reception sees "photo received".
+
 ---
 
 ## Part F — When Meta verification is done (real WhatsApp)

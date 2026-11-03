@@ -21,6 +21,7 @@ import { concernThread, findConcerns } from "@/lib/whatsapp/concerns";
 import { handleInbound } from "@/lib/whatsapp/inbound";
 import { sendPostCare } from "@/lib/whatsapp/outbox";
 import { markHandled } from "@/lib/whatsapp/staff";
+import { resolveConcern } from "@/lib/whatsapp/concern-actions";
 import {
   admin,
   DERMA,
@@ -196,7 +197,7 @@ describe("the links actually sent, per recipient", () => {
 });
 
 describe("concerns for the doctor (My Day) and the patient's file", () => {
-  it("open for the visit's doctor only, with the post-care chat; answered once reception handles it", async () => {
+  it("open for the visit's doctor only, with the post-care chat; closed when marked resolved", async () => {
     const a = await book("D-0012");
     const convo = await raiseConcern(a, "D-0012");
 
@@ -218,8 +219,14 @@ describe("concerns for the doctor (My Day) and the patient's file", () => {
     expect(kinds).toContain("concern_ack");
     expect(thread.find((m) => m.flag === "concern")).toBeTruthy();
 
-    // Reception marks the chat handled → no longer open (still shown when asked for directly).
+    // Reception marks the CHAT handled: the concern stays open for the doctor…
     await withActor(reception, (tx) => markHandled(tx, reception, convo.id));
+    const stillOpen = await withActor(drSara, (tx) =>
+      findConcerns(tx, { practitionerId: member("derma-dr-sara"), openOnly: true }),
+    );
+    expect(stillOpen.some((c) => c.appointmentId === a.id)).toBe(true);
+    // …until someone marks the CONCERN resolved (still shown when asked for directly).
+    await withActor(reception, (tx) => resolveConcern(tx, reception, a.id, null));
     const after = await withActor(drSara, (tx) =>
       findConcerns(tx, { practitionerId: member("derma-dr-sara"), openOnly: true }),
     );

@@ -6,12 +6,23 @@
  */
 import { and, asc, desc, eq, inArray, or } from "drizzle-orm";
 import type { TenantTx } from "@/db/tenant";
-import { consentTemplates, patientConsents, patients, services } from "@/db/schema";
+import {
+  appointments,
+  consentRules,
+  consentTemplates,
+  packageSessionEvents,
+  patientConsents,
+  patientPackages,
+  patients,
+  services,
+  type ConsentRule,
+} from "@/db/schema";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
 import { getFileStore } from "@/lib/files/store";
 import { contentFingerprint } from "./fingerprint";
+import { decideConsent, type ConsentReason } from "./rules";
 
 export { contentFingerprint };
 
@@ -96,20 +107,57 @@ export async function saveTemplateVersion(
 }
 
 /**
- * Which consent (if any) this patient still has to sign for a service.
- * A signature counts only for the CURRENT version of the template.
+ * Which consent (if any) this appointment still needs signed, by the template's renewal rule
+ * (src/lib/consents/rules.ts). Only the CURRENT template version counts.
  */
-export async function missingConsent(tx: TenantTx, patientId: string, serviceId: string) {
-  const [svc] = await tx.select().from(services).where(eq(services.id, serviceId)).limit(1);
-  if (!svc?.consentCode) return null;
-  const tpl = await currentTemplate(tx, svc.consentCode);
-  if (!tpl) return null;
-  const [signed] = await tx
-    .select({ id: patientConsents.id })
-    .from(patientConsents)
-    .where(and(eq(patientConsents.patientId, patientId), eq(patientConsents.templateId, tpl.id)))
-    .limit(1);
-  return signed ? null : tpl;
+export async function missingConsent(
+  tx: TenantTx,
+  appt: { id: string; patientId: string; serviceId: string },
+) {
+  const status = (await consentStatusFor(tx, [appt])).get(appt.id);
+  if (!status || status.signed) return null;
+  const [tpl] = await tx
+    .select()
+    .from(consentTemplates)
+    .where(eq(consentTemplates.id, status.templateId));
+  return tpl ?? null;
+}
+
+/** Each template code's renewal rule (no row = every visit). */
+export async function consentRulesByCode(tx: TenantTx) {
+  const rows = await tx.select().from(consentRules);
+  return new Map(rows.map((r) => [r.code, { rule: r.rule, months: r.months }]));
+}
+
+/** Admin: sets when a consent needs a new signature. */
+export async function saveConsentRule(
+  tx: TenantTx,
+  actor: Actor,
+  input: { code: string; rule: ConsentRule; months: number | null },
+) {
+  assertCan(actor.roles, "consents:templates");
+  if (!(await currentTemplate(tx, input.code))) throw new ConsentError("not_found");
+  const months = input.rule === "months" ? Math.min(120, Math.max(1, input.months ?? 12)) : null;
+  await tx
+    .insert(consentRules)
+    .values({
+      tenantId: actor.tenantId,
+      code: input.code,
+      rule: input.rule,
+      months,
+      updatedBy: actor.userId,
+    })
+    .onConflictDoUpdate({
+      target: [consentRules.tenantId, consentRules.code],
+      set: { rule: input.rule, months, updatedBy: actor.userId, updatedAt: new Date() },
+    });
+  await audit(tx, {
+    actorUserId: actor.userId,
+    action: "consent_rule.set",
+    entityType: "consent_rule",
+    entityId: input.code,
+    metadata: { rule: input.rule, months },
+  });
 }
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
@@ -175,6 +223,14 @@ async function storeSignedConsent(
     .limit(1);
   if (!tpl) throw new ConsentError("not_found");
   if (!tpl.isCurrent) throw new ConsentError("not_current");
+  // A signature "for this visit" must be for one of this patient's own appointments.
+  if (input.appointmentId) {
+    const [appt] = await tx
+      .select({ patientId: appointments.patientId })
+      .from(appointments)
+      .where(eq(appointments.id, input.appointmentId));
+    if (appt?.patientId !== input.patientId) throw new ConsentError("not_found");
+  }
 
   const file = await getFileStore().put(
     { tx, tenantId, userId: by.witnessUserId },
@@ -218,15 +274,26 @@ async function storeSignedConsent(
   return consent;
 }
 
-/** For each appointment: which consent its service needs and whether it is already signed. */
+export interface ConsentStatus {
+  templateId: string;
+  code: string;
+  signed: boolean;
+  signedVia: string | null;
+  rule: ConsentRule;
+  months: number | null;
+  reason: ConsentReason;
+}
+
+/**
+ * For each appointment: which consent its service needs, whether it is signed FOR THIS VISIT by
+ * the template's renewal rule, and why (shown on the appointment).
+ */
 export async function consentStatusFor(
   tx: TenantTx,
   appts: { id: string; patientId: string; serviceId: string }[],
+  now = new Date(),
 ) {
-  const out = new Map<
-    string,
-    { templateId: string; code: string; signed: boolean; signedVia: string | null }
-  >();
+  const out = new Map<string, ConsentStatus>();
   if (!appts.length) return out;
   const svc = await tx
     .select({ id: services.id, consentCode: services.consentCode })
@@ -234,36 +301,93 @@ export async function consentStatusFor(
     .where(inArray(services.id, [...new Set(appts.map((a) => a.serviceId))]));
   const codes = [...new Set(svc.map((s) => s.consentCode).filter((c): c is string => !!c))];
   if (!codes.length) return out;
-  const tpls = await tx
-    .select()
-    .from(consentTemplates)
-    .where(and(eq(consentTemplates.isCurrent, true), inArray(consentTemplates.code, codes)));
-  const signed = await tx
-    .select({
-      patientId: patientConsents.patientId,
-      templateId: patientConsents.templateId,
-      signedVia: patientConsents.signedVia,
-    })
-    .from(patientConsents)
-    .where(
-      and(
-        inArray(patientConsents.patientId, [...new Set(appts.map((a) => a.patientId))]),
-        inArray(
-          patientConsents.templateId,
-          tpls.map((t) => t.id),
+  const patientIds = [...new Set(appts.map((a) => a.patientId))];
+  const [tpls, rules, signatures, times, pkgs, deductions] = await Promise.all([
+    tx
+      .select()
+      .from(consentTemplates)
+      .where(and(eq(consentTemplates.isCurrent, true), inArray(consentTemplates.code, codes))),
+    consentRulesByCode(tx),
+    tx
+      .select({
+        patientId: patientConsents.patientId,
+        templateId: patientConsents.templateId,
+        templateCode: patientConsents.templateCode,
+        appointmentId: patientConsents.appointmentId,
+        signedAt: patientConsents.signedAt,
+        signedVia: patientConsents.signedVia,
+      })
+      .from(patientConsents)
+      .where(
+        and(
+          inArray(patientConsents.patientId, patientIds),
+          inArray(patientConsents.templateCode, codes),
         ),
       ),
-    );
+    tx
+      .select({ id: appointments.id, startsAt: appointments.startsAt })
+      .from(appointments)
+      .where(
+        inArray(
+          appointments.id,
+          appts.map((a) => a.id),
+        ),
+      ),
+    tx.select().from(patientPackages).where(inArray(patientPackages.patientId, patientIds)),
+    // Patients can't read balance changes (patient wall): then the active package is used.
+    tx
+      .select({
+        appointmentId: packageSessionEvents.appointmentId,
+        packageId: packageSessionEvents.patientPackageId,
+      })
+      .from(packageSessionEvents)
+      .where(
+        and(
+          eq(packageSessionEvents.kind, "deduction"),
+          inArray(
+            packageSessionEvents.appointmentId,
+            appts.map((a) => a.id),
+          ),
+        ),
+      ),
+  ]);
   for (const a of appts) {
     const code = svc.find((s) => s.id === a.serviceId)?.consentCode;
     const tpl = code ? tpls.find((t) => t.code === code) : undefined;
     if (!tpl) continue;
-    const hit = signed.find((x) => x.patientId === a.patientId && x.templateId === tpl.id);
+    const startsAt = times.find((t) => t.id === a.id)?.startsAt ?? now;
+    // The package this visit uses: the one deducted at check-in, else the one check-in would use.
+    const deducted = deductions.find((d) => d.appointmentId === a.id);
+    const pkg = deducted
+      ? pkgs.find((p) => p.id === deducted.packageId)
+      : pkgs
+          .filter(
+            (p) =>
+              p.patientId === a.patientId &&
+              p.serviceId === a.serviceId &&
+              p.sessionsUsed < p.sessionsTotal &&
+              p.expiresAt > now,
+          )
+          .sort((x, y) => x.expiresAt.getTime() - y.expiresAt.getTime())[0];
+    const rule = rules.get(tpl.code) ?? { rule: "every_visit" as const, months: null };
+    const decision = decideConsent({
+      rule: rule.rule,
+      months: rule.months,
+      currentTemplateId: tpl.id,
+      appointment: { id: a.id, startsAt },
+      pkg: pkg ? { purchasedAt: pkg.purchasedAt } : null,
+      signatures: signatures.filter(
+        (x) => x.patientId === a.patientId && x.templateCode === tpl.code,
+      ),
+    });
     out.set(a.id, {
       templateId: tpl.id,
       code: tpl.code,
-      signed: !!hit,
-      signedVia: hit?.signedVia ?? null,
+      signed: decision.signed,
+      signedVia: decision.signature?.signedVia ?? null,
+      rule: decision.rule,
+      months: decision.months,
+      reason: decision.reason,
     });
   }
   return out;

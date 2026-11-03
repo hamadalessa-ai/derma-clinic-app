@@ -235,6 +235,18 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
+  // Renewal rules: Botox/fillers and peels every visit; laser hair removal once per package.
+  out.push(
+    insert(
+      "consent_rules",
+      CONSENT_TEMPLATES.map((c) => ({
+        tenant_id: tid,
+        code: c.code,
+        rule: c.rule,
+        months: null,
+      })),
+    ),
+  );
   out.push(
     insert(
       "package_templates",

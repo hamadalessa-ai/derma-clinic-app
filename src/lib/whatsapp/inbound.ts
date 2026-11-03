@@ -8,10 +8,11 @@
  *  - buttons (signed payloads) confirm / cancel / reschedule through the booking engine;
  *  - STOP / إيقاف opts out, START / تفعيل opts back in;
  *  - post-care "concern" → flagged in the inbox + push to the doctor and reception;
+ *  - a photo → stored in the patient's file (FileStore), tied to their open concern;
  *  - any other text → inbox, "needs reply" (Phase 2c: the AI receptionist plugs in here);
  *  - delivery statuses (sent / delivered / read / failed) update the stored message.
  */
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { conversations, messages, patients, webhookEvents } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
 import {
@@ -26,10 +27,14 @@ import {
 } from "@/lib/booking/engine";
 import { addDays, riyadhDay } from "@/lib/booking/time";
 import { doctorNames } from "@/lib/booking/doctor-names";
+import { audit } from "@/lib/audit";
+import { getFileStore } from "@/lib/files/store";
 import { sendPushEvents, type PushEvent } from "@/lib/push/notify";
 import { parseButtonPayload, type ParsedButton } from "./buttons";
 import { START_WORDS, STOP_WORDS, type ReplyKind } from "./catalog";
-import { appBaseUrl } from "./config";
+import { appBaseUrl, liveConfig } from "./config";
+import { CONCERN_OPEN_DAYS } from "./concerns";
+import { downloadMetaMedia } from "./meta";
 import { appointmentVars, loadAppointmentContext } from "./compose";
 import { sendMessage, type ButtonSpec, type Tenant } from "./send";
 import { ensureConversation, recordMessage } from "./store";
@@ -43,9 +48,12 @@ export type InboundEvent =
       eventId: string;
       from: string; // 05XXXXXXXX
       profileName?: string | null;
-      /** text = typed; button = a reply button (payload = its id); unsupported = image, audio… */
-      kind: "text" | "button" | "unsupported";
+      /** text = typed; button = a reply button (payload = its id); image = a photo; unsupported = audio… */
+      kind: "text" | "button" | "image" | "unsupported";
+      /** Typed text, or a photo's caption. */
       text?: string;
+      /** A photo: Meta's media id (downloaded later), or the simulator's bytes (demo only). */
+      media?: { id?: string | null; mimeType?: string | null; dataBase64?: string | null };
       buttonPayload?: string;
       buttonTitle?: string;
       unsupportedType?: string;
@@ -149,9 +157,18 @@ async function handleOne(
   }
 
   // ── An incoming message ──
+  // A photo is fetched BEFORE the database transaction (network).
+  const photo = ev.kind === "image" ? await fetchPhoto(ev, env) : null;
   const work = await withTenant(tenant.id, async (tx) => {
     if (!(await firstTime(tx, tenant.id, `message:${ev.eventId}`))) return null;
     const convo = await ensureConversation(tx, { phone: ev.from, profileName: ev.profileName });
+    if (ev.kind === "image") {
+      return {
+        replies: [] as Reply[],
+        push: await storePhoto(tx, tenant, convo, ev, photo, now),
+        convo,
+      };
+    }
     const button =
       ev.kind === "button" && ev.buttonPayload
         ? parseButtonPayload(tenant.id, ev.buttonPayload, env)
@@ -222,6 +239,88 @@ async function handleOne(
   }
   if (work.push.length) await notify(work.push);
   return work.replies[0]?.kind ?? "stored";
+}
+
+/** The photo's bytes: from the simulator (demo events only) or downloaded from Meta. */
+async function fetchPhoto(ev: Extract<InboundEvent, { type: "message" }>, env: Env) {
+  const mimeType = ev.media?.mimeType || "image/jpeg";
+  if (ev.eventId.startsWith("sim-")) {
+    return ev.media?.dataBase64
+      ? { data: Buffer.from(ev.media.dataBase64, "base64"), mimeType }
+      : null;
+  }
+  const live = liveConfig(env).config;
+  if (!live || live.provider !== "meta" || !ev.media?.id) return null;
+  return downloadMetaMedia(live, ev.media.id);
+}
+
+/**
+ * A photo from the patient: stored in their file through the FileStore (doctors and admins can
+ * see it), shown in the chat, and tied to their open post-care concern (the doctor is notified).
+ */
+async function storePhoto(
+  tx: TenantTx,
+  tenant: Tenant,
+  convo: { id: string; patientId: string | null },
+  ev: Extract<InboundEvent, { type: "message" }>,
+  photo: { data: Buffer; mimeType: string } | null,
+  now = new Date(),
+): Promise<PushEvent[]> {
+  const [concern] = await tx
+    .select({ appointmentId: messages.appointmentId })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, convo.id),
+        eq(messages.flag, "concern"),
+        gte(messages.createdAt, new Date(now.getTime() - CONCERN_OPEN_DAYS * 86_400_000)),
+      ),
+    )
+    .orderBy(desc(messages.createdAt))
+    .limit(1);
+  let fileId: string | null = null;
+  if (photo && convo.patientId) {
+    try {
+      fileId = (
+        await getFileStore().put(
+          { tx, tenantId: tenant.id, userId: null },
+          { kind: "patient_photo", mimeType: photo.mimeType, data: photo.data },
+        )
+      ).id;
+    } catch (err) {
+      console.warn("whatsapp photo not stored", err); // e.g. not an image / too big
+    }
+  }
+  const caption = (ev.text ?? "").trim();
+  await recordMessage(tx, {
+    conversationId: convo.id,
+    patientId: convo.patientId,
+    appointmentId: concern?.appointmentId ?? null,
+    direction: "in",
+    kind: "inbound_image",
+    body: (caption || "[photo]").slice(0, 4000),
+    fileId,
+    channel: ev.eventId.startsWith("sim-") ? "demo" : "meta",
+    status: "received",
+    providerMessageId: ev.eventId.startsWith("sim-") ? null : ev.eventId,
+    needsReply: true,
+  });
+  if (fileId) {
+    await audit(tx, {
+      actorUserId: null,
+      action: "patient_photo.received",
+      entityType: "file",
+      entityId: fileId,
+      metadata: {
+        via: "whatsapp",
+        patientId: convo.patientId,
+        appointmentId: concern?.appointmentId ?? null,
+      },
+    });
+  }
+  return concern?.appointmentId
+    ? [{ type: "concern_photo", appointmentId: concern.appointmentId }]
+    : [];
 }
 
 async function setOptOut(

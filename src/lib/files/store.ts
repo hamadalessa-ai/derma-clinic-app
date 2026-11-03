@@ -24,12 +24,25 @@ export interface FileStore {
   get(ctx: { tx: TenantTx }, id: string): Promise<(StoredFile & { data: Buffer }) | null>;
 }
 
-const MAX_BYTES = 2 * 1024 * 1024;
-const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+/** Before shrinking: signatures are small; photos from a phone camera can be several MB. */
+const MAX_BYTES: Record<string, number> = { patient_photo: 10 * 1024 * 1024 };
+const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
+const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/heic"]);
 
-/** Shrinks images before storing (signatures become small palette PNGs). */
-export async function compressImage(data: Buffer, mimeType: string) {
+/**
+ * Shrinks images before storing: signatures become small palette PNGs; photos become JPEGs
+ * (max 1600 px, good enough to judge redness or swelling, ~200–400 KB).
+ */
+export async function compressImage(data: Buffer, mimeType: string, kind = "signature") {
   if (!IMAGE_TYPES.has(mimeType)) return { data, mimeType };
+  if (kind === "patient_photo") {
+    const out = await sharp(data)
+      .rotate()
+      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 80, mozjpeg: true })
+      .toBuffer();
+    return { data: out, mimeType: "image/jpeg" };
+  }
   const out = await sharp(data)
     .rotate()
     .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
@@ -40,9 +53,9 @@ export async function compressImage(data: Buffer, mimeType: string) {
 
 export const postgresFileStore: FileStore = {
   async put({ tx, tenantId, userId }, file) {
-    if (file.data.length === 0 || file.data.length > MAX_BYTES)
+    if (file.data.length === 0 || file.data.length > (MAX_BYTES[file.kind] ?? DEFAULT_MAX_BYTES))
       throw new Error("file too large or empty");
-    const { data, mimeType } = await compressImage(file.data, file.mimeType);
+    const { data, mimeType } = await compressImage(file.data, file.mimeType, file.kind);
     const sha256 = createHash("sha256").update(data).digest("hex");
     const [row] = await tx
       .insert(files)

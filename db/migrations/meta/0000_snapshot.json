@@ -1,5 +1,5 @@
 {
-  "id": "198b3971-dfb8-4942-b50f-ab042f1bf2ab",
+  "id": "d370939a-36be-4498-8c61-5a068caf5ff5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1028,6 +1028,322 @@
       },
       "isRLSEnabled": false
     },
+    "public.concern_events": {
+      "name": "concern_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "appointment_id": {
+          "name": "appointment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "patient_id": {
+          "name": "patient_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_id": {
+          "name": "service_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_starts_at": {
+          "name": "proposed_starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "follow_up_appointment_id": {
+          "name": "follow_up_appointment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "concern_events_appointment_idx": {
+          "name": "concern_events_appointment_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "appointment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "concern_events_tenant_id_tenants_id_fk": {
+          "name": "concern_events_tenant_id_tenants_id_fk",
+          "tableFrom": "concern_events",
+          "tableTo": "tenants",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "concern_events_service_fk": {
+          "name": "concern_events_service_fk",
+          "tableFrom": "concern_events",
+          "tableTo": "services",
+          "columnsFrom": [
+            "tenant_id",
+            "service_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "concern_events_appointment_fk": {
+          "name": "concern_events_appointment_fk",
+          "tableFrom": "concern_events",
+          "tableTo": "appointments",
+          "columnsFrom": [
+            "tenant_id",
+            "appointment_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "concern_events_conversation_fk": {
+          "name": "concern_events_conversation_fk",
+          "tableFrom": "concern_events",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "tenant_id",
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "concern_events_patient_fk": {
+          "name": "concern_events_patient_fk",
+          "tableFrom": "concern_events",
+          "tableTo": "patients",
+          "columnsFrom": [
+            "tenant_id",
+            "patient_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "concern_events_follow_up_fk": {
+          "name": "concern_events_follow_up_fk",
+          "tableFrom": "concern_events",
+          "tableTo": "appointments",
+          "columnsFrom": [
+            "tenant_id",
+            "follow_up_appointment_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "concern_events_tenant_id_id_key": {
+          "name": "concern_events_tenant_id_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "concern_events_kind": {
+          "name": "concern_events_kind",
+          "value": "\"concern_events\".\"kind\" in ('note', 'follow_up_request', 'follow_up', 'resolved')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.consent_rules": {
+      "name": "consent_rules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rule": {
+          "name": "rule",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'every_visit'"
+        },
+        "months": {
+          "name": "months",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "consent_rules_tenant_id_tenants_id_fk": {
+          "name": "consent_rules_tenant_id_tenants_id_fk",
+          "tableFrom": "consent_rules",
+          "tableTo": "tenants",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "consent_rules_tenant_id_id_key": {
+          "name": "consent_rules_tenant_id_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "consent_rules_code_key": {
+          "name": "consent_rules_code_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "consent_rules_rule": {
+          "name": "consent_rules_rule",
+          "value": "\"consent_rules\".\"rule\" in ('every_visit', 'per_package', 'months', 'template_change')"
+        },
+        "consent_rules_months": {
+          "name": "consent_rules_months",
+          "value": "(\"consent_rules\".\"rule\" = 'months' and \"consent_rules\".\"months\" between 1 and 120) or (\"consent_rules\".\"rule\" <> 'months' and \"consent_rules\".\"months\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.consent_templates": {
       "name": "consent_templates",
       "schema": "",
@@ -1929,6 +2245,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "file_id": {
+          "name": "file_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "sent_by": {
           "name": "sent_by",
           "type": "text",
@@ -2079,6 +2401,21 @@
             "id"
           ],
           "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "messages_file_fk": {
+          "name": "messages_file_fk",
+          "tableFrom": "messages",
+          "tableTo": "files",
+          "columnsFrom": [
+            "tenant_id",
+            "file_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

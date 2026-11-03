@@ -56,16 +56,16 @@ export function pushLink(type: PushType, roles: readonly Role[], c: LinkContext)
     ? `/whatsapp?f=needs_reply&c=${c.conversationId}`
     : "/whatsapp?f=needs_reply";
   const patient = concernLink(c);
-  const choices: string[] =
-    type === "patient_concern"
-      ? // The appointment's doctor reads it in the patient's file; reception answers in the inbox.
-        roles.includes("practitioner")
-        ? [patient]
-        : [inbox, patient]
-      : type === "reschedule_request"
-        ? ["/requests", myDay, calendar]
-        : (DOCTOR_TYPES as readonly string[]).includes(type)
-          ? [myDay, calendar]
-          : [calendar];
+  const concernish = ["patient_concern", "concern_note", "concern_photo"].includes(type);
+  const choices: string[] = concernish
+    ? // The appointment's doctor works on it in the patient's file; reception in the inbox.
+      roles.includes("practitioner")
+      ? [patient]
+      : [inbox, patient]
+    : type === "reschedule_request" || type === "follow_up_request"
+      ? ["/requests", myDay, calendar]
+      : (DOCTOR_TYPES as readonly string[]).includes(type)
+        ? [myDay, calendar]
+        : [calendar];
   return choices.find((url) => canOpen(roles, url)) ?? "/";
 }
