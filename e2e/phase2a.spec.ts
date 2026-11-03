@@ -173,7 +173,10 @@ test.describe("online booking and the patient page", () => {
       movedDay = (await chip.getAttribute("data-day"))!;
       await chip.click();
       const slot = move.locator("[data-time]").first();
-      await expect(slot.or(move.getByText("لا توجد أوقات متاحة"))).toBeVisible();
+      // A free time, "no free times", or a reason (e.g. Friday: the clinic is closed).
+      await expect(
+        slot.or(move.getByText("لا توجد أوقات متاحة")).or(move.getByTestId("move-refusal")),
+      ).toBeVisible();
       if (await slot.count()) {
         await slot.click();
         break;

@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AlertBadge, BalanceBadge, StatusBadge } from "@/components/clinic/badges";
+import { ConcernCard } from "@/components/clinic/concern-card";
 import {
   AlertsEditor,
   ConsentsPanel,
@@ -40,6 +41,8 @@ import {
 } from "@/lib/packages/packages";
 import { getFamily, getPatient, getPatientAlerts } from "@/lib/patients/queries";
 import { loadAppointments } from "@/lib/views/schedule";
+import { concernThread, findConcerns } from "@/lib/whatsapp/concerns";
+import { messageView } from "@/lib/whatsapp/view";
 import { riyadhDay, riyadhTime } from "@/lib/booking/time";
 import type { Locale } from "@/i18n/config";
 
@@ -52,7 +55,7 @@ export default async function PatientProfilePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; appointment?: string }>;
+  searchParams: Promise<{ tab?: string; appointment?: string; concern?: string }>;
 }) {
   const ctx = await requirePermission("patients:read");
   const { id } = await params;
@@ -71,6 +74,8 @@ export default async function PatientProfilePage({
     ? (sp.tab as Tab)
     : "overview";
   const actor = { ...actorOf(ctx) };
+  // Opened from a "patient concern" notification (or My Day): show that concern first.
+  const concernId = sp.concern && UUID_RE.test(sp.concern) ? sp.concern : null;
 
   const data = await withActor(actor, async (tx) => {
     const patient = await getPatient(tx, id);
@@ -106,12 +111,24 @@ export default async function PatientProfilePage({
         pkgs.map((p) => p.id),
       ),
     ]);
+    // Post-care concerns: the open ones, and the one the link asked for (even if answered).
+    const concerns = (await findConcerns(tx, { patientId: id })).filter(
+      (c) => c.open || c.appointmentId === concernId,
+    );
+    const concernThreads = await Promise.all(concerns.map((c) => concernThread(tx, c)));
     const [convo] = await tx
       .select({ id: conversations.id })
       .from(conversations)
       .where(eq(conversations.phone, patient.phone))
       .limit(1);
     return {
+      concerns: concerns
+        .map((c, i) => ({ concern: c, thread: concernThreads[i] }))
+        .sort(
+          (a, b) =>
+            Number(b.concern.appointmentId === concernId) -
+            Number(a.concern.appointmentId === concernId),
+        ),
       conversationId: convo?.id ?? null,
       patient,
       alerts: alerts.get(id),
@@ -193,6 +210,19 @@ export default async function PatientProfilePage({
           </Link>
         )}
       </div>
+
+      {data.concerns.map(({ concern, thread }) => (
+        <ConcernCard
+          key={concern.appointmentId}
+          concern={concern}
+          thread={thread.map((m) => messageView(m, locale))}
+          locale={locale}
+          highlighted={concern.appointmentId === concernId}
+          inboxHref={
+            can(ctx.roles, "whatsapp:inbox") ? `/whatsapp?f=all&c=${concern.conversationId}` : null
+          }
+        />
+      ))}
 
       <LinkTabs active={tab} tabs={tabs.map((x) => ({ key: x, label: t(x), href: href(x) }))} />
 

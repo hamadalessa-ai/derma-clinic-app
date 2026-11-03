@@ -23,14 +23,14 @@ self.addEventListener("push", (event) => {
       lang: "ar",
       tag: data.tag || undefined,
       renotify: !!data.tag,
-      data: { url: data.url || "/my-day" },
+      data: { url: data.url || "/" },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/my-day";
+  const url = (event.notification.data && event.notification.data.url) || "/"; // the dashboard: every staff role may open it
   event.waitUntil(
     self.clients.matchAll({ type: "window" }).then((list) => {
       for (const c of list) if ("focus" in c) return c.navigate(url).then(() => c.focus());

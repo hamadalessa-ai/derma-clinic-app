@@ -7,8 +7,9 @@
  *  2. "Run scheduled messages now" → the reminder appears → tap Confirm → reception's calendar
  *     shows the appointment as confirmed.
  *  3. Complete a visit → run (fast-forward 24 h) → post-care check-in → tap "I have a concern" →
- *     the chat is in reception's inbox flagged as a concern (the push to Dr. Sara is tested in
- *     tests/push.test.ts and tests/whatsapp-inbound.test.ts — a browser can't receive a real push).
+ *     Dr. Sara follows her notification's link (from the push log) to the patient's file: concern
+ *     + chat, read-only; it is also on her My Day. Reception's inbox has it flagged as a concern.
+ *     (A browser can't receive a real push: sending is tested in tests/push-log.test.ts.)
  *  4. A message from a number that isn't a patient → inbox "new numbers" → create the patient.
  */
 import { expect, test, type Browser, type Page } from "@playwright/test";
@@ -196,6 +197,35 @@ test.describe("WhatsApp in demo mode", () => {
       admin.locator("[data-testid=push-log-row][data-type=patient_concern]").first(),
     ).toBeVisible();
 
+    // Dr. Sara taps her concern notification: it opens the patient's file (not "no permission")
+    // with a "Concern" badge, the concern and the post-care conversation, read-only.
+    const sentToSara = admin
+      .locator(
+        "[data-testid=push-log-row][data-type=patient_concern][data-user='usr_derma-dr-sara']",
+      )
+      .first();
+    const link = (await sentToSara.getAttribute("data-link"))!;
+    expect(link).toMatch(/^\/patients\/[0-9a-f-]{36}\?concern=/);
+    const doctor = await staff(browser, "dr.sara@derma.demo", isMobile);
+    await doctor.goto(link);
+    await expect(doctor).not.toHaveURL(/forbidden/);
+    const concern = doctor.locator("#concern[data-testid=patient-concern]");
+    await expect(concern).toBeVisible();
+    await expect(concern.getByTestId("concern-badge")).toHaveText("قلق");
+    await expect(concern.locator("[data-kind=post_care]")).toContainText("التنظيف");
+    await expect(concern.locator("[data-kind=inbound_button]").last()).toContainText(
+      "لدي استفسار/قلق",
+    );
+    await expect(concern.getByTestId("concern-read-only")).toBeVisible();
+    await expect(doctor.getByTestId("reply-text")).toHaveCount(0); // doctors can't answer here
+    await noSidewaysScroll(doctor);
+    // …and it is on her My Day, not only in the notification.
+    await doctor.goto("/my-day");
+    const onMyDay = doctor.locator(`[data-testid=my-concern][data-patient="${booked.fileNumber}"]`);
+    await expect(onMyDay).toBeVisible();
+    await onMyDay.click();
+    await expect(doctor.locator("#concern[data-testid=patient-concern]")).toBeVisible();
+
     // Reception's inbox: needs reply, flagged as a concern.
     const inbox = await staff(browser, "reception.riyadh1@derma.demo", isMobile);
     await inbox.goto("/whatsapp?f=needs_reply");
@@ -210,6 +240,12 @@ test.describe("WhatsApp in demo mode", () => {
     await inbox.getByTestId("reply-send").click();
     await expect(inbox.locator("[data-testid=chat-message][data-kind=staff_reply]")).toBeVisible();
     await noSidewaysScroll(inbox);
+
+    // Answered → no longer an open concern on Dr. Sara's My Day.
+    await doctor.goto("/my-day");
+    await expect(
+      doctor.locator(`[data-testid=my-concern][data-patient="${booked.fileNumber}"]`),
+    ).toHaveCount(0);
   });
 
   test("a number that isn't a patient lands in the inbox; reception creates the patient", async ({

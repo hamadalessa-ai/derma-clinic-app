@@ -44,19 +44,6 @@ const TITLES: Record<PushType, string> = {
   patient_concern: "مريض لديه قلق بعد الإجراء · Patient concern",
 };
 
-const URLS: Record<PushType, string> = {
-  new_booking: "/my-day",
-  cancelled: "/my-day",
-  rescheduled: "/my-day",
-  checked_in: "/my-day",
-  request_answered: "/my-day",
-  online_booking: "/calendar",
-  patient_cancelled: "/calendar",
-  patient_rescheduled: "/calendar",
-  reschedule_request: "/requests",
-  patient_concern: "/whatsapp",
-};
-
 /** "العنود سليمان الرشيد" → "ع. ر." ; "Sara Ahmed" → "S. A." (first and last name only). */
 export function initials(fullName: string): string {
   const words = fullName
@@ -93,11 +80,13 @@ export function buildPayload(input: {
   patientName: string;
   serviceName: string;
   startsAt: Date;
+  /** Where tapping opens — chosen per recipient by their roles (pushLink in ./links). */
+  url: string;
 }): PushPayload {
   return {
     title: TITLES[input.type],
     body: `${initials(input.patientName)} · ${input.serviceName} · ${when(input.startsAt)}`,
-    url: URLS[input.type],
+    url: input.url,
     // One tag per type AND appointment: a "concern" must not silently replace an earlier
     // "patient arrived" for the same visit (iPhone replaces same-tag notifications without alert).
     tag: `${input.type}-${input.appointmentId}`,

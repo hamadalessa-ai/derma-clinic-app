@@ -8,7 +8,12 @@ import { actorOf, requirePermission } from "@/lib/auth/session";
 import { getSettings } from "@/lib/booking/engine";
 import { addDays, dayRange, isDay, riyadhDay } from "@/lib/booking/time";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flag } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { pick } from "@/lib/brand";
+import { concernLink } from "@/lib/push/links";
+import { findConcerns } from "@/lib/whatsapp/concerns";
 import { buttonVariants } from "@/components/ui/button";
 import { formatDualDate } from "@/lib/format";
 import { loadAppointments, loadBlocks, loadDoctors, loadRooms } from "@/lib/views/schedule";
@@ -25,6 +30,7 @@ export default async function MyDayPage({
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("myDay");
   const tc = await getTranslations("calendar");
+  const tco = await getTranslations("concerns");
   const branch = ctx.activeBranch;
   if (!ctx.memberId || !branch) return null;
   const today = riyadhDay(new Date());
@@ -32,14 +38,16 @@ export default async function MyDayPage({
   const [from, to] = dayRange(day);
 
   const data = await withActor(actorOf(ctx), async (tx) => {
-    const [appointments, blocks, rooms, doctors, settings] = await Promise.all([
+    const [appointments, blocks, rooms, doctors, settings, concerns] = await Promise.all([
       loadAppointments(tx, { from, to, practitionerId: ctx.memberId! }),
       loadBlocks(tx, { branchId: branch.id, from, to, memberId: ctx.memberId! }),
       loadRooms(tx, branch.id),
       loadDoctors(tx, branch.id),
       getSettings(tx),
+      // Open post-care concerns about this doctor's own patients (any day, not only this one).
+      findConcerns(tx, { practitionerId: ctx.memberId!, openOnly: true }),
     ]);
-    return { appointments, blocks, rooms, doctors, settings };
+    return { appointments, blocks, rooms, doctors, settings, concerns };
   });
   const active = data.appointments.filter((a) => a.status !== "cancelled");
 
@@ -72,6 +80,38 @@ export default async function MyDayPage({
           </>
         }
       />
+      {data.concerns.length > 0 && (
+        <Card data-testid="my-concerns" className="border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flag className="text-destructive size-5" aria-hidden />
+              {tco("title", { count: data.concerns.length })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col divide-y p-0">
+            {data.concerns.map((c) => (
+              <Link
+                key={c.appointmentId}
+                href={concernLink(c)}
+                data-testid="my-concern"
+                data-patient={c.fileNumber}
+                className="hover:bg-muted flex flex-wrap items-center gap-2 px-4 py-3 text-sm"
+              >
+                <Badge variant="destructive">{tco("badge")}</Badge>
+                <span className="font-medium">
+                  {pick(locale, c.patientNameAr, c.patientNameEn)}
+                </span>
+                <span className="text-muted-foreground">
+                  {tco("afterVisit", {
+                    service: pick(locale, c.serviceNameAr, c.serviceNameEn),
+                    date: formatDualDate(c.visitAt, locale, "medium").split(" · ")[0],
+                  })}
+                </span>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       <Notice tone="info">
         {data.settings.doctorsManageOwnSchedule ? t("ownSchedule") : t("requestMode")}
       </Notice>
