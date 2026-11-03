@@ -99,6 +99,8 @@ grant select, insert, delete on public.rate_limit_hits to clinic_app;
 grant select, insert, update on public.conversations, public.message_templates to clinic_app;
 grant select, insert on public.messages, public.message_dispatches to clinic_app;
 grant update (status, status_at, provider_message_id, error_code, error_text) on public.messages to clinic_app;
+-- The AI receptionist marks a patient's message as a medical "concern" about their visit (hand-off).
+grant update (flag, appointment_id) on public.messages to clinic_app;
 grant select, insert, delete on public.webhook_events to clinic_app;
 grant select, insert, delete on public.push_log to clinic_app;
 -- Consent renewal rules (admin setting). Concern notes/follow-ups/resolutions: append-only.

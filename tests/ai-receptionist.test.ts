@@ -23,7 +23,7 @@ import {
   type ClaudeRequest,
   type ContentBlock,
 } from "@/lib/ai/claude";
-import { historyTurns, systemPrompt, TOOLS } from "@/lib/ai/receptionist";
+import { FALLBACK_REPLY, historyTurns, systemPrompt, TOOLS } from "@/lib/ai/receptionist";
 import type { PushEvent } from "@/lib/push/notify";
 import { handleInbound } from "@/lib/whatsapp/inbound";
 import { setAiPaused } from "@/lib/whatsapp/staff";
@@ -468,7 +468,58 @@ describe("hand-off and staying quiet", () => {
       expect.objectContaining({ outcome: "ai_failed" }),
     ]);
     expect((await convoOf(phone)).needsReply).toBe(true);
-    expect(await outgoing(phone, "ai_reply")).toHaveLength(0);
+    // The patient still gets a polite "the team will reply" (never left waiting).
+    const replies = await outgoing(phone, "ai_reply");
+    expect(replies).toHaveLength(1);
+    expect(replies[0].m.body).toBe(FALLBACK_REPLY.ar);
+  });
+
+  it("a medical worry from a patient with a visit: marked as a concern for the doctor", async () => {
+    // What happened live: the number had a booking, so the message is marked as a concern.
+    const visit = await withActor(reception, (tx) =>
+      bookAppointment(tx, reception, {
+        branchId: RIYADH,
+        patientId: patient("D-0019"),
+        serviceId: service("laser_hair_removal"),
+        practitionerId: member("derma-dr-sara"),
+        startsAt: riyadhAt("12:00", "2035-03-12"),
+      }),
+    );
+    const phone = await phoneOf("D-0019");
+    await clearChat(phone);
+    const pushes: PushEvent[] = [];
+    const turn = scripted([
+      () => [use("hand_off_to_staff", { reason: "medical", summary: "Redness after laser" })],
+      () => say("سيرد عليك أحد أفراد الفريق قريبًا."),
+    ]);
+    expect(await write(phone, "عندي احمرار بعد الليزر", turn.client, pushes)).toEqual([
+      expect.objectContaining({ outcome: "ai_handed_off" }),
+    ]);
+    const [inbound] = await system((tx) =>
+      tx
+        .select({ m: messages })
+        .from(messages)
+        .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+        .where(and(eq(conversations.phone, phone), eq(messages.direction, "in")))
+        .orderBy(desc(messages.createdAt))
+        .limit(1),
+    );
+    expect(inbound.m.flag).toBe("concern");
+    expect(inbound.m.appointmentId).toBe(visit.id);
+    expect(pushes).toContainEqual({ type: "patient_concern", appointmentId: visit.id });
+    expect((await convoOf(phone)).needsReply).toBe(true);
+    expect((await outgoing(phone, "ai_reply"))[0].m.body).toContain("الفريق");
+  });
+
+  it("if handing off breaks, the chat still goes to staff and the patient still hears back", async () => {
+    const phone = "0590007740";
+    const turn = scripted([
+      () => [use("hand_off_to_staff", { reason: "medical", summary: "x" })],
+      () => [], // the model ends without any text
+    ]);
+    await write(phone, "عندي ألم", turn.client);
+    expect((await convoOf(phone)).needsReply).toBe(true);
+    expect((await outgoing(phone, "ai_reply"))[0].m.body).toBe(FALLBACK_REPLY.ar);
   });
 });
 
