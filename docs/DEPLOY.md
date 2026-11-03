@@ -410,6 +410,45 @@ Ask for it when you've chosen one.
 
 ---
 
+## Part G — Automatic database updates (no more SQL Editor)
+
+From now on, a merge that changes the database updates the live demo **by itself**: the GitHub
+workflow **"Update demo database"** runs `db/reset.sql` and `db/setup.sql` as **one** step. It either
+fully works or changes nothing, so a failed run never leaves the demo empty. Demo only: it deletes all
+app data and rebuilds the fake clinics, like the manual reset did.
+
+### G1. One-time setup (10 minutes, no terminal)
+
+1. **Supabase → Project Settings → Database → Reset database password.** Generate a new one and save it
+   in your password manager as "Supabase admin (postgres)". This is the admin password, not the app
+   one; it doesn't affect Vercel or the app.
+2. **Supabase → Connect → Session pooler** (port **5432**, not 6543). Copy the string. It looks like
+   `postgresql://postgres.wmrgcidygdkcmhurfxtv:[YOUR-PASSWORD]@aws-…pooler.supabase.com:5432/postgres`.
+   In your notes, replace `[YOUR-PASSWORD]` (brackets too) with the admin password from step 1.
+   Keep the user as `postgres.…` here (the admin), **not** `clinic_app.…`.
+3. **GitHub → your repo → Settings → Secrets and variables → Actions → New repository secret**, three times:
+
+| Name                  | Secret                                                                   |
+| --------------------- | ------------------------------------------------------------------------ |
+| `SUPABASE_ADMIN_URL`  | the Session pooler string from step 2, with the admin password filled in |
+| `APP_DB_PASSWORD`     | the **same** clinic_app password that is inside Vercel's `DATABASE_URL`  |
+| `DEMO_STAFF_PASSWORD` | the password demo staff sign in with                                     |
+
+4. Test it: **Actions → Update demo database → Run workflow**. After about a minute you should see a
+   green ✓ and the line _"Demo database updated (… tables)"_. Then open the app and sign in.
+
+### G2. After each automatic update
+
+- Staff phones must turn notifications on again (**My account → Turn on for this device**): the reset
+  removes saved phones.
+- If a run fails (red ✗), nothing was changed. The log says why; the most common cause is a secret
+  with a typo. Fix the secret and press **Run workflow** again.
+
+### G3. Tests on GitHub
+
+The **"Tests"** workflow runs every automatic check (lint, formatting, types, all database tests) on
+every pull request and every change to `main`. A pull request is only merged when it shows a green ✓.
+
 ## Demo accounts (Derma Clinics)
 
 All use your demo staff password.

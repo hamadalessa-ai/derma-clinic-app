@@ -62,6 +62,7 @@ describe("reset works on a database from every released phase", () => {
       "phase-0.sql",
       "phase-1.sql",
       "phase-2a.sql",
+      "phase-2b-concerns.sql", // live since PR #10 (consent rules + concern actions)
       "phase-2b-push-log.sql", // live since PR #8 (push log)
       "phase-2b.sql",
     ]);
