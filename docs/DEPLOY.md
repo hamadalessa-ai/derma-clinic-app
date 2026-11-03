@@ -449,6 +449,47 @@ app data and rebuilds the fake clinics, like the manual reset did.
 The **"Tests"** workflow runs every automatic check (lint, formatting, types, all database tests) on
 every pull request and every change to `main`. A pull request is only merged when it shows a green ✓.
 
+## Part H — AI receptionist (WhatsApp)
+
+The AI receptionist answers patients' typed WhatsApp messages (and the simulator) in Arabic or English:
+questions about services, prices (only if "show prices" is on), branches and hours, and booking,
+cancelling or moving visits with the same rules as `/book`. It **always asks the patient to reply
+"yes" before booking, cancelling or moving**, never gives medical advice, and passes medical questions,
+complaints and anything unsure to the inbox (a medical worry about a recent visit also reaches the
+doctor as a concern). It is **on for Derma Clinics** in the demo data; it only answers once a key is set.
+
+### H1. Add the key (5 minutes, no terminal)
+
+1. **console.anthropic.com → API keys → Create key.** Name it "Derma demo". Copy it once (it starts with
+   `sk-ant-`) and save it in your password manager. Never paste it into a chat.
+2. **Vercel → your project → Settings → Environment Variables → Add:**
+   `ANTHROPIC_API_KEY` = the key (choose **Secret**).
+3. **Deployments → the latest → ⋯ → Redeploy.**
+4. **Admin → Settings → WhatsApp messages:** the "AI receptionist" card should say _"AI key is set ✓"_.
+   Here you can switch it off and set the daily limit (default 200 replies a day).
+
+Optional: `ANTHROPIC_MODEL` chooses another Claude model (default: the fast, low-cost Haiku model).
+
+### H2. Try it in the simulator
+
+As admin or reception: **More → WhatsApp simulator → Simulate a message from a new number**, and type,
+for example, _"السلام عليكم، أبغى أحجز استشارة يوم الأحد"_. The AI asks what it needs, offers times,
+asks you to reply **نعم**, and books. The booking appears on the calendar with the WhatsApp source.
+Try _"عندي احمرار بعد الليزر"_: it hands the chat to the team instead of answering.
+
+### H3. How staff stay in control
+
+- In the **inbox**, every chat shows _"AI answering"_ or _"Staff took over"_. **Take over (pause AI)** stops
+  the AI in that chat; **Let the AI answer** turns it back on. Replying yourself also pauses it.
+- When the AI hands a chat over, it stays quiet until someone presses **Mark handled**.
+- Every AI message is labelled "AI receptionist", and every booking, cancellation, move and hand-off is
+  in the audit log.
+- If the AI can't answer (no credit, the service is down, the daily limit), messages go to the inbox
+  exactly as before. Nothing is lost.
+
+> **Before real patients:** messages are processed by Anthropic outside Saudi Arabia. Check PDPL and
+> patient consent with a lawyer first. Only fake demo data until then.
+
 ## Demo accounts (Derma Clinics)
 
 All use your demo staff password.

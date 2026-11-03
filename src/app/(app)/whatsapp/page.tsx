@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowLeft, ArrowRight, BellOff, Flag, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellOff, Bot, Flag, Hand, UserPlus } from "lucide-react";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
@@ -8,7 +8,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { LinkTabs } from "@/components/ui/tabs";
 import { ChatThread, type ConcernEventView } from "@/components/whatsapp/chat";
 import { ConversationList } from "@/components/whatsapp/conversation-list";
-import { LinkOrCreatePatient, MarkHandled, ReplyBox } from "@/components/whatsapp/inbox-actions";
+import {
+  AiPauseToggle,
+  LinkOrCreatePatient,
+  MarkHandled,
+  ReplyBox,
+} from "@/components/whatsapp/inbox-actions";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { pick } from "@/lib/brand";
@@ -21,10 +26,14 @@ import { findConcerns } from "@/lib/whatsapp/concerns";
 import { ConcernActions } from "@/components/clinic/concern-actions";
 import { can } from "@/lib/auth/permissions";
 import { riyadhDay } from "@/lib/booking/time";
+import { getSettings } from "@/lib/booking/engine";
 import { formatDualDate, formatTime } from "@/lib/format";
 import { services } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import type { Locale } from "@/i18n/config";
+
+/** The AI receptionist may take several seconds (a few model calls) to answer a message. */
+export const maxDuration = 60;
 
 const FILTERS: InboxFilter[] = ["needs_reply", "new_contacts", "all"];
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -38,6 +47,7 @@ export default async function WhatsAppInboxPage({
   const ctx = await requirePermission("whatsapp:inbox");
   const t = await getTranslations("whatsapp");
   const tc = await getTranslations("concerns");
+  const ta = await getTranslations("whatsapp.ai");
   const locale = (await getLocale()) as Locale;
   const sp = await searchParams;
   const filter: InboxFilter = FILTERS.includes(sp.f as InboxFilter)
@@ -45,9 +55,10 @@ export default async function WhatsAppInboxPage({
     : "needs_reply";
   const activeId = sp.c && UUID.test(sp.c) ? sp.c : null;
   const actor = actorOf(ctx);
-  const { items, thread, names, events, concerns } = await withActor(actor, async (tx) => {
+  const { items, thread, names, events, concerns, aiEnabled } = await withActor(actor, async (tx) => {
     const thread = activeId ? await getThread(tx, activeId) : null;
     return {
+      aiEnabled: (await getSettings(tx)).aiReceptionistEnabled,
       items: await listConversations(tx, filter),
       thread,
       names: thread ? await senderNames(tx, thread.messages, locale) : new Map<string, string>(),
@@ -65,6 +76,8 @@ export default async function WhatsAppInboxPage({
         : [],
     };
   });
+  // The AI receptionist answers chats here (clinic setting + API key).
+  const aiOn = aiEnabled && !!process.env.ANTHROPIC_API_KEY?.trim();
   const serviceList = concerns.length
     ? await withActor(actor, (tx) =>
         tx
@@ -162,6 +175,25 @@ export default async function WhatsAppInboxPage({
                 )}
                 {thread.conversation.needsReply && (
                   <MarkHandled conversationId={thread.conversation.id} />
+                )}
+                {aiOn && (
+                  <>
+                    <span
+                      className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs"
+                      data-testid="ai-status"
+                    >
+                      {thread.conversation.aiPausedAt ? (
+                        <Hand className="size-3" />
+                      ) : (
+                        <Bot className="size-3" />
+                      )}
+                      {thread.conversation.aiPausedAt ? ta("takenOver") : ta("answering")}
+                    </span>
+                    <AiPauseToggle
+                      conversationId={thread.conversation.id}
+                      paused={!!thread.conversation.aiPausedAt}
+                    />
+                  </>
                 )}
               </div>
               {!p && thread.conversation.profileName && (

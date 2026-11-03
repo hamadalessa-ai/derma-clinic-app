@@ -137,6 +137,8 @@ export async function findOrCreateOnlinePatient(
     phone: string;
     fullName: string;
     gender: "male" | "female";
+    /** Where they came from: the online page (default) or WhatsApp (AI receptionist). */
+    createdVia?: "online" | "whatsapp";
   },
 ): Promise<{ patient: Patient; created: boolean }> {
   const matches = await tx
@@ -154,7 +156,7 @@ export async function findOrCreateOnlinePatient(
       phone: input.phone,
       gender: input.gender,
       isFake: true,
-      createdVia: "online",
+      createdVia: input.createdVia ?? "online",
       needsCompletion: true,
     })
     .returning();

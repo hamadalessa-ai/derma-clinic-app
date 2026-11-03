@@ -134,9 +134,10 @@ export async function staffReply(
     throw new WhatsAppError("not_configured");
   }
   await withTenant(tenant.id, async (tx) => {
+    // A person answered: the AI receptionist stays quiet in this chat until staff let it answer again.
     await tx
       .update(conversations)
-      .set({ needsReply: false })
+      .set({ needsReply: false, aiPausedAt: sql`coalesce(${conversations.aiPausedAt}, now())` })
       .where(eq(conversations.id, conversationId));
     await audit(tx, {
       actorUserId: actor.userId,
@@ -328,4 +329,27 @@ export async function markDemoThreadRead(tx: TenantTx, conversationId: string) {
         inArray(messages.status, ["sent", "delivered"]),
       ),
     );
+}
+
+/** Staff take over a chat (the AI receptionist stays quiet) or let the AI answer it again. */
+export async function setAiPaused(
+  tx: TenantTx,
+  actor: Actor,
+  conversationId: string,
+  paused: boolean,
+) {
+  assertCan(actor.roles, "whatsapp:inbox");
+  const [row] = await tx
+    .update(conversations)
+    .set({ aiPausedAt: paused ? sql`now()` : null, aiPendingAction: null })
+    .where(eq(conversations.id, conversationId))
+    .returning({ id: conversations.id });
+  if (!row) throw new WhatsAppError("not_found");
+  await audit(tx, {
+    actorUserId: actor.userId,
+    action: paused ? "whatsapp.ai_paused" : "whatsapp.ai_resumed",
+    entityType: "conversation",
+    entityId: conversationId,
+  });
+  return row;
 }

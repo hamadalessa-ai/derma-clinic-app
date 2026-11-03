@@ -692,7 +692,8 @@
       "reschedule_none": "Auto-reply",
       "reschedule_unavailable": "Auto-reply",
       "inbound_image": "Photo",
-      "photo_request": "Photo request"
+      "photo_request": "Photo request",
+      "ai_reply": "AI receptionist"
     },
     "simChats": "Chats",
     "simNewNumber": "Simulate a message from a new number",
@@ -785,7 +786,24 @@
     "photoHidden": "📷 Photo received — visible to doctors and admins only",
     "photoSent": "📷 Photo",
     "sentBy": "Sent by {name}",
-    "simAttachPhoto": "Send a photo (as the patient)"
+    "simAttachPhoto": "Send a photo (as the patient)",
+    "ai": {
+      "title": "AI receptionist",
+      "enabled": "Answer WhatsApp messages with the AI receptionist",
+      "enabledHint": "It answers questions (services, prices if shown online, branches, hours) and books, cancels or moves visits with the same rules as online booking. It always asks the patient to confirm first, never gives medical advice, and passes medical questions, complaints and anything unsure to your team.",
+      "limit": "Most AI replies per day",
+      "limitHint": "After this, messages go to the inbox for your team, as without the AI.",
+      "usedToday": "AI replies today: {used} of {limit}",
+      "keySet": "AI key is set ✓",
+      "keyMissing": "No AI key yet: add ANTHROPIC_API_KEY in Vercel's settings (see docs/DEPLOY.md). Until then, messages go to the inbox.",
+      "save": "Save limit",
+      "privacy": "Patients' messages are processed by Anthropic (outside Saudi Arabia). Fine for the demo with fake data; check PDPL and patient consent before real patients.",
+      "answering": "AI answering",
+      "takenOver": "Staff took over",
+      "takeOver": "Take over (pause AI)",
+      "letAiAnswer": "Let the AI answer",
+      "sentByAi": "AI receptionist"
+    }
   },
   "pushLog": {
     "title": "Staff phone notifications (last 30)",

@@ -473,6 +473,11 @@ export const tenantSettings = pgTable("tenant_settings", {
   showPricesOnline: boolean("show_prices_online").notNull().default(true),
   /** WhatsApp: name the service in confirmations, reminders and recalls (off → "your appointment"). */
   showServiceInMessages: boolean("show_service_in_messages").notNull().default(true),
+  // ── AI receptionist (WhatsApp) ──
+  /** ON: free-text WhatsApp messages are answered by the AI receptionist (needs ANTHROPIC_API_KEY). */
+  aiReceptionistEnabled: boolean("ai_receptionist_enabled").notNull().default(false),
+  /** Most AI replies per day (Riyadh); beyond it, messages go to the inbox as before. */
+  aiDailyLimit: smallint("ai_daily_limit").notNull().default(200),
   /** When Meta last verified our webhook (WhatsApp status page). */
   whatsappWebhookVerifiedAt: timestamp("whatsapp_webhook_verified_at", { withTimezone: true }),
   updatedAt: updatedAt(),
@@ -1181,6 +1186,13 @@ export const conversations = pgTable(
     lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
     /** STOP from a number that isn't a patient yet. */
     optedOutAt: timestamp("opted_out_at", { withTimezone: true }),
+    /** Staff took over this chat: the AI receptionist stays quiet until they let it answer again. */
+    aiPausedAt: timestamp("ai_paused_at", { withTimezone: true }),
+    /**
+     * A booking / cancellation / move the AI offered and is waiting for the patient's "yes" to.
+     * It is only carried out after a NEWER message from the patient (src/lib/ai/receptionist.ts).
+     */
+    aiPendingAction: jsonb("ai_pending_action").$type<Record<string, unknown>>(),
     createdAt: createdAt(),
   },
   (t) => [

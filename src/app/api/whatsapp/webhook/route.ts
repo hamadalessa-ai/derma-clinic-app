@@ -7,6 +7,9 @@ import { liveConfig } from "@/lib/whatsapp/config";
 import { handleInbound } from "@/lib/whatsapp/inbound";
 import { parseMetaWebhook, validSignature } from "@/lib/whatsapp/webhook";
 
+/** The AI receptionist may take several seconds (a few model calls) to answer a message. */
+export const maxDuration = 60;
+
 /**
  * Meta WhatsApp webhook. GET = Meta's verification challenge; POST = messages and statuses.
  * The clinic is the one WHATSAPP_CLINIC names. Signatures are checked with the app secret;

@@ -4,6 +4,7 @@ import { Fragment, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertCircle,
+  Bot,
   CalendarPlus,
   Camera,
   Check,
@@ -169,6 +170,15 @@ export function ChatThread({
                 {perspective === "clinic" && m.sentByName && (
                   <div className="text-chat-meta mt-0.5 text-[11px]" data-testid="chat-sender">
                     {t("sentBy", { name: m.sentByName })}
+                  </div>
+                )}
+                {perspective === "clinic" && m.kind === "ai_reply" && (
+                  <div
+                    className="text-chat-meta mt-0.5 flex items-center gap-1 text-[11px]"
+                    data-testid="chat-sender-ai"
+                  >
+                    <Bot className="size-3" aria-hidden />
+                    {t("ai.sentByAi")}
                   </div>
                 )}
                 <div className="text-chat-meta mt-0.5 flex items-center justify-end gap-1 text-[11px]">

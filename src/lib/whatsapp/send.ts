@@ -55,7 +55,7 @@ export interface SendInput {
   appointmentId?: string | null;
   vars?: Record<string, string>;
   buttons?: ButtonSpec[];
-  /** Staff free-text reply (kind "staff_reply"). */
+  /** Free text: a staff reply ("staff_reply") or the AI receptionist's answer ("ai_reply"). */
   text?: string;
   /** Secret placeholder values (codes): shown in the demo simulator, never stored for real sends. */
   secrets?: Record<string, string>;
@@ -144,7 +144,7 @@ export async function prepareMessage(
     wording = row
       ? { ar: row.bodyAr, en: row.bodyEn }
       : { ar: TEMPLATES[input.kind].bodyAr, en: TEMPLATES[input.kind].bodyEn };
-  } else if (input.kind === "staff_reply") {
+  } else if (input.kind === "staff_reply" || input.kind === "ai_reply") {
     wording = { ar: input.text ?? "", en: input.text ?? "" };
   } else {
     wording = REPLIES[input.kind];
