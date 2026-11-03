@@ -772,6 +772,9 @@ export const ONLINE_SETTINGS: Record<
   lamsa: { enabled: true, requiresApproval: true, showPrices: false },
 };
 
+/** Clinics whose WhatsApp chats are answered by the AI receptionist (when a key is set). */
+export const AI_RECEPTIONIST: Record<string, boolean> = { derma: true, lamsa: false };
+
 /** Services patients can book online (service codes). */
 export const ONLINE_SERVICES: Record<string, string[]> = {
   derma: [

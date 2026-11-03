@@ -49,6 +49,91 @@ export function ShowServiceToggle({ initial }: { initial: boolean }) {
   );
 }
 
+/** AI receptionist: on/off and the daily limit (clinic admin). */
+export function AiReceptionistSettings({
+  initialEnabled,
+  initialLimit,
+  keySet,
+  usedToday,
+}: {
+  initialEnabled: boolean;
+  initialLimit: number;
+  keySet: boolean;
+  usedToday: number;
+}) {
+  const t = useTranslations("whatsapp.ai");
+  const tw = useTranslations("whatsapp");
+  const [on, setOn] = useState(initialEnabled);
+  const [limit, setLimit] = useState(String(initialLimit));
+  const [msg, setMsg] = useState<string | null>(null);
+  const { run, pending, error } = useAction();
+  return (
+    <div className="flex flex-col gap-3" data-testid="ai-settings">
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="accent-brand mt-0.5 size-5 shrink-0"
+          checked={on}
+          disabled={pending}
+          data-testid="ai-enabled"
+          onChange={(e) => {
+            const value = e.target.checked;
+            setOn(value);
+            run(
+              () => updateSettingsAction({ aiReceptionistEnabled: value }),
+              () => setMsg(tw("saved")),
+            );
+          }}
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-medium">{t("enabled")}</span>
+          <span className="text-muted-foreground text-sm">{t("enabledHint")}</span>
+        </span>
+      </label>
+      <p
+        className={keySet ? "text-success-foreground text-sm" : "text-warning-foreground text-sm"}
+        data-testid="ai-key"
+      >
+        {keySet ? t("keySet") : t("keyMissing")}
+      </p>
+      <form
+        className="flex flex-wrap items-end gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          run(
+            () => updateSettingsAction({ aiDailyLimit: Number(limit) }),
+            () => setMsg(tw("saved")),
+          );
+        }}
+      >
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="ai-limit">{t("limit")}</Label>
+          <Input
+            id="ai-limit"
+            type="number"
+            min={10}
+            max={2000}
+            className="w-32"
+            dir="ltr"
+            value={limit}
+            onChange={(e) => setLimit(e.target.value)}
+          />
+        </div>
+        <Button type="submit" variant="outline" disabled={pending}>
+          {t("save")}
+        </Button>
+      </form>
+      <p className="text-muted-foreground text-xs">{t("limitHint")}</p>
+      <p className="text-muted-foreground text-sm" data-testid="ai-used">
+        {t("usedToday", { used: usedToday, limit: initialLimit })}
+      </p>
+      <p className="text-muted-foreground text-xs">{t("privacy")}</p>
+      <FormError message={error} />
+      <FormSuccess message={msg} />
+    </div>
+  );
+}
+
 export function TemplateEditor({
   kind,
   label,

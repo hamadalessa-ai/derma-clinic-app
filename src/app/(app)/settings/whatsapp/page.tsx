@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import {
+  AiReceptionistSettings,
   ServiceTextsEditor,
   ShowServiceToggle,
   TemplateEditor,
@@ -12,6 +13,7 @@ import { messageTemplates, services } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { getSettings } from "@/lib/booking/engine";
+import { aiRepliesToday } from "@/lib/ai/receptionist";
 import { TEMPLATE_KINDS, TEMPLATES } from "@/lib/whatsapp/catalog";
 
 /** Clinic admin: WhatsApp message types (on/off, wording) and per-service texts. */
@@ -22,6 +24,7 @@ export default async function WhatsAppSettingsPage() {
     settings: await getSettings(tx),
     templates: await tx.select().from(messageTemplates),
     services: await tx.select().from(services).orderBy(asc(services.sortOrder)),
+    aiUsedToday: await aiRepliesToday(tx),
   }));
   return (
     <div className="flex max-w-4xl flex-col gap-4">
@@ -32,6 +35,19 @@ export default async function WhatsAppSettingsPage() {
       <Card>
         <CardContent className="pt-5">
           <ShowServiceToggle initial={data.settings.showServiceInMessages} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("ai.title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AiReceptionistSettings
+            initialEnabled={data.settings.aiReceptionistEnabled}
+            initialLimit={data.settings.aiDailyLimit}
+            keySet={!!process.env.ANTHROPIC_API_KEY?.trim()}
+            usedToday={data.aiUsedToday}
+          />
         </CardContent>
       </Card>
       <Card>

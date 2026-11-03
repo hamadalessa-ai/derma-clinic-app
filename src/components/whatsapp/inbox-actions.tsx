@@ -3,9 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, Link2, Search, Send, UserPlus } from "lucide-react";
+import { Bot, CheckCircle2, Hand, Link2, Search, Send, UserPlus } from "lucide-react";
 import {
   searchPatientsAction,
+  whatsappAiPauseAction,
   whatsappCreatePatientAction,
   whatsappHandledAction,
   whatsappLinkAction,
@@ -92,6 +93,33 @@ export function MarkHandled({ conversationId }: { conversationId: string }) {
       >
         <CheckCircle2 />
         {t("markHandled")}
+      </Button>
+      <FormError message={error} />
+    </>
+  );
+}
+
+/** Staff take over the chat (AI stays quiet) or let the AI receptionist answer it again. */
+export function AiPauseToggle({
+  conversationId,
+  paused,
+}: {
+  conversationId: string;
+  paused: boolean;
+}) {
+  const t = useTranslations("whatsapp.ai");
+  const { run, pending, error } = useAction();
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        onClick={() => run(() => whatsappAiPauseAction({ conversationId, paused: !paused }))}
+        data-testid={paused ? "ai-resume" : "ai-take-over"}
+      >
+        {paused ? <Bot /> : <Hand />}
+        {paused ? t("letAiAnswer") : t("takeOver")}
       </Button>
       <FormError message={error} />
     </>

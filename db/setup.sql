@@ -772,6 +772,11 @@ CREATE INDEX "rate_limit_hits_bucket_idx" ON "rate_limit_hits" USING btree ("ten
 CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");
 CREATE INDEX "tenant_members_user_id_idx" ON "tenant_members" USING btree ("user_id");
 CREATE INDEX "verification_codes_phone_idx" ON "verification_codes" USING btree ("tenant_id","phone","created_at");
+-- 0001_large_the_anarchist.sql
+ALTER TABLE "conversations" ADD COLUMN "ai_paused_at" timestamp with time zone;
+ALTER TABLE "conversations" ADD COLUMN "ai_pending_action" jsonb;
+ALTER TABLE "tenant_settings" ADD COLUMN "ai_receptionist_enabled" boolean DEFAULT false NOT NULL;
+ALTER TABLE "tenant_settings" ADD COLUMN "ai_daily_limit" smallint DEFAULT 200 NOT NULL;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1230,8 +1235,8 @@ insert into public.package_templates (id, tenant_id, service_id, name_ar, name_e
   ('d3475e8c-f332-5206-92b7-789d4e7e838d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', 'باقة محفزات البشرة — 3 جلسات', 'Skin Boosters — 3 sessions', 3, 390000, 180),
   ('8eb6d02a-4e51-5c37-8c65-a971dd40b976', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '238646ad-fa4b-5239-a04f-c948716feebd', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 190000, 180);
 
-insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, demo_anchor_day) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false, true, false, true, (select demo_anchor from pg_temp.setup_params));
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, ai_receptionist_enabled, demo_anchor_day) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false, true, false, true, true, (select demo_anchor from pg_temp.setup_params));
 
 insert into public.message_templates (tenant_id, kind, enabled, body_ar, body_en, meta_name, category) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'booking_confirmation', true, 'مرحبًا {patient_first_name}، تم حجز {appointment} يوم {date} الساعة {time} مع {doctor} في {branch}.
@@ -1383,8 +1388,8 @@ insert into public.consent_rules (tenant_id, code, rule, months) values
 insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
   ('baa4e36f-c509-587a-ab60-06c22bf3188a', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, 180);
 
-insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, demo_anchor_day) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', true, true, true, false, (select demo_anchor from pg_temp.setup_params));
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, ai_receptionist_enabled, demo_anchor_day) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', true, true, true, false, false, (select demo_anchor from pg_temp.setup_params));
 
 insert into public.message_templates (tenant_id, kind, enabled, body_ar, body_en, meta_name, category) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'booking_confirmation', true, 'مرحبًا {patient_first_name}، تم حجز {appointment} يوم {date} الساعة {time} مع {doctor} في {branch}.

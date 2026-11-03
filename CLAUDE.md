@@ -73,6 +73,12 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   Everything patients send goes through `handleInbound()` (`inbound.ts`) — simulator and webhook alike.
   Wording lives in `catalog.ts`; after changing it run `pnpm docs:whatsapp` (a test checks the doc).
 - Business logic also checks permissions (`assertCan`), not only the screens.
+- AI receptionist (`src/lib/ai/receptionist.ts`, client `src/lib/ai/claude.ts`, key `ANTHROPIC_API_KEY`):
+  answers typed WhatsApp text from `handleInbound()` ONLY through its tools; it never takes a patient id
+  (always the chat's own patient + family). Book / cancel / move = `propose_action`, then `confirm_action`
+  only after a NEWER patient message. Never medical advice → `hand_off_to_staff`. It stays quiet when the
+  clinic switched it off, no key, staff took over (`conversations.ai_paused_at`), the chat already needs
+  staff, or the daily limit is reached; any failure → "needs reply". Tests use a scripted fake client.
 
 ## Database changes
 
@@ -86,6 +92,9 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   must keep exactly one `begin;` and one `commit;` line. The SQL Editor paste still works as a fallback.
   Once real clinics exist, this reset must stop: use numbered `db/upgrades/NNNN_*.sql` files instead.
   Founder guide: `docs/DEPLOY.md` (Part G).
+- If the tools can't be installed where you edit (no npm access), push the branch and run the GitHub
+  workflow "Regenerate files" on it: it runs `db:generate`, `db:build-setup`, `docs:whatsapp` and
+  Prettier, and commits the result back. Then run "Tests" on the branch.
 - GitHub workflow "Tests" runs `pnpm check` on every pull request; merge only when it is green.
   When a phase is released, also update `latest` in `tests/demo-update.test.ts`.
 - Supabase's `postgres` user is NOT a superuser. SQL we ship must work without superuser rights

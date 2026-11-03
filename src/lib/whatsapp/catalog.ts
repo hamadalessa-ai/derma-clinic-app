@@ -39,6 +39,7 @@ export const REPLY_KINDS = [
   "not_found",
   "photo_request",
   "staff_reply",
+  "ai_reply",
 ] as const;
 export type ReplyKind = (typeof REPLY_KINDS)[number];
 
@@ -167,7 +168,10 @@ export const TEMPLATES: Record<TemplateKind, TemplateDefinition> = {
 };
 
 /** Fixed replies to the patient's own taps/messages (free-form, inside the 24-hour window). */
-export const REPLIES: Record<Exclude<ReplyKind, "staff_reply">, { ar: string; en: string }> = {
+export const REPLIES: Record<
+  Exclude<ReplyKind, "staff_reply" | "ai_reply">,
+  { ar: string; en: string }
+> = {
   confirm_ack: {
     ar: "شكرًا، تم تأكيد حضورك ✓ نراك في الموعد.",
     en: "Thank you, your attendance is confirmed ✓ See you then.",

@@ -55,6 +55,7 @@ import {
   linkConversation,
   markDemoThreadRead,
   markHandled,
+  setAiPaused,
   setWhatsappConsent,
   staffReply,
 } from "@/lib/whatsapp/staff";
@@ -700,6 +701,8 @@ const settingsInput = z.object({
   onlineRequiresApproval: z.boolean().optional(),
   showPricesOnline: z.boolean().optional(),
   showServiceInMessages: z.boolean().optional(),
+  aiReceptionistEnabled: z.boolean().optional(),
+  aiDailyLimit: z.number().int().min(10).max(2000).optional(),
 });
 
 export async function updateSettingsAction(input: z.input<typeof settingsInput>) {
@@ -810,6 +813,16 @@ export async function whatsappHandledAction(input: { conversationId: string }) {
   return staffAction("whatsapp:inbox", async (_ctx, actor) => {
     const v = parse(conversationId, input);
     await withActor(actor, (tx) => markHandled(tx, actor, v.conversationId));
+    revalidatePath("/whatsapp", "layout");
+    return null;
+  });
+}
+
+/** Staff take over a WhatsApp chat (the AI receptionist stays quiet) or let the AI answer again. */
+export async function whatsappAiPauseAction(input: { conversationId: string; paused: boolean }) {
+  return staffAction("whatsapp:inbox", async (_ctx, actor) => {
+    const v = parse(conversationId.extend({ paused: z.boolean() }), input);
+    await withActor(actor, (tx) => setAiPaused(tx, actor, v.conversationId, v.paused));
     revalidatePath("/whatsapp", "layout");
     return null;
   });

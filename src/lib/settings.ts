@@ -14,6 +14,8 @@ export interface SettingsInput {
   onlineRequiresApproval?: boolean;
   showPricesOnline?: boolean;
   showServiceInMessages?: boolean;
+  aiReceptionistEnabled?: boolean;
+  aiDailyLimit?: number;
 }
 
 /** Changes clinic settings (only the fields given). Admins only; audited. */

@@ -9,7 +9,8 @@
  *  - STOP / إيقاف opts out, START / تفعيل opts back in;
  *  - post-care "concern" → flagged in the inbox + push to the doctor and reception;
  *  - a photo → stored in the patient's file (FileStore), tied to their open concern;
- *  - any other text → inbox, "needs reply" (Phase 2c: the AI receptionist plugs in here);
+ *  - any other text → the AI receptionist answers (src/lib/ai/receptionist.ts) when the clinic
+ *    switched it on and nobody on staff took the chat over; otherwise → inbox, "needs reply";
  *  - delivery statuses (sent / delivered / read / failed) update the stored message.
  */
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
@@ -28,6 +29,8 @@ import {
 import { addDays, riyadhDay } from "@/lib/booking/time";
 import { doctorNames } from "@/lib/booking/doctor-names";
 import { audit } from "@/lib/audit";
+import { anthropicClient, type ClaudeClient } from "@/lib/ai/claude";
+import { aiCanAnswer, runReceptionist } from "@/lib/ai/receptionist";
 import { getFileStore } from "@/lib/files/store";
 import { sendPushEvents, type PushEvent } from "@/lib/push/notify";
 import { parseButtonPayload, type ParsedButton } from "./buttons";
@@ -73,6 +76,8 @@ export interface InboundOptions {
   notify?: (events: PushEvent[]) => Promise<unknown>;
   /** Tests: the moment to act at (default: now). */
   now?: Date;
+  /** The AI receptionist's model client (default: from ANTHROPIC_API_KEY; null = no AI). */
+  ai?: ClaudeClient | null;
 }
 
 const STATUS_RANK: Record<string, number> = { queued: 0, sent: 1, delivered: 2, read: 3 };
@@ -101,12 +106,13 @@ export async function handleInbound(
 ) {
   const env = options.env ?? process.env;
   const notify = options.notify ?? ((e: PushEvent[]) => sendPushEvents(tenant.id, e, env));
+  const ai = options.ai === undefined ? anthropicClient(env) : options.ai;
   const results: { eventId: string; outcome: string }[] = [];
   for (const ev of events) {
     try {
       results.push({
         eventId: ev.eventId,
-        outcome: await handleOne(tenant, ev, env, notify, options.now),
+        outcome: await handleOne(tenant, ev, env, notify, options.now, ai),
       });
     } catch (err) {
       // Never crash the webhook: log and move on (Meta would otherwise retry for days).
@@ -123,6 +129,7 @@ async function handleOne(
   env: Env,
   notify: (e: PushEvent[]) => Promise<unknown>,
   now?: Date,
+  ai: ClaudeClient | null = null,
 ): Promise<string> {
   if (ev.type === "status") {
     return withTenant(tenant.id, async (tx) => {
@@ -159,6 +166,7 @@ async function handleOne(
   // ── An incoming message ──
   // A photo is fetched BEFORE the database transaction (network).
   const photo = ev.kind === "image" ? await fetchPhoto(ev, env) : null;
+  let aiTurn = false;
   const work = await withTenant(tenant.id, async (tx) => {
     if (!(await firstTime(tx, tenant.id, `message:${ev.eventId}`))) return null;
     const convo = await ensureConversation(tx, { phone: ev.from, profileName: ev.profileName });
@@ -185,6 +193,8 @@ async function handleOne(
           : text || "[empty]";
     // Free text, unknown buttons and new numbers need a human; handled taps don't.
     const needsReply = (ev.kind !== "button" || !button) && !isStop && !isStart;
+    // Typed text the AI receptionist may answer (the chat as it was BEFORE this message decides).
+    aiTurn = ev.kind === "text" && !!text && needsReply && (await aiCanAnswer(tx, convo, ai, now));
     await recordMessage(tx, {
       conversationId: convo.id,
       patientId: convo.patientId,
@@ -202,7 +212,7 @@ async function handleOne(
       channel: ev.eventId.startsWith("sim-") ? "demo" : "meta",
       status: "received",
       providerMessageId: ev.eventId.startsWith("sim-") ? null : ev.eventId,
-      needsReply: needsReply || undefined,
+      needsReply: (needsReply && !aiTurn) || undefined,
     });
 
     if (isStop || isStart) {
@@ -238,6 +248,10 @@ async function handleOne(
     );
   }
   if (work.push.length) await notify(work.push);
+  if (aiTurn && ai) {
+    const r = await runReceptionist(tenant, work.convo.id, { client: ai, env, now, notify });
+    return `ai_${r.outcome}`;
+  }
   return work.replies[0]?.kind ?? "stored";
 }
 

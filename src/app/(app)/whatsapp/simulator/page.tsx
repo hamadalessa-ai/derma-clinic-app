@@ -20,6 +20,9 @@ import { getThread, listConversations } from "@/lib/whatsapp/staff";
 import { messageView } from "@/lib/whatsapp/view";
 import type { Locale } from "@/i18n/config";
 
+/** The AI receptionist may take several seconds (a few model calls) to answer a message. */
+export const maxDuration = 60;
+
 const UUID = /^[0-9a-f-]{36}$/i;
 
 /** Demo only: every message the clinic would send by WhatsApp, as the patient sees it. */

@@ -11,6 +11,9 @@ import { getThread } from "@/lib/whatsapp/staff";
 import { messageView } from "@/lib/whatsapp/view";
 import type { Locale } from "@/i18n/config";
 
+/** The AI receptionist may take several seconds (a few model calls) to answer a message. */
+export const maxDuration = 60;
+
 export const metadata: Metadata = { title: "WhatsApp" };
 
 /** Demo: the patient's phone, full screen (to show on a real phone during a demo). */

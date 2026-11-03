@@ -119,6 +119,8 @@ const DEFAULT_SETTINGS: Settings = {
   onlineRequiresApproval: false,
   showPricesOnline: true,
   showServiceInMessages: true,
+  aiReceptionistEnabled: false,
+  aiDailyLimit: 200,
   whatsappWebhookVerifiedAt: null,
 };
 
@@ -833,6 +835,8 @@ export async function bookOnline(
     practitionerId?: string | null;
     gender?: DoctorGender | null;
     now?: Date;
+    /** Where the patient booked: the online page (default) or WhatsApp (AI receptionist). */
+    via?: PatientChannel;
   },
 ) {
   const { settings } = await onlineService(tx, input.serviceId);
@@ -854,7 +858,11 @@ export async function bookOnline(
     .limit(1);
   if (dup) throw new BookingError("already_booked");
 
-  const by: ChangedBy = { userId: null, source: "online", patientId: input.patientId };
+  const by: ChangedBy = {
+    userId: null,
+    source: input.via ?? "online",
+    patientId: input.patientId,
+  };
   let lastError: BookingError = new BookingError("slot_taken");
   for (const doc of doctors) {
     try {
