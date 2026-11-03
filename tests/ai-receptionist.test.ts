@@ -17,7 +17,12 @@ import {
 import { withTenant } from "@/db/tenant";
 import { withActor } from "@/lib/auth/db";
 import { bookAppointment } from "@/lib/booking/engine";
-import { anthropicClient, type ClaudeClient, type ClaudeRequest, type ContentBlock } from "@/lib/ai/claude";
+import {
+  anthropicClient,
+  type ClaudeClient,
+  type ClaudeRequest,
+  type ContentBlock,
+} from "@/lib/ai/claude";
 import { historyTurns, TOOLS } from "@/lib/ai/receptionist";
 import type { PushEvent } from "@/lib/push/notify";
 import { handleInbound } from "@/lib/whatsapp/inbound";
@@ -103,18 +108,20 @@ async function outgoing(phone: string, kind: string) {
       .from(messages)
       .innerJoin(conversations, eq(conversations.id, messages.conversationId))
       .where(
-        and(
-          eq(conversations.phone, phone),
-          eq(messages.direction, "out"),
-          eq(messages.kind, kind),
-        ),
+        and(eq(conversations.phone, phone), eq(messages.direction, "out"), eq(messages.kind, kind)),
       )
       .orderBy(desc(messages.createdAt)),
   );
 }
 const phoneOf = async (file: string) =>
-  (await system((tx) => tx.select().from(patients).where(eq(patients.id, patient(file)))))[0]
-    .phone;
+  (
+    await system((tx) =>
+      tx
+        .select()
+        .from(patients)
+        .where(eq(patients.id, patient(file))),
+    )
+  )[0].phone;
 async function clearChat(phone: string) {
   await system((tx) =>
     tx
@@ -257,7 +264,10 @@ describe("booking through the AI", () => {
     expect((await convoOf(phone)).aiPendingAction).toBeNull();
     expect(await outgoing(phone, "booking_confirmation")).not.toHaveLength(0);
     const [log] = await system((tx) =>
-      tx.select().from(auditLogs).where(and(eq(auditLogs.action, "ai.booked"), eq(auditLogs.entityId, appt.id))),
+      tx
+        .select()
+        .from(auditLogs)
+        .where(and(eq(auditLogs.action, "ai.booked"), eq(auditLogs.entityId, appt.id))),
     );
     expect(log).toBeDefined();
   });
@@ -308,7 +318,9 @@ describe("booking through the AI", () => {
     await write(phone, "yes", turn2.client);
     const c = await convoOf(phone);
     expect(c.patientId).not.toBeNull();
-    const [p] = await system((tx) => tx.select().from(patients).where(eq(patients.id, c.patientId!)));
+    const [p] = await system((tx) =>
+      tx.select().from(patients).where(eq(patients.id, c.patientId!)),
+    );
     expect(p.fullNameAr).toBe("نورة الاختبار");
     expect(p.createdVia).toBe("whatsapp");
     expect(p.needsCompletion).toBe(true);
@@ -438,7 +450,9 @@ describe("hand-off and staying quiet", () => {
   it("with no API key, messages go to the inbox as before", async () => {
     const phone = "0590007738";
     await clearChat(phone);
-    expect(await write(phone, "hi", null)).toEqual([expect.objectContaining({ outcome: "stored" })]);
+    expect(await write(phone, "hi", null)).toEqual([
+      expect.objectContaining({ outcome: "stored" }),
+    ]);
     expect((await convoOf(phone)).needsReply).toBe(true);
   });
 

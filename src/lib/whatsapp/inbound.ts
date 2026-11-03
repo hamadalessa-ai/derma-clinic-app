@@ -194,8 +194,7 @@ async function handleOne(
     // Free text, unknown buttons and new numbers need a human; handled taps don't.
     const needsReply = (ev.kind !== "button" || !button) && !isStop && !isStart;
     // Typed text the AI receptionist may answer (the chat as it was BEFORE this message decides).
-    aiTurn =
-      ev.kind === "text" && !!text && needsReply && (await aiCanAnswer(tx, convo, ai, now));
+    aiTurn = ev.kind === "text" && !!text && needsReply && (await aiCanAnswer(tx, convo, ai, now));
     await recordMessage(tx, {
       conversationId: convo.id,
       patientId: convo.patientId,

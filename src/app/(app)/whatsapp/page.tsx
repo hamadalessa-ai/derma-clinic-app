@@ -55,27 +55,32 @@ export default async function WhatsAppInboxPage({
     : "needs_reply";
   const activeId = sp.c && UUID.test(sp.c) ? sp.c : null;
   const actor = actorOf(ctx);
-  const { items, thread, names, events, concerns, aiEnabled } = await withActor(actor, async (tx) => {
-    const thread = activeId ? await getThread(tx, activeId) : null;
-    return {
-      aiEnabled: (await getSettings(tx)).aiReceptionistEnabled,
-      items: await listConversations(tx, filter),
-      thread,
-      names: thread ? await senderNames(tx, thread.messages, locale) : new Map<string, string>(),
-      events: thread ? await concernEventsFor(tx, { conversationId: thread.conversation.id }) : [],
-      // Open concerns in this chat: note to the doctor, follow-up, resolve.
-      concerns: thread
-        ? await Promise.all(
-            (
-              await findConcerns(tx, { conversationId: thread.conversation.id, openOnly: true })
-            ).map(async (c) => ({
-              concern: c,
-              mode: await followUpMode(tx, actor, c.practitionerId),
-            })),
-          )
-        : [],
-    };
-  });
+  const { items, thread, names, events, concerns, aiEnabled } = await withActor(
+    actor,
+    async (tx) => {
+      const thread = activeId ? await getThread(tx, activeId) : null;
+      return {
+        aiEnabled: (await getSettings(tx)).aiReceptionistEnabled,
+        items: await listConversations(tx, filter),
+        thread,
+        names: thread ? await senderNames(tx, thread.messages, locale) : new Map<string, string>(),
+        events: thread
+          ? await concernEventsFor(tx, { conversationId: thread.conversation.id })
+          : [],
+        // Open concerns in this chat: note to the doctor, follow-up, resolve.
+        concerns: thread
+          ? await Promise.all(
+              (
+                await findConcerns(tx, { conversationId: thread.conversation.id, openOnly: true })
+              ).map(async (c) => ({
+                concern: c,
+                mode: await followUpMode(tx, actor, c.practitionerId),
+              })),
+            )
+          : [],
+      };
+    },
+  );
   // The AI receptionist answers chats here (clinic setting + API key).
   const aiOn = aiEnabled && !!process.env.ANTHROPIC_API_KEY?.trim();
   const serviceList = concerns.length

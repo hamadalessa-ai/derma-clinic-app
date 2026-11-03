@@ -426,7 +426,9 @@ async function findTimes(
       doctor_name_ar: names.get(x.practitionerId)?.nameAr ?? null,
       doctor_name_en: names.get(x.practitionerId)?.nameEn ?? null,
     })),
-    ...(found.length ? {} : { hint: "No free times in these 7 days: suggest another date or branch." }),
+    ...(found.length
+      ? {}
+      : { hint: "No free times in these 7 days: suggest another date or branch." }),
   };
 }
 
@@ -652,7 +654,8 @@ async function proposeAction(
   return {
     saved: true,
     summary,
-    next_step: 'Tell the person these details and ask them to reply "yes" / "نعم" to confirm. Do not call confirm_action now.',
+    next_step:
+      'Tell the person these details and ask them to reply "yes" / "نعم" to confirm. Do not call confirm_action now.',
   };
 }
 
@@ -666,7 +669,10 @@ async function confirmAction(s: RunState): Promise<ToolResult> {
     if (!last || last.id === pending.afterInboundId) {
       return { error: "ask_the_person_first" } as const;
     }
-    if (last.createdAt.getTime() - new Date(pending.afterInboundAt).getTime() > PROPOSAL_MINUTES * 60_000) {
+    if (
+      last.createdAt.getTime() - new Date(pending.afterInboundAt).getTime() >
+      PROPOSAL_MINUTES * 60_000
+    ) {
       await tx
         .update(conversations)
         .set({ aiPendingAction: null })
