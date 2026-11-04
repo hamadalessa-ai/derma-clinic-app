@@ -25,6 +25,8 @@ create index reservations_lookup_idx on public.reservations
 
 -- Appointments reserve their doctor, room and device from start until end + buffer.
 -- Cancelled and no-show appointments free their slot.
+-- A video room (rooms.is_virtual) is not a real room: it is never reserved, so several video
+-- consultations can run at once (each doctor is still reserved).
 create or replace function public.sync_appointment_reservations() returns trigger
   language plpgsql
   set search_path = ''
@@ -39,8 +41,14 @@ begin
   if new.status not in ('cancelled', 'no_show') then
     slot := tstzrange(new.starts_at, new.blocked_until, '[)');
     insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
-      values (new.tenant_id, new.branch_id, 'practitioner', new.practitioner_id, slot, new.id),
-             (new.tenant_id, new.branch_id, 'room', new.room_id, slot, new.id);
+      values (new.tenant_id, new.branch_id, 'practitioner', new.practitioner_id, slot, new.id);
+    if not exists (
+      select 1 from public.rooms r
+        where r.tenant_id = new.tenant_id and r.id = new.room_id and r.is_virtual
+    ) then
+      insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
+        values (new.tenant_id, new.branch_id, 'room', new.room_id, slot, new.id);
+    end if;
     if new.device_id is not null then
       insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
         values (new.tenant_id, new.branch_id, 'device', new.device_id, slot, new.id);

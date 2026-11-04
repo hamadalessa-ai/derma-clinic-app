@@ -38,6 +38,8 @@ import { whatsappLater } from "@/lib/whatsapp/later";
 import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { clientIp } from "@/lib/request-info";
 import { checkCode, sendCode } from "@/lib/verify/codes";
+import { videoProvider } from "@/lib/video/provider";
+import { patientJoin } from "@/lib/video/visit";
 
 const uuid = z.string().uuid();
 const gender = z.enum(["male", "female"]);
@@ -400,5 +402,17 @@ export async function portalWhatsappAction(input: { optIn: boolean }) {
     );
     revalidatePath("/my");
     return null;
+  });
+}
+
+/**
+ * The patient joins their video consultation from the WhatsApp link (/visit/<token>).
+ * The signed token decides which appointment; the time window and consent are checked inside.
+ */
+export async function joinVideoAsPatientAction(input: { token: string }) {
+  return publicAction(async (tenant) => {
+    const v = parse(z.object({ token: z.string().min(40).max(80) }), input);
+    const lang = (await getLocale()) === "en" ? "en" : "ar";
+    return patientJoin(tenant.id, v.token, { provider: videoProvider(), lang });
   });
 }

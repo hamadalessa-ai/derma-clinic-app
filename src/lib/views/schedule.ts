@@ -43,6 +43,8 @@ export interface ApptView {
   serviceId: string;
   serviceNameAr: string;
   serviceNameEn: string;
+  /** A video consultation (joined from /visits/<id>/video). */
+  isVirtual: boolean;
   patient: { id: string; nameAr: string; nameEn: string | null; fileNumber: string; phone: string };
   alerts: PatientAlerts;
   balance: { remaining: number; total: number } | null;
@@ -213,6 +215,7 @@ export async function loadAppointments(
       serviceId: s.id,
       serviceNameAr: s.nameAr,
       serviceNameEn: s.nameEn,
+      isVirtual: s.isVirtual,
       patient: {
         id: p.id,
         nameAr: p.fullNameAr,

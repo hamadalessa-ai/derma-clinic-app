@@ -499,7 +499,7 @@ describe("patients from online booking", () => {
 });
 
 describe("demo data", () => {
-  it("Derma has online booking on, approval off, prices shown; six services online", async () => {
+  it("Derma has online booking on, approval off, prices shown; seven services online", async () => {
     const [s] = await online((tx) => tx.select().from(tenantSettings));
     expect(s).toMatchObject({
       onlineBookingEnabled: true,
@@ -509,10 +509,10 @@ describe("demo data", () => {
       onlineMinNoticeMinutes: 120,
       cancellationWindowHours: 24,
     });
-    const online6 = await online((tx) =>
+    const online7 = await online((tx) =>
       tx.select({ code: services.code }).from(services).where(eq(services.onlineBookable, true)),
     );
-    expect(online6.map((r) => r.code).sort()).toEqual(
+    expect(online7.map((r) => r.code).sort()).toEqual(
       [
         "chemical_peeling",
         "consultation",
@@ -520,6 +520,7 @@ describe("demo data", () => {
         "facial_treatment",
         "fillers",
         "laser_hair_removal",
+        "video_consultation",
       ].sort(),
     );
   });

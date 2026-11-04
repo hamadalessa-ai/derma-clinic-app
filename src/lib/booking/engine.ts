@@ -253,7 +253,12 @@ async function pickRoomAndDevice(
     .select()
     .from(rooms)
     .where(
-      and(eq(rooms.branchId, opts.branchId), wantedRoom ? eq(rooms.id, wantedRoom) : undefined),
+      and(
+        eq(rooms.branchId, opts.branchId),
+        // Video consultations use the branch's video room; everything else a real room.
+        eq(rooms.isVirtual, opts.service.isVirtual),
+        wantedRoom ? eq(rooms.id, wantedRoom) : undefined,
+      ),
     )
     .orderBy(asc(rooms.createdAt));
   const room = roomRows.find((r) => !busy.has(`room:${r.id}`));
@@ -655,7 +660,10 @@ export async function findFreeSlots(
     : (await branchPractitioners(tx, opts.branchId)).filter(
         (d) => !opts.practitionerIds || opts.practitionerIds.includes(d.id),
       );
-  const roomRows = await tx.select().from(rooms).where(eq(rooms.branchId, opts.branchId));
+  const roomRows = await tx
+    .select()
+    .from(rooms)
+    .where(and(eq(rooms.branchId, opts.branchId), eq(rooms.isVirtual, service.isVirtual)));
   const deviceRows = service.requiredDeviceType
     ? await tx
         .select()

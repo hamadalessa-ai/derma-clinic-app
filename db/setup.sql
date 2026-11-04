@@ -780,6 +780,9 @@ ALTER TABLE "tenant_settings" ADD COLUMN "ai_daily_limit" smallint DEFAULT 200 N
 -- 0002_natural_redwing.sql
 ALTER TABLE "clinical_notes" ADD COLUMN "ai_drafted_at" timestamp with time zone;
 ALTER TABLE "tenant_settings" ADD COLUMN "ai_scribe_enabled" boolean DEFAULT false NOT NULL;
+-- 0003_wonderful_polaris.sql
+ALTER TABLE "rooms" ADD COLUMN "is_virtual" boolean DEFAULT false NOT NULL;
+ALTER TABLE "services" ADD COLUMN "is_virtual" boolean DEFAULT false NOT NULL;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -809,6 +812,8 @@ create index reservations_lookup_idx on public.reservations
 
 -- Appointments reserve their doctor, room and device from start until end + buffer.
 -- Cancelled and no-show appointments free their slot.
+-- A video room (rooms.is_virtual) is not a real room: it is never reserved, so several video
+-- consultations can run at once (each doctor is still reserved).
 create or replace function public.sync_appointment_reservations() returns trigger
   language plpgsql
   set search_path = ''
@@ -823,8 +828,14 @@ begin
   if new.status not in ('cancelled', 'no_show') then
     slot := tstzrange(new.starts_at, new.blocked_until, '[)');
     insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
-      values (new.tenant_id, new.branch_id, 'practitioner', new.practitioner_id, slot, new.id),
-             (new.tenant_id, new.branch_id, 'room', new.room_id, slot, new.id);
+      values (new.tenant_id, new.branch_id, 'practitioner', new.practitioner_id, slot, new.id);
+    if not exists (
+      select 1 from public.rooms r
+        where r.tenant_id = new.tenant_id and r.id = new.room_id and r.is_virtual
+    ) then
+      insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
+        values (new.tenant_id, new.branch_id, 'room', new.room_id, slot, new.id);
+    end if;
     if new.device_id is not null then
       insert into public.reservations (tenant_id, branch_id, resource_kind, resource_id, during, appointment_id)
         values (new.tenant_id, new.branch_id, 'device', new.device_id, slot, new.id);
@@ -1001,6 +1012,10 @@ insert into public.rooms (id, tenant_id, branch_id, name_ar, name_en) values
   ('067421e1-88fa-5abd-8a7b-f266b2b25ade', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'غرفة الكشف', 'Consultation Room'),
   ('86737463-421e-5c8f-aeaa-398dfe9d0ccb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'غرفة الليزر', 'Laser Room');
 
+insert into public.rooms (id, tenant_id, branch_id, name_ar, name_en, is_virtual) values
+  ('1c8bed0f-150b-5150-a727-8c35fd81c954', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', 'الاستشارات المرئية', 'Video Consultations', true),
+  ('9afb9032-9145-5825-baa9-7d8445715156', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'الاستشارات المرئية', 'Video Consultations', true);
+
 insert into public.devices (id, tenant_id, branch_id, room_id, device_type, name_ar, name_en) values
   ('8ab8a1ea-925e-5ccb-938c-5504d9e2ee11', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'hair_removal_laser', 'جهاز ليزر إزالة الشعر', 'Laser Hair Removal'),
   ('80fe641a-1e18-5a33-8b8a-eed174677889', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1695ce36-16b8-58e2-b068-e31ca6285fd4', 'fractional_laser', 'جهاز الليزر التجزيئي', 'Fractional Laser'),
@@ -1099,29 +1114,30 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 3, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '3973e5f5-1994-5c66-8033-04c749bad229', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, pre_visit_ar, pre_visit_en, post_care_ar, post_care_en, recall_after_days, sort_order) values
-  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, 'أحضر قائمة بأي أدوية أو منتجات تستخدمها حاليًا.', 'Bring a list of any medicines or skin products you use now.', null, null, null, 0),
-  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, true, 'قبل الجلسة: تجنّب الأسبرين والكحول ومميّعات الدم قبل 48 ساعة إن أمكن.', 'Before the session: avoid aspirin, alcohol and blood thinners for 48 hours if possible.', 'كيف تشعر بعد جلسة البوتوكس؟ تذكّر ألا تستلقي 4 ساعات بعد الحقن.', 'How do you feel after your Botox session? Remember not to lie down for 4 hours after the injection.', 120, 1),
-  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, true, 'قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.', 'Before the session: avoid blood thinners for 48 hours, and tell us about any infection.', 'كيف تشعر بعد حقن الفيلر؟ التورّم الخفيف طبيعي في الأيام الأولى.', 'How do you feel after the filler? Mild swelling is normal in the first days.', 270, 2),
-  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, null, true, false, null, null, null, null, null, 3),
-  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, null, true, false, null, null, null, null, null, 4),
-  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, 'chemical_peel', true, true, 'قبل الجلسة: أوقف الريتينول والمقشّرات قبل 5 أيام، وتجنّب الشمس.', 'Before the session: stop retinol and exfoliants 5 days before, and avoid the sun.', 'كيف حال بشرتك بعد التقشير؟ استخدم واقي الشمس والمرطّب بانتظام.', 'How is your skin after the peel? Use sunscreen and moisturiser regularly.', 30, 5),
-  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, 'قبل الجلسة: تعال بوجه نظيف بدون مكياج إن أمكن.', 'Before the session: come with a clean face, no make-up if possible.', 'كيف حال بشرتك بعد جلسة التنظيف؟', 'How is your skin after the facial?', 30, 6),
-  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, null, true, false, null, null, null, null, null, 7),
-  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, null, true, false, null, null, null, null, null, 8),
-  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, null, true, false, null, null, null, null, null, 9),
-  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, null, true, false, null, null, null, null, null, 10),
-  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, null, true, false, null, null, null, null, null, 11),
-  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', null, true, false, null, null, null, null, null, 12),
-  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', null, true, false, null, null, null, null, null, 13),
-  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', null, true, false, null, null, null, null, null, 14),
-  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', null, true, false, null, null, null, null, null, 15),
-  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', null, true, false, null, null, null, null, null, 16),
-  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', null, true, false, null, null, null, null, null, 17),
-  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', null, true, false, null, null, null, null, null, 18),
-  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', 'laser_hair_removal', true, true, 'قبل الجلسة: احلق المنطقة قبل يوم، وتجنّب الشمس والتقشير لمدة أسبوع.', 'Before the session: shave the area the day before, and avoid sun and exfoliation for a week.', 'كيف حال بشرتك بعد جلسة الليزر؟', 'How is your skin after the laser session?', 42, 19),
-  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, null, true, false, null, null, null, null, null, 20),
-  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, null, true, false, null, null, null, null, null, 21);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, is_virtual, pre_visit_ar, pre_visit_en, post_care_ar, post_care_en, recall_after_days, sort_order) values
+  ('ce687cb8-e682-5940-9815-38d15cd2ea5a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, false, 'أحضر قائمة بأي أدوية أو منتجات تستخدمها حاليًا.', 'Bring a list of any medicines or skin products you use now.', null, null, null, 0),
+  ('f81befe7-9561-50af-adc9-2553e96b6277', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, true, false, 'قبل الجلسة: تجنّب الأسبرين والكحول ومميّعات الدم قبل 48 ساعة إن أمكن.', 'Before the session: avoid aspirin, alcohol and blood thinners for 48 hours if possible.', 'كيف تشعر بعد جلسة البوتوكس؟ تذكّر ألا تستلقي 4 ساعات بعد الحقن.', 'How do you feel after your Botox session? Remember not to lie down for 4 hours after the injection.', 120, 1),
+  ('ca94abdb-c5cc-5ac3-b91d-d621c575419b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, true, false, 'قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.', 'Before the session: avoid blood thinners for 48 hours, and tell us about any infection.', 'كيف تشعر بعد حقن الفيلر؟ التورّم الخفيف طبيعي في الأيام الأولى.', 'How do you feel after the filler? Mild swelling is normal in the first days.', 270, 2),
+  ('deefcbf8-ca24-56d6-8246-06bdd635c96a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_boosters', 'محفزات البشرة (سكين بوستر)', 'Skin Boosters', 45, 15, 150000, null, null, true, false, false, null, null, null, null, null, 3),
+  ('ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'exosomes', 'الإكسوسومات', 'Exosomes', 45, 15, 180000, null, null, true, false, false, null, null, null, null, null, 4),
+  ('54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'chemical_peeling', 'التقشير الكيميائي', 'Chemical Peeling', 45, 15, 60000, null, 'chemical_peel', true, true, false, 'قبل الجلسة: أوقف الريتينول والمقشّرات قبل 5 أيام، وتجنّب الشمس.', 'Before the session: stop retinol and exfoliants 5 days before, and avoid the sun.', 'كيف حال بشرتك بعد التقشير؟ استخدم واقي الشمس والمرطّب بانتظام.', 'How is your skin after the peel? Use sunscreen and moisturiser regularly.', 30, 5),
+  ('238646ad-fa4b-5239-a04f-c948716feebd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, false, 'قبل الجلسة: تعال بوجه نظيف بدون مكياج إن أمكن.', 'Before the session: come with a clean face, no make-up if possible.', 'كيف حال بشرتك بعد جلسة التنظيف؟', 'How is your skin after the facial?', 30, 6),
+  ('0d54f91f-103f-5d7c-b2e7-e4d0f85f7ca2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'skin_rejuvenation', 'نضارة البشرة', 'Skin Rejuvenation', 60, 15, 90000, null, null, true, false, false, null, null, null, null, null, 7),
+  ('df0d892c-0dbf-543b-bfdb-8125f294ed1c', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prp', 'البلازما (PRP)', 'PRP', 45, 15, 90000, null, null, true, false, false, null, null, null, null, null, 8),
+  ('fcfe9f2e-6667-533d-8c24-1460a8cc286f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'prf', 'البلازما الغنية بالفيبرين (PRF)', 'PRF', 45, 15, 110000, null, null, true, false, false, null, null, null, null, null, 9),
+  ('8992cc30-8f04-5ddd-92c4-d766bef36234', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'thread_lift', 'شد الوجه بالخيوط', 'Thread Lift', 90, 30, 350000, null, null, true, false, false, null, null, null, null, null, 10),
+  ('d8b97501-c3db-5396-a574-756d8fbddc60', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'mesotherapy', 'الميزوثيرابي', 'Mesotherapy', 45, 15, 70000, null, null, true, false, false, null, null, null, null, null, 11),
+  ('a4b2d666-9415-5a07-92ee-e520efe5d5c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'fractional_laser', 'الليزر التجزيئي (فراكشنال)', 'Fractional Laser', 60, 15, 150000, 'fractional_laser', null, true, false, false, null, null, null, null, null, 12),
+  ('9255076a-e45b-5c4b-8ebb-6899c5499bab', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'morpheus8', 'مورفيس 8', 'Morpheus8', 75, 15, 250000, 'morpheus8', null, true, false, false, null, null, null, null, null, 13),
+  ('9231fbe6-71a2-5249-bb19-9a3165c3fac7', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'scarlet_rf', 'سكارليت RF', 'Scarlet RF', 60, 15, 220000, 'scarlet_rf', null, true, false, false, null, null, null, null, null, 14),
+  ('4eaf494d-3e48-5021-9a9b-8f5e5f62fdb2', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'vascular_laser', 'ليزر الأوعية الدموية', 'Vascular Laser', 30, 10, 90000, 'vascular_laser', null, true, false, false, null, null, null, null, null, 15),
+  ('5f4d4957-b818-557e-a0df-b307292dc651', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_pigmentation', 'ليزر إزالة التصبغات', 'Laser Pigmentation Removal', 45, 15, 100000, 'pico_laser', null, true, false, false, null, null, null, null, null, 16),
+  ('f8f8372c-997d-5158-8d3b-da4afa225f46', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_tattoo', 'ليزر إزالة الوشم', 'Laser Tattoo Removal', 30, 10, 80000, 'pico_laser', null, true, false, false, null, null, null, null, null, 17),
+  ('b7715006-a012-5f4f-96d1-7d78fcb01fd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'ultherapy', 'ألثيرابي', 'Ultherapy', 90, 15, 600000, 'ultherapy', null, true, false, false, null, null, null, null, null, 18),
+  ('901925ea-47ec-5bdd-bc69-bab97d91b50b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'laser_hair_removal', 'ليزر إزالة الشعر', 'Laser Hair Removal', 60, 15, 80000, 'hair_removal_laser', 'laser_hair_removal', true, true, false, 'قبل الجلسة: احلق المنطقة قبل يوم، وتجنّب الشمس والتقشير لمدة أسبوع.', 'Before the session: shave the area the day before, and avoid sun and exfoliation for a week.', 'كيف حال بشرتك بعد جلسة الليزر؟', 'How is your skin after the laser session?', 42, 19),
+  ('cb576008-0669-5825-8d8b-646aef504b3b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'cryotherapy', 'العلاج بالتبريد', 'Cryotherapy', 30, 10, 40000, null, null, true, false, false, null, null, null, null, null, 20),
+  ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, null, true, false, false, null, null, null, null, null, 21),
+  ('278b82c7-f6bd-5b1b-aaf3-1b9f576e42ff', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'video_consultation', 'استشارة مرئية (فيديو)', 'Video Consultation', 20, 10, 25000, null, 'telehealth', true, true, true, 'قبل المكالمة: اختر مكانًا هادئًا وجيد الإضاءة. يمكنك إرسال صور واضحة للمنطقة في هذه المحادثة قبل الموعد ليطّلع عليها الطبيب.', 'find a quiet, well-lit place. You can send clear photos of the area in this chat before the call, so the doctor can see them.', null, null, null, 22);
 
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake, whatsapp_opt_in_at, whatsapp_opt_in_source, whatsapp_opted_out_at) values
   ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', 'national_id', '1000000101', null, null, null, true, now() - interval '60 days', 'demo', null),
@@ -1225,12 +1241,30 @@ I understand my skin may be red and peel for several days, and sun exposure may 
 
 I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
 
-I consent to the procedure and will use SPF 50 sunscreen daily.');
+I consent to the procedure and will use SPF 50 sunscreen daily.'),
+  ('ff82401e-4e7b-5973-9793-0e0ccc1d3670', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'telehealth', 1, true, 'نموذج موافقة على الاستشارة المرئية (عن بُعد)', 'Consent for video (telehealth) consultations', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أوافق على تلقي استشارة طبية عبر مكالمة فيديو بدلًا من الحضور إلى العيادة.
+
+أعلم أن الطبيب/ة لا يستطيع فحصي بالكامل عن بُعد، وقد يطلب زيارة العيادة لاستكمال الفحص أو العلاج.
+
+أعلم أن المكالمة لا تُسجَّل، وأن ما يُدوَّن منها يُحفظ في ملفي الطبي فقط، وأن الصور التي أرسلها تُحفظ في ملفي.
+
+أؤكد أنني في مكان خاص، وأن المعلومات التي أقدمها صحيحة. في الحالات الطارئة سأتصل بالرقم 997.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I agree to receive a medical consultation by video call instead of visiting the clinic.
+
+I understand the practitioner cannot fully examine me remotely and may ask me to visit the clinic to complete the examination or treatment.
+
+I understand the call is not recorded, notes from it are kept in my medical file only, and photos I send are kept in my file.
+
+I confirm I am in a private place and the information I give is accurate. In an emergency I will call 997.');
 
 insert into public.consent_rules (tenant_id, code, rule, months) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'laser_hair_removal', 'per_package', null),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'injectables', 'every_visit', null),
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'chemical_peel', 'every_visit', null);
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'chemical_peel', 'every_visit', null),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'telehealth', 'months', 12);
 
 insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
   ('e3f5912c-34e3-5c06-ad82-859640083596', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '901925ea-47ec-5bdd-bc69-bab97d91b50b', 'باقة ليزر إزالة الشعر — 6 جلسات', 'Laser Hair Removal — 6 sessions', 6, 360000, 365),
@@ -1311,11 +1345,11 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00');
 
-insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, pre_visit_ar, pre_visit_en, post_care_ar, post_care_en, recall_after_days, sort_order) values
-  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, 'أحضر قائمة بأي أدوية أو منتجات تستخدمها حاليًا.', 'Bring a list of any medicines or skin products you use now.', null, null, null, 0),
-  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, false, 'قبل الجلسة: تجنّب الأسبرين والكحول ومميّعات الدم قبل 48 ساعة إن أمكن.', 'Before the session: avoid aspirin, alcohol and blood thinners for 48 hours if possible.', 'كيف تشعر بعد جلسة البوتوكس؟ تذكّر ألا تستلقي 4 ساعات بعد الحقن.', 'How do you feel after your Botox session? Remember not to lie down for 4 hours after the injection.', 120, 1),
-  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, false, 'قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.', 'Before the session: avoid blood thinners for 48 hours, and tell us about any infection.', 'كيف تشعر بعد حقن الفيلر؟ التورّم الخفيف طبيعي في الأيام الأولى.', 'How do you feel after the filler? Mild swelling is normal in the first days.', 270, 2),
-  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, 'قبل الجلسة: تعال بوجه نظيف بدون مكياج إن أمكن.', 'Before the session: come with a clean face, no make-up if possible.', 'كيف حال بشرتك بعد جلسة التنظيف؟', 'How is your skin after the facial?', 30, 3);
+insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, is_virtual, pre_visit_ar, pre_visit_en, post_care_ar, post_care_en, recall_after_days, sort_order) values
+  ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, false, 'أحضر قائمة بأي أدوية أو منتجات تستخدمها حاليًا.', 'Bring a list of any medicines or skin products you use now.', null, null, null, 0),
+  ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, false, false, 'قبل الجلسة: تجنّب الأسبرين والكحول ومميّعات الدم قبل 48 ساعة إن أمكن.', 'Before the session: avoid aspirin, alcohol and blood thinners for 48 hours if possible.', 'كيف تشعر بعد جلسة البوتوكس؟ تذكّر ألا تستلقي 4 ساعات بعد الحقن.', 'How do you feel after your Botox session? Remember not to lie down for 4 hours after the injection.', 120, 1),
+  ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, false, false, 'قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.', 'Before the session: avoid blood thinners for 48 hours, and tell us about any infection.', 'كيف تشعر بعد حقن الفيلر؟ التورّم الخفيف طبيعي في الأيام الأولى.', 'How do you feel after the filler? Mild swelling is normal in the first days.', 270, 2),
+  ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, false, 'قبل الجلسة: تعال بوجه نظيف بدون مكياج إن أمكن.', 'Before the session: come with a clean face, no make-up if possible.', 'كيف حال بشرتك بعد جلسة التنظيف؟', 'How is your skin after the facial?', 30, 3);
 
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake, whatsapp_opt_in_at, whatsapp_opt_in_source, whatsapp_opted_out_at) values
   ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', 'national_id', '1000000201', null, null, null, true, now() - interval '60 days', 'demo', null),
@@ -1381,12 +1415,30 @@ I understand my skin may be red and peel for several days, and sun exposure may 
 
 I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.
 
-I consent to the procedure and will use SPF 50 sunscreen daily.');
+I consent to the procedure and will use SPF 50 sunscreen daily.'),
+  ('da25c253-8309-5031-8e4a-07bf296a9b7b', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'telehealth', 1, true, 'نموذج موافقة على الاستشارة المرئية (عن بُعد)', 'Consent for video (telehealth) consultations', 'تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.
+
+أوافق على تلقي استشارة طبية عبر مكالمة فيديو بدلًا من الحضور إلى العيادة.
+
+أعلم أن الطبيب/ة لا يستطيع فحصي بالكامل عن بُعد، وقد يطلب زيارة العيادة لاستكمال الفحص أو العلاج.
+
+أعلم أن المكالمة لا تُسجَّل، وأن ما يُدوَّن منها يُحفظ في ملفي الطبي فقط، وأن الصور التي أرسلها تُحفظ في ملفي.
+
+أؤكد أنني في مكان خاص، وأن المعلومات التي أقدمها صحيحة. في الحالات الطارئة سأتصل بالرقم 997.', 'Notice: demo wording for demonstration only — NOT legal text.
+
+I agree to receive a medical consultation by video call instead of visiting the clinic.
+
+I understand the practitioner cannot fully examine me remotely and may ask me to visit the clinic to complete the examination or treatment.
+
+I understand the call is not recorded, notes from it are kept in my medical file only, and photos I send are kept in my file.
+
+I confirm I am in a private place and the information I give is accurate. In an emergency I will call 997.');
 
 insert into public.consent_rules (tenant_id, code, rule, months) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'laser_hair_removal', 'per_package', null),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'injectables', 'every_visit', null),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'chemical_peel', 'every_visit', null);
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'chemical_peel', 'every_visit', null),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'telehealth', 'months', 12);
 
 insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
   ('baa4e36f-c509-587a-ab60-06c22bf3188a', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, 180);
