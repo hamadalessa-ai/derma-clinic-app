@@ -124,6 +124,7 @@ describe("AI scribe", () => {
     expect(SCRIBE_SYSTEM).toContain("underarm");
     expect(SCRIBE_SYSTEM).toContain("never explain what you left out");
     expect(SCRIBE_SYSTEM).toContain("next such date on or after today's date");
+    expect(SCRIBE_SYSTEM).toContain("never write a heading just to say [unclear]");
   });
 
   it("refuses signed notes, other doctors' notes and non-doctors", async () => {
