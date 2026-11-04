@@ -34,8 +34,11 @@ async function newNote(file: string, actor = drSara) {
   // A fresh draft each time (no appointment: openDraft always creates one).
   return withActor(actor, (tx) => openDraft(tx, actor, { patientId: patient(file) }));
 }
+/** Read as Dr. Sara: notes are hidden from anyone without the practitioner role (RLS). */
 const noteRow = async (id: string) =>
-  (await system((tx) => tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, id))))[0];
+  (
+    await withActor(drSara, (tx) => tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, id)))
+  )[0];
 
 async function code(p: Promise<unknown>) {
   try {
