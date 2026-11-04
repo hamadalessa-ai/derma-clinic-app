@@ -783,6 +783,26 @@ ALTER TABLE "tenant_settings" ADD COLUMN "ai_scribe_enabled" boolean DEFAULT fal
 -- 0003_wonderful_polaris.sql
 ALTER TABLE "rooms" ADD COLUMN "is_virtual" boolean DEFAULT false NOT NULL;
 ALTER TABLE "services" ADD COLUMN "is_virtual" boolean DEFAULT false NOT NULL;
+-- 0004_famous_vivisector.sql
+CREATE TABLE "schedule_exceptions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"day" date NOT NULL,
+	"kind" text NOT NULL,
+	"branch_id" uuid,
+	"start_time" time,
+	"end_time" time,
+	"note" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "schedule_exceptions_kind" CHECK (("schedule_exceptions"."kind" = 'off' and "schedule_exceptions"."branch_id" is null and "schedule_exceptions"."start_time" is null and "schedule_exceptions"."end_time" is null) or ("schedule_exceptions"."kind" = 'hours' and "schedule_exceptions"."branch_id" is not null and "schedule_exceptions"."start_time" < "schedule_exceptions"."end_time"))
+);
+ALTER TABLE "tenant_settings" ADD COLUMN "doctors_edit_own_hours" boolean DEFAULT true NOT NULL;
+ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_member_fk" FOREIGN KEY ("tenant_id","member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "schedule_exceptions_member_day_idx" ON "schedule_exceptions" USING btree ("tenant_id","member_id","day");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -2038,6 +2058,8 @@ grant select, insert, update, delete on public.branches, public.departments,
   public.staff_schedules, public.patients, public.branch_holidays,
   public.patient_medical_flags, public.time_blocks, public.package_templates
   to clinic_app;
+-- One-off schedule changes (day off / special hours): added and removed, never edited.
+grant select, insert, delete on public.schedule_exceptions to clinic_app;
 grant select, update on public.tenant_settings to clinic_app;
 -- Appointments are never deleted: they are cancelled (status), which keeps the history.
 grant select, insert, update on public.appointments, public.reschedule_requests,
@@ -2094,7 +2116,7 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs'
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2183,7 +2205,7 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs',
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case

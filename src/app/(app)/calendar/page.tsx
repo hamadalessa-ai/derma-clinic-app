@@ -183,11 +183,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           {t("week")}
         </Link>
         {can(ctx.roles, "hours:edit") && (
-          <Link
-            href="/working-hours"
-            className={tab(false)}
-            data-testid="working-hours-link"
-          >
+          <Link href="/working-hours" className={tab(false)} data-testid="working-hours-link">
             {th("title")}
           </Link>
         )}

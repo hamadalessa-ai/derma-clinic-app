@@ -118,4 +118,3 @@ export function overlapping(shifts: { start: string; end: string }[]) {
   const s = [...shifts].sort((a, b) => a.start.localeCompare(b.start));
   return s.some((x, i) => i > 0 && x.start < s[i - 1].end);
 }
-

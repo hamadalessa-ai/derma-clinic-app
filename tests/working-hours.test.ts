@@ -161,7 +161,11 @@ describe("split shifts", () => {
       }),
     );
     const times = slots.map((s) =>
-      s.startsAt.toLocaleTimeString("en-GB", { timeZone: "Asia/Riyadh", hour: "2-digit", minute: "2-digit" }),
+      s.startsAt.toLocaleTimeString("en-GB", {
+        timeZone: "Asia/Riyadh",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     );
     expect(times).toContain("09:00");
     expect(times).toContain("17:30"); // 17:00 was booked above (until 17:30)
@@ -185,12 +189,26 @@ describe("changes for a single date", () => {
       withActor(receptionJeddah, (tx) => addHoursException(tx, receptionJeddah, input, NOW));
 
     // Extra Friday clinic 16:00–20:00.
-    await add({ memberId: MAJED, day: FRI, kind: "hours", branchId: JEDDAH, start: "16:00", end: "20:00" });
+    await add({
+      memberId: MAJED,
+      day: FRI,
+      kind: "hours",
+      branchId: JEDDAH,
+      start: "16:00",
+      end: "20:00",
+    });
     expect(await code(book("D-0014", FRI, "16:00"))).toBe("ok");
     expect(await code(book("D-0014", FRI, "10:00"))).toBe("outside_hours");
     expect(
       await code(
-        add({ memberId: MAJED, day: FRI, kind: "hours", branchId: JEDDAH, start: "19:00", end: "21:00" }),
+        add({
+          memberId: MAJED,
+          day: FRI,
+          kind: "hours",
+          branchId: JEDDAH,
+          start: "19:00",
+          end: "21:00",
+        }),
       ),
     ).toBe("overlap");
 
@@ -202,7 +220,9 @@ describe("changes for a single date", () => {
     );
     const off = data.exceptions.find((e) => e.day === TUE)!;
     expect(off).toMatchObject({ kind: "off", note: "Conference" });
-    await withActor(receptionJeddah, (tx) => removeHoursException(tx, receptionJeddah, off.id, NOW));
+    await withActor(receptionJeddah, (tx) =>
+      removeHoursException(tx, receptionJeddah, off.id, NOW),
+    );
     expect(await code(book("D-0015", TUE, "10:00"))).toBe("ok");
 
     expect(await code(add({ memberId: MAJED, day: "2037-02-01", kind: "off" }))).toBe("in_past");
@@ -218,9 +238,7 @@ describe("changes for a single date", () => {
         NOW,
       ),
     );
-    const evening = r.conflicts.find(
-      (c) => c.startsAt === riyadhAt("17:00", SUN).toISOString(),
-    );
+    const evening = r.conflicts.find((c) => c.startsAt === riyadhAt("17:00", SUN).toISOString());
     expect(evening).toBeDefined();
     const [still] = await withActor(admin, (tx) =>
       tx.select().from(appointments).where(eq(appointments.id, evening!.id)),

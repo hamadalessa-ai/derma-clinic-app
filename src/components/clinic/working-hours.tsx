@@ -91,7 +91,11 @@ export function WeeklyHoursEditor({
           .filter((x) => x.s.weekday === wd)
           .sort((a, b) => a.s.start.localeCompare(b.s.start));
         return (
-          <div key={wd} className="flex flex-col gap-2 border-b pb-3 last:border-b-0" data-weekday={wd}>
+          <div
+            key={wd}
+            className="flex flex-col gap-2 border-b pb-3 last:border-b-0"
+            data-weekday={wd}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium">{dayName(wd)}</span>
               <span className="flex gap-1">

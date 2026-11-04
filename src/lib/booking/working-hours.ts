@@ -325,7 +325,10 @@ export async function hourConflicts(tx: TenantTx, memberId: string, now = new Da
         eq(appointments.practitionerId, memberId),
         inArray(appointments.status, [...MOVABLE_STATUSES]),
         gte(appointments.startsAt, now),
-        lte(appointments.startsAt, new Date(`${addDays(riyadhDay(now), CONFLICT_DAYS)}T23:59:59+03:00`)),
+        lte(
+          appointments.startsAt,
+          new Date(`${addDays(riyadhDay(now), CONFLICT_DAYS)}T23:59:59+03:00`),
+        ),
       ),
     )
     .orderBy(asc(appointments.startsAt));

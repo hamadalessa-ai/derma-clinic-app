@@ -39,6 +39,7 @@ drop table if exists
   public.reschedule_requests,
   public.reservations,
   public.rooms,
+  public.schedule_exceptions,
   public.services,
   public.sessions,
   public.staff_schedules,

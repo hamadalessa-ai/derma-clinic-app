@@ -77,8 +77,9 @@ export default async function WorkingHoursPage({
                   className="underline"
                 >
                   {formatGregorian(new Date(c.startsAt), locale, "medium")} ·{" "}
-                  {formatTime(new Date(c.startsAt), locale)} · {pick(locale, c.patientAr, c.patientEn)}{" "}
-                  · {pick(locale, c.serviceAr, c.serviceEn)}
+                  {formatTime(new Date(c.startsAt), locale)} ·{" "}
+                  {pick(locale, c.patientAr, c.patientEn)} ·{" "}
+                  {pick(locale, c.serviceAr, c.serviceEn)}
                 </Link>
               </li>
             ))}
