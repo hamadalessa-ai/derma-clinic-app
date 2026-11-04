@@ -51,6 +51,46 @@ export function ScheduleSettingForm({ initial }: { initial: boolean }) {
   );
 }
 
+/** AI scribe for doctors: on/off (clinic admin). */
+export function ScribeSettingForm({ initial, keySet }: { initial: boolean; keySet: boolean }) {
+  const t = useTranslations("scribe");
+  const ts = useTranslations("settings");
+  const tw = useTranslations("whatsapp.ai");
+  const [on, setOn] = useState(initial);
+  const [msg, setMsg] = useState<string | null>(null);
+  const { run, pending, error } = useAction();
+  return (
+    <div className="flex flex-col gap-2" data-testid="scribe-settings">
+      <label className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          className="accent-brand size-5"
+          checked={on}
+          disabled={pending}
+          data-testid="scribe-toggle"
+          onChange={(e) => {
+            const value = e.target.checked;
+            setOn(value);
+            run(
+              () => updateSettingsAction({ aiScribeEnabled: value }),
+              () => setMsg(ts("savedOk")),
+            );
+          }}
+        />
+        <span className="font-medium">
+          {t("settingTitle")} — {on ? t("on") : t("off")}
+        </span>
+      </label>
+      <p className="text-muted-foreground text-sm">{t("settingHint")}</p>
+      <p className={keySet ? "text-success-foreground text-sm" : "text-warning-foreground text-sm"}>
+        {keySet ? tw("keySet") : tw("keyMissing")}
+      </p>
+      <FormError message={error} />
+      <FormSuccess message={msg} />
+    </div>
+  );
+}
+
 export function RefreshDemoButton() {
   const t = useTranslations("settings");
   const [msg, setMsg] = useState<string | null>(null);

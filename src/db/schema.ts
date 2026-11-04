@@ -478,6 +478,8 @@ export const tenantSettings = pgTable("tenant_settings", {
   aiReceptionistEnabled: boolean("ai_receptionist_enabled").notNull().default(false),
   /** Most AI replies per day (Riyadh); beyond it, messages go to the inbox as before. */
   aiDailyLimit: smallint("ai_daily_limit").notNull().default(200),
+  /** ON: doctors can dictate and get an AI-drafted clinical note to review and sign. */
+  aiScribeEnabled: boolean("ai_scribe_enabled").notNull().default(false),
   /** When Meta last verified our webhook (WhatsApp status page). */
   whatsappWebhookVerifiedAt: timestamp("whatsapp_webhook_verified_at", { withTimezone: true }),
   updatedAt: updatedAt(),
@@ -997,6 +999,8 @@ export const clinicalNotes = pgTable(
     body: text("body").notNull().default(""),
     status: noteStatus("status").notNull().default("draft"),
     signedAt: timestamp("signed_at", { withTimezone: true }),
+    /** The AI scribe drafted (part of) this note: shown as "AI draft — review before signing". */
+    aiDraftedAt: timestamp("ai_drafted_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

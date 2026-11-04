@@ -27,6 +27,8 @@ import { saveConsentRule, saveTemplateVersion, signConsent } from "@/lib/consent
 import { CONSENT_RULES } from "@/db/schema";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
+import { anthropicClient } from "@/lib/ai/claude";
+import { scribeDraft } from "@/lib/ai/scribe";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
 import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
 import { notifyLater, sendTestPush } from "@/lib/push/notify";
@@ -664,6 +666,24 @@ export async function signNoteAction(input: { patientId: string; noteId: string;
   });
 }
 
+/** AI scribe: the doctor's spoken notes → an English draft in their own draft note. */
+export async function scribeDraftAction(input: {
+  patientId: string;
+  noteId: string;
+  transcript: string;
+}) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ patientId: uuid, noteId: uuid, transcript: z.string().max(20000) }),
+      input,
+    );
+    const r = await scribeDraft(actor, v, { client: anthropicClient() });
+    revalidatePath(`/patients/${v.patientId}`);
+    revalidatePath("/clinical-notes");
+    return r;
+  });
+}
+
 export async function addAddendumAction(input: {
   patientId: string;
   noteId: string;
@@ -703,6 +723,7 @@ const settingsInput = z.object({
   showServiceInMessages: z.boolean().optional(),
   aiReceptionistEnabled: z.boolean().optional(),
   aiDailyLimit: z.number().int().min(10).max(2000).optional(),
+  aiScribeEnabled: z.boolean().optional(),
 });
 
 export async function updateSettingsAction(input: z.input<typeof settingsInput>) {

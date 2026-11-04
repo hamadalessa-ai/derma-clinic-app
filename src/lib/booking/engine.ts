@@ -121,6 +121,7 @@ const DEFAULT_SETTINGS: Settings = {
   showServiceInMessages: true,
   aiReceptionistEnabled: false,
   aiDailyLimit: 200,
+  aiScribeEnabled: false,
   whatsappWebhookVerifiedAt: null,
 };
 

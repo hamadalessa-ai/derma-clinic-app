@@ -43,7 +43,11 @@ import { getFamily, getPatient, getPatientAlerts } from "@/lib/patients/queries"
 import { loadAppointments } from "@/lib/views/schedule";
 import { concernCards } from "@/lib/whatsapp/concern-view";
 import { riyadhDay, riyadhTime } from "@/lib/booking/time";
+import { getSettings } from "@/lib/booking/engine";
 import type { Locale } from "@/i18n/config";
+
+/** The AI scribe may take a while to draft a long note. */
+export const maxDuration = 60;
 
 const TABS = ["overview", "visits", "packages", "consents", "notes"] as const;
 type Tab = (typeof TABS)[number];
@@ -76,6 +80,11 @@ export default async function PatientProfilePage({
   // Opened from a "patient concern" notification (or My Day): show that concern first.
   const concernId = sp.concern && UUID_RE.test(sp.concern) ? sp.concern : null;
 
+  // AI scribe: the clinic switched it on and a key is set (doctors who can write notes only).
+  const scribeOn =
+    can(ctx.roles, "notes:write") &&
+    !!process.env.ANTHROPIC_API_KEY?.trim() &&
+    (await withActor(actor, (tx) => getSettings(tx))).aiScribeEnabled;
   const data = await withActor(actor, async (tx) => {
     const patient = await getPatient(tx, id);
     if (!patient) return null;
@@ -420,6 +429,7 @@ export default async function PatientProfilePage({
           <NotesPanel
             patientId={id}
             userId={ctx.user.id}
+            scribe={scribeOn}
             canWrite={can(ctx.roles, "notes:write")}
             appointmentId={sp.appointment && UUID_RE.test(sp.appointment) ? sp.appointment : null}
             notes={data.notes.map((n) => ({
@@ -430,6 +440,7 @@ export default async function PatientProfilePage({
               authorName: n.authorName,
               createdAt: n.createdAt.toISOString(),
               signedAt: n.signedAt?.toISOString() ?? null,
+              aiDrafted: !!n.aiDraftedAt,
               appointmentId: n.appointmentId,
               addenda: n.addenda.map((a) => ({
                 id: a.id,

@@ -91,7 +91,7 @@ grant select, insert on public.consent_templates to clinic_app;
 grant update (is_current) on public.consent_templates to clinic_app;
 -- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
 grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
-grant update (body, status, signed_at, updated_at) on public.clinical_notes to clinic_app;
+grant update (body, status, signed_at, updated_at, ai_drafted_at) on public.clinical_notes to clinic_app;
 -- Phase 2a: codes, rate limits, patient sessions, message log, push.
 grant select, insert, update on public.verification_codes, public.patient_sessions to clinic_app;
 grant select, insert, delete on public.rate_limit_hits to clinic_app;
