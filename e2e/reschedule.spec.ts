@@ -29,6 +29,7 @@ const freshPhone = () => `0596${String((Date.now() + seq++ * 7919) % 1_000_000).
 /** Books with Dr. Sara on the first day at least 3 days ahead that has free times (latest time). */
 async function bookLater(page: Page, phone: string) {
   await page.goto("/book");
+  await page.getByTestId("mode-clinic").click();
   await page
     .getByTestId("step-branch")
     .getByRole("button", { name: /الرياض/ })

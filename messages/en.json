@@ -528,7 +528,13 @@
     "disabled": "Online booking isn't available right now. Please contact the clinic.",
     "priceFrom": "{price}",
     "privacy": "Your details are used for booking only. This is a demo — don't enter real data.",
-    "myLink": "Already booked? Patient page"
+    "myLink": "Already booked? Patient page",
+    "stepMode": "How would you like to see the doctor?",
+    "modeClinic": "Visit the clinic",
+    "modeClinicHint": "Choose a branch and a treatment or consultation.",
+    "modeVideo": "Video consultation from home",
+    "modeVideoHint": "Talk to the doctor by video on your phone. No app needed.",
+    "videoDone": "By video: the join link comes on WhatsApp."
   },
   "sources": {
     "reception": "Reception",

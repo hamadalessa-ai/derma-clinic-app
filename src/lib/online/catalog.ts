@@ -4,6 +4,7 @@ import {
   branchHolidays,
   branches,
   departments,
+  rooms,
   services,
   staffSchedules,
   tenantMembers,
@@ -42,6 +43,7 @@ export async function loadBookingCatalog(tx: TenantTx) {
       departmentId: services.departmentId,
       departmentAr: departments.nameAr,
       departmentEn: departments.nameEn,
+      isVirtual: services.isVirtual,
     })
     .from(services)
     .innerJoin(departments, eq(departments.id, services.departmentId))
@@ -77,6 +79,13 @@ export async function loadBookingCatalog(tx: TenantTx) {
     const list = (openWeekdays[s.branchId] ??= []);
     if (!list.includes(s.weekday)) list.push(s.weekday);
   }
+  // Branches with a video room offer video consultations.
+  const videoRooms = await tx
+    .select({ branchId: rooms.branchId })
+    .from(rooms)
+    .where(eq(rooms.isVirtual, true));
+  const videoBranches = [...new Set(videoRooms.map((r) => r.branchId))];
+
   const holidays = await tx
     .select({ day: branchHolidays.day, branchId: branchHolidays.branchId })
     .from(branchHolidays);
@@ -106,6 +115,8 @@ export async function loadBookingCatalog(tx: TenantTx) {
       showPrices: settings.showPricesOnline,
     },
     branches: branchRows,
+    /** Branches whose doctors offer video consultations (patients don't pick one for video). */
+    videoBranches,
     openWeekdays,
     holidays: holidays.map((h) => ({ day: String(h.day), branchId: h.branchId })),
     departments: [...groups.values()].map((g) => ({
@@ -117,6 +128,7 @@ export async function loadBookingCatalog(tx: TenantTx) {
         nameAr: s.nameAr,
         nameEn: s.nameEn,
         durationMinutes: s.durationMinutes,
+        isVirtual: s.isVirtual,
         priceHalalas: settings.showPricesOnline ? s.priceHalalas : null,
       })),
     })),
