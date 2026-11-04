@@ -76,10 +76,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
     [mode, branchId, catalog.videoBranches],
   );
   const branchDoctors = useMemo(
-    () =>
-      catalog.doctors.filter(
-        (d) => !d.branchId || searchBranches.includes(d.branchId),
-      ),
+    () => catalog.doctors.filter((d) => !d.branchId || searchBranches.includes(d.branchId)),
     [catalog.doctors, searchBranches],
   );
   const departments = catalog.departments
@@ -98,7 +95,8 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
   useEffect(() => {
     if (!searchBranches.length || !serviceId || !doctor || !day) return;
     let cancelled = false;
-    const chosen = doctor.kind === "doctor" ? catalog.doctors.find((d) => d.id === doctor.id) : null;
+    const chosen =
+      doctor.kind === "doctor" ? catalog.doctors.find((d) => d.id === doctor.id) : null;
     const where = chosen?.branchId
       ? searchBranches.filter((b) => b === chosen.branchId)
       : searchBranches;
