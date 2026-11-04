@@ -662,5 +662,8 @@ describe("confirming after a re-check", () => {
       preferredLanguage: "ar",
     });
     expect(text).toContain("Never guess gender");
+    // 997 only for emergencies, not routine worries.
+    expect(text).toContain("Emergency advice ONLY when");
+    expect(text).toContain("do NOT mention 997");
   });
 });
