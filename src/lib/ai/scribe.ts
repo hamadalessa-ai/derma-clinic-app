@@ -27,13 +27,7 @@ const MAX_NOTE = 20_000;
 export class ScribeError extends Error {
   constructor(
     public code:
-      | "not_configured"
-      | "disabled"
-      | "empty"
-      | "not_found"
-      | "signed"
-      | "not_author"
-      | "failed",
+      "not_configured" | "disabled" | "empty" | "not_found" | "signed" | "not_author" | "failed",
   ) {
     super(code);
     this.name = "ScribeError";
