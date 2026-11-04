@@ -7,13 +7,13 @@ import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import type { TenantTx } from "@/db/tenant";
 import {
   appointments,
+  branchHolidays,
   devices,
   messages,
   patients,
   rescheduleRequests,
   rooms,
   services,
-  staffSchedules,
   tenantMembers,
   timeBlocks,
   users,
@@ -23,7 +23,7 @@ import { reasonView, type ConsentReasonView } from "@/lib/consents/rules";
 import { getPatientAlerts, type PatientAlerts } from "@/lib/patients/queries";
 import { balanceFor, packagesForPatients } from "@/lib/packages/packages";
 import type { AppointmentStatus } from "@/lib/booking/status";
-import { minutesOf } from "@/lib/booking/time";
+import { clockShiftsOn, loadHourRows, minutesView } from "@/lib/booking/hours";
 
 export interface ApptView {
   id: string;
@@ -70,14 +70,23 @@ export interface DoctorView {
   userId: string;
   nameAr: string;
   nameEn: string | null;
-  /** weekday (0=Sun) → minutes since midnight */
-  hours: Record<
-    number,
-    { start: number; end: number; breakStart: number | null; breakEnd: number | null }
-  >;
+  /** day ("2026-11-05") → working hours at this branch, in minutes since midnight. */
+  hours: Record<string, DayHours | null>;
 }
 
-export async function loadDoctors(tx: TenantTx, branchId: string): Promise<DoctorView[]> {
+export interface DayHours {
+  start: number;
+  end: number;
+  /** Gaps between shifts. */
+  breaks: { start: number; end: number }[];
+}
+
+/** The branch's doctors, with their working hours on the given days (weekly pattern + changes). */
+export async function loadDoctors(
+  tx: TenantTx,
+  branchId: string,
+  days: string[] = [],
+): Promise<DoctorView[]> {
   const rows = await tx
     .select({ member: tenantMembers, user: users })
     .from(tenantMembers)
@@ -85,17 +94,19 @@ export async function loadDoctors(tx: TenantTx, branchId: string): Promise<Docto
     .where(or(isNull(tenantMembers.branchId), eq(tenantMembers.branchId, branchId)))
     .orderBy(asc(tenantMembers.createdAt));
   const docs = rows.filter((r) => r.member.roles.includes("practitioner"));
-  const schedules = docs.length
+  const hourRows = await loadHourRows(
+    tx,
+    docs.map((d) => d.member.id),
+    days,
+  );
+  const closed = days.length
     ? await tx
-        .select()
-        .from(staffSchedules)
+        .select({ day: branchHolidays.day })
+        .from(branchHolidays)
         .where(
           and(
-            eq(staffSchedules.branchId, branchId),
-            inArray(
-              staffSchedules.memberId,
-              docs.map((d) => d.member.id),
-            ),
+            inArray(branchHolidays.day, days),
+            or(isNull(branchHolidays.branchId), eq(branchHolidays.branchId, branchId)),
           ),
         )
     : [];
@@ -105,17 +116,15 @@ export async function loadDoctors(tx: TenantTx, branchId: string): Promise<Docto
     nameAr: user.name,
     nameEn: user.nameEn,
     hours: Object.fromEntries(
-      schedules
-        .filter((s) => s.memberId === member.id)
-        .map((s) => [
-          s.weekday,
-          {
-            start: minutesOf(s.startTime),
-            end: minutesOf(s.endTime),
-            breakStart: s.breakStart ? minutesOf(s.breakStart) : null,
-            breakEnd: s.breakEnd ? minutesOf(s.breakEnd) : null,
-          },
-        ]),
+      days.map((d) => [
+        d,
+        closed.some((c) => String(c.day) === d)
+          ? null
+          : minutesView(
+              clockShiftsOn(member.id, d, hourRows.weekly, hourRows.exceptions),
+              branchId,
+            ),
+      ]),
     ),
   }));
 }

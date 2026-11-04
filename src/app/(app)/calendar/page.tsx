@@ -9,7 +9,7 @@ import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { getSettings } from "@/lib/booking/engine";
-import { addDays, dayRange, isDay, riyadhDay, weekDays, weekdayOf } from "@/lib/booking/time";
+import { addDays, dayRange, isDay, riyadhDay, weekDays } from "@/lib/booking/time";
 import { formatDualDate } from "@/lib/format";
 import { getPatient } from "@/lib/patients/queries";
 import { pick } from "@/lib/brand";
@@ -38,10 +38,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const view = sp.view === "week" ? "week" : "day";
   const by = sp.by === "room" ? "room" : "doctor";
   const actor = actorOf(ctx);
+  const th = await getTranslations("hours");
 
   const data = await withActor(actor, async (tx) => {
+    const shownDays = view === "week" ? weekDays(day) : [day];
     const [doctors, rooms, services, settings] = await Promise.all([
-      loadDoctors(tx, branch.id),
+      loadDoctors(tx, branch.id, shownDays),
       loadRooms(tx, branch.id),
       loadServices(tx),
       getSettings(tx),
@@ -95,7 +97,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         }).format(new Date(`${d}T12:00:00+03:00`)),
         doctorId: doc.id,
         day: d,
-        hours: doc.hours[weekdayOf(d)] ?? null,
+        hours: doc.hours[d] ?? null,
         appointments: visible.filter(
           (a) => a.startsAt >= s.toISOString() && a.startsAt < e.toISOString(),
         ),
@@ -120,7 +122,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       title: pick(locale, d.nameAr, d.nameEn),
       doctorId: d.id,
       day,
-      hours: d.hours[weekdayOf(day)] ?? null,
+      hours: d.hours[day] ?? null,
       appointments: visible.filter((a) => a.practitionerId === d.id),
       blocks: data.blocks.filter((b) => b.memberId === d.id),
     }));
@@ -180,6 +182,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         <Link href={qs({ view: "week" })} className={tab(view === "week")}>
           {t("week")}
         </Link>
+        {can(ctx.roles, "hours:edit") && (
+          <Link href="/working-hours" className={tab(false)} data-testid="working-hours-link">
+            {th("title")}
+          </Link>
+        )}
         <span className="bg-border mx-1 h-6 w-px" />
         {view === "day" ? (
           <>

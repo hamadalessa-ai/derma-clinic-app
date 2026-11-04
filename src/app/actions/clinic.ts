@@ -31,6 +31,11 @@ import { anthropicClient } from "@/lib/ai/claude";
 import { scribeDraft } from "@/lib/ai/scribe";
 import { videoProvider } from "@/lib/video/provider";
 import { doctorJoin } from "@/lib/video/visit";
+import {
+  addHoursException,
+  removeHoursException,
+  saveWeeklyHours,
+} from "@/lib/booking/working-hours";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
 import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
 import { notifyLater, sendTestPush } from "@/lib/push/notify";
@@ -686,6 +691,81 @@ export async function scribeDraftAction(input: {
   });
 }
 
+// ─── Working hours ──────────────────────────────────────────────────────────
+
+const clock = z.string().regex(/^\d{2}:\d{2}$/);
+
+function refreshHours() {
+  refreshScreens();
+  revalidatePath("/working-hours");
+}
+
+/** Replaces a doctor's weekly hours. Returns upcoming appointments now outside the hours. */
+export async function saveWeeklyHoursAction(input: {
+  memberId: string;
+  shifts: { weekday: number; branchId: string; start: string; end: string }[];
+}) {
+  return staffAction("hours:edit", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        memberId: uuid,
+        shifts: z
+          .array(
+            z.object({
+              weekday: z.number().int().min(0).max(6),
+              branchId: uuid,
+              start: clock,
+              end: clock,
+            }),
+          )
+          .max(42),
+      }),
+      input,
+    );
+    const r = await withActor(actor, (tx) => saveWeeklyHours(tx, actor, v));
+    refreshHours();
+    return r;
+  });
+}
+
+/** A one-off change for one date: day off, or special hours (also an extra working day). */
+export async function addHoursExceptionAction(input: {
+  memberId: string;
+  day: string;
+  kind: "off" | "hours";
+  branchId?: string | null;
+  start?: string | null;
+  end?: string | null;
+  note?: string | null;
+}) {
+  return staffAction("hours:edit", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        memberId: uuid,
+        day,
+        kind: z.enum(["off", "hours"]),
+        branchId: uuid.nullish(),
+        start: clock.nullish(),
+        end: clock.nullish(),
+        note: text(200).nullish(),
+      }),
+      input,
+    );
+    const r = await withActor(actor, (tx) => addHoursException(tx, actor, v));
+    refreshHours();
+    return r;
+  });
+}
+
+export async function removeHoursExceptionAction(input: { id: string }) {
+  return staffAction("hours:edit", async (_ctx, actor) => {
+    const v = parse(z.object({ id: uuid }), input);
+    const r = await withActor(actor, (tx) => removeHoursException(tx, actor, v.id));
+    refreshHours();
+    return r;
+  });
+}
+
 /** The doctor joins a video consultation: returns a personal link into the video room. */
 export async function joinVideoAction(input: { appointmentId: string }) {
   return staffAction("video:join", async (_ctx, actor) => {
@@ -714,6 +794,7 @@ export async function addAddendumAction(input: {
 
 const settingsInput = z.object({
   doctorsManageOwnSchedule: z.boolean().optional(),
+  doctorsEditOwnHours: z.boolean().optional(),
   onlineBookingEnabled: z.boolean().optional(),
   onlineHorizonDays: z.number().int().min(1).max(180).optional(),
   onlineMinNoticeMinutes: z

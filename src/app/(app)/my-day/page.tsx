@@ -29,6 +29,7 @@ export default async function MyDayPage({
   const sp = await searchParams;
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("myDay");
+  const th = await getTranslations("hours");
   const tc = await getTranslations("calendar");
   const tco = await getTranslations("concerns");
   const branch = ctx.activeBranch;
@@ -115,6 +116,15 @@ export default async function MyDayPage({
       <Notice tone="info">
         {data.settings.doctorsManageOwnSchedule ? t("ownSchedule") : t("requestMode")}
       </Notice>
+      {data.settings.doctorsEditOwnHours && (
+        <Link
+          href="/working-hours"
+          className="text-brand self-start text-sm font-medium underline"
+          data-testid="my-hours-link"
+        >
+          {th("myHours")}
+        </Link>
+      )}
       <MyDayList
         appointments={active}
         blocks={data.blocks}

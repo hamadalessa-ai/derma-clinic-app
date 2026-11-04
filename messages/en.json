@@ -160,7 +160,13 @@
     "video_ended": "This video consultation has ended.",
     "video_consent": "Please sign the video consultation consent first.",
     "video_not_yours": "Only the appointment's own doctor can join this call.",
-    "video_failed": "The video call couldn't start just now. Please try again in a moment."
+    "video_failed": "The video call couldn't start just now. Please try again in a moment.",
+    "hours_not_allowed": "You can't change this doctor's hours.",
+    "hours_not_found": "Doctor not found.",
+    "hours_bad_time": "Please check the times: each shift must end after it starts.",
+    "hours_overlap": "Two shifts on the same day overlap.",
+    "hours_wrong_branch": "This doctor doesn't work at that branch.",
+    "hours_in_past": "That date has passed."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -482,7 +488,9 @@
     "copied": "Copied",
     "downloadQr": "Download QR code",
     "qrAlt": "QR code for the booking link",
-    "bookingLinkHint": "Share the link on WhatsApp or Instagram, or print the QR code for reception."
+    "bookingLinkHint": "Share the link on WhatsApp or Instagram, or print the QR code for reception.",
+    "doctorsEditHours": "Doctors set their own working hours",
+    "doctorsEditHoursHint": "Admins and reception can always change doctors' hours (Calendar → Working hours)."
   },
   "book": {
     "title": "Book your appointment",
@@ -982,5 +990,39 @@
     "noPhotos": "No photos in the last 30 days.",
     "photoAlt": "Photo from the patient",
     "note": "Note for this visit"
+  },
+  "hours": {
+    "title": "Working hours",
+    "subtitle": "Each doctor's weekly hours, and changes for single dates. Booking, online booking and the AI receptionist follow them straight away.",
+    "myHours": "My working hours",
+    "notAllowed": "You can't change working hours here. Please ask reception or the clinic admin.",
+    "weekly": "Weekly hours: {name}",
+    "dayOff": "Day off",
+    "addHours": "Add hours",
+    "addShift": "Add another shift",
+    "removeShift": "Remove this shift",
+    "copy": "Copy to working days",
+    "copyHint": "Use these hours on every other day that has hours (days off stay off).",
+    "from": "From",
+    "to": "To",
+    "branch": "Branch",
+    "breakHint": "A break is the gap between two shifts, e.g. 10:00–14:00 and 15:00–20:00.",
+    "save": "Save weekly hours",
+    "saved": "Saved.",
+    "savedConflicts": "Saved. Some booked appointments are now outside the hours: see the list above.",
+    "changes": "Changes for a single date",
+    "noChanges": "No upcoming changes.",
+    "off": "Off",
+    "removeChange": "Remove this change",
+    "date": "Date",
+    "change": "Change",
+    "kindOff": "Day off",
+    "kindHours": "Special hours (or an extra working day)",
+    "note": "Note (optional)",
+    "notePlaceholder": "e.g. conference, covering Jeddah",
+    "changeHint": "Special hours replace that day's weekly hours. Add them again for a second shift the same day.",
+    "addChange": "Add change",
+    "conflicts": "{count, plural, one {# booked appointment is} other {# booked appointments are}} outside the new hours",
+    "conflictsHint": "Nothing was moved or cancelled. Open each one in the calendar to move it, or tell the patient."
   }
 }

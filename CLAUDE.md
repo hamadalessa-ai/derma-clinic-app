@@ -90,6 +90,12 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   Join only around the visit time and after the `telehealth` consent (`visit.ts`). The provider (Daily today,
   key `DAILY_API_KEY`) sits behind `provider.ts` so it can be swapped for a Saudi-hosted server. Never recorded.
 
+- Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly
+  pattern (`staff_schedules`, several shifts per weekday, each at a branch; old rows with a break = two shifts)
+  unless `schedule_exceptions` has a change for that date (off / special hours, which also adds extra days).
+  Edits go through `src/lib/booking/working-hours.ts` (admin: all; reception: own branch; doctor: self if
+  `doctors_edit_own_hours`). Never move or cancel bookings on an hours change: list the conflicts instead.
+
 ## Database changes
 
 - Edit `src/db/schema.ts` → `pnpm db:generate` (Drizzle SQL) → `pnpm db:build-setup` regenerates

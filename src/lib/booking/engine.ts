@@ -16,7 +16,6 @@ import {
   reservations,
   rooms,
   services,
-  staffSchedules,
   tenantMembers,
   tenantSettings,
   timeBlocks,
@@ -25,7 +24,8 @@ import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { canTransition, MOVABLE_STATUSES, type AppointmentStatus } from "./status";
-import { addMinutes, atRiyadh, minutesOf, overlaps, riyadhDay, weekdayOf } from "./time";
+import { clockShiftsOn, loadHourRows, shiftsAt, type Shift } from "./hours";
+import { addMinutes, atRiyadh, minutesOf, overlaps, riyadhDay } from "./time";
 
 export type BookingErrorCode =
   | "slot_taken" // the doctor, room or device is already reserved
@@ -110,6 +110,7 @@ export type Settings = Omit<typeof tenantSettings.$inferSelect, "tenantId" | "up
 /** Used when a clinic has no settings row: everything online is OFF. */
 const DEFAULT_SETTINGS: Settings = {
   doctorsManageOwnSchedule: false,
+  doctorsEditOwnHours: true,
   slotMinutes: 15,
   demoAnchorDay: null,
   onlineBookingEnabled: false,
@@ -143,10 +144,11 @@ export async function branchPractitioners(tx: TenantTx, branchId: string): Promi
 // ─── Working hours ──────────────────────────────────────────────────────────
 
 export interface WorkDay {
+  /** First start and last end of the day's shifts at this branch. */
   start: Date;
   end: Date;
-  breakStart: Date | null;
-  breakEnd: Date | null;
+  /** One or more shifts; the gaps between them are breaks. */
+  shifts: Shift[];
 }
 
 /** The doctor's hours on a clinic day at a branch, or a reason they can't be booked. */
@@ -168,33 +170,22 @@ export async function workDay(
     .limit(1);
   if (holiday.length) return "closed";
 
-  const [schedule] = await tx
-    .select()
-    .from(staffSchedules)
-    .where(
-      and(
-        eq(staffSchedules.memberId, memberId),
-        eq(staffSchedules.branchId, branchId),
-        eq(staffSchedules.weekday, weekdayOf(day)),
-      ),
-    )
-    .limit(1);
-  if (!schedule) return "not_working";
-  return {
-    start: atRiyadh(day, schedule.startTime.slice(0, 5)),
-    end: atRiyadh(day, schedule.endTime.slice(0, 5)),
-    breakStart: schedule.breakStart ? atRiyadh(day, schedule.breakStart.slice(0, 5)) : null,
-    breakEnd: schedule.breakEnd ? atRiyadh(day, schedule.breakEnd.slice(0, 5)) : null,
-  };
+  // The weekly pattern, unless a one-off change for this date replaces it (lib/booking/hours.ts).
+  const rows = await loadHourRows(tx, [memberId], [day]);
+  const shifts = shiftsAt(
+    day,
+    branchId,
+    clockShiftsOn(memberId, day, rows.weekly, rows.exceptions),
+  );
+  if (!shifts.length) return "not_working";
+  return { start: shifts[0].start, end: shifts[shifts.length - 1].end, shifts };
 }
 
-/** Checks a slot against working hours and break. Returns null when fine. */
+/** Checks a slot against the shifts: it must fit inside ONE shift. Returns null when fine. */
 export function hoursProblem(wd: WorkDay, start: Date, until: Date): BookingErrorCode | null {
   if (start < wd.start || until > wd.end) return "outside_hours";
-  if (wd.breakStart && wd.breakEnd && overlaps(start, until, wd.breakStart, wd.breakEnd)) {
-    return "during_break";
-  }
-  return null;
+  if (wd.shifts.some((s) => start >= s.start && until <= s.end)) return null;
+  return "during_break"; // between two shifts (a break) or across one
 }
 
 // ─── Free rooms and devices ─────────────────────────────────────────────────
@@ -712,7 +703,13 @@ export async function findFreeSlots(
     for (const doc of doctors) {
       const wd = await workDay(tx, doc.id, opts.branchId, day);
       if (typeof wd === "string") continue;
-      for (let t = wd.start; t < wd.end; t = addMinutes(t, step)) {
+      // Each shift's times start at the shift's own start (e.g. 17:00 after an afternoon gap).
+      const starts = wd.shifts.flatMap((sh) => {
+        const list: Date[] = [];
+        for (let x = sh.start; x < sh.end; x = addMinutes(x, step)) list.push(x);
+        return list;
+      });
+      for (const t of starts) {
         if (t < opts.from) continue;
         const end = addMinutes(t, service.durationMinutes);
         const until = addMinutes(end, service.bufferMinutes);

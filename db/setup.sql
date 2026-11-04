@@ -783,6 +783,26 @@ ALTER TABLE "tenant_settings" ADD COLUMN "ai_scribe_enabled" boolean DEFAULT fal
 -- 0003_wonderful_polaris.sql
 ALTER TABLE "rooms" ADD COLUMN "is_virtual" boolean DEFAULT false NOT NULL;
 ALTER TABLE "services" ADD COLUMN "is_virtual" boolean DEFAULT false NOT NULL;
+-- 0004_famous_vivisector.sql
+CREATE TABLE "schedule_exceptions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"day" date NOT NULL,
+	"kind" text NOT NULL,
+	"branch_id" uuid,
+	"start_time" time,
+	"end_time" time,
+	"note" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "schedule_exceptions_kind" CHECK (("schedule_exceptions"."kind" = 'off' and "schedule_exceptions"."branch_id" is null and "schedule_exceptions"."start_time" is null and "schedule_exceptions"."end_time" is null) or ("schedule_exceptions"."kind" = 'hours' and "schedule_exceptions"."branch_id" is not null and "schedule_exceptions"."start_time" < "schedule_exceptions"."end_time"))
+);
+ALTER TABLE "tenant_settings" ADD COLUMN "doctors_edit_own_hours" boolean DEFAULT true NOT NULL;
+ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_member_fk" FOREIGN KEY ("tenant_id","member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "schedule_exceptions_member_day_idx" ON "schedule_exceptions" USING btree ("tenant_id","member_id","day");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1478,6 +1498,9 @@ insert into public.time_blocks (id, tenant_id, branch_id, member_id, starts_at, 
   ('ab2bae82-bbfb-58c1-9da2-2e5ee94a897b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '356e5967-34b6-564e-a086-32c2e4a387d1', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '12:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '13:00') at time zone 'Asia/Riyadh'), 'اجتماع الطاقم الطبي', 0, 'usr_derma-admin'),
   ('871ad32f-850f-57b2-a3e5-dc566508f9b0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 1) + time '12:00') at time zone 'Asia/Riyadh'), 'إجازة صباحية', 1, 'usr_derma-admin');
 
+insert into public.schedule_exceptions (id, tenant_id, member_id, day, kind, note, created_by) values
+  ('38ef946a-ffda-55a3-a6cf-d6228161be21', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', '2027-03-16', 'off', 'مؤتمر', 'usr_derma-admin');
+
 insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, source, created_by) values
   ('6aef2b36-4ae0-5be8-9fff-e7164a60ec33', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '54485c5f-3cab-5ef3-8ee6-0d573842dc0a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh') + interval '45 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '10:00') at time zone 'Asia/Riyadh') + interval '60 minutes', 'completed', null, null, -3, 'reception', 'usr_derma-rec-ruh1'),
   ('919bdfe9-4a9f-53b5-926f-203243dd199d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '309f27d5-a5c8-57aa-b4a9-e52bf9ee0f17', 'ce687cb8-e682-5940-9815-38d15cd2ea5a', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'd2f98f40-e6fd-5674-9e55-82c0a2994d83', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:00') at time zone 'Asia/Riyadh') + interval '20 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -3) + time '11:00') at time zone 'Asia/Riyadh') + interval '30 minutes', 'completed', null, null, -3, 'reception', 'usr_derma-rec-ruh1'),
@@ -1803,6 +1826,9 @@ insert into public.appointments (id, tenant_id, branch_id, patient_id, service_i
 insert into public.time_blocks (id, tenant_id, branch_id, member_id, starts_at, ends_at, reason, demo_day_index, created_by) values
   ('72211765-873d-5e3d-be2b-307fada23821', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:00') at time zone 'Asia/Riyadh'), 'اجتماع', 0, 'usr_lamsa-admin');
 
+insert into public.schedule_exceptions (id, tenant_id, member_id, day, kind, branch_id, start_time, end_time, note, created_by) values
+  ('959d1b1c-fd66-5744-8b8c-88f2bd90cf52', '55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '2027-03-19', 'hours', '582af1ea-4eca-5c50-bef7-54515ca85695', '16:00', '20:00', 'عيادة مسائية إضافية', 'usr_lamsa-admin');
+
 insert into public.patient_packages (id, tenant_id, patient_id, template_id, service_id, name_ar, name_en, sessions_total, price_halalas, purchased_at, expires_at, sold_by) values
   ('0e192f25-9a21-5b2c-9793-8f8c2bb1eb27', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'baa4e36f-c509-587a-ab60-06c22bf3188a', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, now() - interval '20 days', now() + interval '160 days', 'usr_lamsa-rec');
 
@@ -2038,6 +2064,8 @@ grant select, insert, update, delete on public.branches, public.departments,
   public.staff_schedules, public.patients, public.branch_holidays,
   public.patient_medical_flags, public.time_blocks, public.package_templates
   to clinic_app;
+-- One-off schedule changes (day off / special hours): added and removed, never edited.
+grant select, insert, delete on public.schedule_exceptions to clinic_app;
 grant select, update on public.tenant_settings to clinic_app;
 -- Appointments are never deleted: they are cancelled (status), which keeps the history.
 grant select, insert, update on public.appointments, public.reschedule_requests,
@@ -2094,7 +2122,7 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs'
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2183,7 +2211,7 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs',
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case

@@ -51,6 +51,41 @@ export function ScheduleSettingForm({ initial }: { initial: boolean }) {
   );
 }
 
+/** May doctors change their own working hours? (Admins and reception always can.) */
+export function HoursSettingForm({ initial }: { initial: boolean }) {
+  const t = useTranslations("settings");
+  const [on, setOn] = useState(initial);
+  const [msg, setMsg] = useState<string | null>(null);
+  const { run, pending, error } = useAction();
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          className="accent-brand size-5"
+          checked={on}
+          disabled={pending}
+          data-testid="doctors-hours-toggle"
+          onChange={(e) => {
+            const value = e.target.checked;
+            setOn(value);
+            run(
+              () => updateSettingsAction({ doctorsEditOwnHours: value }),
+              () => setMsg(t("savedOk")),
+            );
+          }}
+        />
+        <span className="font-medium">
+          {t("doctorsEditHours")} — {on ? t("on") : t("off")}
+        </span>
+      </label>
+      <p className="text-muted-foreground text-sm">{t("doctorsEditHoursHint")}</p>
+      <FormError message={error} />
+      <FormSuccess message={msg} />
+    </div>
+  );
+}
+
 /** AI scribe for doctors: on/off (clinic admin). */
 export function ScribeSettingForm({ initial, keySet }: { initial: boolean; keySet: boolean }) {
   const t = useTranslations("scribe");

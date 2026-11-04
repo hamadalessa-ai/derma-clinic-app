@@ -155,6 +155,12 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "hours:edit": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: true,
+    receptionist: true,
+  },
   "video:join": {
     platform_owner: false,
     clinic_admin: false,
