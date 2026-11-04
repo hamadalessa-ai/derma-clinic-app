@@ -5,6 +5,7 @@ import {
   branches,
   departments,
   rooms,
+  scheduleExceptions,
   services,
   staffSchedules,
   tenantMembers,
@@ -86,6 +87,12 @@ export async function loadBookingCatalog(tx: TenantTx) {
     .where(eq(rooms.isVirtual, true));
   const videoBranches = [...new Set(videoRooms.map((r) => r.branchId))];
 
+  // One-off extra working days (e.g. a Friday clinic) open that date for booking too.
+  const extra = await tx
+    .select({ day: scheduleExceptions.day, branchId: scheduleExceptions.branchId })
+    .from(scheduleExceptions)
+    .where(eq(scheduleExceptions.kind, "hours"));
+
   const holidays = await tx
     .select({ day: branchHolidays.day, branchId: branchHolidays.branchId })
     .from(branchHolidays);
@@ -118,6 +125,9 @@ export async function loadBookingCatalog(tx: TenantTx) {
     /** Branches whose doctors offer video consultations (patients don't pick one for video). */
     videoBranches,
     openWeekdays,
+    extraDays: extra
+      .filter((e) => e.branchId && doctorIds.size)
+      .map((e) => ({ day: String(e.day), branchId: e.branchId! })),
     holidays: holidays.map((h) => ({ day: String(h.day), branchId: h.branchId })),
     departments: [...groups.values()].map((g) => ({
       id: g.id,

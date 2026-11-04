@@ -342,6 +342,46 @@ export const staffSchedules = pgTable(
   ],
 );
 
+/**
+ * One-off changes to a doctor's hours on ONE date, replacing the weekly pattern for that date:
+ *  - kind "off":   not working that day (any branch);
+ *  - kind "hours": works these hours at this branch (several rows = several shifts).
+ * An extra working day (e.g. a Friday clinic) is simply "hours" on a day with no weekly shifts.
+ */
+export const scheduleExceptions = pgTable(
+  "schedule_exceptions",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id").notNull(),
+    day: date("day").notNull(),
+    kind: text("kind").notNull(), // off | hours
+    branchId: uuid("branch_id"),
+    startTime: time("start_time"),
+    endTime: time("end_time"),
+    note: text("note"),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check(
+      "schedule_exceptions_kind",
+      sql`(${t.kind} = 'off' and ${t.branchId} is null and ${t.startTime} is null and ${t.endTime} is null) or (${t.kind} = 'hours' and ${t.branchId} is not null and ${t.startTime} < ${t.endTime})`,
+    ),
+    index("schedule_exceptions_member_day_idx").on(t.tenantId, t.memberId, t.day),
+    foreignKey({
+      name: "schedule_exceptions_member_fk",
+      columns: [t.tenantId, t.memberId],
+      foreignColumns: [tenantMembers.tenantId, tenantMembers.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "schedule_exceptions_branch_fk",
+      columns: [t.tenantId, t.branchId],
+      foreignColumns: [branches.tenantId, branches.id],
+    }).onDelete("cascade"),
+  ],
+);
+
 // ─── Patients (FAKE DATA ONLY in the demo) ──────────────────────────────────
 
 export const patients = pgTable(
@@ -450,6 +490,7 @@ export const TENANT_TABLES = [
   "push_log",
   "consent_rules",
   "concern_events",
+  "schedule_exceptions",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -463,6 +504,8 @@ export const tenantSettings = pgTable("tenant_settings", {
     .references(() => tenants.id, { onDelete: "cascade" }),
   /** ON: doctors move their own appointments. OFF: doctors send requests reception approves. */
   doctorsManageOwnSchedule: boolean("doctors_manage_own_schedule").notNull().default(false),
+  /** ON: doctors set their own working days and hours (admins and reception always can). */
+  doctorsEditOwnHours: boolean("doctors_edit_own_hours").notNull().default(true),
   slotMinutes: smallint("slot_minutes").notNull().default(15),
   /** Demo clinics: the day the demo week is centred on ("Refresh demo week" moves it to today). */
   demoAnchorDay: date("demo_anchor_day"),

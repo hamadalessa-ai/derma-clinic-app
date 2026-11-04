@@ -7,6 +7,7 @@ import { assertCan } from "@/lib/auth/permissions";
 
 export interface SettingsInput {
   doctorsManageOwnSchedule?: boolean;
+  doctorsEditOwnHours?: boolean;
   onlineBookingEnabled?: boolean;
   onlineHorizonDays?: number;
   onlineMinNoticeMinutes?: number;

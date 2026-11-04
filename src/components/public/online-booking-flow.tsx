@@ -192,7 +192,8 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
   const isOpen = (d: string) =>
     searchBranches.some(
       (b) =>
-        (catalog.openWeekdays[b] ?? []).includes(new Date(`${d}T12:00:00Z`).getUTCDay()) &&
+        ((catalog.openWeekdays[b] ?? []).includes(new Date(`${d}T12:00:00Z`).getUTCDay()) ||
+          catalog.extraDays.some((x) => x.day === d && x.branchId === b)) &&
         !catalog.holidays.some((h) => h.day === d && (!h.branchId || h.branchId === b)),
     );
 

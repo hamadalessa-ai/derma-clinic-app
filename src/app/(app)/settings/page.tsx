@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   RefreshDemoButton,
+  HoursSettingForm,
   ScheduleSettingForm,
   ScribeSettingForm,
 } from "@/components/clinic/settings-forms";
@@ -77,6 +78,11 @@ export default async function SettingsPage() {
       <Card>
         <CardContent className="pt-5">
           <ScheduleSettingForm initial={settings.doctorsManageOwnSchedule} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="pt-5">
+          <HoursSettingForm initial={settings.doctorsEditOwnHours} />
         </CardContent>
       </Card>
       <Card>

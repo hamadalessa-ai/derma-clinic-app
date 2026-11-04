@@ -21,7 +21,7 @@ export interface BoardColumn {
   doctorId?: string;
   day: string;
   /** Working hours (minutes) and break, to shade unavailable time. */
-  hours?: { start: number; end: number; breakStart: number | null; breakEnd: number | null } | null;
+  hours?: { start: number; end: number; breaks: { start: number; end: number }[] } | null;
   appointments: ApptView[];
   blocks: BlockView[];
 }
@@ -214,20 +214,21 @@ export function CalendarBoard({
                       )}
                       style={{ top: y(col.hours.end) }}
                     />
-                    {col.hours.breakStart !== null && col.hours.breakEnd !== null && (
+                    {col.hours.breaks.map((b) => (
                       <div
+                        key={b.start}
                         className={cn(
                           "pointer-events-none absolute inset-x-0 flex items-center justify-center text-xs opacity-80",
                           BLOCKED_CLASSES,
                         )}
                         style={{
-                          top: y(col.hours.breakStart),
-                          height: (col.hours.breakEnd - col.hours.breakStart) * PX_PER_MIN,
+                          top: y(b.start),
+                          height: (b.end - b.start) * PX_PER_MIN,
                         }}
                       >
                         {t("break")}
                       </div>
-                    )}
+                    ))}
                   </>
                 )}
 

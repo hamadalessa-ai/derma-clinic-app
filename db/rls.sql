@@ -77,6 +77,8 @@ grant select, insert, update, delete on public.branches, public.departments,
   public.staff_schedules, public.patients, public.branch_holidays,
   public.patient_medical_flags, public.time_blocks, public.package_templates
   to clinic_app;
+-- One-off schedule changes (day off / special hours): added and removed, never edited.
+grant select, insert, delete on public.schedule_exceptions to clinic_app;
 grant select, update on public.tenant_settings to clinic_app;
 -- Appointments are never deleted: they are cancelled (status), which keeps the history.
 grant select, insert, update on public.appointments, public.reschedule_requests,
@@ -133,7 +135,7 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs'
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -222,7 +224,7 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs',
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case
