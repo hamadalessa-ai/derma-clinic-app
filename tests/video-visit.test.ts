@@ -233,8 +233,9 @@ describe("joining", () => {
     expect(await errCode(doctorJoin(reception, a.id, { provider: fake.provider, now }))).toBe(
       "permission",
     );
-    expect(await errCode(doctorJoin(drFaisal, a.id, { provider: fake.provider, now: at("12:00") })))
-      .toBe("too_early");
+    expect(
+      await errCode(doctorJoin(drFaisal, a.id, { provider: fake.provider, now: at("12:00") })),
+    ).toBe("too_early");
     const r = await doctorJoin(drFaisal, a.id, { provider: fake.provider, now });
     expect(r.url).toContain("?t=tok-host");
     expect(fake.calls.find((c) => c.kind === "token")!.input.owner).toBe(true);

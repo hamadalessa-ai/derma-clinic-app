@@ -169,8 +169,18 @@ export const VIRTUAL_ROOMS: Record<
   { key: string; branch: string; nameAr: string; nameEn: string }[]
 > = {
   derma: [
-    { key: "ruh-video", branch: "riyadh", nameAr: "الاستشارات المرئية", nameEn: "Video Consultations" },
-    { key: "jed-video", branch: "jeddah", nameAr: "الاستشارات المرئية", nameEn: "Video Consultations" },
+    {
+      key: "ruh-video",
+      branch: "riyadh",
+      nameAr: "الاستشارات المرئية",
+      nameEn: "Video Consultations",
+    },
+    {
+      key: "jed-video",
+      branch: "jeddah",
+      nameAr: "الاستشارات المرئية",
+      nameEn: "Video Consultations",
+    },
   ],
 };
 
@@ -709,25 +719,25 @@ export const CONSENT_TEMPLATES: SeedConsentTemplate[] = [
     ].join("\n\n"),
   },
   {
-  code: "telehealth",
-  rule: "months",
-  months: 12,
-  titleAr: "نموذج موافقة على الاستشارة المرئية (عن بُعد)",
-  titleEn: "Consent for video (telehealth) consultations",
-  bodyAr: [
-    DEMO_NOTICE_AR,
-    "أوافق على تلقي استشارة طبية عبر مكالمة فيديو بدلًا من الحضور إلى العيادة.",
-    "أعلم أن الطبيب/ة لا يستطيع فحصي بالكامل عن بُعد، وقد يطلب زيارة العيادة لاستكمال الفحص أو العلاج.",
-    "أعلم أن المكالمة لا تُسجَّل، وأن ما يُدوَّن منها يُحفظ في ملفي الطبي فقط، وأن الصور التي أرسلها تُحفظ في ملفي.",
-    "أؤكد أنني في مكان خاص، وأن المعلومات التي أقدمها صحيحة. في الحالات الطارئة سأتصل بالرقم 997.",
-  ].join("\n\n"),
-  bodyEn: [
-    DEMO_NOTICE_EN,
-    "I agree to receive a medical consultation by video call instead of visiting the clinic.",
-    "I understand the practitioner cannot fully examine me remotely and may ask me to visit the clinic to complete the examination or treatment.",
-    "I understand the call is not recorded, notes from it are kept in my medical file only, and photos I send are kept in my file.",
-    "I confirm I am in a private place and the information I give is accurate. In an emergency I will call 997.",
-  ].join("\n\n"),
+    code: "telehealth",
+    rule: "months",
+    months: 12,
+    titleAr: "نموذج موافقة على الاستشارة المرئية (عن بُعد)",
+    titleEn: "Consent for video (telehealth) consultations",
+    bodyAr: [
+      DEMO_NOTICE_AR,
+      "أوافق على تلقي استشارة طبية عبر مكالمة فيديو بدلًا من الحضور إلى العيادة.",
+      "أعلم أن الطبيب/ة لا يستطيع فحصي بالكامل عن بُعد، وقد يطلب زيارة العيادة لاستكمال الفحص أو العلاج.",
+      "أعلم أن المكالمة لا تُسجَّل، وأن ما يُدوَّن منها يُحفظ في ملفي الطبي فقط، وأن الصور التي أرسلها تُحفظ في ملفي.",
+      "أؤكد أنني في مكان خاص، وأن المعلومات التي أقدمها صحيحة. في الحالات الطارئة سأتصل بالرقم 997.",
+    ].join("\n\n"),
+    bodyEn: [
+      DEMO_NOTICE_EN,
+      "I agree to receive a medical consultation by video call instead of visiting the clinic.",
+      "I understand the practitioner cannot fully examine me remotely and may ask me to visit the clinic to complete the examination or treatment.",
+      "I understand the call is not recorded, notes from it are kept in my medical file only, and photos I send are kept in my file.",
+      "I confirm I am in a private place and the information I give is accurate. In an emergency I will call 997.",
+    ].join("\n\n"),
   },
 ];
 
