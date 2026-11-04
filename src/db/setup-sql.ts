@@ -196,7 +196,8 @@ function tenantSql(t: SeedTenant): string {
         post_care_ar: SERVICE_TEXTS[s.code]?.postCareAr ?? null,
         post_care_en: SERVICE_TEXTS[s.code]?.postCareEn ?? null,
         recall_after_days: SERVICE_TEXTS[s.code]?.recallAfterDays ?? null,
-        sort_order: i,
+        // Video consultations first, so reception and the AI receptionist see them at the top.
+        sort_order: s.isVirtual ? 0 : i + 1,
       })),
     ),
   );

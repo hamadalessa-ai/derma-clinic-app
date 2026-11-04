@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { CalendarCheck, CheckCircle2, Clock } from "lucide-react";
+import { Building2, CalendarCheck, CheckCircle2, Clock, Video } from "lucide-react";
 import {
   confirmBookingAction,
   onlineSlotsAction,
@@ -23,7 +23,8 @@ import { Choice, Step } from "./choice";
 type DoctorChoice =
   { kind: "any" } | { kind: "gender"; gender: "female" | "male" } | { kind: "doctor"; id: string };
 
-type Slot = { startsAt: string; practitionerId: string };
+type Slot = { startsAt: string; practitionerId: string; branchId: string };
+type Mode = "clinic" | "video";
 
 export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; days: string[] }) {
   const t = useTranslations("book");
@@ -34,6 +35,10 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
     locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
   const errorText = (code: string) => (te.has(code) ? te(code) : te("unexpected"));
 
+  const allServices = catalog.departments.flatMap((d) => d.services);
+  /** Video consultations are offered when a video service and a branch with a video room exist. */
+  const offersVideo = catalog.videoBranches.length > 0 && allServices.some((s) => s.isVirtual);
+  const [mode, setMode] = useState<Mode | null>(offersVideo ? null : "clinic");
   const [branchId, setBranchId] = useState<string | null>(
     catalog.branches.length === 1 ? catalog.branches[0].id : null,
   );
@@ -60,56 +65,93 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
   const [reload, setReload] = useState(0);
   const [pending, start] = useTransition();
 
-  const service = catalog.departments.flatMap((d) => d.services).find((s) => s.id === serviceId);
+  const service = allServices.find((s) => s.id === serviceId);
   const branch = catalog.branches.find((b) => b.id === branchId);
-  const branchDoctors = useMemo(
-    () => catalog.doctors.filter((d) => !d.branchId || d.branchId === branchId),
-    [catalog.doctors, branchId],
+  /**
+   * Where to look for times: the chosen branch, or — for video — every branch that offers video
+   * (the patient stays at home, so the branch doesn't matter to them).
+   */
+  const searchBranches = useMemo(
+    () => (mode === "video" ? catalog.videoBranches : branchId ? [branchId] : []),
+    [mode, branchId, catalog.videoBranches],
   );
+  const branchDoctors = useMemo(
+    () =>
+      catalog.doctors.filter(
+        (d) => !d.branchId || searchBranches.includes(d.branchId),
+      ),
+    [catalog.doctors, searchBranches],
+  );
+  const departments = catalog.departments
+    .map((dep) => ({
+      ...dep,
+      services: dep.services.filter((s) => s.isVirtual === (mode === "video")),
+    }))
+    .filter((dep) => dep.services.length > 0);
   const hasGender = (g: "male" | "female") => branchDoctors.some((d) => d.gender === g);
   const doctorName = (id: string) => {
     const d = catalog.doctors.find((x) => x.id === id);
     return d ? name(d) : "";
   };
 
-  // Free times for the chosen day.
+  // Free times for the chosen day (for video: from every video branch, merged).
   useEffect(() => {
-    if (!branchId || !serviceId || !doctor || !day) return;
+    if (!searchBranches.length || !serviceId || !doctor || !day) return;
     let cancelled = false;
-    onlineSlotsAction({
-      branchId,
-      serviceId,
-      day,
-      practitionerId: doctor.kind === "doctor" ? doctor.id : null,
-      gender: doctor.kind === "gender" ? doctor.gender : null,
-    }).then((r) => {
+    const chosen = doctor.kind === "doctor" ? catalog.doctors.find((d) => d.id === doctor.id) : null;
+    const where = chosen?.branchId
+      ? searchBranches.filter((b) => b === chosen.branchId)
+      : searchBranches;
+    Promise.all(
+      where.map((b) =>
+        onlineSlotsAction({
+          branchId: b,
+          serviceId,
+          day,
+          practitionerId: doctor.kind === "doctor" ? doctor.id : null,
+          gender: doctor.kind === "gender" ? doctor.gender : null,
+        }).then((r) => ({ b, r })),
+      ),
+    ).then((results) => {
       if (cancelled) return;
-      if (r.ok) setSlots(r.data);
-      else {
+      const failed = results.find((x) => !x.r.ok);
+      if (failed && !failed.r.ok) {
         setSlots([]);
-        setError(errorText(r.error));
+        setError(errorText(failed.r.error));
+        return;
       }
+      // One button per time: the first doctor free then.
+      const seen = new Set<string>();
+      const merged = results
+        .flatMap((x) => (x.r.ok ? x.r.data.map((s) => ({ ...s, branchId: x.b })) : []))
+        .sort((a, z) => a.startsAt.localeCompare(z.startsAt))
+        .filter((s) => {
+          if (seen.has(s.startsAt)) return false;
+          seen.add(s.startsAt);
+          return true;
+        });
+      setSlots(merged);
     });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchId, serviceId, doctor, day, reload]);
+  }, [searchBranches, serviceId, doctor, day, reload]);
 
   /** Changing an earlier step clears everything after it. */
-  const reset = (from: "branch" | "service" | "doctor" | "day" | "slot") => {
+  const reset = (from: "mode" | "branch" | "service" | "doctor" | "day" | "slot") => {
     setError(null);
     setCodeStage(null);
     setCode("");
-    if (from === "branch") setServiceId(null);
-    if (["branch", "service"].includes(from)) setDoctor(null);
-    if (["branch", "service", "doctor"].includes(from)) setDay(null);
+    if (from === "mode" || from === "branch") setServiceId(null);
+    if (["mode", "branch", "service"].includes(from)) setDoctor(null);
+    if (["mode", "branch", "service", "doctor"].includes(from)) setDay(null);
     if (from !== "slot") setSlots(null);
     setSlot(null);
   };
 
   const request = () => ({
-    branchId: branchId!,
+    branchId: slot!.branchId,
     serviceId: serviceId!,
     practitionerId: doctor?.kind === "doctor" ? doctor.id : null,
     gender: doctor?.kind === "gender" ? doctor.gender : null,
@@ -150,9 +192,11 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
   };
 
   const isOpen = (d: string) =>
-    !!branchId &&
-    (catalog.openWeekdays[branchId] ?? []).includes(new Date(`${d}T12:00:00Z`).getUTCDay()) &&
-    !catalog.holidays.some((h) => h.day === d && (!h.branchId || h.branchId === branchId));
+    searchBranches.some(
+      (b) =>
+        (catalog.openWeekdays[b] ?? []).includes(new Date(`${d}T12:00:00Z`).getUTCDay()) &&
+        !catalog.holidays.some((h) => h.day === d && (!h.branchId || h.branchId === b)),
+    );
 
   const dayLabel = (d: string) =>
     new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA", {
@@ -177,7 +221,9 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
             {formatGregorian(new Date(done.startsAt), locale, "full")} ·{" "}
             <span dir="ltr">{riyadhParts(done.startsAt).time}</span>
           </dd>
-          <dd className="text-muted-foreground">{branch && name(branch)}</dd>
+          <dd className="text-muted-foreground">
+            {mode === "video" ? t("videoDone") : branch && name(branch)}
+          </dd>
         </dl>
         <p className="text-sm">{pendingApproval ? t("pendingText") : t("confirmedText")}</p>
         <Link
@@ -195,9 +241,50 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
   }
 
   let n = 0;
+  const pickService = mode === "video" ? true : !!branch;
   return (
     <div className="flex flex-col gap-3" data-testid="online-booking">
-      {catalog.branches.length > 1 && (
+      {offersVideo && (
+        <Step
+          n={++n}
+          title={t("stepMode")}
+          done={!!mode}
+          summary={mode && (mode === "video" ? t("modeVideo") : t("modeClinic"))}
+          changeLabel={t("change")}
+          onChange={() => {
+            setMode(null);
+            reset("mode");
+          }}
+          testId="step-mode"
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Choice onClick={() => setMode("clinic")} data-testid="mode-clinic">
+              <span className="flex items-center gap-2 font-medium">
+                <Building2 className="text-brand size-5" />
+                {t("modeClinic")}
+              </span>
+              <span className="text-muted-foreground text-xs">{t("modeClinicHint")}</span>
+            </Choice>
+            <Choice
+              onClick={() => {
+                setMode("video");
+                // Only one video service: choose it straight away.
+                const video = allServices.filter((s) => s.isVirtual);
+                if (video.length === 1) setServiceId(video[0].id);
+              }}
+              data-testid="mode-video"
+            >
+              <span className="flex items-center gap-2 font-medium">
+                <Video className="text-brand size-5" />
+                {t("modeVideo")}
+              </span>
+              <span className="text-muted-foreground text-xs">{t("modeVideoHint")}</span>
+            </Choice>
+          </div>
+        </Step>
+      )}
+
+      {mode === "clinic" && catalog.branches.length > 1 && (
         <Step
           n={++n}
           title={t("stepBranch")}
@@ -220,7 +307,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
         </Step>
       )}
 
-      {branch && (
+      {mode && pickService && (
         <Step
           n={++n}
           title={t("stepService")}
@@ -234,7 +321,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
           testId="step-service"
         >
           <div className="flex flex-col gap-4">
-            {catalog.departments.map((dep) => (
+            {departments.map((dep) => (
               <div key={dep.id} className="flex flex-col gap-2">
                 <h3 className="text-muted-foreground text-xs font-semibold">{name(dep)}</h3>
                 <div className="grid gap-2 sm:grid-cols-2">

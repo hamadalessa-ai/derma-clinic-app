@@ -57,6 +57,7 @@ async function noSidewaysScroll(page: Page) {
 /** Books on /book with Dr. Sara, WhatsApp ticked: the first free time from tomorrow on. */
 async function bookOnline(page: Page, opts: { service: RegExp; phone: string; name: string }) {
   await page.goto("/book");
+  await page.getByTestId("mode-clinic").click();
   await page
     .getByTestId("step-branch")
     .getByRole("button", { name: /الرياض/ })

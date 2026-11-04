@@ -17,6 +17,7 @@ import { parseVideoToken, videoJoinUrl, videoRoomName, videoToken } from "@/lib/
 import type { VideoProvider } from "@/lib/video/provider";
 import { doctorJoin, patientJoin, videoState, VideoVisitError } from "@/lib/video/visit";
 import { appointmentVars, loadAppointmentContext } from "@/lib/whatsapp/compose";
+import { loadBookingCatalog } from "@/lib/online/catalog";
 import {
   admin,
   DERMA,
@@ -27,6 +28,7 @@ import {
   member,
   patient,
   reception,
+  JEDDAH,
   RIYADH,
   riyadhAt,
   room,
@@ -252,5 +254,18 @@ describe("joining", () => {
         patientJoin(DERMA, videoToken(DERMA, a.id), { provider: fake.provider, now: at("17:00") }),
       ),
     ).toBe("not_virtual");
+  });
+});
+
+describe("the booking page", () => {
+  it("knows which branches offer video and which services are video (patients choose first)", async () => {
+    const c = await withTenant(DERMA, (tx) => loadBookingCatalog(tx));
+    expect([...c.videoBranches].sort()).toEqual([RIYADH, JEDDAH].sort());
+    const all = c.departments.flatMap((d) => d.services);
+    expect(all.filter((s) => s.isVirtual).map((s) => s.nameEn)).toEqual(["Video Consultation"]);
+    // Listed first for reception and the AI receptionist.
+    expect(all[0].nameEn).toBe("Video Consultation");
+    const lamsa = await withTenant(LAMSA, (tx) => loadBookingCatalog(tx));
+    expect(lamsa.videoBranches).toEqual([]);
   });
 });

@@ -56,6 +56,7 @@ async function bookOnline(
 ) {
   await page.goto("/book");
   await expect(page.getByTestId("demo-mode")).toBeVisible();
+  await page.getByTestId("mode-clinic").click();
   await page
     .getByTestId("step-branch")
     .getByRole("button", { name: /الرياض/ })
