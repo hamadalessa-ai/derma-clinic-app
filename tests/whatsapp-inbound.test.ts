@@ -327,8 +327,11 @@ describe("buttons act through the booking engine", () => {
       )[0].startsAt.getTime(),
     ).toBe(a.startsAt.getTime());
 
-    // The second offered time works.
-    const second = offer!.buttons![1];
+    // Another offered time works — one that doesn't overlap the appointment just booked
+    // (offers can be 15 minutes apart, and a consultation lasts longer than that).
+    const second = offer!
+      .buttons!.slice(1)
+      .find((b) => Math.abs(Number(b.id.split(".")[3]) - minutes) >= 60);
     if (second) {
       const pushes: PushEvent[] = [];
       await tap(phone, second, async (e) => pushes.push(...e));
