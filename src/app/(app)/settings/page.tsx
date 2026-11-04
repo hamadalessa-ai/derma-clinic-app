@@ -2,7 +2,11 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { RefreshDemoButton, ScheduleSettingForm } from "@/components/clinic/settings-forms";
+import {
+  RefreshDemoButton,
+  ScheduleSettingForm,
+  ScribeSettingForm,
+} from "@/components/clinic/settings-forms";
 import {
   BookingLink,
   OnlineServicesList,
@@ -73,6 +77,14 @@ export default async function SettingsPage() {
       <Card>
         <CardContent className="pt-5">
           <ScheduleSettingForm initial={settings.doctorsManageOwnSchedule} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="pt-5">
+          <ScribeSettingForm
+            initial={settings.aiScribeEnabled}
+            keySet={!!process.env.ANTHROPIC_API_KEY?.trim()}
+          />
         </CardContent>
       </Card>
       <Card data-testid="online-booking-settings">

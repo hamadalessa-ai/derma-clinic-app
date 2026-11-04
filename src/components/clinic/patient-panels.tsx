@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { FileDown, Plus, Printer, Trash2 } from "lucide-react";
+import { FileDown, Plus, Printer, Sparkles, Trash2 } from "lucide-react";
 import {
   addAddendumAction,
   addMedicalFlagAction,
@@ -24,6 +24,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDualDate, formatSAR } from "@/lib/format";
 import type { Locale } from "@/i18n/config";
+import { AiScribe } from "./ai-scribe";
 import { ConsentSignDialog, type ConsentTemplateView } from "./consent-sign-dialog";
 import { FormError, FormSuccess } from "./form-message";
 import { useAction } from "./use-action";
@@ -512,6 +513,8 @@ export interface NoteView {
   authorName: string;
   createdAt: string;
   signedAt: string | null;
+  /** The AI scribe drafted (part of) it. */
+  aiDrafted?: boolean;
   appointmentId: string | null;
   addenda: { id: string; body: string; authorName: string; createdAt: string }[];
 }
@@ -522,12 +525,15 @@ export function NotesPanel({
   userId,
   canWrite,
   appointmentId,
+  scribe = false,
 }: {
   patientId: string;
   notes: NoteView[];
   userId: string;
   canWrite: boolean;
   appointmentId: string | null;
+  /** The AI scribe is available (clinic setting + key). */
+  scribe?: boolean;
 }) {
   const t = useTranslations("notes");
   const create = useAction();
@@ -555,6 +561,7 @@ export function NotesPanel({
           note={n}
           mine={n.authorUserId === userId}
           canWrite={canWrite}
+          scribe={scribe}
         />
       ))}
     </div>
@@ -566,13 +573,16 @@ function NoteCard({
   note,
   mine,
   canWrite,
+  scribe,
 }: {
   patientId: string;
   note: NoteView;
   mine: boolean;
   canWrite: boolean;
+  scribe: boolean;
 }) {
   const t = useTranslations("notes");
+  const ts = useTranslations("scribe");
   const locale = useLocale() as Locale;
   const [body, setBody] = useState(note.body);
   const [addendum, setAddendum] = useState("");
@@ -586,13 +596,22 @@ function NoteCard({
           {note.authorName} ·{" "}
           {formatDualDate(new Date(note.createdAt), locale, "medium").split(" · ")[0]}
         </CardTitle>
-        <Badge variant={note.status === "signed" ? "default" : "outline"}>
-          {note.status === "signed" ? t("signed") : t("draft")}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {note.aiDrafted && note.status === "draft" && (
+            <Badge variant="outline" data-testid="ai-draft-badge">
+              <Sparkles className="size-3" />
+              {ts("aiDraft")}
+            </Badge>
+          )}
+          <Badge variant={note.status === "signed" ? "default" : "outline"}>
+            {note.status === "signed" ? t("signed") : t("draft")}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {editable ? (
           <>
+            {scribe && <AiScribe patientId={patientId} noteId={note.id} onDrafted={setBody} />}
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}

@@ -492,6 +492,31 @@ Try _"عندي احمرار بعد الليزر"_: it hands the chat to the team
 > **Before real patients:** messages are processed by Anthropic outside Saudi Arabia. Check PDPL and
 > patient consent with a lawyer first. Only fake demo data until then.
 
+## Part I — AI scribe (doctors)
+
+Doctors speak their notes during the examination instead of typing; the AI turns them into an
+**English note draft** in the visit note. The doctor reviews, edits and **signs** — nothing is signed
+for them. It writes down only what the doctor said: no diagnoses, codes, doses or suggestions of its own.
+It uses the same `ANTHROPIC_API_KEY` as the AI receptionist (Part H). On for Derma in the demo data;
+**Admin → Settings → "AI scribe for doctors"** switches it on/off.
+
+### Try it
+
+1. Sign in as **dr.sara@derma.demo** (Chrome on a laptop or Android, or Safari on iPhone/iPad).
+2. Open a patient → **Notes** → **New note** (or **Start** a visit from My Day, then its note).
+3. In the **AI scribe** box: choose **Arabic (Saudi)** or **English** → **Start dictation** → allow the
+   microphone → speak, e.g. _"المريضة جلسة ليزر رابعة للإبط، الإعدادات ٢٢ جول، ما في احمرار، الجلسة
+   الجاية بعد ستة أسابيع"_ → **Stop**. Correct any wrong words in the box if needed.
+4. **Write the note** → an English draft appears in the note, marked _"AI draft — review before signing"_.
+5. Edit if needed → **Sign note**.
+
+Notes: the browser does the speech recognition (Google in Chrome, Apple in Safari); the audio is never
+stored, only the draft. Firefox can't dictate — type or paste instead. Later, a medical speech service
+(e.g. Speechmatics' Arabic–English medical model) can replace browser dictation for better accuracy.
+
+> **Before real patients:** speech and text are processed outside Saudi Arabia (Google/Apple, Anthropic).
+> Check PDPL, patient information and SFDA with a lawyer first. Fake demo data only until then.
+
 ## Demo accounts (Derma Clinics)
 
 All use your demo staff password.

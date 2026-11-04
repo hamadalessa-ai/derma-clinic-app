@@ -12,6 +12,7 @@ import { SERVICE_TEXTS, TEMPLATE_KINDS, TEMPLATES } from "../lib/whatsapp/catalo
 import { demoSql } from "./demo-sql";
 import {
   AI_RECEPTIONIST,
+  AI_SCRIBE,
   demoId,
   PLATFORM_OWNER,
   SEED_TENANTS,
@@ -272,6 +273,7 @@ function tenantSql(t: SeedTenant): string {
         online_requires_approval: ONLINE_SETTINGS[t.slug]?.requiresApproval ?? false,
         show_prices_online: ONLINE_SETTINGS[t.slug]?.showPrices ?? true,
         ai_receptionist_enabled: AI_RECEPTIONIST[t.slug] ?? false,
+        ai_scribe_enabled: AI_SCRIBE[t.slug] ?? false,
         demo_anchor_day: raw("(select demo_anchor from pg_temp.setup_params)"),
       },
     ]),

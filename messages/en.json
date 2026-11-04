@@ -144,7 +144,14 @@
     "unknown_placeholder": "The text has an unknown placeholder.",
     "cannot_disable": "Verification codes can't be switched off.",
     "doctor_busy": "The doctor has another appointment or blocked time then. Choose another time or doctor.",
-    "empty_message": "Write a message first."
+    "empty_message": "Write a message first.",
+    "scribe_not_configured": "The AI scribe needs an AI key (ANTHROPIC_API_KEY in Vercel).",
+    "scribe_disabled": "The AI scribe is switched off for this clinic (Settings).",
+    "scribe_empty": "Nothing to draft yet: dictate or type your notes first.",
+    "scribe_not_found": "This note no longer exists.",
+    "scribe_signed": "This note is already signed. Add an addendum instead.",
+    "scribe_not_author": "Only the note's author can use the AI scribe on it.",
+    "scribe_failed": "The AI couldn't draft the note just now. Your spoken text is kept below; try again."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -904,5 +911,27 @@
     "before_package": "New signature needed: the last signature ({ago}) was before this package was bought.",
     "expired": "New signature needed: the last signature ({ago}) expired on {until} (valid {months} months).",
     "onPatientPage": "on the patient page"
+  },
+  "scribe": {
+    "title": "AI scribe",
+    "hint": "Speak your notes while you examine. Then tap \"Write the note\": an English draft appears in the note for you to review, edit and sign.",
+    "start": "Start dictation",
+    "stop": "Stop",
+    "listening": "Listening…",
+    "language": "Speaking in",
+    "arabic": "Arabic (Saudi)",
+    "english": "English",
+    "spoken": "Your spoken notes (you can edit them)",
+    "write": "Write the note",
+    "writing": "Writing the draft…",
+    "done": "Draft added to the note. Review it before signing.",
+    "unsupported": "This browser can't dictate (use Chrome or Safari). You can type or paste your notes here instead.",
+    "privacy": "Audio is not stored. Browser dictation is processed by Google (Chrome) or Apple (Safari); the text is drafted by Anthropic. Demo with fake data only.",
+    "micBlocked": "Microphone access is blocked. Allow it in the browser settings, then try again.",
+    "aiDraft": "AI draft — review before signing",
+    "settingTitle": "AI scribe for doctors",
+    "settingHint": "Doctors can dictate their notes during the visit and get an English note draft to review, edit and sign. It only writes down what the doctor said: no diagnoses or suggestions of its own.",
+    "on": "on",
+    "off": "off"
   }
 }

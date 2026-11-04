@@ -777,6 +777,9 @@ ALTER TABLE "conversations" ADD COLUMN "ai_paused_at" timestamp with time zone;
 ALTER TABLE "conversations" ADD COLUMN "ai_pending_action" jsonb;
 ALTER TABLE "tenant_settings" ADD COLUMN "ai_receptionist_enabled" boolean DEFAULT false NOT NULL;
 ALTER TABLE "tenant_settings" ADD COLUMN "ai_daily_limit" smallint DEFAULT 200 NOT NULL;
+-- 0002_natural_redwing.sql
+ALTER TABLE "clinical_notes" ADD COLUMN "ai_drafted_at" timestamp with time zone;
+ALTER TABLE "tenant_settings" ADD COLUMN "ai_scribe_enabled" boolean DEFAULT false NOT NULL;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1235,8 +1238,8 @@ insert into public.package_templates (id, tenant_id, service_id, name_ar, name_e
   ('d3475e8c-f332-5206-92b7-789d4e7e838d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'deefcbf8-ca24-56d6-8246-06bdd635c96a', 'باقة محفزات البشرة — 3 جلسات', 'Skin Boosters — 3 sessions', 3, 390000, 180),
   ('8eb6d02a-4e51-5c37-8c65-a971dd40b976', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '238646ad-fa4b-5239-a04f-c948716feebd', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 190000, 180);
 
-insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, ai_receptionist_enabled, demo_anchor_day) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false, true, false, true, true, (select demo_anchor from pg_temp.setup_params));
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, ai_receptionist_enabled, ai_scribe_enabled, demo_anchor_day) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', false, true, false, true, true, true, (select demo_anchor from pg_temp.setup_params));
 
 insert into public.message_templates (tenant_id, kind, enabled, body_ar, body_en, meta_name, category) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'booking_confirmation', true, 'مرحبًا {patient_first_name}، تم حجز {appointment} يوم {date} الساعة {time} مع {doctor} في {branch}.
@@ -1388,8 +1391,8 @@ insert into public.consent_rules (tenant_id, code, rule, months) values
 insert into public.package_templates (id, tenant_id, service_id, name_ar, name_en, sessions_count, price_halalas, validity_days) values
   ('baa4e36f-c509-587a-ab60-06c22bf3188a', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 'باقة تنظيف البشرة — 5 جلسات', 'Facial Treatment — 5 sessions', 5, 180000, 180);
 
-insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, ai_receptionist_enabled, demo_anchor_day) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', true, true, true, false, false, (select demo_anchor from pg_temp.setup_params));
+insert into public.tenant_settings (tenant_id, doctors_manage_own_schedule, online_booking_enabled, online_requires_approval, show_prices_online, ai_receptionist_enabled, ai_scribe_enabled, demo_anchor_day) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', true, true, true, false, false, false, (select demo_anchor from pg_temp.setup_params));
 
 insert into public.message_templates (tenant_id, kind, enabled, body_ar, body_en, meta_name, category) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'booking_confirmation', true, 'مرحبًا {patient_first_name}، تم حجز {appointment} يوم {date} الساعة {time} مع {doctor} في {branch}.
@@ -1997,7 +2000,7 @@ grant select, insert on public.consent_templates to clinic_app;
 grant update (is_current) on public.consent_templates to clinic_app;
 -- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
 grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
-grant update (body, status, signed_at, updated_at) on public.clinical_notes to clinic_app;
+grant update (body, status, signed_at, updated_at, ai_drafted_at) on public.clinical_notes to clinic_app;
 -- Phase 2a: codes, rate limits, patient sessions, message log, push.
 grant select, insert, update on public.verification_codes, public.patient_sessions to clinic_app;
 grant select, insert, delete on public.rate_limit_hits to clinic_app;

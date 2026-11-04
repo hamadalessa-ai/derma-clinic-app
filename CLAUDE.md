@@ -80,6 +80,10 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   clinic switched it off, no key, staff took over or replied (`conversations.ai_paused_at`), or the daily
   limit is reached. After a hand-off the chat stays "needs reply" but the AI still helps with other things
   (never the handed-off topic). Any failure → "needs reply" + a fixed reply. Tests use a scripted fake client.
+- AI scribe (`src/lib/ai/scribe.ts`, UI `src/components/clinic/ai-scribe.tsx`): browser dictation (Web Speech
+  API; audio never reaches us) → Claude → English draft appended to the AUTHOR's own UNSIGNED note, marked
+  `clinical_notes.ai_drafted_at`. Never signs, never adds diagnoses/codes/doses of its own; the spoken text is
+  never stored or audited. Needs `tenant_settings.ai_scribe_enabled` + `ANTHROPIC_API_KEY`.
 
 ## Database changes
 

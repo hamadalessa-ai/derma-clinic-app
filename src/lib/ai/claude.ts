@@ -36,6 +36,8 @@ export interface ClaudeRequest {
   messages: ClaudeMessage[];
   tools: ToolDefinition[];
   maxTokens?: number;
+  /** Give up after this long (default 25 s). */
+  timeoutMs?: number;
 }
 
 export interface ClaudeResponse {
@@ -75,9 +77,9 @@ export function anthropicClient(env: Env = process.env): ClaudeClient | null {
           max_tokens: req.maxTokens ?? 700,
           system: req.system,
           messages: req.messages,
-          tools: req.tools,
+          ...(req.tools.length ? { tools: req.tools } : {}),
         }),
-        signal: AbortSignal.timeout(25_000),
+        signal: AbortSignal.timeout(req.timeoutMs ?? 25_000),
       });
       const body = (await res.json().catch(() => null)) as {
         content?: ContentBlock[];
