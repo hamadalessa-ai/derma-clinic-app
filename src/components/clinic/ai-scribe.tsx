@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { Mic, Sparkles, Square } from "lucide-react";
-import { scribeDraftAction } from "@/app/actions/clinic";
+import { saveDraftAction, scribeDraftAction } from "@/app/actions/clinic";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/ui/notice";
@@ -82,6 +82,8 @@ export function AiScribe({
   const [interim, setInterim] = useState("");
   const [micError, setMicError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  /** A tidy rewrite of the whole note the doctor can choose instead (never applied silently). */
+  const [tidy, setTidy] = useState<string | null>(null);
   const rec = useRef<Recognition | null>(null);
   const wantOn = useRef(false);
   const { run, pending, error } = useAction();
@@ -218,7 +220,8 @@ export function AiScribe({
             (r) => {
               onDrafted(r.body);
               setText("");
-              setMsg(t("done"));
+              setTidy(r.tidy);
+              setMsg(r.tidy ? null : t("done"));
             },
           )
         }
@@ -227,6 +230,35 @@ export function AiScribe({
         <Sparkles />
         {pending ? t("writing") : t("write")}
       </Button>
+      {tidy && (
+        <Notice tone="warning" data-testid="scribe-tidy">
+          <div className="flex flex-col gap-2">
+            <span>{t("tidyOffer")}</span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={pending}
+                onClick={() =>
+                  run(
+                    () => saveDraftAction({ patientId, noteId, body: tidy }),
+                    () => {
+                      onDrafted(tidy);
+                      setTidy(null);
+                      setMsg(t("tidyUsed"));
+                    },
+                  )
+                }
+                data-testid="scribe-use-tidy"
+              >
+                {t("useTidy")}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setTidy(null)}>
+                {t("keepAll")}
+              </Button>
+            </div>
+          </div>
+        </Notice>
+      )}
       <FormError message={error} />
       <FormSuccess message={msg} />
       <p className="text-muted-foreground text-xs">{t("privacy")}</p>

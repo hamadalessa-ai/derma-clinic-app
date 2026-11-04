@@ -109,8 +109,14 @@ describe("AI scribe", () => {
     const note = await newNote("D-0010");
     const long = `History:\n- ${"Long history written by the doctor. ".repeat(12).trim()}`;
     await withActor(drSara, (tx) => saveDraft(tx, drSara, note.id, long));
-    await scribeDraft(drSara, { noteId: note.id, transcript: "follow up in six weeks" }, fake());
+    const r = await scribeDraft(
+      drSara,
+      { noteId: note.id, transcript: "follow up in six weeks" },
+      fake(),
+    );
     expect((await noteRow(note.id)).body).toBe(`${long}\n\n${DRAFT}`);
+    // …and the tidy rewrite is offered to the doctor, never applied silently.
+    expect(r.tidy).toBe(DRAFT);
   });
 
   it("tells the model to fix obvious mishearings, never repeat headings or explain itself", () => {
