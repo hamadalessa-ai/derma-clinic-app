@@ -932,6 +932,10 @@
     "settingTitle": "AI scribe for doctors",
     "settingHint": "Doctors can dictate their notes during the visit and get an English note draft to review, edit and sign. It only writes down what the doctor said: no diagnoses or suggestions of its own.",
     "on": "on",
-    "off": "off"
+    "off": "off",
+    "tidyOffer": "The new part was added below, so nothing was removed. The AI also wrote a tidier, shorter version of the whole note (repeated text merged). Use it instead?",
+    "useTidy": "Use the tidy version",
+    "keepAll": "Keep everything",
+    "tidyUsed": "The note now has the tidy version. Review it before signing."
   }
 }

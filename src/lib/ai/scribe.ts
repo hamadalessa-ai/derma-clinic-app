@@ -78,7 +78,7 @@ export async function scribeDraft(
   actor: Actor,
   input: { noteId: string; transcript: string },
   opts: { client: ClaudeClient | null },
-): Promise<{ body: string }> {
+): Promise<{ body: string; tidy: string | null }> {
   assertCan(actor.roles, "notes:write");
   const transcript = input.transcript.trim().slice(0, MAX_TRANSCRIPT);
   if (transcript.length < 5) throw new ScribeError("empty");
@@ -155,6 +155,9 @@ export async function scribeDraft(
       entityId: input.noteId,
       metadata: { spokenChars: transcript.length, draftChars: draft.length },
     });
-    return { body };
+    // Not merged because the tidy note is much shorter: offer it to the doctor instead of
+    // deleting anything ("Use the tidy version" in the scribe box).
+    const tidy = !merged && note.body === current ? draft.slice(0, MAX_NOTE) : null;
+    return { body, tidy };
   });
 }
