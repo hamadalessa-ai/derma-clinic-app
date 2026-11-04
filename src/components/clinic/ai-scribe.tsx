@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { Mic, Sparkles, Square } from "lucide-react";
 import { scribeDraftAction } from "@/app/actions/clinic";
@@ -41,6 +41,8 @@ function recognitionCtor(): RecognitionCtor | null {
 const LANG_KEY = "scribe-lang";
 type Lang = "ar-SA" | "en-US";
 
+const noSubscribe = () => () => {};
+
 function savedLang(): Lang {
   try {
     const v = window.localStorage.getItem(LANG_KEY);
@@ -64,8 +66,17 @@ export function AiScribe({
   onDrafted: (body: string) => void;
 }) {
   const t = useTranslations("scribe");
-  const [supported, setSupported] = useState(true);
-  const [lang, setLang] = useState<Lang>("ar-SA");
+  // Read from the browser without an effect (the server assumes "supported" and Arabic).
+  const canDictate = useSyncExternalStore(
+    noSubscribe,
+    () => !!recognitionCtor(),
+    () => true,
+  );
+  const storedLang = useSyncExternalStore(noSubscribe, savedLang, () => "ar-SA" as Lang);
+  const [failed, setFailed] = useState(false);
+  const [chosenLang, setLang] = useState<Lang | null>(null);
+  const supported = canDictate && !failed;
+  const lang = chosenLang ?? storedLang;
   const [listening, setListening] = useState(false);
   const [text, setText] = useState("");
   const [interim, setInterim] = useState("");
@@ -76,8 +87,6 @@ export function AiScribe({
   const { run, pending, error } = useAction();
 
   useEffect(() => {
-    setSupported(!!recognitionCtor());
-    setLang(savedLang());
     return () => {
       wantOn.current = false;
       rec.current?.stop();
@@ -86,7 +95,7 @@ export function AiScribe({
 
   function start() {
     const Ctor = recognitionCtor();
-    if (!Ctor) return setSupported(false);
+    if (!Ctor) return setFailed(true);
     setMicError(null);
     setMsg(null);
     const r = new Ctor();
