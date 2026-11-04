@@ -84,11 +84,40 @@ describe("AI scribe", () => {
     expect(JSON.stringify(log.metadata)).not.toContain("Laser");
   });
 
-  it("adds the draft below what the doctor already wrote", async () => {
+  it("merges new dictation into the note so far: one note, no repeated headings", async () => {
     const note = await newNote("D-0004");
-    await withActor(drSara, (tx) => saveDraft(tx, drSara, note.id, "Seen with mother."));
+    await withActor(drSara, (tx) =>
+      saveDraft(tx, drSara, note.id, "Reason for visit:\n- Laser hair removal, underarm"),
+    );
+    const merged =
+      "Reason for visit:\n- Laser hair removal, underarm\n\nPlan / follow-up:\n- Five sessions from 12 Dec 2026";
+    const { client, calls } = fake(merged);
+    await scribeDraft(
+      drSara,
+      { noteId: note.id, transcript: "she needs five sessions from 12th of December" },
+      { client },
+    );
+    // The model saw the note so far and today's date (for dates without a year).
+    const sent = String(calls[0].messages[0].content);
+    expect(sent).toContain("Current note (keep all of it)");
+    expect(sent).toContain("Laser hair removal, underarm");
+    expect(sent).toMatch(/Today's date: \d{4}-\d{2}-\d{2}/);
+    expect((await noteRow(note.id)).body).toBe(merged);
+  });
+
+  it("if the merged note looks like it lost text, the new part is added below instead", async () => {
+    const note = await newNote("D-0010");
+    const long = `History:\n- ${"Long history written by the doctor. ".repeat(12).trim()}`;
+    await withActor(drSara, (tx) => saveDraft(tx, drSara, note.id, long));
     await scribeDraft(drSara, { noteId: note.id, transcript: "follow up in six weeks" }, fake());
-    expect((await noteRow(note.id)).body).toBe(`Seen with mother.\n\n${DRAFT}`);
+    expect((await noteRow(note.id)).body).toBe(`${long}\n\n${DRAFT}`);
+  });
+
+  it("tells the model to fix obvious mishearings, never repeat headings or explain itself", () => {
+    expect(SCRIBE_SYSTEM).toContain("each heading AT MOST ONCE");
+    expect(SCRIBE_SYSTEM).toContain("underarm");
+    expect(SCRIBE_SYSTEM).toContain("never explain what you left out");
+    expect(SCRIBE_SYSTEM).toContain("next such date on or after today's date");
   });
 
   it("refuses signed notes, other doctors' notes and non-doctors", async () => {

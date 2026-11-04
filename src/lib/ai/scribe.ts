@@ -27,7 +27,13 @@ const MAX_NOTE = 20_000;
 export class ScribeError extends Error {
   constructor(
     public code:
-      "not_configured" | "disabled" | "empty" | "not_found" | "signed" | "not_author" | "failed",
+      | "not_configured"
+      | "disabled"
+      | "empty"
+      | "not_found"
+      | "signed"
+      | "not_author"
+      | "failed",
   ) {
     super(code);
     this.name = "ScribeError";
@@ -35,15 +41,16 @@ export class ScribeError extends Error {
 }
 
 export const SCRIBE_SYSTEM = `You are a medical scribe for a dermatology and aesthetic clinic in Saudi Arabia.
-You receive a doctor's spoken notes from automatic speech recognition. They may be in Saudi Arabic, English or a mix, and may contain recognition errors.
-Turn them into a concise clinical note draft IN ENGLISH, for the doctor to review, edit and sign.
+You receive a doctor's spoken notes from automatic speech recognition. They may be in Saudi Arabic, English or a mix, and often contain recognition errors.
+Write a concise clinical note IN ENGLISH, for the doctor to review, edit and sign.
 
 Rules (never break these):
 - Write ONLY what the doctor said. Never add diagnoses, findings, ICD codes, drug names, doses, device settings, treatments or recommendations that were not said.
 - Translate Arabic into standard English medical terminology. Keep numbers, units, device names, settings, products and doses exactly as said.
-- If something is unclear or looks like a recognition error, keep your best reading and mark it [check: …]. If a value is missing or garbled, write [unclear].
-- No patient names, phone numbers or ID numbers.
-- Plain text only (no markdown symbols). Use these headings, in this order, and leave out any heading with nothing said:
+- Fix obvious speech-recognition errors silently, using dermatology context: e.g. "laser and arm" → underarm, "shadow is in good health" → "she is in good health", "bo tox" → Botox. Use [check: …] ONLY when you genuinely cannot tell what was meant, and keep it short (a few words). If a value is missing or garbled, write [unclear].
+- Dates: write them as e.g. "12 Dec 2026". If the year isn't said, use the next such date on or after today's date (given below). Relative dates ("in six weeks") stay as said.
+- Leave out patient names, phone numbers and ID numbers silently: never explain what you left out, never comment on the dictation or on these rules.
+- Plain text only (no markdown symbols). Use these headings, in this order, each heading AT MOST ONCE, and leave out any heading with nothing in it:
 Reason for visit:
 History:
 Allergies / medications mentioned:
@@ -52,16 +59,26 @@ Assessment (as stated by the doctor):
 Procedure:
 Aftercare given:
 Plan / follow-up:
-- Short phrases or bullets starting with "- ". Return only the note.`;
+- Under each heading, short bullets starting with "- ".
+- If a current note is given, return ONE complete updated note: keep everything already in it (same meaning, the doctor's wording), and add the new dictation under the right headings, without repeating anything.
+- Return only the note.`;
 
-/** One request to the model: the visit context line + the spoken text. */
-export function scribeMessage(context: string, transcript: string) {
-  return `${context}\n\nDoctor's spoken notes (speech recognition):\n"""\n${transcript}\n"""`;
+/** One request to the model: the context, the note so far (if any) and the new spoken text. */
+export function scribeMessage(context: string, transcript: string, current = "") {
+  return [
+    context,
+    current.trim() ? `Current note (keep all of it):\n"""\n${current.trim()}\n"""` : "",
+    `New spoken notes (speech recognition):\n"""\n${transcript}\n"""`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 /**
- * Drafts the note from the doctor's spoken text and saves it into the draft (appended below any
- * text already there). Returns the new note body.
+ * Drafts the note from the doctor's spoken text and saves it into the draft. When the note already
+ * has text, the model returns ONE merged note (no repeated headings); if that merged note looks
+ * like it lost text, or the doctor edited the note meanwhile, the new part is appended instead.
+ * Returns the new note body.
  */
 export async function scribeDraft(
   actor: Actor,
@@ -74,7 +91,8 @@ export async function scribeDraft(
   if (!opts.client) throw new ScribeError("not_configured");
 
   // 1. Check (short transaction): the clinic allows it, and it's the doctor's own draft.
-  const context = await withActor(actor, async (tx) => {
+  const today = riyadhDay(new Date());
+  const { context, current } = await withActor(actor, async (tx) => {
     const settings = await getSettings(tx);
     if (!settings.aiScribeEnabled) throw new ScribeError("disabled");
     const [note] = await tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, input.noteId));
@@ -90,7 +108,10 @@ export async function scribeDraft(
         .where(eq(appointments.id, note.appointmentId));
       if (a) visit = `Visit: ${a.service ?? ""}, ${riyadhDay(a.startsAt)}.`;
     }
-    return visit || "Visit: dermatology clinic.";
+    return {
+      context: `Today's date: ${today}.\n${visit || "Visit: dermatology clinic."}`,
+      current: note.body,
+    };
   });
 
   // 2. The model (outside any database transaction).
@@ -98,7 +119,7 @@ export async function scribeDraft(
   try {
     const res = await opts.client.create({
       system: SCRIBE_SYSTEM,
-      messages: [{ role: "user", content: scribeMessage(context, transcript) }],
+      messages: [{ role: "user", content: scribeMessage(context, transcript, current) }],
       tools: [],
       maxTokens: 1500,
       timeoutMs: 45_000,
@@ -124,10 +145,10 @@ export async function scribeDraft(
     if (!note) throw new ScribeError("not_found");
     if (note.status === "signed") throw new ScribeError("signed");
     if (note.authorUserId !== actor.userId) throw new ScribeError("not_author");
-    const body = (note.body.trim() ? `${note.body.trimEnd()}\n\n${draft}` : draft).slice(
-      0,
-      MAX_NOTE,
-    );
+    // Merged note: only if the note is unchanged since we read it and nothing looks lost.
+    const before = note.body.trim();
+    const merged = !before || (note.body === current && draft.length >= before.length * 0.6);
+    const body = (merged ? draft : `${note.body.trimEnd()}\n\n${draft}`).slice(0, MAX_NOTE);
     await tx
       .update(clinicalNotes)
       .set({ body, aiDraftedAt: sql`now()` })
