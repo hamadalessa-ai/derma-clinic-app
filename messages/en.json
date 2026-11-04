@@ -151,7 +151,16 @@
     "scribe_not_found": "This note no longer exists.",
     "scribe_signed": "This note is already signed. Add an addendum instead.",
     "scribe_not_author": "Only the note's author can use the AI scribe on it.",
-    "scribe_failed": "The AI couldn't draft the note just now. Your spoken text is kept below; try again."
+    "scribe_failed": "The AI couldn't draft the note just now. Your spoken text is kept below; try again.",
+    "video_not_configured": "Video consultations aren't connected yet. Please contact the clinic.",
+    "video_not_found": "This video consultation link isn't valid.",
+    "video_not_virtual": "This appointment isn't a video consultation.",
+    "video_cancelled": "This appointment was cancelled.",
+    "video_too_early": "It's too early: the video room isn't open yet.",
+    "video_ended": "This video consultation has ended.",
+    "video_consent": "Please sign the video consultation consent first.",
+    "video_not_yours": "Only the appointment's own doctor can join this call.",
+    "video_failed": "The video call couldn't start just now. Please try again in a moment."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -312,7 +321,8 @@
     "pendingRequest": "Reschedule request pending",
     "installHint": "To add this app to your home screen: open the browser menu and choose “Add to Home screen”.",
     "count": "{count} appointments",
-    "proposedTime": "Proposed time"
+    "proposedTime": "Proposed time",
+    "startVideo": "Start video"
   },
   "patientsX": {
     "searchPlaceholder": "Search name (Arabic or English), mobile, file or ID number",
@@ -577,7 +587,8 @@
       "too_far": "This day is too far ahead. You can only pick a day within the booking period.",
       "too_soon": "This day is too soon. Choose a time at least 2 hours from now.",
       "closed": "The clinic is closed on this day (holiday or no doctor working). Choose another day."
-    }
+    },
+    "joinVideo": "Join video consultation"
   },
   "account": {
     "title": "My account & notifications",
@@ -937,5 +948,33 @@
     "useTidy": "Use the tidy version",
     "keepAll": "Keep everything",
     "tidyUsed": "The note now has the tidy version. Review it before signing."
+  },
+  "video": {
+    "join": "Join video consultation",
+    "joining": "Connecting…",
+    "leave": "Leave the call",
+    "callTitle": "Video consultation",
+    "permissionsHint": "Your browser will ask to use the camera and microphone: please allow it. No app needed.",
+    "patientTitle": "Hello {name}, your video consultation",
+    "cancelled": "This appointment was cancelled. You can book a new one from the clinic's booking page.",
+    "ended": "This video consultation has ended. Thank you.",
+    "tooEarly": "The video room opens {minutes} minutes before your appointment. Keep this page open: it opens by itself.",
+    "consentFirst": "Before the call, please sign the video consultation consent on your page.",
+    "signConsent": "Sign the consent",
+    "notConnected": "Video isn't connected yet for this clinic (demo). Please contact the clinic.",
+    "tipPlace": "Find a quiet, private, well-lit place, with a good internet connection.",
+    "tipPhotos": "You can send clear photos of the area to the clinic's WhatsApp before the call.",
+    "tipPrivacy": "The call is private and not recorded.",
+    "tipEmergency": "In an emergency, don't wait for the call: dial 997.",
+    "doctorTitle": "Video consultation: {name}",
+    "openFile": "Open patient file",
+    "doctorConsentMissing": "The patient hasn't signed the video consultation consent yet. They are asked to sign it before joining.",
+    "doctorTooEarly": "The video room opens {minutes} minutes before the appointment.",
+    "notConnectedStaff": "Video isn't connected yet: the clinic needs a video service key (see the setup guide, Part J).",
+    "doctorPrivacy": "The call is not recorded. The AI scribe beside it works as usual: only what you dictate is drafted.",
+    "photos": "Photos the patient sent",
+    "noPhotos": "No photos in the last 30 days.",
+    "photoAlt": "Photo from the patient",
+    "note": "Note for this visit"
   }
 }

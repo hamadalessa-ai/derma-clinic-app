@@ -11,6 +11,7 @@ import {
   Play,
   Trash2,
   UserRound,
+  Video,
 } from "lucide-react";
 import { blockTimeAction, removeBlockAction, statusAction } from "@/app/actions/clinic";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -137,6 +138,16 @@ export function MyDayList({
                     <n.icon />
                     {n.label}
                   </Button>
+                )}
+                {a.isVirtual && !["completed", "cancelled", "no_show"].includes(a.status) && (
+                  <Link
+                    href={`/visits/${a.id}/video`}
+                    className={buttonVariants({ size: "sm" })}
+                    data-testid="start-video"
+                  >
+                    <Video />
+                    {t("startVideo")}
+                  </Link>
                 )}
                 <Link
                   href={`/patients/${a.patient.id}?tab=notes&appointment=${a.id}`}

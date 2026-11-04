@@ -84,6 +84,11 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   API; audio never reaches us) → Claude → English draft appended to the AUTHOR's own UNSIGNED note, marked
   `clinical_notes.ai_drafted_at`. Never signs, never adds diagnoses/codes/doses of its own; the spoken text is
   never stored or audited. Needs `tenant_settings.ai_scribe_enabled` + `ANTHROPIC_API_KEY`.
+- Video consultations (`src/lib/video/`): services with `is_virtual` are booked in the branch's video room
+  (`rooms.is_virtual`, never reserved by the trigger; the doctor still is). Patients join from a SIGNED link
+  (`/visit/<appointmentId>.<sig>`, `link.ts`), doctors from My Day (`/visits/<id>/video`, own appointments only).
+  Join only around the visit time and after the `telehealth` consent (`visit.ts`). The provider (Daily today,
+  key `DAILY_API_KEY`) sits behind `provider.ts` so it can be swapped for a Saudi-hosted server. Never recorded.
 
 ## Database changes
 

@@ -155,6 +155,12 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "video:join": {
+    platform_owner: false,
+    clinic_admin: false,
+    practitioner: true,
+    receptionist: false,
+  },
   "platform:keys": {
     platform_owner: true,
     clinic_admin: false,

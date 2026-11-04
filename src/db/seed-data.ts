@@ -35,6 +35,8 @@ export interface SeedService {
   bufferMinutes: number;
   priceSar: number;
   requiredDeviceType: string | null;
+  /** A video consultation (booked in the branch's video room). */
+  isVirtual?: boolean;
 }
 
 export interface SeedPatient {
@@ -152,7 +154,25 @@ export const DERMA_SERVICES: SeedService[] = [
   ),
   S("cryotherapy", "العلاج بالتبريد", "Cryotherapy", 30, 10, 400),
   S("patch_test", "اختبار الحساسية", "Patch Test", 15, 5, 100),
+  {
+    ...S("video_consultation", "استشارة مرئية (فيديو)", "Video Consultation", 20, 10, 250),
+    isVirtual: true,
+  },
 ];
+
+/**
+ * Video rooms: one per branch that offers video consultations. Not real rooms — they are never
+ * reserved (db/booking.sql), so several video visits can run at once; the doctor is reserved.
+ */
+export const VIRTUAL_ROOMS: Record<
+  string,
+  { key: string; branch: string; nameAr: string; nameEn: string }[]
+> = {
+  derma: [
+    { key: "ruh-video", branch: "riyadh", nameAr: "الاستشارات المرئية", nameEn: "Video Consultations" },
+    { key: "jed-video", branch: "jeddah", nameAr: "الاستشارات المرئية", nameEn: "Video Consultations" },
+  ],
+};
 
 // ─── Fake patients ──────────────────────────────────────────────────────────
 
@@ -609,6 +629,7 @@ export const SERVICE_CONSENTS: Record<string, string> = {
   botox: "injectables",
   fillers: "injectables",
   chemical_peeling: "chemical_peel",
+  video_consultation: "telehealth",
 };
 
 const DEMO_NOTICE_AR = "تنبيه: صياغة تجريبية لأغراض العرض فقط — ليست نصًا قانونيًا معتمدًا.";
@@ -617,7 +638,9 @@ const DEMO_NOTICE_EN = "Notice: demo wording for demonstration only — NOT lega
 export interface SeedConsentTemplate {
   code: string;
   /** When a new signature is needed (src/lib/consents/rules.ts). */
-  rule: "every_visit" | "per_package";
+  rule: "every_visit" | "per_package" | "months";
+  /** For rule "months": a signature stays valid this many months. */
+  months?: number;
   titleAr: string;
   titleEn: string;
   bodyAr: string;
@@ -684,6 +707,27 @@ export const CONSENT_TEMPLATES: SeedConsentTemplate[] = [
       "I confirm I am not using isotretinoin (Roaccutane) now or in the last 6 months.",
       "I consent to the procedure and will use SPF 50 sunscreen daily.",
     ].join("\n\n"),
+  },
+  {
+  code: "telehealth",
+  rule: "months",
+  months: 12,
+  titleAr: "نموذج موافقة على الاستشارة المرئية (عن بُعد)",
+  titleEn: "Consent for video (telehealth) consultations",
+  bodyAr: [
+    DEMO_NOTICE_AR,
+    "أوافق على تلقي استشارة طبية عبر مكالمة فيديو بدلًا من الحضور إلى العيادة.",
+    "أعلم أن الطبيب/ة لا يستطيع فحصي بالكامل عن بُعد، وقد يطلب زيارة العيادة لاستكمال الفحص أو العلاج.",
+    "أعلم أن المكالمة لا تُسجَّل، وأن ما يُدوَّن منها يُحفظ في ملفي الطبي فقط، وأن الصور التي أرسلها تُحفظ في ملفي.",
+    "أؤكد أنني في مكان خاص، وأن المعلومات التي أقدمها صحيحة. في الحالات الطارئة سأتصل بالرقم 997.",
+  ].join("\n\n"),
+  bodyEn: [
+    DEMO_NOTICE_EN,
+    "I agree to receive a medical consultation by video call instead of visiting the clinic.",
+    "I understand the practitioner cannot fully examine me remotely and may ask me to visit the clinic to complete the examination or treatment.",
+    "I understand the call is not recorded, notes from it are kept in my medical file only, and photos I send are kept in my file.",
+    "I confirm I am in a private place and the information I give is accurate. In an emergency I will call 997.",
+  ].join("\n\n"),
   },
 ];
 
@@ -787,6 +831,7 @@ export const ONLINE_SERVICES: Record<string, string[]> = {
     "fillers",
     "facial_treatment",
     "chemical_peeling",
+    "video_consultation",
   ],
   lamsa: ["consultation", "facial_treatment"],
 };

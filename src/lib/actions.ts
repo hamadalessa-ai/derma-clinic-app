@@ -3,6 +3,7 @@ import { BookingError } from "@/lib/booking/engine";
 import { ConsentError } from "@/lib/consents/consents";
 import { NoteError } from "@/lib/notes/notes";
 import { ScribeError } from "@/lib/ai/scribe";
+import { VideoVisitError } from "@/lib/video/visit";
 import { PackageError } from "@/lib/packages/packages";
 import { can, PermissionError, type Permission } from "@/lib/auth/permissions";
 import { actorOf, getStaffContext, type StaffContext } from "@/lib/auth/session";
@@ -47,6 +48,7 @@ export async function staffAction<T>(
       return { ok: false, error: err.code };
     }
     if (err instanceof ScribeError) return { ok: false, error: `scribe_${err.code}` };
+    if (err instanceof VideoVisitError) return { ok: false, error: `video_${err.code}` };
     if (err instanceof PermissionError) return { ok: false, error: "not_allowed" };
     if (err instanceof ValidationError) return { ok: false, error: "invalid" };
     console.error("action failed", err);
@@ -83,6 +85,7 @@ export async function publicAction<T>(
       return { ok: false, error: err.code };
     }
     if (err instanceof PublicError) return { ok: false, error: err.code };
+    if (err instanceof VideoVisitError) return { ok: false, error: `video_${err.code}` };
     if (err instanceof ValidationError) return { ok: false, error: "invalid" };
     console.error("public action failed", err);
     return { ok: false, error: "unexpected" };

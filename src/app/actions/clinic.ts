@@ -29,6 +29,8 @@ import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { anthropicClient } from "@/lib/ai/claude";
 import { scribeDraft } from "@/lib/ai/scribe";
+import { videoProvider } from "@/lib/video/provider";
+import { doctorJoin } from "@/lib/video/visit";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
 import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
 import { notifyLater, sendTestPush } from "@/lib/push/notify";
@@ -681,6 +683,14 @@ export async function scribeDraftAction(input: {
     revalidatePath(`/patients/${v.patientId}`);
     revalidatePath("/clinical-notes");
     return r;
+  });
+}
+
+/** The doctor joins a video consultation: returns a personal link into the video room. */
+export async function joinVideoAction(input: { appointmentId: string }) {
+  return staffAction("video:join", async (_ctx, actor) => {
+    const v = parse(z.object({ appointmentId: uuid }), input);
+    return doctorJoin(actor, v.appointmentId, { provider: videoProvider() });
   });
 }
 

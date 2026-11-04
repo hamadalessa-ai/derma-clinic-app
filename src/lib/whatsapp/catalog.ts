@@ -268,6 +268,12 @@ export const SERVICE_TEXTS: Record<
     recallAfterDays?: number;
   }
 > = {
+  video_consultation: {
+    preVisitAr:
+      "قبل المكالمة: اختر مكانًا هادئًا وجيد الإضاءة. يمكنك إرسال صور واضحة للمنطقة في هذه المحادثة قبل الموعد ليطّلع عليها الطبيب.",
+    preVisitEn:
+      "find a quiet, well-lit place. You can send clear photos of the area in this chat before the call, so the doctor can see them.",
+  },
   laser_hair_removal: {
     preVisitAr: "قبل الجلسة: احلق المنطقة قبل يوم، وتجنّب الشمس والتقشير لمدة أسبوع.",
     preVisitEn:

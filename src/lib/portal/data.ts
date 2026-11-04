@@ -20,6 +20,7 @@ import { getSettings } from "@/lib/booking/engine";
 import { MOVABLE_STATUSES } from "@/lib/booking/status";
 import { consentStatusFor } from "@/lib/consents/consents";
 import { reasonView, type ConsentReasonView } from "@/lib/consents/rules";
+import { videoToken } from "@/lib/video/link";
 import { patientDbContext } from "./session";
 
 export async function loadPortal(tenantId: string, patientId: string, now = new Date()) {
@@ -50,6 +51,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
         serviceAr: services.nameAr,
         serviceEn: services.nameEn,
         onlineBookable: services.onlineBookable,
+        isVirtual: services.isVirtual,
         branchAr: branches.nameAr,
         branchEn: branches.nameEn,
       })
@@ -151,6 +153,11 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       (MOVABLE_STATUSES as readonly string[]).includes(a.status) &&
       a.startsAt.getTime() - now.getTime() >= windowMs,
     canReschedule: data.settings.onlineBookingEnabled && a.onlineBookable,
+    /** Video consultation: the same join page as the WhatsApp link. */
+    videoPath:
+      a.isVirtual && ["booked", "confirmed", "arrived", "in_session"].includes(a.status)
+        ? `/visit/${videoToken(tenantId, a.id)}`
+        : null,
   });
   return {
     me: data.family.find((p) => p.id === patientId) ?? null,

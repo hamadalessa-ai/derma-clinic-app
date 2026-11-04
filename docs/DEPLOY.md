@@ -517,6 +517,40 @@ stored, only the draft. Firefox can't dictate — type or paste instead. Later, 
 > **Before real patients:** speech and text are processed outside Saudi Arabia (Google/Apple, Anthropic).
 > Check PDPL, patient information and SFDA with a lawyer first. Fake demo data only until then.
 
+## Part J — Video consultations
+
+A **"Video Consultation"** service patients can book online, on WhatsApp or at reception. It needs no
+room — only the doctor's time. The patient gets a **join link** in the WhatsApp confirmation and
+reminder (and a **Join video consultation** button on their page, /my). They sign a short **telehealth
+consent** first (valid 12 months). The doctor taps **Start video** on **My Day**: the call opens with
+the patient's allergies, the photos they sent on WhatsApp, and this visit's note with the **AI scribe**
+beside it. Nothing is recorded. The room opens 15 minutes before the visit for the patient (30 for the
+doctor) and closes 30 minutes after it ends.
+
+### One-time setup: the video service (Daily, free plan)
+
+1. Go to **daily.co** → sign up (free plan: 10,000 participant-minutes a month — plenty for demos).
+2. In the Daily dashboard, open **Developers** → copy the **API key**. Don't paste it in any chat.
+3. **Vercel** → your project → **Settings → Environment Variables** → add
+   `DAILY_API_KEY` = the key (mark it **Sensitive**), for **Production** (and Preview if you like).
+4. **Deployments** → latest → **⋯ → Redeploy**.
+
+Without the key everything else works (booking, links, consent), and the call screen says "video isn't
+connected yet".
+
+### Try it
+
+1. On the booking page (/book) book **Video Consultation** with **Dr. Sarah**, at the first time
+   offered (at least 2 hours ahead) — use your own phone number in the WhatsApp simulator.
+2. Open the confirmation in the simulator → the **join link**. Before the time it says when it opens.
+3. On /my, sign the **video consultation consent**.
+4. At the time: sign in as **dr.sara@derma.demo** → **My Day** → **Start video** → **Join**. On your
+   phone, open the join link → **Join**. Allow camera and microphone on both.
+
+> **Before real patients:** the clinic must have the MOH telemedicine registration, and a lawyer should
+> check the consent wording. Daily's servers are outside Saudi Arabia; for real patients we can switch
+> to a video server hosted in Saudi Arabia (the app's video part is built to be swapped).
+
 ## Demo accounts (Derma Clinics)
 
 All use your demo staff password.

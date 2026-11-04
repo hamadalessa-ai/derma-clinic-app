@@ -219,6 +219,11 @@ export const rooms = pgTable(
     branchId: uuid("branch_id").notNull(),
     nameAr: text("name_ar").notNull(),
     nameEn: text("name_en").notNull(),
+    /**
+     * A "video room" for virtual consultations: not a real room, so it is never reserved
+     * (any number of video visits at once; only the doctor's time is booked).
+     */
+    isVirtual: boolean("is_virtual").notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [
@@ -277,6 +282,8 @@ export const services = pgTable(
     requiredDeviceType: text("required_device_type"),
     consentCode: text("consent_code"), // which consent template the patient must sign, if any
     onlineBookable: boolean("online_bookable").notNull().default(false),
+    /** A video consultation: booked in the branch's video room, joined from a link. */
+    isVirtual: boolean("is_virtual").notNull().default(false),
     // ── WhatsApp texts per service (editable by the clinic admin; empty = not sent) ──
     preVisitAr: text("pre_visit_ar"),
     preVisitEn: text("pre_visit_en"),

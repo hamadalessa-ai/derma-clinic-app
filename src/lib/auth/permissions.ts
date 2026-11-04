@@ -53,6 +53,10 @@ export const PERMISSIONS = {
   "concerns:handle": ["clinic_admin", "practitioner", "receptionist"],
   /** Photos patients send (medical): doctors and admins. Reception sees "photo received". */
   "photos:view": ["clinic_admin", "practitioner"],
+
+  // ── Video consultations ──
+  /** Join a video consultation (the appointment's own doctor only — checked in lib/video). */
+  "video:join": ["practitioner"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

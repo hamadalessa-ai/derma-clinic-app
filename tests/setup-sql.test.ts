@@ -56,7 +56,7 @@ describe("seed data matches the brief", () => {
     expect(DERMA.rooms.filter((r) => r.branch === "jeddah")).toHaveLength(2);
     expect(DERMA.devices.filter((d) => d.branch === "riyadh")).toHaveLength(7);
     expect(DERMA.devices.filter((d) => d.branch === "jeddah")).toHaveLength(1);
-    expect(DERMA_SERVICES).toHaveLength(22);
+    expect(DERMA_SERVICES).toHaveLength(23);
     expect(DERMA.patients).toHaveLength(40);
   });
 

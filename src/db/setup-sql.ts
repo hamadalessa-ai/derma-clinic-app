@@ -29,6 +29,7 @@ import {
   WHATSAPP_OPTED_OUT,
   WORK_HOURS,
   WORK_WEEK,
+  VIRTUAL_ROOMS,
   type SeedTenant,
 } from "./seed-data";
 
@@ -106,6 +107,21 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
+  if (VIRTUAL_ROOMS[t.slug]?.length) {
+    out.push(
+      insert(
+        "rooms",
+        VIRTUAL_ROOMS[t.slug].map((r) => ({
+          id: ref("room", r.key),
+          tenant_id: tid,
+          branch_id: ref("branch", r.branch),
+          name_ar: r.nameAr,
+          name_en: r.nameEn,
+          is_virtual: true,
+        })),
+      ),
+    );
+  }
   out.push(
     insert(
       "devices",
@@ -174,6 +190,7 @@ function tenantSql(t: SeedTenant): string {
         consent_code: SERVICE_CONSENTS[s.code] ?? null,
         is_demo_value: true,
         online_bookable: (ONLINE_SERVICES[t.slug] ?? []).includes(s.code),
+        is_virtual: s.isVirtual ?? false,
         pre_visit_ar: SERVICE_TEXTS[s.code]?.preVisitAr ?? null,
         pre_visit_en: SERVICE_TEXTS[s.code]?.preVisitEn ?? null,
         post_care_ar: SERVICE_TEXTS[s.code]?.postCareAr ?? null,
@@ -237,7 +254,8 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
-  // Renewal rules: Botox/fillers and peels every visit; laser hair removal once per package.
+  // Renewal rules: Botox/fillers and peels every visit; laser hair removal once per package;
+  // video consultations: one signature valid 12 months.
   out.push(
     insert(
       "consent_rules",
@@ -245,7 +263,7 @@ function tenantSql(t: SeedTenant): string {
         tenant_id: tid,
         code: c.code,
         rule: c.rule,
-        months: null,
+        months: c.months ?? null,
       })),
     ),
   );

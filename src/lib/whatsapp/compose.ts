@@ -9,6 +9,7 @@ import type { TenantTx } from "@/db/tenant";
 import { getSettings } from "@/lib/booking/engine";
 import { consentStatusFor } from "@/lib/consents/consents";
 import { formatGregorian, formatTime } from "@/lib/format";
+import { videoJoinUrl } from "@/lib/video/link";
 
 export type Lang = "ar" | "en";
 
@@ -61,7 +62,22 @@ export function appointmentVars(
   const en = lang === "en";
   const serviceName = en ? ctx.service.nameEn : ctx.service.nameAr;
   const myLink = `${baseUrl}/my`;
-  const instructions = en ? ctx.service.preVisitEn : ctx.service.preVisitAr;
+  const preVisit = en ? ctx.service.preVisitEn : ctx.service.preVisitAr;
+  // Video consultation: the join link takes the place of the map, and leads the instructions.
+  const video = ctx.service.isVirtual
+    ? videoJoinUrl(baseUrl, ctx.appointment.tenantId, ctx.appointment.id)
+    : null;
+  const videoLine = video
+    ? en
+      ? `Join your video consultation here (opens 15 minutes before): ${video}`
+      : `رابط الاستشارة المرئية (يفتح قبل الموعد بـ15 دقيقة): ${video}`
+    : "";
+  const instructions = [
+    videoLine,
+    preVisit ? (en ? `Before your visit: ${preVisit}` : preVisit) : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
   return {
     patient_first_name: firstName(
       en && ctx.patient.fullNameEn ? ctx.patient.fullNameEn : ctx.patient.fullNameAr,
@@ -72,10 +88,10 @@ export function appointmentVars(
     time: formatTime(startsAt, lang),
     doctor: en && ctx.doctor.nameEn ? ctx.doctor.nameEn : ctx.doctor.nameAr,
     branch: en ? ctx.branch.nameEn : ctx.branch.nameAr,
-    map_link: ctx.branch.mapUrl ?? baseUrl,
+    map_link: video ?? ctx.branch.mapUrl ?? baseUrl,
     my_link: myLink,
     booking_link: `${baseUrl}/book`,
-    instructions: instructions ? (en ? `Before your visit: ${instructions}` : instructions) : "",
+    instructions,
     consent_note: ctx.consentUnsigned
       ? en
         ? `Please sign your consent form before the visit: ${myLink}`

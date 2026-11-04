@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { CalendarPlus, FileSignature, Layers, LogOut } from "lucide-react";
+import { CalendarPlus, FileSignature, Layers, LogOut, Video } from "lucide-react";
 import {
   portalCancelAction,
   portalMoveAction,
@@ -18,7 +18,7 @@ import { FormError, FormSuccess } from "@/components/clinic/form-message";
 import { SignaturePad, type SignaturePadHandle } from "@/components/clinic/signature-pad";
 import { riyadhParts, todayRiyadh } from "@/components/clinic/time";
 import { ConsentReason } from "@/components/clinic/consent-reason";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Locale } from "@/i18n/config";
@@ -285,6 +285,16 @@ function AppointmentCard({
         </div>
         <StatusBadge status={a.status} label={ts(a.status)} />
       </div>
+      {!muted && a.videoPath && (
+        <Link
+          href={a.videoPath}
+          className={buttonVariants({ size: "sm", className: "self-start" })}
+          data-testid="portal-video"
+        >
+          <Video />
+          {t("joinVideo")}
+        </Link>
+      )}
       <FormSuccess message={msg} />
       <FormError message={error} />
       {!muted && a.canChange && mode === "none" && (
