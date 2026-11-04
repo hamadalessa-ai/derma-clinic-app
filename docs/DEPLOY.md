@@ -481,7 +481,9 @@ Try _"عندي احمرار بعد الليزر"_: it hands the chat to the team
 
 - In the **inbox**, every chat shows _"AI answering"_ or _"Staff took over"_. **Take over (pause AI)** stops
   the AI in that chat; **Let the AI answer** turns it back on. Replying yourself also pauses it.
-- When the AI hands a chat over, it stays quiet until someone presses **Mark handled**.
+- When the AI hands a medical question over, the chat stays under **Needs reply** until someone answers or
+  presses **Mark handled**. Meanwhile the AI still helps the patient with other things (booking, questions),
+  never with that medical topic.
 - Every AI message is labelled "AI receptionist", and every booking, cancellation, move and hand-off is
   in the audit log.
 - If the AI can't answer (no credit, the service is down, the daily limit), messages go to the inbox

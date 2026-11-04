@@ -389,7 +389,7 @@ describe("clinic info", () => {
 // ─── When the AI stays quiet ────────────────────────────────────────────────
 
 describe("hand-off and staying quiet", () => {
-  it("hands a medical question to staff, then stays quiet until they handle it", async () => {
+  it("hands a medical question to staff; then helps with other things, chat still flagged", async () => {
     const phone = "0590007735";
     await clearChat(phone);
     const turn = scripted([
@@ -402,12 +402,18 @@ describe("hand-off and staying quiet", () => {
     expect((await convoOf(phone)).needsReply).toBe(true);
     expect(await outgoing(phone, "ai_reply")).not.toHaveLength(0);
 
-    // The chat waits for staff: the AI is not called again.
-    const silent = scripted([]);
-    expect(await write(phone, "؟", silent.client)).toEqual([
-      expect.objectContaining({ outcome: "stored" }),
+    // A non-medical request next (live: "ابغى حجز بوتكس يوم الاثنين"): the AI still answers,
+    // told to keep off the handed-off topic, and the chat stays flagged for the team.
+    const next = scripted([
+      (req) => {
+        expect(req.system).toContain("This chat is waiting for the clinic team");
+        return say("أكيد، أي فرع يناسبك؟");
+      },
     ]);
-    expect(silent.calls).toHaveLength(0);
+    expect(await write(phone, "ابغى حجز بوتكس يوم الاثنين", next.client)).toEqual([
+      expect.objectContaining({ outcome: "ai_replied" }),
+    ]);
+    expect(next.calls).toHaveLength(1);
     expect((await convoOf(phone)).needsReply).toBe(true);
   });
 
