@@ -123,6 +123,20 @@ export function demoSql(): string {
       })),
     ),
   );
+  // One-off hours changes: Dr. Lina at a conference one Tuesday (day off).
+  out.push(
+    insert("schedule_exceptions", [
+      {
+        id: ref("schedule_exception", "lina-conference"),
+        tenant_id: tenant,
+        member_id: ref("member", "derma-dr-lina"),
+        day: "2027-03-16",
+        kind: "off",
+        note: "مؤتمر",
+        created_by: "usr_derma-admin",
+      },
+    ]),
+  );
 
   // Appointments (the reservation triggers check there is no overlap).
   const week = generateDemoWeek();
@@ -363,6 +377,23 @@ export function demoSql(): string {
         ends_at: at(0, "17:00"),
         reason: "اجتماع",
         demo_day_index: 0,
+        created_by: "usr_lamsa-admin",
+      },
+    ]),
+  );
+  // Lamsa: an extra Friday evening clinic.
+  out.push(
+    insert("schedule_exceptions", [
+      {
+        id: lref("schedule_exception", "mona-friday"),
+        tenant_id: lamsa,
+        member_id: lref("member", "lamsa-dr-mona"),
+        day: "2027-03-19",
+        kind: "hours",
+        branch_id: lref("branch", "dammam"),
+        start_time: "16:00",
+        end_time: "20:00",
+        note: "عيادة مسائية إضافية",
         created_by: "usr_lamsa-admin",
       },
     ]),
