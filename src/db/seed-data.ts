@@ -830,22 +830,99 @@ export const ONLINE_SETTINGS: Record<
 export const AI_RECEPTIONIST: Record<string, boolean> = { derma: true, lamsa: false };
 
 /**
- * Clinic website texts (Settings → Website). Derma: a CONCEPT for the pitch — no real doctors,
- * reviews or contact numbers (the clinic adds its own). Only the opening year is public.
+ * Website texts (Settings → Website). Derma: wording, specialties, contacts and social links
+ * taken from the clinic's own public website (dermaclinics.net) for the pitch demo. It lists no
+ * doctors, accreditations, statistics or reviews, so none are added here.
  */
+const I = (ar: string, en: string) => ({ ar, en });
 export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
   derma: {
-    headlineAr: "بشرة صحية بثقة، بإشراف أطباء مختصين",
-    headlineEn: "Healthy, confident skin, in specialist hands",
+    headlineAr: "وجهتك المتكاملة للجلدية وجراحة التجميل وزراعة الشعر وطب الأسنان",
+    headlineEn:
+      "Your complete destination for dermatology, plastic surgery, hair transplant & dental care",
     taglineAr:
-      "الجلدية والتجميل في الرياض وجدة. احجز موعدك في دقيقة، أو استشر طبيبك عبر الفيديو من منزلك.",
+      "منذ عام 1996 نقدّم رعاية مبنية على الدليل العلمي بأيدي أطباء استشاريين وأخصائيين، بخطة علاج مخصّصة لكل مريض ونتائج طبيعية تدوم.",
     taglineEn:
-      "Dermatology and aesthetics in Riyadh and Jeddah. Book in a minute, or see your doctor by video from home.",
+      "Since 1996, evidence-based care from specialist physicians and consultants — a personalised plan for every patient, and natural-looking, long-lasting results.",
     aboutAr:
-      "منذ عام 1996 نقدّم رعاية جلدية وتجميلية مبنية على الدليل العلمي، بخطة واضحة لكل مريض ومتابعة بعد كل جلسة.",
+      "عيادات ديرما وجهة رائدة في المملكة العربية السعودية للجلدية والتجميل وجراحة التجميل وزراعة الشعر وطب الأسنان. تبدأ رحلة كل مريض باستشارة شخصية، ونضع سلامتك وراحتك أولًا باستخدام أحدث التقنيات الطبية.",
     aboutEn:
-      "Since 1996 we have offered evidence-based dermatology and aesthetic care, with a clear plan for every patient and follow-up after every session.",
+      "Derma Clinics is a leading destination in Saudi Arabia for dermatology, aesthetic medicine, plastic surgery, hair transplantation and dental care. Every patient starts with a personalised consultation, and your safety and comfort come first, with the latest medical technologies.",
     since: 1996,
+    phone: "9200 33055",
+    whatsapp: "+966550883080",
+    instagram: "dermaclinics",
+    x: "dermaclinics",
+    tiktok: "derma_clinics",
+    specialties: [
+      {
+        key: "skin",
+        nameAr: "الجلدية والتجميل",
+        nameEn: "Dermatology & Aesthetic Medicine",
+        textAr: "علاجات متقدمة لبشرة صحية ونضرة، بحلول مبنية على الدليل العلمي ونتائج طبيعية تدوم.",
+        textEn:
+          "Advanced treatments for healthy, radiant skin — evidence-based solutions for natural-looking, long-lasting results.",
+        items: [
+          I("علاجات الليزر", "Laser treatments"),
+          I("بوتوكس", "Botox"),
+          I("فيلر", "Dermal fillers"),
+          I("علاج حب الشباب", "Acne treatment"),
+          I("علاج التصبغات", "Pigmentation treatment"),
+        ],
+        bookable: true,
+      },
+      {
+        key: "hair",
+        nameAr: "زراعة الشعر واستعادته",
+        nameEn: "Hair Restoration & Transplantation",
+        textAr: "استعد ثقتك بحلول متقدمة لاستعادة الشعر وزراعته، لنتائج أكثف وتدوم.",
+        textEn:
+          "Restore your confidence with advanced hair restoration and transplant solutions, for fuller, lasting results.",
+        items: [
+          I("استشارة طبيب استشاري", "Consultant consultation"),
+          I(
+            "زراعة الشعر بتقنية الاقتطاف (FUE): فروة الرأس، خط الشعر، اللحية، الشارب، الحواجب، الندبات، السوالف",
+            "FUE transplant: scalp, hairline, beard, moustache, eyebrows, scars, sideburns",
+          ),
+          I("البلازما للشعر (PRP)", "Hair plasma (PRP / regenerative)"),
+          I("علاج الإكسوسوم للخلايا", "Exosome cell therapy"),
+          I("الميزوثيرابي", "Mesotherapy"),
+          I("جلسة ليزر لتحفيز نمو الشعر", "Laser hair-growth session"),
+          I("علاج الندبات", "Scar revision"),
+        ],
+      },
+      {
+        key: "plastic",
+        nameAr: "جراحة التجميل",
+        nameEn: "Plastic Surgery",
+        textAr: "إجراءات جراحية مخصّصة لنتائج متوازنة وراقية، بأمان ورعاية شخصية.",
+        textEn:
+          "Personalised surgical procedures for balanced, refined results — safely, with personal care.",
+        items: [
+          I("تجميل الوجه", "Facial contouring"),
+          I("نحت الجسم", "Body contouring"),
+          I("الجراحات الترميمية", "Reconstructive procedures"),
+        ],
+      },
+      {
+        key: "dental",
+        nameAr: "طب الأسنان التجميلي والعام",
+        nameEn: "Cosmetic & General Dentistry",
+        textAr: "رعاية شاملة للأسنان وعلاجات تجميلية لابتسامة صحية وواثقة.",
+        textEn: "Comprehensive dental care and cosmetic treatments for a healthy, confident smile.",
+        items: [
+          I("الفحص والأشعة (PA، OPG، CBCT)", "Examination & imaging (PA, OPG, CBCT)"),
+          I("طب الأسنان الإصلاحي", "Restorative dentistry"),
+          I("علاج لب وجذور الأسنان", "Endodontics"),
+          I("طب وجراحة اللثة", "Periodontics"),
+          I("التركيبات", "Prosthodontics"),
+          I("طب أسنان الأطفال", "Pediatric dentistry"),
+          I("جراحة الفم والوجه والفكين", "Oral & maxillofacial surgery"),
+          I("زراعة الأسنان", "Dental implants"),
+          I("تقويم الأسنان", "Orthodontics"),
+        ],
+      },
+    ],
   },
 };
 

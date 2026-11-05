@@ -65,6 +65,20 @@
   --status-blocked: #eef2f1;
   --status-blocked-foreground: #5b6866;
 
+  /* Clinic website (public, editorial): ivory and white, slate text, champagne hairlines. */
+  --site-ivory: #f8f6f2;
+  --site-mist: #f2f4f4;
+  --site-ink: #14211f;
+  --site-slate: #4b5856;
+  --site-subtle: #7a8684;
+  --site-line: #e7e2d9;
+  --site-champagne: #b89a6a;
+  --site-champagne-ink: #7d5e36;
+  --site-champagne-soft: #f4ede1;
+  /* Website headings: Cormorant Garamond for Latin, Noto Naskh Arabic for Arabic. */
+  --site-display: var(--font-cormorant), var(--font-naskh), ui-serif, Georgia, serif;
+  --shadow-float: 0 30px 60px -24px rgb(20 33 31 / 0.28), 0 2px 6px rgb(20 33 31 / 0.06);
+
   --shadow-card: 0 1px 2px rgb(21 32 30 / 0.06), 0 1px 1px rgb(21 32 30 / 0.04);
   --shadow-raised: 0 8px 24px -6px rgb(21 32 30 / 0.16);
   --shadow-overlay: 0 24px 48px -12px rgb(21 32 30 / 0.28);
@@ -84,6 +98,16 @@
   --primary: var(--brand);
   --primary-foreground: var(--brand-foreground);
   --ring: var(--brand);
+  /* Website call to action: the clinic colour taken deep, for high contrast on ivory. */
+  --site-cta: color-mix(in srgb, var(--brand) 52%, #071514);
+  /* Photo placeholders: a soft wash of the clinic colour into champagne. */
+  --site-photo-from: color-mix(in srgb, var(--brand) 24%, #f8f6f2);
+  --site-photo-to: #e9dcc6;
+  --site-cta-hover: color-mix(in srgb, var(--brand) 68%, #071514);
+}
+
+html[lang="ar"] {
+  --site-display: var(--font-naskh), var(--font-cormorant), ui-serif, serif;
 }
 
 @theme inline {
@@ -144,6 +168,20 @@
   --color-status-cancelled-foreground: var(--status-cancelled-foreground);
   --color-status-blocked: var(--status-blocked);
   --color-status-blocked-foreground: var(--status-blocked-foreground);
+  --color-site-ivory: var(--site-ivory);
+  --color-site-mist: var(--site-mist);
+  --color-site-ink: var(--site-ink);
+  --color-site-slate: var(--site-slate);
+  --color-site-subtle: var(--site-subtle);
+  --color-site-line: var(--site-line);
+  --color-site-champagne: var(--site-champagne);
+  --color-site-champagne-ink: var(--site-champagne-ink);
+  --color-site-champagne-soft: var(--site-champagne-soft);
+  --color-site-cta: var(--site-cta);
+  --color-site-photo-from: var(--site-photo-from);
+  --color-site-photo-to: var(--site-photo-to);
+  --color-site-cta-hover: var(--site-cta-hover);
+  --shadow-float: var(--shadow-float);
   --shadow-card: var(--shadow-card);
   --shadow-raised: var(--shadow-raised);
   --shadow-overlay: var(--shadow-overlay);
@@ -155,6 +193,8 @@
   --radius-2xl: 16px;
   --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  /* Website headings: Cormorant Garamond (Latin) + Noto Naskh Arabic (Arabic). */
+  --font-display: var(--site-display);
 }
 
 @layer base {

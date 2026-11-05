@@ -1,0 +1,77 @@
+# Takes full-page screenshots of the public pages (clinic website, booking) on phone and desktop,
+# in Arabic and English, for design review. Run it from Actions → "Screenshots" on any branch;
+# the pictures are attached to the run as "screenshots".
+name: Screenshots
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - "src/components/site/**"
+      - "src/app/page.tsx"
+      - "src/app/book/**"
+      - "src/app/globals.css"
+      - "scripts/screenshots.mjs"
+
+permissions:
+  contents: write # to publish the pictures on the "review-screenshots" branch
+
+jobs:
+  shoot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: localdev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL_ADMIN: postgresql://postgres:localdev@127.0.0.1:5432/postgres
+      DATABASE_URL: postgresql://clinic_app:localdev-clinic-app@127.0.0.1:5432/derma_dev
+      BETTER_AUTH_SECRET: screenshots-only-not-a-real-secret-0123456789
+      BETTER_AUTH_URL: http://localhost:3000
+      APP_ROOT_DOMAIN: localhost
+      DEMO_DEFAULT_CLINIC: derma
+      MESSAGE_DEMO_MODE: "on"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:local
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Start the app and take screenshots
+        run: |
+          pnpm start > server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/login > /dev/null && break; sleep 1; done
+          node scripts/screenshots.mjs
+      - name: Publish the pictures on the review-screenshots branch
+        run: |
+          src="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          mkdir -p /tmp/pub && cp screenshots/*.png /tmp/pub/
+          cd /tmp/pub
+          git init -q -b review-screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Screenshots of $src at ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" review-screenshots
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: |
+            screenshots/
+            server.log
+          retention-days: 7

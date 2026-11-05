@@ -24,6 +24,7 @@ describe("clinic website", () => {
     expect(site.doctors.length).toBeGreaterThan(0);
     expect(site.branches.map((b) => b.cityEn)).toEqual(expect.arrayContaining(["Riyadh"]));
     expect(site.site.since).toBe(1996);
+    expect(site.site.specialties?.map((x) => x.key)).toEqual(["skin", "hair", "plastic", "dental"]);
     // Specialties not booked online appear as "ask us".
     expect(site.others.length).toBeGreaterThan(0);
     // Only public fields leave the loader: no patient data of any kind.
