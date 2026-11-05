@@ -21,7 +21,7 @@ import {
   rescheduleOptions,
 } from "@/lib/booking/engine";
 import { doctorNames } from "@/lib/booking/doctor-names";
-import { signConsentByPatient } from "@/lib/consents/consents";
+import { signConsentByLink, signConsentByPatient } from "@/lib/consents/consents";
 import { isDay } from "@/lib/booking/time";
 import { parse, publicAction, PublicError } from "@/lib/actions";
 import { findOrCreateOnlinePatient } from "@/lib/patients/queries";
@@ -40,6 +40,7 @@ import { clientIp } from "@/lib/request-info";
 import { checkCode, sendCode } from "@/lib/verify/codes";
 import { videoProvider } from "@/lib/video/provider";
 import { patientJoin } from "@/lib/video/visit";
+import { parseConsentToken } from "@/lib/video/link";
 
 const uuid = z.string().uuid();
 const gender = z.enum(["male", "female"]);
@@ -414,5 +415,37 @@ export async function joinVideoAsPatientAction(input: { token: string }) {
     const v = parse(z.object({ token: z.string().min(40).max(80) }), input);
     const lang = (await getLocale()) === "en" ? "en" : "ar";
     return patientJoin(tenant.id, v.token, { provider: videoProvider(), lang });
+  });
+}
+
+/** Signs this visit's consent from the signed WhatsApp link (/sign/<token>): no code needed. */
+export async function signConsentByLinkAction(input: {
+  token: string;
+  signerName: string;
+  signatureDataUrl: string;
+}) {
+  return publicAction(async (tenant) => {
+    const v = parse(
+      z.object({
+        token: z.string().min(40).max(80),
+        signerName: z.string().trim().min(2).max(120),
+        signatureDataUrl: z.string().max(3_000_000).regex(PNG_DATA_URL),
+      }),
+      input,
+    );
+    const appointmentId = parseConsentToken(tenant.id, v.token);
+    if (!appointmentId) throw new PublicError("not_found");
+    const png = Buffer.from(v.signatureDataUrl.match(PNG_DATA_URL)![1], "base64");
+    const userAgent = (await headers()).get("user-agent");
+    const c = await withTenant(tenant.id, (tx) =>
+      signConsentByLink(tx, {
+        tenantId: tenant.id,
+        appointmentId,
+        signerName: v.signerName,
+        signaturePng: png,
+        userAgent,
+      }),
+    );
+    return { id: c.id };
   });
 }

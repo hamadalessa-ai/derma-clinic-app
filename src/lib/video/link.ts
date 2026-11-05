@@ -50,3 +50,33 @@ export function parseVideoToken(
 export function videoRoomName(tenantId: string, appointmentId: string, env: Env = process.env) {
   return `vc-${mac("video-room", tenantId, appointmentId, env).digest("hex").slice(0, 24)}`;
 }
+
+// ─── Consent links: /sign/<appointmentId>.<signature> ───────────────────────
+// Opens the ONE consent this visit needs, ready to sign: no code, no patient page sign-in.
+
+export function consentToken(tenantId: string, appointmentId: string, env: Env = process.env) {
+  const sig = mac("consent-link", tenantId, appointmentId, env).digest("base64url").slice(0, 22);
+  return `${appointmentId}.${sig}`;
+}
+
+export function consentSignUrl(
+  baseUrl: string,
+  tenantId: string,
+  appointmentId: string,
+  env: Env = process.env,
+) {
+  return `${baseUrl}/sign/${consentToken(tenantId, appointmentId, env)}`;
+}
+
+export function parseConsentToken(
+  tenantId: string,
+  token: string,
+  env: Env = process.env,
+): string | null {
+  const m = /^([0-9a-f-]{36})\.([A-Za-z0-9_-]{22})$/.exec(token.trim());
+  if (!m) return null;
+  const expected = Buffer.from(consentToken(tenantId, m[1], env).split(".")[1]);
+  const given = Buffer.from(m[2]);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  return m[1];
+}

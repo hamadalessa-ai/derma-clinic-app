@@ -31,7 +31,12 @@ export type PatientConsent = typeof patientConsents.$inferSelect;
 
 export class ConsentError extends Error {
   constructor(
-    public code: "not_found" | "not_current" | "bad_signature" | "signer_required" | "empty_text",
+    public code: | "not_found"
+      | "not_current"
+      | "bad_signature"
+      | "signer_required"
+      | "empty_text"
+      | "already_signed",
   ) {
     super(code);
     this.name = "ConsentError";
@@ -201,6 +206,51 @@ export async function signConsentByPatient(
     {
       ...input,
       signerRelation: input.patientId === input.sessionPatientId ? "self" : "guardian",
+    },
+  );
+}
+
+/**
+ * From a signed WhatsApp link (/sign/<token>): the consent THIS visit needs, signed by the
+ * patient (or their guardian, for a child's file). Only while the visit is still ahead or today,
+ * only when a signature is actually needed. No clinic witness; recorded as signed by the patient.
+ */
+export async function signConsentByLink(
+  tx: TenantTx,
+  input: {
+    tenantId: string;
+    appointmentId: string;
+    signerName: string;
+    signaturePng: Buffer;
+    userAgent?: string | null;
+  },
+) {
+  const [appt] = await tx
+    .select()
+    .from(appointments)
+    .where(eq(appointments.id, input.appointmentId))
+    .for("update");
+  if (!appt || !["pending", "booked", "confirmed", "arrived"].includes(appt.status)) {
+    throw new ConsentError("not_found");
+  }
+  const template = await missingConsent(tx, appt);
+  if (!template) throw new ConsentError("already_signed");
+  const [patient] = await tx
+    .select({ guardianId: patients.guardianId })
+    .from(patients)
+    .where(eq(patients.id, appt.patientId));
+  return storeSignedConsent(
+    tx,
+    input.tenantId,
+    { witnessUserId: null, viaPatient: appt.patientId },
+    {
+      patientId: appt.patientId,
+      templateId: template.id,
+      appointmentId: appt.id,
+      signerName: input.signerName,
+      signerRelation: patient?.guardianId ? "guardian" : "self",
+      signaturePng: input.signaturePng,
+      userAgent: input.userAgent,
     },
   );
 }

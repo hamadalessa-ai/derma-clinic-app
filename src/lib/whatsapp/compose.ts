@@ -9,7 +9,7 @@ import type { TenantTx } from "@/db/tenant";
 import { getSettings } from "@/lib/booking/engine";
 import { consentStatusFor } from "@/lib/consents/consents";
 import { formatGregorian, formatTime } from "@/lib/format";
-import { videoJoinUrl } from "@/lib/video/link";
+import { consentSignUrl, videoJoinUrl } from "@/lib/video/link";
 
 export type Lang = "ar" | "en";
 
@@ -62,6 +62,7 @@ export function appointmentVars(
   const en = lang === "en";
   const serviceName = en ? ctx.service.nameEn : ctx.service.nameAr;
   const myLink = `${baseUrl}/my`;
+  const signLink = consentSignUrl(baseUrl, ctx.appointment.tenantId, ctx.appointment.id);
   const preVisit = en ? ctx.service.preVisitEn : ctx.service.preVisitAr;
   // Video consultation: the join link takes the place of the map, and leads the instructions.
   const video = ctx.service.isVirtual
@@ -92,10 +93,11 @@ export function appointmentVars(
     my_link: myLink,
     booking_link: `${baseUrl}/book`,
     instructions,
+    // A signed link straight to this visit's consent (no code, no sign-in).
     consent_note: ctx.consentUnsigned
       ? en
-        ? `Please sign your consent form before the visit: ${myLink}`
-        : `فضلًا وقّع نموذج الموافقة قبل الزيارة: ${myLink}`
+        ? `Please sign your consent form before the visit: ${signLink}`
+        : `فضلًا وقّع نموذج الموافقة قبل الزيارة: ${signLink}`
       : "",
   };
 }

@@ -71,6 +71,9 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   Public pages (`/book`, `/my`) use `src/app/actions/patient.ts` + `publicAction()`: a verified mobile code
   or a patient session (`src/lib/portal/session.ts`) decides what the visitor may do; patient reads run with
   role `patient` + `app.patient_id` (RLS patient walls: own + family rows only, never notes, no writes).
+- Consent links (`/sign/<appointmentId>.<sig>`, `consentToken` in `src/lib/video/link.ts`): WhatsApp messages link
+  straight to the consent THIS visit needs; `signConsentByLink` records it as the patient's (no code). Only while
+  the visit is open and a signature is still needed.
 - Codes are shown on screen ONLY for `is_demo` clinics with `MESSAGE_DEMO_MODE=on` (`src/lib/messaging/sender.ts`).
 - WhatsApp: every message goes through `src/lib/whatsapp/send.ts` (dedupe key claimed before sending →
   at most once; consent rules; demo simulator / live provider chosen by settings in `config.ts`).
