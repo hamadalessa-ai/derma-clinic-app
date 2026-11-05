@@ -1,40 +1,21 @@
-// TEMPORARY (review branch only): render dermaclinics.net with JavaScript (as a visitor sees it)
-// to collect its text, doctors and image addresses for the concept website.
-import { mkdirSync, writeFileSync } from "node:fs";
+// TEMPORARY (review branch only): Derma's doctor cards and partner logos at full size, to read them.
+import { mkdirSync } from "node:fs";
 import { chromium } from "@playwright/test";
-const PAGES = [
-  "en", "ar", "en/dermatology-aesthetic-medicin", "ar/dermatology-aesthetic-medicin",
-  "en/dentistry", "ar/dentistry", "en/plastic-surgery", "ar/plastic-surgery",
-  "en/ab043d79", "en/dental-care", "en/Hair%20Transplant", "en/8a0f3527",
-];
+const BASE = "https://img.rekaz.io/cdn-cgi/image/quality=90,fit=scale-down,width=900,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/";
+const DOCS = ["3a226e09-ab88-3c76-e47d-841242a0c473abc77bf3-09f5-49fb-a9db-d7ded0850a5c-src_ar..jpg?v=0", "3a226e09-ab88-3c76-e47d-841242a0c4733e723497-ce2f-4f7e-a0c0-f786caa34874-src_ar..jpg?v=0", "3a226e09-ab88-3c76-e47d-841242a0c4734101fa9b-4c01-42bb-af61-f105185411d2-src_ar..jpg?v=0", "3a226e29-4da4-4466-26c6-b6c5d3307fa61910777e-978f-4b10-9118-10602c859395-src_ar..jpg?v=0", "3a226e09-ab88-3c76-e47d-841242a0c473406a0f4f-888f-4955-8711-19b88a202489-src_ar..jpg?v=0", "3a226e09-ab88-3c76-e47d-841242a0c473fb540655-2625-453c-ad35-40a731701e9e-src_ar..jpg?v=0", "3a226e09-ab88-3c76-e47d-841242a0c473b72c238d-b0b6-4686-845c-ec873f6b61e4-src_ar..jpg?v=0", "3a226e09-ab88-3c76-e47d-841242a0c473890b7173-62e3-4717-8616-e08280b3ec2f-src_ar..jpg?v=0", "3a226e09-ab88-3c76-e47d-841242a0c473f9385a19-dbe1-420e-a3ef-f45885512319-src_ar..jpg?v=0", "3a226e29-4da4-4466-26c6-b6c5d3307fa6e38a06a2-c282-4aef-926a-8b118a0d6499-src_ar..jpg?v=0", "3a226dfc-b35f-f29a-1eb6-8fb2c25b2c3412a8a97e-4b3a-4af6-91f9-7986bee39d9e-src_ar..jpg?v=0", "3a226dfc-b35f-f29a-1eb6-8fb2c25b2c34ce1d1303-7a5d-44b9-8675-fb0c319cc022-src_ar..jpg?v=0", "3a226dfc-b35f-f29a-1eb6-8fb2c25b2c3428dffe43-0457-447e-9ef0-ec5f88c5ebfe-src_ar..jpg?v=0", "3a226dfc-b35f-f29a-1eb6-8fb2c25b2c34e3255fd9-a2e8-460b-8560-23bfa4370b50-src_ar..jpg?v=0", "3a226dfc-b35f-f29a-1eb6-8fb2c25b2c34e87b2355-c5d5-4e09-ba2b-d3fb0af45ea3-src_ar..jpg", "3a226e17-3a8c-59e7-5957-8066f3d292568e64403f-f37e-4a45-884b-964fe021a739-src_ar..jpg?v=0", "3a226e17-3a8c-59e7-5957-8066f3d292565da0d8f1-d37a-41c1-9c43-605d01bff1a7-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c506cf11e29-6e08-49ac-bf49-e4c379c30fb7-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c5025b28198-b73a-4435-98b9-436861dbf4a2-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c505549794f-2549-4e4b-8c98-20993d9ce8cf-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c50619f625e-7bc3-4e0e-bd2d-ada337f02050-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c50c08fc530-b888-4247-a1be-9557232439fb-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c503c259c08-5f77-4ba9-bf0d-2bfe1c831d56-src_ar..jpg?v=0", "3a226e19-97ef-6817-c4df-91d10c9be369369d8c45-f7d0-42ec-a7be-3e4978420bfe-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c50bc4edbe2-f168-4f43-bd75-5369239e21c5-src_ar..jpg?v=0", "3a226d6f-a4de-37d4-105d-18b169df9c5096b55afa-d9d1-4391-a961-978e5186ae3e-src_ar..jpg?v=0", "3a226e19-97ef-6817-c4df-91d10c9be369394998f9-9545-45b7-b7d5-15810ce6b05e-src_ar..jpg?v=0"];
+const LOGOS = ["3a226d27-aa85-3c98-b407-0db3c07238c4ea540a1e-095b-46c7-b303-62f40d101de2-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c42515bf2b-7a9f-4585-b681-3e9c575ce89e-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c4e44eb202-7c78-49ea-a312-056fc0d0157f-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c400ff37d3-fb59-4574-9158-3ab46c89f7c9-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c44f807def-bc77-4855-b9f8-955cb6451145-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c44635fc00-b278-4d57-a97e-ea429f6fca50-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c4a643105c-c059-4f1a-93b1-8ae159e59528-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c4397033d3-b1cc-4144-8c9c-18ceb07cee47-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c4918d7cfb-4a9e-45da-92ae-a7e0d358cff4-src_ar..png?v=0", "3a226d27-aa85-3c98-b407-0db3c07238c4160485d4-c02c-4077-8260-57bfab66633e-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e1ed770fd0-2f21-4628-92b0-41024ce2d5f2-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e12661a4f7-b999-407e-b724-26df9bb95c00-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e1daf3e3c1-1ee1-43fe-a9a8-0a23350c12d8-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e1dbc5b556-1557-43e9-acc4-5148208e815b-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e19b666fa7-a04b-4a84-86fc-0fe53df2df46-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e1871a4981-fb57-4b0e-b37a-a0b037745026-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e1ce1124af-0b83-459f-b82d-2e0348e99d69-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e15667486e-0887-4dd7-a42c-6b76a840746d-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e1c71d025c-cc0e-493c-b1f3-aae42ed8b316-src_ar..png?v=0", "3a226d45-44bf-a6eb-7d24-987bca25b8e178a5b0b3-308b-4a3d-8e2d-00754ab6e941-src_ar..png?v=0"];
 mkdirSync("screenshots", { recursive: true });
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
-const out = [];
-for (const p of PAGES) {
-  try {
-    await page.goto(`https://dermaclinics.net/${p}`, { waitUntil: "networkidle", timeout: 60000 });
-    await page.evaluate(async () => {
-      for (let y = 0; y < document.body.scrollHeight; y += 500) {
-        window.scrollTo(0, y);
-        await new Promise((r) => setTimeout(r, 250));
-      }
-    });
-    await page.waitForTimeout(1500);
-    const name = p.replace(/[^a-z0-9]+/gi, "-");
-    await page.screenshot({ path: `screenshots/live-${name}.png`, fullPage: true });
-    const info = await page.evaluate(() => ({
-      text: document.body.innerText,
-      images: [...document.querySelectorAll("img")].map((i) => `${i.alt} | ${i.currentSrc || i.src}`),
-      bg: [...document.querySelectorAll("*")]
-        .map((e) => getComputedStyle(e).backgroundImage)
-        .filter((b) => b && b !== "none" && b.includes("url")),
-      links: [...document.querySelectorAll("a")].map((a) => `${a.innerText.trim()} | ${a.href}`),
-    }));
-    out.push(`===== ${p}\n--- TEXT\n${info.text}\n--- IMAGES\n${info.images.join("\n")}\n--- BACKGROUNDS\n${[...new Set(info.bg)].join("\n")}\n--- LINKS\n${info.links.join("\n")}\n`);
-  } catch (e) {
-    out.push(`===== ${p}\nERROR ${e}\n`);
-  }
+const page = await browser.newPage({ viewport: { width: 1800, height: 900 } });
+const sheet = (files, w) => `<body style="margin:0;background:#fff;display:flex;flex-wrap:wrap;gap:8px;font:16px sans-serif">${files
+  .map((f, i) => `<div style="width:${w}px"><div>#${i + 1}</div><img src="${BASE}${f}" style="width:${w}px;display:block"></div>`)
+  .join("")}</body>`;
+for (let i = 0; i < DOCS.length; i += 4) {
+  await page.setContent(sheet(DOCS.slice(i, i + 4), 440));
+  await page.waitForLoadState("networkidle");
+  await page.screenshot({ path: `screenshots/doctors-${String(i / 4 + 1).padStart(2, "0")}.png`, fullPage: true });
 }
-writeFileSync("screenshots/live-site.txt", out.join("\n"));
+await page.setContent(sheet(LOGOS, 340));
+await page.waitForLoadState("networkidle");
+await page.screenshot({ path: "screenshots/partners.png", fullPage: true });
 await browser.close();
