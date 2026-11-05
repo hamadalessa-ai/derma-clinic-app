@@ -14,7 +14,7 @@ on:
       - "scripts/screenshots.mjs"
 
 permissions:
-  contents: read
+  contents: write # to publish the pictures on the "review-screenshots" branch
 
 jobs:
   shoot:
@@ -56,6 +56,17 @@ jobs:
           pnpm start > server.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:3000/login > /dev/null && break; sleep 1; done
           node scripts/screenshots.mjs
+      - name: Publish the pictures on the review-screenshots branch
+        run: |
+          src="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          mkdir -p /tmp/pub && cp screenshots/*.png /tmp/pub/
+          cd /tmp/pub
+          git init -q -b review-screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Screenshots of $src at ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" review-screenshots
       - if: always()
         uses: actions/upload-artifact@v4
         with:
