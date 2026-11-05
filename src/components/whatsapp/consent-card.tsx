@@ -42,7 +42,7 @@ export function WhatsAppConsentCard({
     >
       <div className="flex items-start gap-2">
         {agreed ? (
-          <BellRing className="text-brand mt-0.5 size-4 shrink-0" />
+          <BellRing className="text-brand-strong mt-0.5 size-4 shrink-0" />
         ) : (
           <BellOff className="text-muted-foreground mt-0.5 size-4 shrink-0" />
         )}
@@ -101,7 +101,7 @@ export function WhatsAppConsentCard({
       {conversationId && canEdit && (
         <Link
           href={`/whatsapp?f=all&c=${conversationId}`}
-          className="text-brand inline-flex items-center gap-1 self-start underline"
+          className="text-brand-strong inline-flex items-center gap-1 self-start underline"
         >
           <MessageCircle className="size-4" />
           {t("openChat")}

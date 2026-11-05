@@ -31,7 +31,7 @@ export function MobileNav({ items }: { items: Item[] }) {
   const tab = (active: boolean) =>
     cn(
       "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] leading-tight font-medium",
-      active ? "text-brand" : "text-muted-foreground",
+      active ? "text-brand-strong" : "text-muted-foreground",
     );
 
   return (
@@ -55,7 +55,7 @@ export function MobileNav({ items }: { items: Item[] }) {
                 <span
                   className={cn(
                     "flex h-7 w-12 items-center justify-center rounded-full",
-                    active && "bg-accent",
+                    active && "bg-brand-soft",
                   )}
                 >
                   <Icon className="size-5" />

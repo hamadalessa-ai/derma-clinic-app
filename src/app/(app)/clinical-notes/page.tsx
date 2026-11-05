@@ -32,7 +32,7 @@ export default async function ClinicalNotesPage() {
     <li key={r.note.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
       <Link
         href={`/patients/${r.patient.id}?tab=notes`}
-        className="hover:text-brand font-medium hover:underline"
+        className="hover:text-brand-strong font-medium hover:underline"
       >
         {pick(locale, r.patient.fullNameAr, r.patient.fullNameEn)}{" "}
         <span className="text-muted-foreground text-xs" dir="ltr">

@@ -29,7 +29,7 @@ export default async function WhatsAppSettingsPage() {
   return (
     <div className="flex max-w-4xl flex-col gap-4">
       <PageHeader title={t("settingsTitle")} />
-      <Link href="/settings/whatsapp/status" className="text-brand self-start text-sm underline">
+      <Link href="/settings/whatsapp/status" className="text-brand-strong self-start text-sm underline">
         {t("statusLink")}
       </Link>
       <Card>

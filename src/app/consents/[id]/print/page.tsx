@@ -34,8 +34,8 @@ export default async function ConsentPrintPage({ params }: { params: Promise<{ i
         </div>
 
         <header className="flex items-center justify-between border-b pb-3">
-          <div className="text-brand text-lg font-bold">{r.tenant.nameAr}</div>
-          <div className="text-brand text-lg font-bold" dir="ltr">
+          <div className="text-brand-strong text-lg font-bold">{r.tenant.nameAr}</div>
+          <div className="text-brand-strong text-lg font-bold" dir="ltr">
             {r.tenant.nameEn}
           </div>
         </header>

@@ -53,12 +53,12 @@ export default async function VisitPage({ params }: { params: Promise<{ token: s
         <Card>
           <CardContent className="flex flex-col gap-2 pt-4 text-sm">
             <div className="flex items-center gap-2">
-              <Stethoscope className="text-brand size-4 shrink-0" />
+              <Stethoscope className="text-brand-strong size-4 shrink-0" />
               {pick(locale, visit.serviceAr, visit.serviceEn)} ·{" "}
               {pick(locale, visit.doctorAr, visit.doctorEn ?? visit.doctorAr)}
             </div>
             <div className="flex items-center gap-2">
-              <CalendarClock className="text-brand size-4 shrink-0" />
+              <CalendarClock className="text-brand-strong size-4 shrink-0" />
               {when}
             </div>
           </CardContent>

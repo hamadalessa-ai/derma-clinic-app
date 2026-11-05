@@ -45,7 +45,7 @@ export default async function LoginPage() {
             <div className="bg-brand text-brand-foreground mb-2 flex size-12 items-center justify-center rounded-full text-xl font-bold">
               {pick(locale, tenant.nameAr, tenant.nameEn).charAt(0)}
             </div>
-            <CardTitle className="text-brand text-xl">
+            <CardTitle className="text-brand-strong text-xl">
               {pick(locale, tenant.nameAr, tenant.nameEn)}
             </CardTitle>
             <CardDescription>{t("title")}</CardDescription>

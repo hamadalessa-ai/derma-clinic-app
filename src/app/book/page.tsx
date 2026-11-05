@@ -49,7 +49,7 @@ export default async function BookPage() {
         <p className="text-muted-foreground text-xs">{t("privacy")}</p>
         <Link
           href="/my"
-          className="text-brand text-sm font-medium underline-offset-2 hover:underline"
+          className="text-brand-strong text-sm font-medium underline-offset-2 hover:underline"
         >
           {t("myLink")}
         </Link>

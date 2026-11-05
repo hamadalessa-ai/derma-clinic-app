@@ -46,18 +46,26 @@ export function Dialog({
         onClose();
       }}
       className={cn(
-        "bg-card text-card-foreground shadow-card backdrop:bg-foreground/40 max-h-[92vh] overflow-y-auto border p-0",
+        "bg-card text-card-foreground shadow-overlay backdrop:bg-foreground/35 max-h-[92vh] overflow-y-auto border-0 p-0 backdrop:backdrop-blur-[1px]",
+        // Phones: always a bottom sheet (easy to reach with a thumb). Larger screens: centred.
+        "animate-sheet-in mx-0 mt-auto mb-0 w-full max-w-none rounded-t-2xl pb-[env(safe-area-inset-bottom)]",
         placement === "bottom"
-          ? "mx-0 mt-auto mb-0 w-full max-w-none rounded-t-2xl pb-[env(safe-area-inset-bottom)]"
-          : "m-auto w-[min(100vw-1rem,40rem)] rounded-xl",
+          ? ""
+          : "sm:m-auto sm:w-[min(100vw-2rem,40rem)] sm:rounded-2xl sm:pb-0",
         className,
       )}
     >
       {open && (
-        <div className="flex flex-col gap-4 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <Button variant="ghost" size="icon" onClick={onClose} aria-label={closeLabel}>
+            <h2 className="text-[17px] leading-[26px] font-semibold">{title}</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground -me-2 -mt-1"
+              onClick={onClose}
+              aria-label={closeLabel}
+            >
               <X />
             </Button>
           </div>

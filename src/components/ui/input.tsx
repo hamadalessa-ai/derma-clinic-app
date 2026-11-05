@@ -1,14 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+export const fieldClasses =
+  "border-input bg-card placeholder:text-muted-foreground flex w-full rounded-lg border text-[15px] transition-colors focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand/30 aria-invalid:border-destructive disabled:opacity-50";
+
 export function Input({ className, ...props }: React.ComponentProps<"input">) {
-  return (
-    <input
-      className={cn(
-        "border-input bg-card placeholder:text-muted-foreground focus-visible:ring-ring aria-invalid:border-destructive flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <input className={cn(fieldClasses, "h-10 px-3", className)} {...props} />;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState } from "@/components/ui/empty-state";
 import { useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -75,7 +76,9 @@ export function MyDayList({
     <div className="flex flex-col gap-3">
       <FormError message={error} />
       {appointments.length === 0 && (
-        <p className="text-muted-foreground py-8 text-center">{t("empty")}</p>
+        <Card>
+          <EmptyState icon={<CalendarCheck />} title={t("empty")} />
+        </Card>
       )}
       {appointments.map((a) => {
         const n = next(a);

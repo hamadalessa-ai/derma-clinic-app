@@ -209,7 +209,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
     const pendingApproval = done.status === "pending";
     return (
       <div className="bg-card flex flex-col gap-3 rounded-xl border p-5" data-testid="booking-done">
-        <div className="text-brand flex items-center gap-2 text-lg font-semibold">
+        <div className="text-brand-strong flex items-center gap-2 text-lg font-semibold">
           <CheckCircle2 className="size-6" />
           {pendingApproval ? t("pendingTitle") : t("confirmedTitle")}
         </div>
@@ -259,7 +259,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
           <div className="grid gap-2 sm:grid-cols-2">
             <Choice onClick={() => setMode("clinic")} data-testid="mode-clinic">
               <span className="flex items-center gap-2 font-medium">
-                <Building2 className="text-brand size-5" />
+                <Building2 className="text-brand-strong size-5" />
                 {t("modeClinic")}
               </span>
               <span className="text-muted-foreground text-xs">{t("modeClinicHint")}</span>
@@ -274,7 +274,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
               data-testid="mode-video"
             >
               <span className="flex items-center gap-2 font-medium">
-                <Video className="text-brand size-5" />
+                <Video className="text-brand-strong size-5" />
                 {t("modeVideo")}
               </span>
               <span className="text-muted-foreground text-xs">{t("modeVideoHint")}</span>

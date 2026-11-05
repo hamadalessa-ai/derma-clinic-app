@@ -17,7 +17,7 @@ export function StatusBadge({
     <span
       data-status={status}
       className={cn(
-        "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+        "inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium whitespace-nowrap before:size-1.5 before:rounded-full before:bg-current",
         STATUS_CLASSES[status],
         className,
       )}
@@ -54,7 +54,7 @@ export function AlertBadge({
       aria-label={`${label}: ${title}`}
       data-testid="alert-badge"
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold",
+        "inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium",
         warning ? "bg-danger text-danger-foreground" : "bg-warning text-warning-foreground",
       )}
     >
@@ -82,7 +82,7 @@ export function SourceBadge({
       data-source={source}
       title={label}
       aria-label={label}
-      className="bg-brand text-brand-foreground inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold"
+      className="bg-brand-soft text-brand-strong inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium"
     >
       <Icon className="size-3.5" />
       {!compact && <span>{label}</span>}
@@ -104,7 +104,7 @@ export function BalanceBadge({
     <span
       data-testid="balance-badge"
       title={label}
-      className="bg-info text-info-foreground inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold"
+      className="bg-gold text-gold-foreground inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 font-mono text-xs font-medium"
     >
       <Layers className="size-3.5" />
       <span dir="ltr">

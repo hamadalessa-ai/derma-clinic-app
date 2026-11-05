@@ -20,7 +20,7 @@ export function BranchSwitcher({
   if (branches.length <= 1) {
     return (
       <div className="flex items-center gap-2 text-sm">
-        <MapPin className="text-brand size-4" />
+        <MapPin className="text-brand-strong size-4" />
         {branches[0]?.name}
       </div>
     );
@@ -28,7 +28,7 @@ export function BranchSwitcher({
 
   return (
     <label className="flex items-center gap-2 text-sm">
-      <MapPin className="text-brand size-4" />
+      <MapPin className="text-brand-strong size-4" />
       <span className="sr-only">{t("branch")}</span>
       <select
         className="border-input bg-card focus-visible:ring-ring h-9 rounded-md border px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"

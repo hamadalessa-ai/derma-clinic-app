@@ -174,7 +174,7 @@ export default async function WhatsAppInboxPage({
                   </span>
                 )}
                 {p && (
-                  <Link href={`/patients/${p.id}`} className="text-brand text-sm underline">
+                  <Link href={`/patients/${p.id}`} className="text-brand-strong text-sm underline">
                     {t("openProfile")}
                   </Link>
                 )}

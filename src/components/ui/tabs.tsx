@@ -10,7 +10,7 @@ export function LinkTabs({
   active: string;
 }) {
   return (
-    <nav className="flex flex-wrap gap-x-1 border-b" role="tablist">
+    <nav className="flex gap-x-1 overflow-x-auto border-b" role="tablist">
       {tabs.map((t) => (
         <Link
           key={t.key}
@@ -18,9 +18,9 @@ export function LinkTabs({
           role="tab"
           aria-selected={t.key === active}
           className={cn(
-            "-mb-px border-b-2 px-3 py-2 text-sm font-medium whitespace-nowrap",
+            "-mb-px border-b-2 px-3 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors",
             t.key === active
-              ? "border-brand text-brand"
+              ? "border-brand text-brand-strong"
               : "text-muted-foreground hover:text-foreground border-transparent",
           )}
         >

@@ -116,7 +116,7 @@ export function PortalHome({ data }: { data: PortalData }) {
           <h2 className="font-semibold">{t("upcoming")}</h2>
           <Link
             href="/book"
-            className="text-brand inline-flex items-center gap-1 text-sm font-medium"
+            className="text-brand-strong inline-flex items-center gap-1 text-sm font-medium"
           >
             <CalendarPlus className="size-4" />
             {t("bookNew")}
@@ -148,7 +148,7 @@ export function PortalHome({ data }: { data: PortalData }) {
         )}
         {data.packages.map((p) => (
           <div key={p.id} className="bg-card flex items-center gap-3 rounded-xl border p-3 text-sm">
-            <Layers className="text-brand size-5 shrink-0" />
+            <Layers className="text-brand-strong size-5 shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="font-medium">{pick(p.nameAr, p.nameEn)}</div>
               <div className="text-muted-foreground text-xs">
@@ -170,7 +170,7 @@ export function PortalHome({ data }: { data: PortalData }) {
         )}
         {data.signed.map((c) => (
           <div key={c.id} className="bg-card flex items-start gap-3 rounded-xl border p-3 text-sm">
-            <FileSignature className="text-brand mt-0.5 size-5 shrink-0" />
+            <FileSignature className="text-brand-strong mt-0.5 size-5 shrink-0" />
             <div className="min-w-0">
               <div className="font-medium">
                 {pick(c.titleAr, c.titleEn)}{" "}

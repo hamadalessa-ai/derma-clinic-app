@@ -56,7 +56,7 @@ export function Step({
         {done && onChange && (
           <button
             type="button"
-            className="text-brand shrink-0 text-xs font-medium underline-offset-2 hover:underline"
+            className="text-brand-strong shrink-0 text-xs font-medium underline-offset-2 hover:underline"
             onClick={onChange}
           >
             {changeLabel}
