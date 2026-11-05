@@ -406,7 +406,10 @@ export async function ClinicSite({
                 {data.catalog.departments
                   .flatMap((d) => d.services)
                   .map((svc) => (
-                    <li key={svc.id} className="border-site-line border-b first:border-t md:[&:nth-child(2)]:border-t">
+                    <li
+                      key={svc.id}
+                      className="border-site-line border-b first:border-t md:[&:nth-child(2)]:border-t"
+                    >
                       <Link
                         href={`/book?mode=${svc.isVirtual ? "video" : "clinic"}&service=${svc.id}`}
                         className="group flex items-center gap-5 py-6"
@@ -572,8 +575,14 @@ export async function ClinicSite({
                         key={i}
                         className="border-site-line bg-card grid grid-cols-2 gap-1.5 overflow-hidden rounded-3xl border p-1.5"
                       >
-                        <Photo label={t("resultsBefore")} className="aspect-[3/4] rounded-[1.25rem]" />
-                        <Photo label={t("resultsAfter")} className="aspect-[3/4] rounded-[1.25rem]" />
+                        <Photo
+                          label={t("resultsBefore")}
+                          className="aspect-[3/4] rounded-[1.25rem]"
+                        />
+                        <Photo
+                          label={t("resultsAfter")}
+                          className="aspect-[3/4] rounded-[1.25rem]"
+                        />
                       </div>
                     ))}
                   </div>
