@@ -22,6 +22,9 @@ describe("clinic website", () => {
     expect(ids).toContain(service("consultation"));
     expect(site.videoService?.id).toBe(service("video_consultation"));
     expect(site.doctors.length).toBeGreaterThan(0);
+    // Doctor profiles for the website (specialty, credentials, languages).
+    const sara = site.doctors.find((d) => d.nameEn === "Dr. Sarah Al-Otaibi");
+    expect(sara?.profile?.credentials?.length).toBeGreaterThan(0);
     expect(site.branches.map((b) => b.cityEn)).toEqual(expect.arrayContaining(["Riyadh"]));
     expect(site.site.since).toBe(1996);
     expect(site.site.specialties?.map((x) => x.key)).toEqual(["skin", "hair", "plastic", "dental"]);

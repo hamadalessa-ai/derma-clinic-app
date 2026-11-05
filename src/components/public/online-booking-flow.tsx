@@ -47,7 +47,7 @@ export function OnlineBookingFlow({
   /** Already verified in this browser (pass cookie or signed-in patient). */
   identity: BookingIdentity | null;
   /** From the clinic website: a chosen visit type or service. */
-  initial?: { mode?: "clinic" | "video"; serviceId?: string };
+  initial?: { mode?: "clinic" | "video"; serviceId?: string; doctorId?: string };
 }) {
   const t = useTranslations("book");
   const te = useTranslations("errors");
@@ -61,20 +61,31 @@ export function OnlineBookingFlow({
   /** Video consultations are offered when a video service and a branch with a video room exist. */
   const offersVideo = catalog.videoBranches.length > 0 && allServices.some((s) => s.isVirtual);
   const initialService = allServices.find((s) => s.id === initial?.serviceId);
+  /** Chosen on the website ("Book with this doctor"): picked once a service is chosen. */
+  const wantedDoctor = catalog.doctors.find((d) => d.id === initial?.doctorId) ?? null;
   const [mode, setMode] = useState<Mode | null>(
-    initialService
-      ? initialService.isVirtual
-        ? "video"
-        : "clinic"
-      : offersVideo
-        ? (initial?.mode ?? null)
-        : "clinic",
+    wantedDoctor && !initialService && !initial?.mode
+      ? "clinic"
+      : initialService
+        ? initialService.isVirtual
+          ? "video"
+          : "clinic"
+        : offersVideo
+          ? (initial?.mode ?? null)
+          : "clinic",
   );
   const [branchId, setBranchId] = useState<string | null>(
-    catalog.branches.length === 1 ? catalog.branches[0].id : null,
+    catalog.branches.length === 1
+      ? catalog.branches[0].id
+      : wantedDoctor?.branchId && catalog.branches.some((b) => b.id === wantedDoctor.branchId)
+        ? wantedDoctor.branchId
+        : null,
   );
   const [serviceId, setServiceId] = useState<string | null>(
-    initialService && (initialService.isVirtual || catalog.branches.length === 1)
+    initialService &&
+      (initialService.isVirtual ||
+        catalog.branches.length === 1 ||
+        (wantedDoctor?.branchId && !initialService.isVirtual))
       ? initialService.id
       : null,
   );
@@ -84,7 +95,9 @@ export function OnlineBookingFlow({
   );
   const [verified, setVerified] = useState<BookingIdentity | null>(identity);
   const [phoneInput, setPhoneInput] = useState("");
-  const [doctor, setDoctor] = useState<DoctorChoice | null>(null);
+  const [doctor, setDoctor] = useState<DoctorChoice | null>(
+    wantedDoctor && initialService ? { kind: "doctor", id: wantedDoctor.id } : null,
+  );
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [slots, setSlots] = useState<Slot[] | null>(null);
@@ -176,6 +189,16 @@ export function OnlineBookingFlow({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchBranches, serviceId, doctor, day, reload]);
+
+  /**
+   * Choose a service. "Book with this doctor" from the website: the doctor is chosen too when
+   * they work where the patient is booking (they can still change the doctor afterwards).
+   */
+  const chooseService = (id: string, where: string[]) => {
+    setServiceId(id);
+    if (wantedDoctor && (!wantedDoctor.branchId || where.includes(wantedDoctor.branchId)))
+      setDoctor({ kind: "doctor", id: wantedDoctor.id });
+  };
 
   /** Changing an earlier step clears everything after it. */
   const reset = (from: "mode" | "branch" | "service" | "doctor" | "day" | "slot") => {
@@ -451,7 +474,7 @@ export function OnlineBookingFlow({
                 setMode("video");
                 // Only one video service: choose it straight away.
                 const video = allServices.filter((s) => s.isVirtual);
-                if (video.length === 1) setServiceId(video[0].id);
+                if (video.length === 1) chooseService(video[0].id, catalog.videoBranches);
               }}
               data-testid="mode-video"
             >
@@ -484,7 +507,7 @@ export function OnlineBookingFlow({
                 key={b.id}
                 onClick={() => {
                   setBranchId(b.id);
-                  if (wantedService) setServiceId(wantedService);
+                  if (wantedService) chooseService(wantedService, [b.id]);
                 }}
               >
                 <span className="font-medium">{name(b)}</span>
@@ -513,7 +536,11 @@ export function OnlineBookingFlow({
                 <h3 className="text-muted-foreground text-xs font-semibold">{name(dep)}</h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {dep.services.map((s) => (
-                    <Choice key={s.id} onClick={() => setServiceId(s.id)} data-service={s.id}>
+                    <Choice
+                      key={s.id}
+                      onClick={() => chooseService(s.id, searchBranches)}
+                      data-service={s.id}
+                    >
                       <span className="font-medium">{name(s)}</span>
                       <span className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
                         <span className="inline-flex items-center gap-1">

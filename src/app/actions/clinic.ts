@@ -894,6 +894,31 @@ const siteInput = z.object({
     .trim()
     .regex(/^@?[\w.]{1,30}$/)
     .optional(),
+  eyebrowAr: siteText(80),
+  eyebrowEn: siteText(80),
+  footerAr: siteText(200),
+  footerEn: siteText(200),
+  departments: z
+    .array(
+      z.object({
+        key: z.string().trim().min(1).max(30),
+        nameAr: z.string().trim().min(1).max(80),
+        nameEn: z.string().trim().min(1).max(80),
+        specialties: z.array(z.string().trim().min(1).max(30)).max(8),
+      }),
+    )
+    .max(8)
+    .optional(),
+  images: z
+    .record(
+      z.string().max(40),
+      z
+        .string()
+        .trim()
+        .max(500)
+        .regex(/^(\/|https:\/\/)/),
+    )
+    .optional(),
   credentials: z
     .array(
       z.object({ ar: z.string().trim().min(2).max(120), en: z.string().trim().min(2).max(120) }),

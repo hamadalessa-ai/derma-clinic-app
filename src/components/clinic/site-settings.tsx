@@ -55,6 +55,12 @@ export function SiteSettingsForm({ initial }: { initial: SiteContent }) {
                 .map((c) => ({ ar: c.ar.trim(), en: c.en.trim() })),
               // Specialties are kept as they are (edited with the clinic's content later).
               specialties: initial.specialties,
+              departments: initial.departments,
+              images: initial.images,
+              eyebrowAr: clean(initial.eyebrowAr),
+              eyebrowEn: clean(initial.eyebrowEn),
+              footerAr: clean(initial.footerAr),
+              footerEn: clean(initial.footerEn),
               reviews: reviews
                 .filter((r) => r.quote.trim() && r.name.trim())
                 .map((r) => ({ quote: r.quote, name: r.name, treatment: clean(r.treatment) })),

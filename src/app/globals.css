@@ -75,8 +75,8 @@
   --site-champagne: #b89a6a;
   --site-champagne-ink: #7d5e36;
   --site-champagne-soft: #f4ede1;
-  /* Website headings: Cormorant Garamond for Latin, Noto Naskh Arabic for Arabic. */
-  --site-display: var(--font-cormorant), var(--font-naskh), ui-serif, Georgia, serif;
+  /* Website headings: the app's IBM Plex Sans Arabic (enterprise healthcare look). */
+  --site-display: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
   --shadow-float: 0 30px 60px -24px rgb(20 33 31 / 0.28), 0 2px 6px rgb(20 33 31 / 0.06);
 
   --shadow-card: 0 1px 2px rgb(21 32 30 / 0.06), 0 1px 1px rgb(21 32 30 / 0.04);
@@ -104,10 +104,6 @@
   --site-photo-from: color-mix(in srgb, var(--brand) 24%, #f8f6f2);
   --site-photo-to: #e9dcc6;
   --site-cta-hover: color-mix(in srgb, var(--brand) 68%, #071514);
-}
-
-html[lang="ar"] {
-  --site-display: var(--font-naskh), var(--font-cormorant), ui-serif, serif;
 }
 
 @theme inline {
@@ -193,7 +189,7 @@ html[lang="ar"] {
   --radius-2xl: 16px;
   --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  /* Website headings: Cormorant Garamond (Latin) + Noto Naskh Arabic (Arabic). */
+  /* Website headings (see --site-display). */
   --font-display: var(--site-display);
 }
 

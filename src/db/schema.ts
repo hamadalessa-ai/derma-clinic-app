@@ -194,6 +194,8 @@ export const tenantMembers = pgTable(
     gender: gender("gender"),
     titleAr: text("title_ar"),
     titleEn: text("title_en"),
+    /** Doctors: public profile for the clinic website (specialty, credentials, languages). */
+    profile: jsonb("profile").$type<MemberProfile>(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -502,6 +504,14 @@ export const TENANT_TABLES = [
 // ════════════════════════════════════════════════════════════════════════════
 
 /** What the clinic writes for its public website (Settings → Website). All optional. */
+/** A doctor's public profile on the clinic website. Only real details the clinic enters. */
+export interface MemberProfile {
+  specialtyAr?: string;
+  specialtyEn?: string;
+  credentials?: { ar: string; en: string }[];
+  languages?: { ar: string; en: string }[];
+}
+
 export interface SiteContent {
   headlineAr?: string;
   headlineEn?: string;
@@ -518,6 +528,21 @@ export interface SiteContent {
   licence?: string;
   x?: string;
   tiktok?: string;
+  /** Short line above the hero headline, e.g. the clinic's motto. */
+  eyebrowAr?: string;
+  eyebrowEn?: string;
+  /** One-line description in the footer. */
+  footerAr?: string;
+  footerEn?: string;
+  /** Departments (top level), each grouping specialty keys from `specialties`. */
+  departments?: {
+    key: string;
+    nameAr: string;
+    nameEn: string;
+    specialties: string[];
+  }[];
+  /** Real photos per website slot (see src/lib/site/images.ts): slot → URL. */
+  images?: Record<string, string>;
   /** Real patient reviews the clinic has permission to show. */
   reviews?: { quote: string; name: string; treatment?: string }[];
   /** Real accreditations / licences / memberships, shown only when filled in. */

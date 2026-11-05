@@ -77,6 +77,7 @@ export async function loadClinicSite(tenantId: string, now = new Date()) {
         id: tenantMembers.id,
         titleAr: tenantMembers.titleAr,
         titleEn: tenantMembers.titleEn,
+        profile: tenantMembers.profile,
       })
       .from(tenantMembers)
       .innerJoin(users, eq(users.id, tenantMembers.userId));
@@ -85,6 +86,7 @@ export async function loadClinicSite(tenantId: string, now = new Date()) {
       ...d,
       titleAr: titles.get(d.id)?.titleAr ?? null,
       titleEn: titles.get(d.id)?.titleEn ?? null,
+      profile: titles.get(d.id)?.profile ?? null,
     }));
 
     // Specialties not booked online yet: shown as "ask us on WhatsApp".

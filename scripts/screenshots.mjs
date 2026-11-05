@@ -25,6 +25,25 @@ for (const locale of ["ar", "en"]) {
       await page.screenshot({ path: `screenshots/${name}-${locale}-${view}.png`, fullPage: true });
       // The first screen as a visitor sees it.
       await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-fold.png` });
+      if (name === "site") {
+        // The menus: the "Medical Services" mega menu on desktop, the full menu on phones.
+        if (view === "desktop") {
+          await page.locator("header nav button").nth(1).hover();
+          await page.waitForTimeout(400);
+          await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-menu.png` });
+          await page.mouse.move(5, 600);
+        } else {
+          await page.getByTestId("site-menu").click();
+          await page
+            .locator("details")
+            .first()
+            .evaluate((d) => (d.open = true));
+          await page.waitForTimeout(300);
+          await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-menu.png` });
+          await page.keyboard.press("Escape");
+          await page.reload({ waitUntil: "networkidle" });
+        }
+      }
     }
     await context.close();
   }

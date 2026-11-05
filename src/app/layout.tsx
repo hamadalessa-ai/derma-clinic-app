@@ -1,10 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Cormorant_Garamond,
-  IBM_Plex_Mono,
-  IBM_Plex_Sans_Arabic,
-  Noto_Naskh_Arabic,
-} from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { directionOf, type Locale } from "@/i18n/config";
@@ -28,22 +23,6 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
-/** Clinic website headings only (not preloaded on the app's screens). */
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  display: "swap",
-  preload: false,
-});
-const naskh = Noto_Naskh_Arabic({
-  variable: "--font-naskh",
-  subsets: ["arabic"],
-  weight: ["500", "600"],
-  display: "swap",
-  preload: false,
-});
-
 export const metadata: Metadata = {
   title: "منصة العيادات | Clinic Platform (Demo)",
   description: "Demo — fake data only",
@@ -60,7 +39,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       dir={directionOf(locale)}
-      className={`${plexArabic.variable} ${plexMono.variable} ${cormorant.variable} ${naskh.variable} h-full antialiased`}
+      className={`${plexArabic.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>
