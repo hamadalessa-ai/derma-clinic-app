@@ -166,7 +166,8 @@
     "hours_bad_time": "Please check the times: each shift must end after it starts.",
     "hours_overlap": "Two shifts on the same day overlap.",
     "hours_wrong_branch": "This doctor doesn't work at that branch.",
-    "hours_in_past": "That date has passed."
+    "hours_in_past": "That date has passed.",
+    "already_signed": "This consent is already signed."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -1047,5 +1048,15 @@
     "left": "{remaining} of {total} left",
     "earlier": "Earlier notes",
     "noEarlier": "No earlier signed notes."
+  },
+  "sign": {
+    "title": "{name}, your consent form",
+    "agree": "I have read the form and I agree.",
+    "forChild": "You are signing as the guardian of {name}.",
+    "done": "Thank you, your consent is signed.",
+    "doneHint": "The clinic sees it straight away: no need to sign again when you arrive.",
+    "toVideo": "Go to the video consultation",
+    "nothing": "Nothing to sign for this visit: you're all set.",
+    "closed": "This visit has already taken place or was cancelled, so this link has closed."
   }
 }

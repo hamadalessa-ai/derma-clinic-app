@@ -15,7 +15,7 @@ import { brandStyle, pick } from "@/lib/brand";
 import { formatGregorian, formatTime } from "@/lib/format";
 import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { getCurrentTenant } from "@/lib/tenant/current";
-import { parseVideoToken } from "@/lib/video/link";
+import { consentToken, parseVideoToken } from "@/lib/video/link";
 import { videoProvider } from "@/lib/video/provider";
 import { loadVisit, PATIENT_EARLY_MINUTES, videoState } from "@/lib/video/visit";
 import type { Locale } from "@/i18n/config";
@@ -75,7 +75,10 @@ export default async function VisitPage({ params }: { params: Promise<{ token: s
         {state === "open" && visit.consentNeeded && (
           <Notice tone="warning" className="flex flex-col gap-2">
             <span>{t("consentFirst")}</span>
-            <Link href="/my" className={buttonVariants({ size: "sm", className: "self-start" })}>
+            <Link
+              href={`/sign/${consentToken(tenant.id, visit.appointmentId)}`}
+              className={buttonVariants({ size: "sm", className: "self-start" })}
+            >
               {t("signConsent")}
             </Link>
           </Notice>
