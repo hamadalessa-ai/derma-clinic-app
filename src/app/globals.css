@@ -65,19 +65,27 @@
   --status-blocked: #eef2f1;
   --status-blocked-foreground: #5b6866;
 
-  /* Clinic website (public, editorial): ivory and white, slate text, champagne hairlines. */
-  --site-ivory: #f8f6f2;
-  --site-mist: #f2f4f4;
-  --site-ink: #14211f;
-  --site-slate: #4b5856;
-  --site-subtle: #7a8684;
-  --site-line: #e7e2d9;
-  --site-champagne: #b89a6a;
-  --site-champagne-ink: #7d5e36;
-  --site-champagne-soft: #f4ede1;
-  /* Website headings: the app's IBM Plex Sans Arabic (enterprise healthcare look). */
-  --site-display: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
-  --shadow-float: 0 30px 60px -24px rgb(20 33 31 / 0.28), 0 2px 6px rgb(20 33 31 / 0.06);
+  /* Clinic website ("clinical luxury"): true white + soft clinical gray, deep slate text,
+     deep emerald for the main action, matte gold for quiet accents. */
+  --site-ivory: #f8fafc;
+  --site-mist: #f8fafc;
+  --site-ink: #1e293b;
+  --site-slate: #334155;
+  --site-subtle: #64748b;
+  --site-line: #e2e8f0;
+  --site-primary: #0b5d4c;
+  --site-primary-hover: #084a3c;
+  --site-primary-soft: #eaf4f0;
+  --site-night: #082c25;
+  --site-champagne: #b08d57;
+  --site-champagne-ink: #87683a;
+  --site-champagne-soft: #f7f1e6;
+  --site-photo-to: #e9dcc6;
+  --shadow-float: 0 30px 60px -24px rgb(15 23 42 / 0.22), 0 2px 6px rgb(15 23 42 / 0.05);
+  --shadow-soft: 0 12px 32px -16px rgb(15 23 42 / 0.1), 0 2px 6px rgb(15 23 42 / 0.04);
+  /* Website type: Playfair Display headings, Inter text; Arabic in Tajawal. */
+  --site-display: var(--font-playfair), var(--font-tajawal), Georgia, serif;
+  --site-body: var(--font-inter), var(--font-tajawal), system-ui, sans-serif;
 
   --shadow-card: 0 1px 2px rgb(21 32 30 / 0.06), 0 1px 1px rgb(21 32 30 / 0.04);
   --shadow-raised: 0 8px 24px -6px rgb(21 32 30 / 0.16);
@@ -101,9 +109,13 @@
   /* Website call to action: the clinic colour taken deep, for high contrast on ivory. */
   --site-cta: color-mix(in srgb, var(--brand) 52%, #071514);
   /* Photo placeholders: a soft wash of the clinic colour into champagne. */
-  --site-photo-from: color-mix(in srgb, var(--brand) 24%, #f8f6f2);
-  --site-photo-to: #e9dcc6;
+  --site-photo-from: var(--site-primary-soft);
   --site-cta-hover: color-mix(in srgb, var(--brand) 68%, #071514);
+}
+
+html[lang="ar"] {
+  --site-display: var(--font-tajawal), var(--font-playfair), serif;
+  --site-body: var(--font-tajawal), var(--font-inter), system-ui, sans-serif;
 }
 
 @theme inline {
@@ -174,6 +186,11 @@
   --color-site-champagne-ink: var(--site-champagne-ink);
   --color-site-champagne-soft: var(--site-champagne-soft);
   --color-site-cta: var(--site-cta);
+  --color-site-primary: var(--site-primary);
+  --color-site-primary-hover: var(--site-primary-hover);
+  --color-site-primary-soft: var(--site-primary-soft);
+  --color-site-night: var(--site-night);
+  --shadow-soft: var(--shadow-soft);
   --color-site-photo-from: var(--site-photo-from);
   --color-site-photo-to: var(--site-photo-to);
   --color-site-cta-hover: var(--site-cta-hover);
@@ -189,8 +206,8 @@
   --radius-2xl: 16px;
   --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  /* Website headings (see --site-display). */
   --font-display: var(--site-display);
+  --font-site: var(--site-body);
 }
 
 @layer base {

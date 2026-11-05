@@ -8,7 +8,15 @@ import "server-only";
  */
 import { asc, eq } from "drizzle-orm";
 import type { SiteContent } from "@/db/schema";
-import { branches, departments, staffSchedules, tenantMembers, users } from "@/db/schema";
+import {
+  branches,
+  departments,
+  packageTemplates,
+  services,
+  staffSchedules,
+  tenantMembers,
+  users,
+} from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { findFreeSlots, getSettings, onlineDoctors } from "@/lib/booking/engine";
 import { addMinutes } from "@/lib/booking/time";
@@ -122,8 +130,33 @@ export async function loadClinicSite(tenantId: string, now = new Date()) {
       }
     }
 
+    // Offers: the clinic's active session packages (prices only when shown online).
+    const packs = await tx
+      .select({
+        id: packageTemplates.id,
+        nameAr: packageTemplates.nameAr,
+        nameEn: packageTemplates.nameEn,
+        sessions: packageTemplates.sessionsCount,
+        priceHalalas: packageTemplates.priceHalalas,
+        validityDays: packageTemplates.validityDays,
+        serviceId: packageTemplates.serviceId,
+        servicePrice: services.priceHalalas,
+      })
+      .from(packageTemplates)
+      .innerJoin(services, eq(services.id, packageTemplates.serviceId))
+      .where(eq(packageTemplates.isActive, true))
+      .orderBy(asc(packageTemplates.priceHalalas));
+    const onlineIds = new Set(allServices.map((x) => x.id));
+    const offers = packs.map((o) => ({
+      ...o,
+      priceHalalas: settings.showPricesOnline ? o.priceHalalas : null,
+      servicePrice: settings.showPricesOnline ? o.servicePrice : null,
+      bookable: onlineIds.has(o.serviceId),
+    }));
+
     return {
       site: (settings.site ?? {}) as SiteContent,
+      offers,
       catalog,
       doctors,
       others,

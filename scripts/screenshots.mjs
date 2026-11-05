@@ -37,7 +37,7 @@ for (const locale of ["ar", "en"]) {
       if (name === "site") {
         // The menus: the "Medical Services" mega menu on desktop, the full menu on phones.
         if (view === "desktop") {
-          await page.locator("header nav button").nth(1).hover();
+          await page.locator("header nav [aria-haspopup]").first().hover();
           await page.waitForTimeout(400);
           await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-menu.png` });
           await page.mouse.move(5, 600);

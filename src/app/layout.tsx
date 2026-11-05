@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import {
+  IBM_Plex_Mono,
+  IBM_Plex_Sans_Arabic,
+  Inter,
+  Playfair_Display,
+  Tajawal,
+} from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { directionOf, type Locale } from "@/i18n/config";
@@ -23,6 +29,28 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+/** Clinic website only (not preloaded on the app's screens). */
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+  preload: false,
+});
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+const tajawal = Tajawal({
+  variable: "--font-tajawal",
+  subsets: ["arabic"],
+  weight: ["400", "500", "700", "800"],
+  display: "swap",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: "منصة العيادات | Clinic Platform (Demo)",
   description: "Demo — fake data only",
@@ -39,7 +67,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       dir={directionOf(locale)}
-      className={`${plexArabic.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${plexArabic.variable} ${plexMono.variable} ${playfair.variable} ${inter.variable} ${tajawal.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>

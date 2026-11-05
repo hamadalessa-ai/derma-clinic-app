@@ -37,7 +37,7 @@ export function SiteMobileMenu({
     <>
       <button
         type="button"
-        className="border-site-line text-site-ink flex size-11 items-center justify-center rounded-lg border xl:hidden"
+        className="border-site-line text-site-ink flex size-11 items-center justify-center rounded-xl border lg:hidden"
         aria-label={labels.open}
         aria-expanded={open}
         onClick={() => setOpen(true)}
@@ -49,7 +49,7 @@ export function SiteMobileMenu({
         // In <body>: the sticky header's backdrop blur would otherwise trap a fixed overlay.
         createPortal(
           <div
-            className="bg-card fixed inset-0 z-50 flex flex-col xl:hidden"
+            className="bg-card font-site fixed inset-0 z-50 flex flex-col lg:hidden"
             role="dialog"
             aria-modal
           >
@@ -101,7 +101,7 @@ export function SiteMobileMenu({
                 <Link
                   href={book.href}
                   onClick={close}
-                  className="bg-brand text-brand-foreground flex h-12 items-center justify-center gap-2 rounded-lg font-semibold"
+                  className="bg-site-primary text-site-ivory flex h-12 items-center justify-center gap-2 rounded-lg font-semibold"
                 >
                   <CalendarCheck className="size-4" />
                   {book.label}

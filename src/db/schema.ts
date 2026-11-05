@@ -539,10 +539,45 @@ export interface SiteContent {
     key: string;
     nameAr: string;
     nameEn: string;
+    textAr?: string;
+    textEn?: string;
     specialties: string[];
   }[];
   /** Real photos per website slot (see src/lib/site/images.ts): slot → URL. */
   images?: Record<string, string>;
+  /** Intro texts of the website sections, in the clinic's own words. */
+  clinicsAr?: string;
+  clinicsEn?: string;
+  doctorsAr?: string;
+  doctorsEn?: string;
+  findAr?: string;
+  findEn?: string;
+  /** Procedures grouped for browsing (laser, injectables, …), per department. */
+  silos?: {
+    key: string;
+    dept: string;
+    nameAr: string;
+    nameEn: string;
+    items: { ar: string; en: string }[];
+  }[];
+  /** The medical team as the clinic publishes it (name, title, photo). */
+  doctors?: {
+    nameAr: string;
+    nameEn: string;
+    titleAr: string;
+    titleEn: string;
+    dept: string;
+    branchAr?: string;
+    branchEn?: string;
+    photo: string;
+    founder?: boolean;
+    bioAr?: string;
+    bioEn?: string;
+    /** The doctor's account in this system, when they take online bookings here. */
+    memberId?: string;
+  }[];
+  /** Partner / corporate logos the clinic shows. */
+  partners?: { nameAr: string; nameEn: string; logo: string }[];
   /** Real patient reviews the clinic has permission to show. */
   reviews?: { quote: string; name: string; treatment?: string }[];
   /** Real accreditations / licences / memberships, shown only when filled in. */

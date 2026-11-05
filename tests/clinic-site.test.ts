@@ -22,12 +22,15 @@ describe("clinic website", () => {
     expect(ids).toContain(service("consultation"));
     expect(site.videoService?.id).toBe(service("video_consultation"));
     expect(site.doctors.length).toBeGreaterThan(0);
+    // The clinic's published medical team (from its own website), founder first.
+    expect(site.site.doctors?.length).toBeGreaterThan(20);
+    expect(site.site.doctors?.[0].founder).toBe(true);
     // Doctor profiles for the website (specialty, credentials, languages).
     const sara = site.doctors.find((d) => d.nameEn === "Dr. Sarah Al-Otaibi");
     expect(sara?.profile?.credentials?.length).toBeGreaterThan(0);
     expect(site.branches.map((b) => b.cityEn)).toEqual(expect.arrayContaining(["Riyadh"]));
     expect(site.site.since).toBe(1996);
-    expect(site.site.specialties?.map((x) => x.key)).toEqual(["skin", "hair", "plastic", "dental"]);
+    expect(site.site.specialties?.map((x) => x.key)).toEqual(["skin", "dental", "hair", "plastic"]);
     // Specialties not booked online appear as "ask us".
     expect(site.others.length).toBeGreaterThan(0);
     // Only public fields leave the loader: no patient data of any kind.
