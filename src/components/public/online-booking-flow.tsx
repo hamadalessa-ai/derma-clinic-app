@@ -7,7 +7,8 @@ import { Building2, CalendarCheck, CheckCircle2, Clock, Video } from "lucide-rea
 import {
   confirmBookingAction,
   onlineSlotsAction,
-  requestBookingCodeAction,
+  requestPhoneCodeAction,
+  verifyBookingPhoneAction,
 } from "@/app/actions/patient";
 import { FormError } from "@/components/clinic/form-message";
 import { riyadhParts } from "@/components/clinic/time";
@@ -26,7 +27,28 @@ type DoctorChoice =
 type Slot = { startsAt: string; practitionerId: string; branchId: string };
 type Mode = "clinic" | "video";
 
-export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; days: string[] }) {
+export interface BookingIdentity {
+  phone: string;
+  known: { fullName: string; gender: "male" | "female" | null } | null;
+}
+
+/**
+ * Online booking. Step 1 is the patient's mobile + a code (OTP); after that they choose the visit
+ * type, service, doctor and time, and confirm with one tap (no second code).
+ */
+export function OnlineBookingFlow({
+  catalog,
+  days,
+  identity,
+  initial,
+}: {
+  catalog: BookingCatalog;
+  days: string[];
+  /** Already verified in this browser (pass cookie or signed-in patient). */
+  identity: BookingIdentity | null;
+  /** From the clinic website: a chosen visit type or service. */
+  initial?: { mode?: "clinic" | "video"; serviceId?: string };
+}) {
   const t = useTranslations("book");
   const te = useTranslations("errors");
   const tw = useTranslations("whatsapp");
@@ -38,19 +60,36 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
   const allServices = catalog.departments.flatMap((d) => d.services);
   /** Video consultations are offered when a video service and a branch with a video room exist. */
   const offersVideo = catalog.videoBranches.length > 0 && allServices.some((s) => s.isVirtual);
-  const [mode, setMode] = useState<Mode | null>(offersVideo ? null : "clinic");
+  const initialService = allServices.find((s) => s.id === initial?.serviceId);
+  const [mode, setMode] = useState<Mode | null>(
+    initialService
+      ? initialService.isVirtual
+        ? "video"
+        : "clinic"
+      : offersVideo
+        ? (initial?.mode ?? null)
+        : "clinic",
+  );
   const [branchId, setBranchId] = useState<string | null>(
     catalog.branches.length === 1 ? catalog.branches[0].id : null,
   );
-  const [serviceId, setServiceId] = useState<string | null>(null);
+  const [serviceId, setServiceId] = useState<string | null>(
+    initialService && (initialService.isVirtual || catalog.branches.length === 1)
+      ? initialService.id
+      : null,
+  );
+  /** Chosen on the website for a clinic visit: picked once a branch is chosen. */
+  const [wantedService] = useState(initialService && !initialService.isVirtual ? initialService.id : null);
+  const [verified, setVerified] = useState<BookingIdentity | null>(identity);
+  const [phoneInput, setPhoneInput] = useState("");
   const [doctor, setDoctor] = useState<DoctorChoice | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [details, setDetails] = useState({
-    fullName: "",
-    phone: "",
-    patientGender: "",
+    fullName: identity?.known?.fullName ?? "",
+    phone: identity?.phone ?? "",
+    patientGender: (identity?.known?.gender ?? "") as string,
     website: "",
     whatsappOptIn: false,
   });
@@ -139,8 +178,6 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
   /** Changing an earlier step clears everything after it. */
   const reset = (from: "mode" | "branch" | "service" | "doctor" | "day" | "slot") => {
     setError(null);
-    setCodeStage(null);
-    setCode("");
     if (from === "mode" || from === "branch") setServiceId(null);
     if (["mode", "branch", "service"].includes(from)) setDoctor(null);
     if (["mode", "branch", "service", "doctor"].includes(from)) setDay(null);
@@ -161,20 +198,38 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
     whatsappOptIn: details.whatsappOptIn,
   });
 
+  /** Step 1: a code to the mobile… */
   const sendCode = () => {
     setError(null);
     start(async () => {
-      const r = await requestBookingCodeAction(request());
+      const r = await requestPhoneCodeAction({ phone: phoneInput, website: details.website });
       if (!r.ok) return setError(errorText(r.error));
       setCodeStage({ demoCode: r.data.demoCode });
       setCode("");
     });
   };
 
+  /** …then the code: the mobile is verified for this booking (no second code later). */
+  const verifyCode = () => {
+    setError(null);
+    start(async () => {
+      const r = await verifyBookingPhoneAction({ phone: phoneInput, code });
+      if (!r.ok) return setError(errorText(r.error));
+      setVerified(r.data);
+      setCodeStage(null);
+      setDetails((d) => ({
+        ...d,
+        phone: r.data.phone,
+        fullName: r.data.known?.fullName ?? d.fullName,
+        patientGender: r.data.known?.gender ?? d.patientGender,
+      }));
+    });
+  };
+
   const confirm = () => {
     setError(null);
     start(async () => {
-      const r = await confirmBookingAction({ ...request(), code });
+      const r = await confirmBookingAction(request());
       if (!r.ok) {
         setError(errorText(r.error));
         // The time was taken meanwhile: pick another one (the code still works).
@@ -239,10 +294,123 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
     );
   }
 
-  let n = 0;
+  // Step 1 (before anything else): the mobile number and its code.
+  if (!verified) {
+    return (
+      <div className="flex flex-col gap-3" data-testid="online-booking">
+        <Step n={1} title={t("stepMobile")} done={false} changeLabel={t("change")} testId="step-mobile">
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (codeStage) verifyCode();
+              else sendCode();
+            }}
+          >
+            <p className="text-muted-foreground text-sm">{t("mobileFirst")}</p>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="phone">{t("mobile")}</Label>
+              <Input
+                id="phone"
+                required
+                inputMode="tel"
+                autoComplete="tel"
+                dir="ltr"
+                placeholder={t("mobileHint")}
+                value={phoneInput}
+                disabled={!!codeStage}
+                onChange={(e) => setPhoneInput(e.target.value)}
+              />
+            </div>
+            {/* Honeypot: invisible to people, bots fill it in. */}
+            <div aria-hidden className="absolute -start-[9999px] h-0 w-0 overflow-hidden">
+              <label htmlFor="website">{t("website")}</label>
+              <input
+                id="website"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={details.website}
+                onChange={(e) => setDetails({ ...details, website: e.target.value })}
+              />
+            </div>
+            {codeStage && (
+              <div className="flex flex-col gap-1.5" data-testid="code-step">
+                <p className="text-sm">{t("codeSent")}</p>
+                {codeStage.demoCode && (
+                  <Notice tone="info" data-testid="demo-code">
+                    {t("demoCode", { code: codeStage.demoCode })}
+                  </Notice>
+                )}
+                <Label htmlFor="code">{t("code")}</Label>
+                <Input
+                  id="code"
+                  required
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  dir="ltr"
+                  maxLength={6}
+                  pattern="[0-9٠-٩]{6}"
+                  className="font-mono tracking-[0.3em]"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            )}
+            <FormError message={error} />
+            <Button
+              type="submit"
+              size="lg"
+              loading={pending}
+              data-testid={codeStage ? "verify-code" : "send-code"}
+            >
+              {codeStage ? t("verifyCode") : t("sendCode")}
+            </Button>
+            {codeStage && (
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={sendCode}>
+                  {t("resend")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCodeStage(null);
+                    setCode("");
+                  }}
+                >
+                  {t("changeMobile")}
+                </Button>
+              </div>
+            )}
+          </form>
+        </Step>
+      </div>
+    );
+  }
+
+  let n = 1;
   const pickService = mode === "video" ? true : !!branch;
   return (
     <div className="flex flex-col gap-3" data-testid="online-booking">
+      <Step
+        n={1}
+        title={t("stepMobile")}
+        done
+        summary={
+          <span dir="ltr" className="font-mono">
+            {verified.phone}
+          </span>
+        }
+        changeLabel={t("change")}
+        onChange={() => {
+          setVerified(null);
+          setPhoneInput("");
+        }}
+        testId="step-mobile"
+      />
       {offersVideo && (
         <Step
           n={++n}
@@ -298,7 +466,13 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
         >
           <div className="grid grid-cols-2 gap-2">
             {catalog.branches.map((b) => (
-              <Choice key={b.id} onClick={() => setBranchId(b.id)}>
+              <Choice
+                key={b.id}
+                onClick={() => {
+                  setBranchId(b.id);
+                  if (wantedService) setServiceId(wantedService);
+                }}
+              >
                 <span className="font-medium">{name(b)}</span>
               </Choice>
             ))}
@@ -481,8 +655,7 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
             className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              if (codeStage) confirm();
-              else sendCode();
+              confirm();
             }}
           >
             <Notice tone="info" className="flex items-start gap-2">
@@ -506,25 +679,17 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
                 maxLength={80}
                 autoComplete="name"
                 value={details.fullName}
-                disabled={!!codeStage}
                 onChange={(e) => setDetails({ ...details, fullName: e.target.value })}
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="phone">{t("mobile")}</Label>
-              <Input
-                id="phone"
-                required
-                inputMode="tel"
-                autoComplete="tel"
-                dir="ltr"
-                placeholder={t("mobileHint")}
-                value={details.phone}
-                disabled={!!codeStage}
-                onChange={(e) => setDetails({ ...details, phone: e.target.value })}
-              />
-            </div>
-            <fieldset className="flex flex-col gap-1.5" disabled={!!codeStage}>
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm" data-testid="verified-phone">
+              <CheckCircle2 className="text-success-foreground size-4" />
+              {t("verifiedMobile")}{" "}
+              <span dir="ltr" className="font-mono">
+                {details.phone}
+              </span>
+            </p>
+            <fieldset className="flex flex-col gap-1.5">
               <legend className="mb-1.5 text-sm font-medium">{t("yourGender")}</legend>
               <div className="grid grid-cols-2 gap-2">
                 {(["female", "male"] as const).map((g) => (
@@ -550,7 +715,6 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
                 type="checkbox"
                 className="accent-brand mt-0.5 size-4 shrink-0"
                 checked={details.whatsappOptIn}
-                disabled={!!codeStage}
                 onChange={(e) => setDetails({ ...details, whatsappOptIn: e.target.checked })}
                 data-testid="whatsapp-opt-in"
               />
@@ -569,42 +733,10 @@ export function OnlineBookingFlow({ catalog, days }: { catalog: BookingCatalog; 
               />
             </div>
 
-            {codeStage && (
-              <div className="flex flex-col gap-1.5" data-testid="code-step">
-                <p className="text-sm">{t("codeSent")}</p>
-                {codeStage.demoCode && (
-                  <Notice tone="info" data-testid="demo-code">
-                    {t("demoCode", { code: codeStage.demoCode })}
-                  </Notice>
-                )}
-                <Label htmlFor="code">{t("code")}</Label>
-                <Input
-                  id="code"
-                  required
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  dir="ltr"
-                  maxLength={6}
-                  pattern="[0-9٠-٩]{6}"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-              </div>
-            )}
-
             <FormError message={error} />
-            <Button
-              type="submit"
-              disabled={pending}
-              data-testid={codeStage ? "confirm" : "send-code"}
-            >
-              {codeStage ? t("confirm") : t("sendCode")}
+            <Button type="submit" size="lg" loading={pending} data-testid="confirm">
+              {t("confirm")}
             </Button>
-            {codeStage && (
-              <Button type="button" variant="ghost" disabled={pending} onClick={sendCode}>
-                {t("resend")}
-              </Button>
-            )}
           </form>
         </Step>
       )}
