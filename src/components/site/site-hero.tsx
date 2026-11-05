@@ -37,7 +37,9 @@ export async function SiteHero({
     <section className="relative">
       {/* Photograph, edge to edge, with a soft wash for the text side */}
       <div className="bg-site-night relative h-[34rem] overflow-hidden sm:h-[38rem] lg:h-[44rem]">
-        <SiteImage slot="hero" src={site.images?.hero} locale={locale} priority />
+        <div className="absolute inset-0">
+          <SiteImage slot="hero" src={site.images?.hero} locale={locale} priority />
+        </div>
         <div
           className="from-site-night/90 via-site-night/60 absolute inset-0 bg-linear-to-r to-transparent rtl:bg-linear-to-l"
           aria-hidden

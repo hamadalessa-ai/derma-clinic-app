@@ -582,7 +582,7 @@ export async function ClinicSite({
                         alt={L(p.nameAr, p.nameEn)}
                         title={L(p.nameAr, p.nameEn)}
                         loading="lazy"
-                        className="max-h-14 w-auto max-w-full object-contain opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0"
+                        className="max-h-14 w-auto max-w-full object-contain opacity-80 grayscale transition hover:opacity-100 hover:grayscale-0"
                       />
                     </li>
                   ))}
