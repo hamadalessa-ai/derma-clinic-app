@@ -59,25 +59,25 @@ export function SiteMobileMenu({
             aria-modal
           >
             <div className="border-site-line flex h-16 items-center justify-between gap-3 border-b px-5">
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element -- the clinic's own logo
-              <img src={logo} alt={name} className="h-8 w-auto" />
-            ) : (
-              <span className="text-site-ink font-semibold">{name}</span>
-            )}
-            <div className="flex items-center gap-2">
-              <SiteLangSwitch tone="light" className="text-site-slate" />
-              <button
-                type="button"
-                className="text-site-ink flex size-11 items-center justify-center"
-                aria-label={labels.close}
-                onClick={close}
-              >
-                <X className="size-6" />
-              </button>
+              {logo ? (
+                // eslint-disable-next-line @next/next/no-img-element -- the clinic's own logo
+                <img src={logo} alt={name} className="h-8 w-auto" />
+              ) : (
+                <span className="text-site-ink font-semibold">{name}</span>
+              )}
+              <div className="flex items-center gap-2">
+                <SiteLangSwitch tone="light" className="text-site-slate" />
+                <button
+                  type="button"
+                  className="text-site-ink flex size-11 items-center justify-center"
+                  aria-label={labels.close}
+                  onClick={close}
+                >
+                  <X className="size-6" />
+                </button>
+              </div>
             </div>
-          </div>
-          <nav className="flex-1 overflow-y-auto px-5 py-2">
+            <nav className="flex-1 overflow-y-auto px-5 py-2">
               {groups.map((g) => (
                 <details key={g.label} className="border-site-line group border-b">
                   <summary className="text-site-ink flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden">

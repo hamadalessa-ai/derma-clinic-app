@@ -416,36 +416,36 @@ export async function ClinicSite({
 
         {/* ── Results ─────────────────────────────────────────────────────── */}
         {s.images?.["result-before"] && s.images?.["result-after"] && (
-        <section id="results" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
-          <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 lg:grid-cols-12 lg:px-8">
-            <div className="flex flex-col gap-6 lg:col-span-5">
-              <Heading
-                eyebrow={t("resultsEyebrow")}
-                title={t("resultsTitle")}
-                text={t("resultsText")}
-              />
-              <p className="text-site-subtle flex items-start gap-2 text-sm">
-                <ShieldCheck
-                  className="text-site-champagne-ink mt-0.5 size-4 shrink-0"
-                  aria-hidden
+          <section id="results" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
+            <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 lg:grid-cols-12 lg:px-8">
+              <div className="flex flex-col gap-6 lg:col-span-5">
+                <Heading
+                  eyebrow={t("resultsEyebrow")}
+                  title={t("resultsTitle")}
+                  text={t("resultsText")}
                 />
-                {t("resultsConsent")}
-              </p>
+                <p className="text-site-subtle flex items-start gap-2 text-sm">
+                  <ShieldCheck
+                    className="text-site-champagne-ink mt-0.5 size-4 shrink-0"
+                    aria-hidden
+                  />
+                  {t("resultsConsent")}
+                </p>
+              </div>
+              <div className="lg:col-span-7">
+                <BeforeAfter
+                  before={s.images?.["result-before"]}
+                  after={s.images?.["result-after"]}
+                  labels={{
+                    before: t("before"),
+                    after: t("after"),
+                    drag: t("resultsDrag"),
+                    placeholder: t("resultsPlaceholder"),
+                  }}
+                />
+              </div>
             </div>
-            <div className="lg:col-span-7">
-              <BeforeAfter
-                before={s.images?.["result-before"]}
-                after={s.images?.["result-after"]}
-                labels={{
-                  before: t("before"),
-                  after: t("after"),
-                  drag: t("resultsDrag"),
-                  placeholder: t("resultsPlaceholder"),
-                }}
-              />
-            </div>
-          </div>
-        </section>
+          </section>
         )}
 
         {/* ── FAQ ─────────────────────────────────────────────────────────── */}
@@ -569,7 +569,9 @@ export async function ClinicSite({
               </p>
               <ul className="flex flex-wrap justify-center gap-3 text-sm">
                 <Badge>{s.licence ? t("licence", { n: s.licence }) : t("licencePending")}</Badge>
-                {s.credentials?.map((c) => <Badge key={c.en}>{L(c.ar, c.en)}</Badge>)}
+                {s.credentials?.map((c) => (
+                  <Badge key={c.en}>{L(c.ar, c.en)}</Badge>
+                ))}
               </ul>
               {s.partners && s.partners.length > 0 && (
                 <ul className="grid grid-cols-3 gap-x-6 gap-y-8 sm:grid-cols-5 lg:grid-cols-10">

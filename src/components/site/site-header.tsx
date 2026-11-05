@@ -145,8 +145,9 @@ export async function SiteHeader({
                           </span>
                           <span className="text-site-subtle text-xs">
                             {t("deptCounts", {
-                              doctors: doctors.filter((x) => (x.dept === "hair" ? "skin" : x.dept) === d.key)
-                                .length,
+                              doctors: doctors.filter(
+                                (x) => (x.dept === "hair" ? "skin" : x.dept) === d.key,
+                              ).length,
                               treatments: (site.silos ?? [])
                                 .filter((x) => (x.dept === "hair" ? "skin" : x.dept) === d.key)
                                 .reduce((n, x) => n + x.items.length, 0),
