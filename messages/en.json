@@ -1232,6 +1232,8 @@
     "quickPortal": "Patient portal",
     "quickPortalText": "Your appointments and forms",
     "heroNext": "Next available consultation",
-    "heroLearnMore": "Explore our services"
+    "heroLearnMore": "Explore our services",
+    "sinceShort": "Since {year}",
+    "conceptShort": "Concept demo — not the official website"
   }
 }

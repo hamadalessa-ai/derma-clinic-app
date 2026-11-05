@@ -1232,6 +1232,8 @@
     "quickPortal": "بوابة المرضى",
     "quickPortalText": "مواعيدك ونماذجك",
     "heroNext": "أقرب موعد استشارة",
-    "heroLearnMore": "استكشف خدماتنا"
+    "heroLearnMore": "استكشف خدماتنا",
+    "sinceShort": "منذ {year}",
+    "conceptShort": "نسخة تصوّرية — ليست الموقع الرسمي"
   }
 }

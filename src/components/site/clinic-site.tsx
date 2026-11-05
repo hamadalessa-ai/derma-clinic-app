@@ -116,7 +116,10 @@ export async function ClinicSite({
         role="note"
         data-testid="site-concept"
       >
-        {tApp("demoBanner")} · {t("concept", { name })}
+        <span className="sm:hidden">{t("conceptShort")}</span>
+        <span className="hidden sm:inline">
+          {tApp("demoBanner")} · {t("concept", { name })}
+        </span>
       </div>
 
       <SiteHeader

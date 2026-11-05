@@ -67,7 +67,7 @@ export async function SiteHeader({
   ].filter((g) => g.links.length > 0);
 
   const navTrigger =
-    "flex h-full items-center gap-1 border-b-2 border-transparent px-1 text-[15px] font-medium text-site-ink transition-colors group-hover/nav:border-brand group-hover/nav:text-brand-strong group-focus-within/nav:border-brand";
+    "flex h-full items-center gap-1 border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap text-site-ink transition-colors group-hover/nav:border-brand group-hover/nav:text-brand-strong group-focus-within/nav:border-brand";
   const panel =
     "invisible absolute top-full z-50 translate-y-1 opacity-0 transition-[opacity,transform,visibility] duration-150 group-focus-within/nav:visible group-focus-within/nav:translate-y-0 group-focus-within/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 group-hover/nav:opacity-100";
 
@@ -132,19 +132,19 @@ export async function SiteHeader({
               {name.charAt(0)}
             </span>
             <span className="flex min-w-0 flex-col leading-tight">
-              <span className="text-site-ink truncate text-lg font-bold">{name}</span>
+              <span className="text-site-ink truncate text-lg font-bold whitespace-nowrap">{name}</span>
               {site.since && (
-                <span className="text-site-subtle hidden text-[11px] sm:block">
-                  {t("eyebrow", { year: site.since, cities: t("utilityLocations") })}
+                <span className="text-site-subtle hidden text-[11px] whitespace-nowrap sm:block">
+                  {t("sinceShort", { year: site.since })}
                 </span>
               )}
             </span>
           </Link>
 
-          <nav className="hidden h-full items-stretch gap-7 xl:flex" aria-label={name}>
+          <nav className="hidden h-full items-stretch gap-6 xl:flex" aria-label={name}>
             <Link
               href="/"
-              className="text-site-ink hover:border-brand flex items-center border-b-2 border-transparent px-1 text-[15px] font-medium"
+              className="text-site-ink hover:border-brand flex items-center border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap"
             >
               {t("navHome")}
             </Link>
@@ -272,13 +272,13 @@ export async function SiteHeader({
 
             <a
               href="#visit"
-              className="text-site-ink hover:border-brand flex items-center border-b-2 border-transparent px-1 text-[15px] font-medium"
+              className="text-site-ink hover:border-brand flex items-center border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap"
             >
               {t("navClinics")}
             </a>
             <a
               href="#faq"
-              className="text-site-ink hover:border-brand flex items-center border-b-2 border-transparent px-1 text-[15px] font-medium"
+              className="text-site-ink hover:border-brand hidden items-center border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap 2xl:flex"
             >
               {t("navFaq")}
             </a>
@@ -288,7 +288,7 @@ export async function SiteHeader({
             {canBook && (
               <Link
                 href="/book"
-                className="bg-brand text-brand-foreground hover:bg-brand-strong hidden h-11 items-center gap-2 rounded-lg px-5 text-sm font-semibold transition-colors sm:inline-flex"
+                className="bg-brand text-brand-foreground hover:bg-brand-strong hidden h-11 items-center gap-2 rounded-lg px-5 text-sm font-semibold whitespace-nowrap transition-colors sm:inline-flex"
                 data-testid="nav-book"
               >
                 <CalendarCheck className="size-4" aria-hidden />

@@ -127,13 +127,13 @@ export async function SiteHero({
 
         {/* Photo with the floating quick-action card */}
         <div className="relative order-1 lg:order-2">
-          <div className="aspect-[4/3] w-full lg:absolute lg:inset-0 lg:aspect-auto lg:w-[calc(100%+max(0px,(100vw-80rem)/2))]">
+          <div className="aspect-[16/10] w-full sm:aspect-[4/3] lg:absolute lg:inset-0 lg:aspect-auto lg:w-[calc(100%+max(0px,(100vw-80rem)/2))]">
             <SiteImage
               slot="hero"
               src={site.images?.hero}
               locale={locale}
               priority
-              className="rounded-none"
+              className="rounded-none lg:items-start lg:pt-28"
             />
           </div>
         </div>
