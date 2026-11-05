@@ -884,6 +884,29 @@ const siteInput = z.object({
     .regex(/^@?[\w.]{1,30}$/)
     .optional(),
   licence: siteText(40),
+  x: z.string().trim().regex(/^@?[\w.]{1,30}$/).optional(),
+  tiktok: z.string().trim().regex(/^@?[\w.]{1,30}$/).optional(),
+  credentials: z
+    .array(z.object({ ar: z.string().trim().min(2).max(120), en: z.string().trim().min(2).max(120) }))
+    .max(8)
+    .optional(),
+  specialties: z
+    .array(
+      z.object({
+        key: z.string().trim().min(1).max(30),
+        nameAr: z.string().trim().min(1).max(80),
+        nameEn: z.string().trim().min(1).max(80),
+        textAr: z.string().trim().max(400),
+        textEn: z.string().trim().max(400),
+        items: z
+          .array(z.object({ ar: z.string().trim().max(200), en: z.string().trim().max(200) }))
+          .max(20)
+          .optional(),
+        bookable: z.boolean().optional(),
+      }),
+    )
+    .max(8)
+    .optional(),
   reviews: z
     .array(
       z.object({

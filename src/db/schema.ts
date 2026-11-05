@@ -516,8 +516,25 @@ export interface SiteContent {
   instagram?: string;
   /** Ministry of Health licence number, shown only when filled in. */
   licence?: string;
+  x?: string;
+  tiktok?: string;
   /** Real patient reviews the clinic has permission to show. */
   reviews?: { quote: string; name: string; treatment?: string }[];
+  /** Real accreditations / licences / memberships, shown only when filled in. */
+  credentials?: { ar: string; en: string }[];
+  /**
+   * The clinic's specialties as presented on its website (its own wording). `bookable`: patients
+   * can book it online here; otherwise the website offers WhatsApp / phone.
+   */
+  specialties?: {
+    key: string;
+    nameAr: string;
+    nameEn: string;
+    textAr: string;
+    textEn: string;
+    items?: { ar: string; en: string }[];
+    bookable?: boolean;
+  }[];
 }
 
 /** One row per clinic. */
