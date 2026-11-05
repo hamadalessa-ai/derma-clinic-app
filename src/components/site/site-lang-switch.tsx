@@ -7,7 +7,14 @@ import { setLocale } from "@/app/actions/locale";
 import { cn } from "@/lib/utils";
 
 /** Strict EN | AR switch for the clinic website (the page flips LTR / RTL with it). */
-export function SiteLangSwitch({ className }: { className?: string }) {
+export function SiteLangSwitch({
+  className,
+  tone = "dark",
+}: {
+  className?: string;
+  /** "dark" on the dark utility bar, "light" on white headers. */
+  tone?: "dark" | "light";
+}) {
   const locale = useLocale();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -37,7 +44,11 @@ export function SiteLangSwitch({ className }: { className?: string }) {
           onClick={() => go(l)}
           className={cn(
             "rounded-full px-2.5 py-0.5 font-semibold tracking-wide transition-colors",
-            locale === l ? "bg-site-ivory text-site-night" : "opacity-80 hover:opacity-100",
+            locale === l
+              ? tone === "dark"
+                ? "bg-site-ivory text-site-night"
+                : "bg-site-primary text-site-ivory"
+              : "opacity-80 hover:opacity-100",
           )}
         >
           {l === "en" ? "EN" : "عربي"}

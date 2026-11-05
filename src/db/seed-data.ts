@@ -388,7 +388,7 @@ export const DERMA: SeedTenant = {
   slug: "derma",
   nameAr: "عيادات ديرما",
   nameEn: "Derma Clinics",
-  brandColor: "#28817a",
+  brandColor: "#0b5d4c", // deep emerald: website, booking and app share one accent
   branches: [
     {
       key: "riyadh",

@@ -61,13 +61,13 @@ export function SiteDoctors({
             className="bg-card shadow-soft flex flex-col overflow-hidden rounded-2xl"
             data-testid="site-doctor"
           >
-            <div className="bg-site-mist aspect-[9/10] overflow-hidden">
+            <div className="bg-card aspect-[4/5] overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element -- the clinic's own photos */}
               <img
                 src={d.photo}
                 alt={d.name}
                 loading="lazy"
-                className="h-full w-full object-cover"
+                className="h-full w-full origin-top-right scale-[1.7] object-cover object-[100%_0%]"
               />
             </div>
             <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">

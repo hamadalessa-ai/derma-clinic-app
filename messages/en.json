@@ -562,7 +562,7 @@
     "loadingTimes": "Looking for free times…",
     "fullName": "Full name",
     "mobile": "Mobile number",
-    "mobileHint": "e.g. 05XXXXXXXX",
+    "mobileHint": "05XXXXXXXX",
     "yourGender": "Gender",
     "male": "Male",
     "female": "Female",
@@ -1191,11 +1191,15 @@
     "directions": "Get Directions",
     "contactUs": "Contact us",
     "videoCta": "Video consultation from home",
-    "partnersTitle": "Partners",
+    "partnersTitle": "Trusted by leading Saudi institutions",
     "licence": "Ministry of Health licence {n}",
     "staff": "Staff sign-in",
     "rights": "All rights reserved {name} © {year}",
     "metaTitle": "{name} — Dermatology, Plastic Surgery, Hair & Dental",
-    "metaDescription": "{name}: dermatology, aesthetic medicine, plastic surgery, hair transplant and dental care. Book online in a minute."
+    "metaDescription": "{name}: dermatology, aesthetic medicine, plastic surgery, hair transplant and dental care. Book online in a minute.",
+    "samplePrices": "Sample prices for this demo — the clinic sets its own.",
+    "licencePending": "Ministry of Health licence no. — to be added",
+    "deptCounts": "{doctors} doctors · {treatments} treatments",
+    "conceptShort": "Concept demo — not the official website"
   }
 }

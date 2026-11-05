@@ -43,7 +43,7 @@ describe("db/setup.sql", () => {
 describe("seed data matches the brief", () => {
   it("Derma Clinics has the requested structure", () => {
     expect(DERMA.slug).toBe("derma");
-    expect(DERMA.brandColor).toBe("#28817a");
+    expect(DERMA.brandColor).toBe("#0b5d4c");
     expect(DERMA.branches.map((b) => b.key)).toEqual(["riyadh", "jeddah"]);
     expect(DERMA.departments.filter((d) => d.isActive).map((d) => d.code)).toEqual(["dermatology"]);
     expect(DERMA.departments).toHaveLength(4);

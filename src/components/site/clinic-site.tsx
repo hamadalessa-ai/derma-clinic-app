@@ -143,7 +143,8 @@ export async function ClinicSite({
         role="note"
         data-testid="site-concept"
       >
-        {t("concept", { name })}
+        <span className="sm:hidden">{t("conceptShort")}</span>
+        <span className="hidden sm:inline">{t("concept", { name })}</span>
       </div>
 
       <SiteHeader
@@ -414,6 +415,7 @@ export async function ClinicSite({
         )}
 
         {/* ── Results ─────────────────────────────────────────────────────── */}
+        {s.images?.["result-before"] && s.images?.["result-after"] && (
         <section id="results" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 lg:grid-cols-12 lg:px-8">
             <div className="flex flex-col gap-6 lg:col-span-5">
@@ -444,6 +446,7 @@ export async function ClinicSite({
             </div>
           </div>
         </section>
+        )}
 
         {/* ── FAQ ─────────────────────────────────────────────────────────── */}
         <section id="faq" className="scroll-mt-28 py-24 lg:py-32">
@@ -558,20 +561,16 @@ export async function ClinicSite({
         </section>
 
         {/* ── Partners & accreditations (pre-footer) ─────────────────────── */}
-        {(s.partners?.length || s.licence || (s.credentials?.length ?? 0) > 0) && (
+        {(s.partners?.length || s.licence || clinic.isDemo) && (
           <section className="border-site-line border-t py-16" aria-labelledby="partners-title">
             <div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 lg:px-8">
-              <p id="partners-title" className="text-site-subtle text-center text-sm font-semibold">
+              <p id="partners-title" className="text-site-ink text-center text-base font-semibold">
                 {t("partnersTitle")}
               </p>
-              {(s.licence || (s.credentials?.length ?? 0) > 0) && (
-                <ul className="flex flex-wrap justify-center gap-3 text-sm">
-                  {s.licence && <Badge>{t("licence", { n: s.licence })}</Badge>}
-                  {s.credentials?.map((c) => (
-                    <Badge key={c.en}>{L(c.ar, c.en)}</Badge>
-                  ))}
-                </ul>
-              )}
+              <ul className="flex flex-wrap justify-center gap-3 text-sm">
+                <Badge>{s.licence ? t("licence", { n: s.licence }) : t("licencePending")}</Badge>
+                {s.credentials?.map((c) => <Badge key={c.en}>{L(c.ar, c.en)}</Badge>)}
+              </ul>
               {s.partners && s.partners.length > 0 && (
                 <ul className="grid grid-cols-3 gap-x-6 gap-y-8 sm:grid-cols-5 lg:grid-cols-10">
                   {s.partners.map((p) => (
@@ -582,7 +581,7 @@ export async function ClinicSite({
                         alt={L(p.nameAr, p.nameEn)}
                         title={L(p.nameAr, p.nameEn)}
                         loading="lazy"
-                        className="max-h-14 w-auto max-w-full object-contain opacity-80 grayscale transition hover:opacity-100 hover:grayscale-0"
+                        className="max-h-14 w-auto max-w-full object-contain opacity-90 grayscale-[35%] transition hover:opacity-100 hover:grayscale-0"
                       />
                     </li>
                   ))}
