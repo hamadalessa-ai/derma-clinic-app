@@ -328,6 +328,11 @@ export async function ClinicSite({
           <section id="offers" className="scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
               <Heading title={t("offersEyebrow")} />
+              {clinic.isDemo && (
+                <p className="text-site-champagne-ink -mt-8 text-sm" data-testid="sample-prices">
+                  {t("samplePrices")}
+                </p>
+              )}
               <ul className={cn("grid gap-6 md:grid-cols-2", OFFER_COLS[offerCols])}>
                 {data.offers.map((o, i) => {
                   const full = o.servicePrice !== null ? o.servicePrice * o.sessions : null;
