@@ -67,12 +67,12 @@ export function OnlineBookingFlow({
     wantedDoctor && !initialService && !initial?.mode
       ? "clinic"
       : initialService
-      ? initialService.isVirtual
-        ? "video"
-        : "clinic"
-      : offersVideo
-        ? (initial?.mode ?? null)
-        : "clinic",
+        ? initialService.isVirtual
+          ? "video"
+          : "clinic"
+        : offersVideo
+          ? (initial?.mode ?? null)
+          : "clinic",
   );
   const [branchId, setBranchId] = useState<string | null>(
     catalog.branches.length === 1

@@ -46,7 +46,9 @@ export function SectionHeading({
   center?: boolean;
 }) {
   return (
-    <div className={cn("flex max-w-3xl flex-col gap-3", center && "mx-auto items-center text-center")}>
+    <div
+      className={cn("flex max-w-3xl flex-col gap-3", center && "mx-auto items-center text-center")}
+    >
       <span className="text-brand-strong flex items-center gap-2 text-sm font-semibold">
         <span className="bg-brand h-0.5 w-6 rounded-full" aria-hidden />
         {eyebrow}
@@ -265,12 +267,17 @@ export async function SiteServices({ ctx }: { ctx: Ctx }) {
                 <div className="flex flex-col gap-5 p-6 lg:p-8">
                   <div>
                     <h3 className="text-site-ink text-2xl font-bold">{spName}</h3>
-                    <p className="text-site-slate mt-2 leading-relaxed">{L(sp.textAr, sp.textEn)}</p>
+                    <p className="text-site-slate mt-2 leading-relaxed">
+                      {L(sp.textAr, sp.textEn)}
+                    </p>
                   </div>
                   {sp.items && sp.items.length > 0 && (
                     <ul className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2">
                       {sp.items.map((it) => (
-                        <li key={it.en} className="text-site-ink flex items-start gap-2.5 text-[15px]">
+                        <li
+                          key={it.en}
+                          className="text-site-ink flex items-start gap-2.5 text-[15px]"
+                        >
                           <span className="bg-brand-soft text-brand-strong mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
                             <Check className="size-3" aria-hidden />
                           </span>
@@ -371,7 +378,8 @@ export async function SiteDoctors({
             const docName = pick(ctx.locale, d.nameAr, d.nameEn);
             const branch = branches.find((b) => b.id === d.branchId);
             const p = d.profile ?? {};
-            const specialty = L(p.specialtyAr, p.specialtyEn) || L(d.titleAr ?? "", d.titleEn ?? "");
+            const specialty =
+              L(p.specialtyAr, p.specialtyEn) || L(d.titleAr ?? "", d.titleEn ?? "");
             return (
               <li
                 key={d.id}
@@ -397,7 +405,10 @@ export async function SiteDoctors({
                     {p.credentials && p.credentials.length > 0 && (
                       <div className="flex gap-2.5">
                         <dt className="sr-only">{t("doctorCredentials")}</dt>
-                        <GraduationCap className="text-site-subtle mt-0.5 size-4 shrink-0" aria-hidden />
+                        <GraduationCap
+                          className="text-site-subtle mt-0.5 size-4 shrink-0"
+                          aria-hidden
+                        />
                         <dd className="text-site-slate flex flex-col gap-1">
                           {p.credentials.map((c) => (
                             <span key={c.en}>{L(c.ar, c.en)}</span>
@@ -408,9 +419,14 @@ export async function SiteDoctors({
                     {p.languages && p.languages.length > 0 && (
                       <div className="flex gap-2.5">
                         <dt className="sr-only">{t("doctorLanguages")}</dt>
-                        <Languages className="text-site-subtle mt-0.5 size-4 shrink-0" aria-hidden />
+                        <Languages
+                          className="text-site-subtle mt-0.5 size-4 shrink-0"
+                          aria-hidden
+                        />
                         <dd className="text-site-slate">
-                          {p.languages.map((l) => L(l.ar, l.en)).join(ctx.locale === "ar" ? "، " : ", ")}
+                          {p.languages
+                            .map((l) => L(l.ar, l.en))
+                            .join(ctx.locale === "ar" ? "، " : ", ")}
                         </dd>
                       </div>
                     )}
