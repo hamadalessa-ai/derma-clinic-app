@@ -38,6 +38,8 @@ import { whatsappLater } from "@/lib/whatsapp/later";
 import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { clientIp } from "@/lib/request-info";
 import { checkCode, sendCode } from "@/lib/verify/codes";
+import { BOOKING_PASS_COOKIE, BOOKING_PASS_MINUTES, phonePass } from "@/lib/verify/pass";
+import { adultByPhone, verifiedPhone } from "@/lib/verify/identity";
 import { videoProvider } from "@/lib/video/provider";
 import { patientJoin } from "@/lib/video/visit";
 import { parseConsentToken } from "@/lib/video/link";
@@ -101,7 +103,52 @@ export async function requestBookingCodeAction(input: z.input<typeof bookingRequ
   });
 }
 
-const bookingConfirm = bookingRequest.extend({ code: z.string().trim().max(10) });
+/** The code is optional when the mobile was verified first (booking pass) or the patient is signed in. */
+const bookingConfirm = bookingRequest.extend({ code: z.string().trim().max(10).optional() });
+
+const phoneOnly = z.object({ phone, website: z.string().max(200).optional() });
+
+/** Booking step 1: a code to the mobile (in demo mode: shown on screen). */
+export async function requestPhoneCodeAction(input: z.input<typeof phoneOnly>) {
+  return publicAction(async (tenant) => {
+    const v = parse(phoneOnly, input);
+    if (v.website) return { demoCode: null as string | null };
+    const ip = await clientIp();
+    return withTenant(tenant.id, (tx) =>
+      sendCode(tx, { tenant, phone: v.phone, purpose: "booking", ip }),
+    );
+  });
+}
+
+/**
+ * Booking step 2: the code is right → this browser holds a 30-minute "verified mobile" pass; the
+ * patient then chooses service and time and confirms without another code. Known patients get
+ * their name pre-filled.
+ */
+export async function verifyBookingPhoneAction(input: { phone: string; code: string }) {
+  return publicAction(async (tenant) => {
+    const v = parse(z.object({ phone, code: z.string().trim().max(10) }), input);
+    const result = await withTenant(tenant.id, async (tx) => {
+      const check = await checkCode(tx, {
+        tenantId: tenant.id,
+        phone: v.phone,
+        purpose: "booking",
+        code: westernDigits(v.code),
+      });
+      if (!check.ok) return { error: check.error as string };
+      return { known: await adultByPhone(tx, v.phone) };
+    });
+    if (result.error) throw new PublicError(result.error);
+    (await cookies()).set(BOOKING_PASS_COOKIE, phonePass(tenant.id, v.phone), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: BOOKING_PASS_MINUTES * 60,
+    });
+    return { phone: v.phone, known: result.known ?? null };
+  });
+}
 
 /**
  * Step 2: checks the code, finds (or creates) the patient by mobile, books through the engine and
@@ -113,15 +160,20 @@ export async function confirmBookingAction(input: z.input<typeof bookingConfirm>
     const v = parse(bookingConfirm, input);
     if (v.website) throw new PublicError("code_expired");
     const ip = await clientIp();
+    // Verified first (pass / signed-in patient) → no code needed, but only for THAT mobile.
+    const preVerified = !v.code && (await verifiedPhone(tenant.id)) === v.phone;
+    if (!v.code && !preVerified) throw new PublicError("code_expired");
     const result = await withTenant(tenant.id, async (tx) => {
-      const check = await checkCode(tx, {
-        tenantId: tenant.id,
-        phone: v.phone,
-        purpose: "booking",
-        code: westernDigits(v.code),
-      });
-      // Return (not throw) so the counted attempt is saved.
-      if (!check.ok) return { error: check.error };
+      if (!preVerified) {
+        const check = await checkCode(tx, {
+          tenantId: tenant.id,
+          phone: v.phone,
+          purpose: "booking",
+          code: westernDigits(v.code ?? ""),
+        });
+        // Return (not throw) so the counted attempt is saved.
+        if (!check.ok) return { error: check.error };
+      }
       const { patient } = await findOrCreateOnlinePatient(tx, {
         tenantId: tenant.id,
         filePrefix: tenant.slug.charAt(0).toUpperCase(),

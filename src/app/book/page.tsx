@@ -11,6 +11,7 @@ import { addDays } from "@/lib/booking/time";
 import { brandStyle, pick } from "@/lib/brand";
 import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { loadBookingCatalog } from "@/lib/online/catalog";
+import { bookingIdentity } from "@/lib/verify/identity";
 import { getCurrentTenant } from "@/lib/tenant/current";
 import { todayRiyadh } from "@/components/clinic/time";
 import type { Locale } from "@/i18n/config";
@@ -18,12 +19,26 @@ import type { Locale } from "@/i18n/config";
 export const metadata: Metadata = { title: "Book · احجز" };
 
 /** Public online booking. No login: the mobile number is verified with a code. */
-export default async function BookPage() {
+export default async function BookPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string; mode?: string }>;
+}) {
+  const sp = await searchParams;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("book");
   const catalog = await withTenant(tenant.id, (tx) => loadBookingCatalog(tx));
+  // Verified earlier in this browser (step 1 done) or signed in on the patient page.
+  const identity = await bookingIdentity(tenant.id);
+  const UUID = /^[0-9a-f-]{36}$/i;
+  const mode: "video" | "clinic" | undefined =
+    sp.mode === "video" ? "video" : sp.mode === "clinic" ? "clinic" : undefined;
+  const initial = {
+    serviceId: sp.service && UUID.test(sp.service) ? sp.service : undefined,
+    mode,
+  };
   const today = todayRiyadh();
   const days = Array.from({ length: catalog.settings.horizonDays + 1 }, (_, i) =>
     addDays(today, i),
@@ -42,7 +57,7 @@ export default async function BookPage() {
           <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         {catalog.enabled && catalog.departments.length > 0 ? (
-          <OnlineBookingFlow catalog={catalog} days={days} />
+          <OnlineBookingFlow catalog={catalog} days={days} identity={identity} initial={initial} />
         ) : (
           <Notice tone="warning">{t("disabled")}</Notice>
         )}
