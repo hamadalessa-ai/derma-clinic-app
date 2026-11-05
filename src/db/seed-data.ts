@@ -896,7 +896,8 @@ export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
         nameAr: "جراحة التجميل",
         nameEn: "Plastic Surgery",
         textAr: "إجراءات جراحية مخصّصة لنتائج متوازنة وراقية، بأمان ورعاية شخصية.",
-        textEn: "Personalised surgical procedures for balanced, refined results — safely, with personal care.",
+        textEn:
+          "Personalised surgical procedures for balanced, refined results — safely, with personal care.",
         items: [
           I("تجميل الوجه", "Facial contouring"),
           I("نحت الجسم", "Body contouring"),

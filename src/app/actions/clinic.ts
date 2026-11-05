@@ -884,10 +884,20 @@ const siteInput = z.object({
     .regex(/^@?[\w.]{1,30}$/)
     .optional(),
   licence: siteText(40),
-  x: z.string().trim().regex(/^@?[\w.]{1,30}$/).optional(),
-  tiktok: z.string().trim().regex(/^@?[\w.]{1,30}$/).optional(),
+  x: z
+    .string()
+    .trim()
+    .regex(/^@?[\w.]{1,30}$/)
+    .optional(),
+  tiktok: z
+    .string()
+    .trim()
+    .regex(/^@?[\w.]{1,30}$/)
+    .optional(),
   credentials: z
-    .array(z.object({ ar: z.string().trim().min(2).max(120), en: z.string().trim().min(2).max(120) }))
+    .array(
+      z.object({ ar: z.string().trim().min(2).max(120), en: z.string().trim().min(2).max(120) }),
+    )
     .max(8)
     .optional(),
   specialties: z

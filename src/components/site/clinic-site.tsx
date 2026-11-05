@@ -289,7 +289,10 @@ export async function ClinicSite({
                       i > 0 && "md:border-site-line md:border-s",
                     )}
                   >
-                    <dd className="font-display text-site-ink text-5xl font-medium lg:text-6xl" dir="ltr">
+                    <dd
+                      className="font-display text-site-ink text-5xl font-medium lg:text-6xl"
+                      dir="ltr"
+                    >
                       {f.value}
                     </dd>
                     <dt className="text-site-subtle text-sm">{f.label}</dt>
@@ -468,7 +471,10 @@ export async function ClinicSite({
                     ] as const
                   ).map(([title, text], i) => (
                     <li key={title} className="flex gap-4">
-                      <span className="font-display text-site-champagne text-3xl leading-none" dir="ltr">
+                      <span
+                        className="font-display text-site-champagne text-3xl leading-none"
+                        dir="ltr"
+                      >
                         {i + 1}
                       </span>
                       <div>
@@ -487,11 +493,7 @@ export async function ClinicSite({
         {data.doctors.length > 0 && (
           <section id="team" className="scroll-mt-24 py-24 lg:py-32">
             <div className="mx-auto max-w-7xl px-5 lg:px-8">
-              <SectionHead
-                eyebrow={t("teamEyebrow")}
-                title={t("teamTitle")}
-                text={t("teamText")}
-              />
+              <SectionHead eyebrow={t("teamEyebrow")} title={t("teamTitle")} text={t("teamText")} />
               {clinic.isDemo && (
                 <p className="text-site-subtle mt-4 text-sm" data-testid="team-demo">
                   {t("teamDemo")}
@@ -540,9 +542,7 @@ export async function ClinicSite({
                   <div className="text-site-ink text-sm font-medium">{t("credentials")}</div>
                   {credentials.length > 0 || s.licence ? (
                     <ul className="mt-3 flex flex-col">
-                      {s.licence && (
-                        <Credential>{t("licence", { n: s.licence })}</Credential>
-                      )}
+                      {s.licence && <Credential>{t("licence", { n: s.licence })}</Credential>}
                       {credentials.map((c) => (
                         <Credential key={c.en}>{L(c.ar, c.en)}</Credential>
                       ))}
@@ -610,7 +610,10 @@ export async function ClinicSite({
                 <ul className="flex flex-col gap-2 text-[15px]">
                   {(["videoPoint1", "videoPoint2", "videoPoint3"] as const).map((k) => (
                     <li key={k} className="flex items-center gap-3">
-                      <ShieldCheck className="text-site-champagne-ink size-4 shrink-0" aria-hidden />
+                      <ShieldCheck
+                        className="text-site-champagne-ink size-4 shrink-0"
+                        aria-hidden
+                      />
                       {t(k)}
                     </li>
                   ))}
@@ -787,7 +790,12 @@ export async function ClinicSite({
               </a>
             )}
             {wa && (
-              <a href={wa} target="_blank" rel="noopener noreferrer" className="hover:text-site-ivory w-fit">
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-site-ivory w-fit"
+              >
                 {t("whatsapp")}
               </a>
             )}
