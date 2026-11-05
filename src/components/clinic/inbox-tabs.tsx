@@ -13,11 +13,26 @@ export async function InboxTabs({
 }) {
   const t = await getTranslations("inbox");
   const tabs = [
-    { key: "messages" as const, href: "/whatsapp", label: t("messages"), n: counts.messages, Icon: MessageCircle },
-    { key: "requests" as const, href: "/requests", label: t("requests"), n: counts.requests, Icon: Inbox },
+    {
+      key: "messages" as const,
+      href: "/whatsapp",
+      label: t("messages"),
+      n: counts.messages,
+      Icon: MessageCircle,
+    },
+    {
+      key: "requests" as const,
+      href: "/requests",
+      label: t("requests"),
+      n: counts.requests,
+      Icon: Inbox,
+    },
   ];
   return (
-    <nav className="bg-muted flex w-full gap-1 rounded-xl p-1 sm:w-auto sm:self-start" data-testid="inbox-tabs">
+    <nav
+      className="bg-muted flex w-full gap-1 rounded-xl p-1 sm:w-auto sm:self-start"
+      data-testid="inbox-tabs"
+    >
       {tabs.map(({ key, href, label, n, Icon }) => (
         <Link
           key={key}
