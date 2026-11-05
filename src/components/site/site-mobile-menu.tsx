@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { CalendarCheck, ChevronDown, Menu, Phone, X } from "lucide-react";
 
@@ -44,7 +45,9 @@ export function SiteMobileMenu({
       >
         <Menu className="size-5" />
       </button>
-      {open && (
+      {open &&
+        // In <body>: the sticky header's backdrop blur would otherwise trap a fixed overlay.
+        createPortal(
         <div
           className="bg-card fixed inset-0 z-50 flex flex-col xl:hidden"
           role="dialog"
@@ -115,7 +118,7 @@ export function SiteMobileMenu({
             )}
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }
