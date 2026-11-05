@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: "Book · احجز" };
 export default async function BookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ service?: string; mode?: string }>;
+  searchParams: Promise<{ service?: string; mode?: string; doctor?: string }>;
 }) {
   const sp = await searchParams;
   const tenant = await getCurrentTenant();
@@ -38,6 +38,7 @@ export default async function BookPage({
   const initial = {
     serviceId: sp.service && UUID.test(sp.service) ? sp.service : undefined,
     mode,
+    doctorId: sp.doctor && UUID.test(sp.doctor) ? sp.doctor : undefined,
   };
   const today = todayRiyadh();
   const days = Array.from({ length: catalog.settings.horizonDays + 1 }, (_, i) =>

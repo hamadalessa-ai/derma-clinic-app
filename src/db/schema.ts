@@ -194,6 +194,8 @@ export const tenantMembers = pgTable(
     gender: gender("gender"),
     titleAr: text("title_ar"),
     titleEn: text("title_en"),
+    /** Doctors: public profile for the clinic website (specialty, credentials, languages). */
+    profile: jsonb("profile").$type<MemberProfile>(),
     createdAt: createdAt(),
   },
   (t) => [
@@ -502,6 +504,14 @@ export const TENANT_TABLES = [
 // ════════════════════════════════════════════════════════════════════════════
 
 /** What the clinic writes for its public website (Settings → Website). All optional. */
+/** A doctor's public profile on the clinic website. Only real details the clinic enters. */
+export interface MemberProfile {
+  specialtyAr?: string;
+  specialtyEn?: string;
+  credentials?: { ar: string; en: string }[];
+  languages?: { ar: string; en: string }[];
+}
+
 export interface SiteContent {
   headlineAr?: string;
   headlineEn?: string;

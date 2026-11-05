@@ -1,5 +1,5 @@
 import { ImageIcon } from "lucide-react";
-import { SITE_IMAGE_SLOTS, type ImageSlotKey } from "@/lib/site/images";
+import { SITE_IMAGE_SLOTS, type ImageSlot, type ImageSlotKey } from "@/lib/site/images";
 import { cn } from "@/lib/utils";
 
 /**
@@ -9,20 +9,23 @@ import { cn } from "@/lib/utils";
  */
 export function SiteImage({
   slot,
+  spec,
   src,
   locale,
   className,
   showSpec = true,
   priority = false,
 }: {
-  slot: ImageSlotKey;
+  slot: ImageSlotKey | string;
+  /** For slots not in SITE_IMAGE_SLOTS (e.g. a doctor's portrait). */
+  spec?: ImageSlot;
   src?: string;
   locale: "ar" | "en";
   className?: string;
   showSpec?: boolean;
   priority?: boolean;
 }) {
-  const s = SITE_IMAGE_SLOTS[slot];
+  const s = spec ?? SITE_IMAGE_SLOTS[slot as ImageSlotKey];
   const alt = locale === "ar" ? s.altAr : s.altEn;
   if (src) {
     return (

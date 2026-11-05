@@ -47,7 +47,7 @@ export function OnlineBookingFlow({
   /** Already verified in this browser (pass cookie or signed-in patient). */
   identity: BookingIdentity | null;
   /** From the clinic website: a chosen visit type or service. */
-  initial?: { mode?: "clinic" | "video"; serviceId?: string };
+  initial?: { mode?: "clinic" | "video"; serviceId?: string; doctorId?: string };
 }) {
   const t = useTranslations("book");
   const te = useTranslations("errors");
@@ -61,8 +61,12 @@ export function OnlineBookingFlow({
   /** Video consultations are offered when a video service and a branch with a video room exist. */
   const offersVideo = catalog.videoBranches.length > 0 && allServices.some((s) => s.isVirtual);
   const initialService = allServices.find((s) => s.id === initial?.serviceId);
+  /** Chosen on the website ("Book with this doctor"): picked once a service is chosen. */
+  const wantedDoctor = catalog.doctors.find((d) => d.id === initial?.doctorId) ?? null;
   const [mode, setMode] = useState<Mode | null>(
-    initialService
+    wantedDoctor && !initialService && !initial?.mode
+      ? "clinic"
+      : initialService
       ? initialService.isVirtual
         ? "video"
         : "clinic"
@@ -71,10 +75,17 @@ export function OnlineBookingFlow({
         : "clinic",
   );
   const [branchId, setBranchId] = useState<string | null>(
-    catalog.branches.length === 1 ? catalog.branches[0].id : null,
+    catalog.branches.length === 1
+      ? catalog.branches[0].id
+      : wantedDoctor?.branchId && catalog.branches.some((b) => b.id === wantedDoctor.branchId)
+        ? wantedDoctor.branchId
+        : null,
   );
   const [serviceId, setServiceId] = useState<string | null>(
-    initialService && (initialService.isVirtual || catalog.branches.length === 1)
+    initialService &&
+      (initialService.isVirtual ||
+        catalog.branches.length === 1 ||
+        (wantedDoctor?.branchId && !initialService.isVirtual))
       ? initialService.id
       : null,
   );
@@ -131,6 +142,14 @@ export function OnlineBookingFlow({
     const d = catalog.doctors.find((x) => x.id === id);
     return d ? name(d) : "";
   };
+
+  // "Book with this doctor" from the website: choose them once a service is picked (if they
+  // offer it at this branch). Changing the doctor afterwards is always possible.
+  useEffect(() => {
+    if (serviceId && !doctor && wantedDoctor && branchDoctors.some((d) => d.id === wantedDoctor.id))
+      setDoctor({ kind: "doctor", id: wantedDoctor.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceId, branchDoctors]);
 
   // Free times for the chosen day (for video: from every video branch, merged).
   useEffect(() => {

@@ -830,6 +830,56 @@ export const ONLINE_SETTINGS: Record<
 export const AI_RECEPTIONIST: Record<string, boolean> = { derma: true, lamsa: false };
 
 /**
+ * Demo doctors' website profiles. The doctors are fictional demo staff, and so are these details;
+ * the website labels the team as a demo team. Real clinics enter their own.
+ */
+const AR_EN = [
+  { ar: "العربية", en: "Arabic" },
+  { ar: "الإنجليزية", en: "English" },
+];
+export const STAFF_PROFILE: Record<string, Record<string, unknown>> = {
+  "derma-dr-sara": {
+    specialtyAr: "الأمراض الجلدية والتجميل",
+    specialtyEn: "Medical & aesthetic dermatology",
+    credentials: [
+      { ar: "البورد السعودي في الأمراض الجلدية", en: "Saudi Board of Dermatology" },
+      { ar: "زمالة الليزر والتجميل الجلدي", en: "Fellowship in laser & cosmetic dermatology" },
+    ],
+    languages: AR_EN,
+  },
+  "derma-dr-faisal": {
+    specialtyAr: "الليزر واستعادة الشعر",
+    specialtyEn: "Laser & hair restoration",
+    credentials: [
+      { ar: "البورد السعودي في الأمراض الجلدية", en: "Saudi Board of Dermatology" },
+      { ar: "دبلوم زراعة الشعر", en: "Diploma in hair restoration" },
+    ],
+    languages: AR_EN,
+  },
+  "derma-dr-reem": {
+    specialtyAr: "جلدية الأطفال والأمراض الجلدية",
+    specialtyEn: "Pediatric & medical dermatology",
+    credentials: [{ ar: "البورد العربي في الأمراض الجلدية", en: "Arab Board of Dermatology" }],
+    languages: AR_EN,
+  },
+  "derma-dr-lina": {
+    specialtyAr: "التجميل الجلدي والحقن",
+    specialtyEn: "Aesthetic dermatology & injectables",
+    credentials: [
+      { ar: "البورد السعودي في الأمراض الجلدية", en: "Saudi Board of Dermatology" },
+      { ar: "زمالة الطب التجميلي", en: "Fellowship in aesthetic medicine" },
+    ],
+    languages: AR_EN,
+  },
+  "derma-dr-majed": {
+    specialtyAr: "حب الشباب والندبات والتصبغات",
+    specialtyEn: "Acne, scars & pigmentation",
+    credentials: [{ ar: "البورد السعودي في الأمراض الجلدية", en: "Saudi Board of Dermatology" }],
+    languages: AR_EN,
+  },
+};
+
+/**
  * Website texts (Settings → Website). Derma: wording, specialties, contacts and social links
  * taken from the clinic's own public website (dermaclinics.net) for the pitch demo. It lists no
  * doctors, accreditations, statistics or reviews, so none are added here.

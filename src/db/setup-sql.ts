@@ -30,6 +30,7 @@ import {
   WORK_HOURS,
   WORK_WEEK,
   SITE_CONTENT,
+  STAFF_PROFILE,
   VIRTUAL_ROOMS,
   type SeedTenant,
 } from "./seed-data";
@@ -152,6 +153,7 @@ function tenantSql(t: SeedTenant): string {
         title_ar: s.titleAr,
         title_en: s.titleEn,
         gender: STAFF_GENDER[s.key] ?? null,
+        profile: STAFF_PROFILE[s.key] ? JSON.stringify(STAFF_PROFILE[s.key]) : null,
       })),
     ),
   );
