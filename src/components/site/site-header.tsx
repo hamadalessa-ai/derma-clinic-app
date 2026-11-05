@@ -318,7 +318,7 @@ export function doctorsForHeader(
   doctors: {
     id: string;
     nameAr: string;
-    nameEn: string;
+    nameEn: string | null;
     titleAr: string | null;
     titleEn: string | null;
     branchId: string | null;
