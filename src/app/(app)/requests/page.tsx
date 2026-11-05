@@ -13,6 +13,8 @@ import {
 import { SourceBadge } from "@/components/clinic/badges";
 import { patients, services, users } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
+import { InboxTabs } from "@/components/clinic/inbox-tabs";
+import { inboxCounts } from "@/lib/views/inbox";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { formatDualDate, formatTime } from "@/lib/format";
 import { pick } from "@/lib/brand";
@@ -30,6 +32,8 @@ export default async function RequestsPage() {
   const tc = await getTranslations("common");
   const tsrc = await getTranslations("sources");
 
+  const ti = await getTranslations("inbox");
+  const counts = await withActor(actorOf(ctx), (tx) => inboxCounts(tx));
   const data = await withActor(actorOf(ctx), async (tx) => {
     const reqs = await pendingRequests(tx);
     const all = await loadAppointments(tx, {
@@ -111,7 +115,8 @@ export default async function RequestsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("title")} />
+      <PageHeader title={ti("title")} />
+      <InboxTabs active="requests" counts={counts} />
       {data.pendingBookings.length > 0 && (
         <h2 className="text-base font-semibold">{t("pendingBookings")}</h2>
       )}

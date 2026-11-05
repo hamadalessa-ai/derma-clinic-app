@@ -33,7 +33,7 @@
     "more": "More",
     "mainMenu": "Main menu",
     "account": "My account",
-    "whatsapp": "WhatsApp messages",
+    "whatsapp": "Inbox",
     "simulator": "WhatsApp simulator"
   },
   "roles": {
@@ -1058,5 +1058,10 @@
     "toVideo": "Go to the video consultation",
     "nothing": "Nothing to sign for this visit: you're all set.",
     "closed": "This visit has already taken place or was cancelled, so this link has closed."
+  },
+  "inbox": {
+    "title": "Inbox",
+    "messages": "Messages",
+    "requests": "Requests"
   }
 }
