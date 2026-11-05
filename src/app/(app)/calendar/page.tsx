@@ -230,34 +230,34 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
         />
       ) : (
-      <CalendarBoard
-        columns={columns}
-        startMin={10 * 60}
-        endMin={20 * 60}
-        branchId={branch.id}
-        services={data.services.map((s) => ({
-          id: s.id,
-          nameAr: s.nameAr,
-          nameEn: s.nameEn,
-          durationMinutes: s.durationMinutes,
-        }))}
-        doctors={doctorOptions}
-        canBook={can(ctx.roles, "appointments:manage")}
-        canManage={can(ctx.roles, "appointments:manage")}
-        memberId={ctx.memberId}
-        doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
-        preselectPatient={
-          pre
-            ? {
-                id: pre.id,
-                fileNumber: pre.fileNumber,
-                nameAr: pre.fullNameAr,
-                nameEn: pre.fullNameEn,
-                phone: pre.phone,
-              }
-            : null
-        }
-      />
+        <CalendarBoard
+          columns={columns}
+          startMin={10 * 60}
+          endMin={20 * 60}
+          branchId={branch.id}
+          services={data.services.map((s) => ({
+            id: s.id,
+            nameAr: s.nameAr,
+            nameEn: s.nameEn,
+            durationMinutes: s.durationMinutes,
+          }))}
+          doctors={doctorOptions}
+          canBook={can(ctx.roles, "appointments:manage")}
+          canManage={can(ctx.roles, "appointments:manage")}
+          memberId={ctx.memberId}
+          doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
+          preselectPatient={
+            pre
+              ? {
+                  id: pre.id,
+                  fileNumber: pre.fileNumber,
+                  nameAr: pre.fullNameAr,
+                  nameEn: pre.fullNameEn,
+                  phone: pre.phone,
+                }
+              : null
+          }
+        />
       )}
       <AutoRefresh
         versionUrl={`/api/calendar/version?from=${encodeURIComponent(data.from.toISOString())}&to=${encodeURIComponent(data.to.toISOString())}`}
