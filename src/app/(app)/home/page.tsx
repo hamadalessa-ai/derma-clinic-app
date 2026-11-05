@@ -3,7 +3,7 @@ import { can } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/session";
 
 /**
- * Home: straight to each person's main screen (no dashboard to click through).
+ * Staff home (/home; "/" is the clinic website and sends signed-in staff here): straight to each person's main screen (no dashboard to click through).
  * Doctors → My Day; reception and admins → Calendar; platform owner → Platform.
  */
 export default async function Home() {

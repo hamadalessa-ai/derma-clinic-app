@@ -123,6 +123,7 @@ const DEFAULT_SETTINGS: Settings = {
   aiReceptionistEnabled: false,
   aiDailyLimit: 200,
   aiScribeEnabled: false,
+  site: {},
   whatsappWebhookVerifiedAt: null,
 };
 

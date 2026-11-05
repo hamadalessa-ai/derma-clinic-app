@@ -54,7 +54,7 @@ const CTX: LinkContext = {
 
 describe("the link table matches the pages", () => {
   it.each(Object.entries(PAGE_PERMISSIONS))("%s asks for %s", (path, permission) => {
-    const file = `src/app/(app)${path === "/" ? "" : path}/page.tsx`;
+    const file = `src/app/(app)${path}/page.tsx`;
     const source = readFileSync(file, "utf8");
     expect(source.match(/requirePermission\("([^"]+)"\)/)?.[1]).toBe(permission);
   });

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { services, tenantMembers, tenantSettings } from "@/db/schema";
+import { services, tenantMembers, tenantSettings, type SiteContent } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
@@ -82,4 +82,21 @@ export async function setMemberGender(
     metadata: { gender },
   });
   return row;
+}
+
+/**
+ * The clinic website's texts and contact details (Settings → Website). Replaces the whole set.
+ * Reviews must be real ones the clinic may publish — the website never invents any.
+ */
+export async function saveSiteContent(tx: TenantTx, actor: Actor, site: SiteContent) {
+  assertCan(actor.roles, "settings:manage");
+  const [row] = await tx.update(tenantSettings).set({ site }).returning({ site: tenantSettings.site });
+  await audit(tx, {
+    actorUserId: actor.userId,
+    action: "settings.site",
+    entityType: "tenant_settings",
+    entityId: actor.tenantId,
+    metadata: { fields: Object.keys(site), reviews: site.reviews?.length ?? 0 },
+  });
+  return row ?? null;
 }

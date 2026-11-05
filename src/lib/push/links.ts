@@ -5,7 +5,7 @@
  *    (read-only); reception → the WhatsApp inbox thread;
  *  - doctor events → My Day on that date (or the calendar for staff without My Day);
  *  - reception events → the calendar on that date; doctors' requests → Requests.
- * Every link falls back to the dashboard ("/"), which every clinic role may open.
+ * Every link falls back to the staff home ("/home"), which every clinic role may open.
  */
 import { can, type Permission, type Role } from "@/lib/auth/permissions";
 import { DOCTOR_TYPES, type PushType } from "./payload";
@@ -24,7 +24,7 @@ export interface LinkContext {
  * tests/push-links.test.ts checks this table against the page files themselves.
  */
 export const PAGE_PERMISSIONS = {
-  "/": "dashboard:view",
+  "/home": "dashboard:view",
   "/my-day": "my_day:view",
   "/calendar": "calendar:view",
   "/requests": "requests:decide",
@@ -67,5 +67,5 @@ export function pushLink(type: PushType, roles: readonly Role[], c: LinkContext)
       : (DOCTOR_TYPES as readonly string[]).includes(type)
         ? [myDay, calendar]
         : [calendar];
-  return choices.find((url) => canOpen(roles, url)) ?? "/";
+  return choices.find((url) => canOpen(roles, url)) ?? "/home";
 }

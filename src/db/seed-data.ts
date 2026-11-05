@@ -829,6 +829,26 @@ export const ONLINE_SETTINGS: Record<
 /** Clinics whose WhatsApp chats are answered by the AI receptionist (when a key is set). */
 export const AI_RECEPTIONIST: Record<string, boolean> = { derma: true, lamsa: false };
 
+/**
+ * Clinic website texts (Settings → Website). Derma: a CONCEPT for the pitch — no real doctors,
+ * reviews or contact numbers (the clinic adds its own). Only the opening year is public.
+ */
+export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
+  derma: {
+    headlineAr: "بشرة صحية بثقة، بإشراف أطباء مختصين",
+    headlineEn: "Healthy, confident skin, in specialist hands",
+    taglineAr:
+      "الجلدية والتجميل في الرياض وجدة. احجز موعدك في دقيقة، أو استشر طبيبك عبر الفيديو من منزلك.",
+    taglineEn:
+      "Dermatology and aesthetics in Riyadh and Jeddah. Book in a minute, or see your doctor by video from home.",
+    aboutAr:
+      "منذ عام 1996 نقدّم رعاية جلدية وتجميلية مبنية على الدليل العلمي، بخطة واضحة لكل مريض ومتابعة بعد كل جلسة.",
+    aboutEn:
+      "Since 1996 we have offered evidence-based dermatology and aesthetic care, with a clear plan for every patient and follow-up after every session.",
+    since: 1996,
+  },
+};
+
 /** Clinics whose doctors can use the AI scribe (when a key is set). */
 export const AI_SCRIBE: Record<string, boolean> = { derma: true, lamsa: false };
 

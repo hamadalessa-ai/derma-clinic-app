@@ -58,7 +58,7 @@ export async function signIn(input: z.input<typeof credentials>): Promise<SignIn
     entityId: userId,
     ipAddress: ip,
   });
-  redirect("/");
+  redirect("/home");
 }
 
 export async function signOut() {
