@@ -261,6 +261,7 @@ export async function freeSlotsAction(input: {
   practitionerId?: string;
   day: string;
   time?: string;
+  limit?: number;
 }) {
   return staffAction(["appointments:manage", "appointments:own"], async (_ctx, actor) => {
     const v = parse(
@@ -270,6 +271,7 @@ export async function freeSlotsAction(input: {
         practitionerId: uuid.optional(),
         day,
         time: time.optional(),
+        limit: z.number().int().min(1).max(12).optional(),
       }),
       input,
     );
@@ -280,7 +282,7 @@ export async function freeSlotsAction(input: {
         serviceId: v.serviceId,
         practitionerId: v.practitionerId,
         from,
-        limit: 6,
+        limit: v.limit ?? 6,
       }),
     );
     return slots.map((s) => ({

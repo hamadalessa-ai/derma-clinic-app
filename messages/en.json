@@ -237,7 +237,7 @@
     "findNextSlot": "Next free slot",
     "nextSlots": "Next free slots",
     "noSlots": "No free slots in the next two weeks",
-    "bookedOk": "Booked",
+    "bookedOk": "Booked for {name}",
     "appointment": "Appointment",
     "checkIn": "Check in",
     "confirm": "Confirm",
@@ -258,7 +258,7 @@
     "alreadyCheckedIn": "Already checked in",
     "consentRequired": "The consent form must be signed before check-in",
     "selectDoctor": "Choose doctor",
-    "anyDoctor": "Any available doctor",
+    "anyDoctor": "Any doctor (first free)",
     "empty": "No appointments",
     "weekOf": "Week of {date}",
     "liveHint": "Updates automatically",
@@ -281,7 +281,9 @@
     "nobodyFreeThatDay": "No doctor has free times that day.",
     "arrivals": "Arrivals",
     "noArrivals": "No appointments this day.",
-    "checkedInName": "{name} checked in"
+    "checkedInName": "{name} checked in",
+    "otherTime": "Book a specific time instead",
+    "showFreeTimes": "Show the next free times"
   },
   "consent": {
     "sign": "Sign consent",
