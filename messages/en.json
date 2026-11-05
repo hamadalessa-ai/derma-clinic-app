@@ -277,7 +277,10 @@
     "consentNeeded": "This service needs a signed consent at check-in.",
     "freeTimesThatDay": "Free times that day",
     "doctorFullThatDay": "{doctor} has no free times that day. Other doctors:",
-    "nobodyFreeThatDay": "No doctor has free times that day."
+    "nobodyFreeThatDay": "No doctor has free times that day.",
+    "arrivals": "Arrivals",
+    "noArrivals": "No appointments this day.",
+    "checkedInName": "{name} checked in"
   },
   "consent": {
     "sign": "Sign consent",
