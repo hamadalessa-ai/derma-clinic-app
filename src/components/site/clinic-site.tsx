@@ -108,8 +108,7 @@ export async function ClinicSite({
 
   // Offers fill complete rows (no gaps): 4 per row when that divides evenly, else 3.
   const n = data.offers.length;
-  const offerCols: 1 | 2 | 3 | 4 =
-    n <= 1 ? 1 : n === 2 ? 2 : n % 4 === 0 || n === 7 ? 4 : 3;
+  const offerCols: 1 | 2 | 3 | 4 = n <= 1 ? 1 : n === 2 ? 2 : n % 4 === 0 || n === 7 ? 4 : 3;
   const offerSlack = (offerCols - (n % offerCols)) % offerCols;
   const years = s.since ? new Date().getFullYear() - s.since : null;
   const facts = [

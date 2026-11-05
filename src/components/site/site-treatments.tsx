@@ -26,7 +26,7 @@ export function SiteTreatments({ silos }: { silos: TreatmentSilo[] }) {
   return (
     <div className="bg-site-mist overflow-hidden rounded-2xl">
       <div
-        className="border-site-line flex gap-1 overflow-x-auto border-b px-3 [scrollbar-width:none]"
+        className="border-site-line flex [scrollbar-width:none] gap-1 overflow-x-auto border-b px-3"
         role="tablist"
       >
         {silos.map((x) => (
@@ -48,7 +48,10 @@ export function SiteTreatments({ silos }: { silos: TreatmentSilo[] }) {
           </button>
         ))}
       </div>
-      <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-start lg:gap-10 lg:p-8" role="tabpanel">
+      <div
+        className="flex flex-col gap-6 p-6 lg:flex-row lg:items-start lg:gap-10 lg:p-8"
+        role="tabpanel"
+      >
         <ul className="flex flex-1 flex-wrap gap-2.5" data-testid="site-silo">
           {s.items.map((it) =>
             it.href ? (
