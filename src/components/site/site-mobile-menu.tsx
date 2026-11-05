@@ -45,7 +45,11 @@ export function SiteMobileMenu({
         <Menu className="size-5" />
       </button>
       {open && (
-        <div className="bg-card fixed inset-0 z-50 flex flex-col xl:hidden" role="dialog" aria-modal>
+        <div
+          className="bg-card fixed inset-0 z-50 flex flex-col xl:hidden"
+          role="dialog"
+          aria-modal
+        >
           <div className="border-site-line flex h-16 items-center justify-end border-b px-5">
             <button
               type="button"

@@ -47,7 +47,10 @@ export function SiteImage({
         className,
       )}
     >
-      <div className="border-brand/15 absolute inset-4 rounded-[inherit] border border-dashed" aria-hidden />
+      <div
+        className="border-brand/15 absolute inset-4 rounded-[inherit] border border-dashed"
+        aria-hidden
+      />
       <div className="text-site-subtle relative flex max-w-[80%] flex-col items-center gap-2 text-center">
         <ImageIcon className="text-brand/40 size-8" aria-hidden />
         <span className="text-site-slate text-sm font-medium">{alt}</span>

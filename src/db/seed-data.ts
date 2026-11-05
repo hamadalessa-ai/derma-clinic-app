@@ -843,7 +843,8 @@ export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
     headlineEn:
       "Your Complete Destination for Dermatology, Plastic Surgery, Hair Transplant & Dental Care in Riyadh",
     footerAr: "عيادات ديرما | أفضل عيادات جلدية وتجميل بالرياض بخبرة +30 عاماً",
-    footerEn: "Derma Clinics | Leading dermatology and aesthetic clinics in Riyadh, with 30+ years of experience",
+    footerEn:
+      "Derma Clinics | Leading dermatology and aesthetic clinics in Riyadh, with 30+ years of experience",
     departments: [
       {
         key: "skin",

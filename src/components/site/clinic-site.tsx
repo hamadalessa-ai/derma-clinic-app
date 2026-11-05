@@ -186,7 +186,7 @@ export async function ClinicSite({
                     <article
                       key={sp.key}
                       id={`service-${sp.key}`}
-                      className="scroll-mt-28 grid items-center gap-10 lg:grid-cols-12 lg:gap-20"
+                      className="grid scroll-mt-28 items-center gap-10 lg:grid-cols-12 lg:gap-20"
                       data-testid="site-specialty"
                     >
                       <Photo

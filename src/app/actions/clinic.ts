@@ -910,7 +910,14 @@ const siteInput = z.object({
     .max(8)
     .optional(),
   images: z
-    .record(z.string().max(40), z.string().trim().max(500).regex(/^(\/|https:\/\/)/))
+    .record(
+      z.string().max(40),
+      z
+        .string()
+        .trim()
+        .max(500)
+        .regex(/^(\/|https:\/\/)/),
+    )
     .optional(),
   credentials: z
     .array(

@@ -90,7 +90,7 @@ export async function SiteHero({
     <section className="bg-site-mist relative overflow-hidden">
       <div className="mx-auto grid max-w-7xl lg:min-h-[640px] lg:grid-cols-2">
         {/* Text */}
-        <div className="order-2 flex flex-col justify-center gap-6 px-5 pt-10 pb-8 lg:order-1 lg:py-20 lg:pe-14 lg:ps-8">
+        <div className="order-2 flex flex-col justify-center gap-6 px-5 pt-10 pb-8 lg:order-1 lg:py-20 lg:ps-8 lg:pe-14">
           {L(site.eyebrowAr, site.eyebrowEn) && (
             <span className="text-brand-strong text-sm font-semibold">
               {L(site.eyebrowAr, site.eyebrowEn)}

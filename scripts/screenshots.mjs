@@ -34,7 +34,10 @@ for (const locale of ["ar", "en"]) {
           await page.mouse.move(5, 600);
         } else {
           await page.getByTestId("site-menu").click();
-          await page.locator("details").first().evaluate((d) => (d.open = true));
+          await page
+            .locator("details")
+            .first()
+            .evaluate((d) => (d.open = true));
           await page.waitForTimeout(300);
           await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-menu.png` });
           await page.keyboard.press("Escape");
