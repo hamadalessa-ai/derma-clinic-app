@@ -46,7 +46,7 @@ export function SiteDoctors({
               "h-11 rounded-full px-5 text-sm font-semibold transition-colors",
               dept === d.key
                 ? "bg-site-primary text-site-ivory shadow-sm"
-                : "bg-card text-site-slate shadow-sm hover:text-site-primary",
+                : "bg-card text-site-slate hover:text-site-primary shadow-sm",
             )}
           >
             {d.name}

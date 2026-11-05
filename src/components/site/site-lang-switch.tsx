@@ -19,7 +19,10 @@ export function SiteLangSwitch({ className }: { className?: string }) {
     });
   return (
     <div
-      className={cn("flex items-center rounded-full border border-current/25 p-0.5 text-[11px]", className)}
+      className={cn(
+        "flex items-center rounded-full border border-current/25 p-0.5 text-[11px]",
+        className,
+      )}
       role="group"
       aria-label="Language / اللغة"
       data-testid="site-lang"

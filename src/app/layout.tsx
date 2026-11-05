@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Inter, Playfair_Display, Tajawal } from "next/font/google";
+import {
+  IBM_Plex_Mono,
+  IBM_Plex_Sans_Arabic,
+  Inter,
+  Playfair_Display,
+  Tajawal,
+} from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { directionOf, type Locale } from "@/i18n/config";
@@ -31,7 +37,12 @@ const playfair = Playfair_Display({
   display: "swap",
   preload: false,
 });
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap", preload: false });
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
 const tajawal = Tajawal({
   variable: "--font-tajawal",
   subsets: ["arabic"],

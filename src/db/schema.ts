@@ -553,7 +553,13 @@ export interface SiteContent {
   findAr?: string;
   findEn?: string;
   /** Procedures grouped for browsing (laser, injectables, …), per department. */
-  silos?: { key: string; dept: string; nameAr: string; nameEn: string; items: { ar: string; en: string }[] }[];
+  silos?: {
+    key: string;
+    dept: string;
+    nameAr: string;
+    nameEn: string;
+    items: { ar: string; en: string }[];
+  }[];
   /** The medical team as the clinic publishes it (name, title, photo). */
   doctors?: {
     nameAr: string;

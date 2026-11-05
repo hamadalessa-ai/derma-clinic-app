@@ -1,7 +1,15 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { CalendarCheck, Crown, MapPin, MessageCircle, Phone, ShieldCheck, Video } from "lucide-react";
+import {
+  CalendarCheck,
+  Crown,
+  MapPin,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Video,
+} from "lucide-react";
 import { pick } from "@/lib/brand";
 import { formatSAR } from "@/lib/format";
 import type { ClinicSiteData } from "@/lib/site/data";
@@ -97,7 +105,10 @@ export async function ClinicSite({
           ? { label: t("doctorBook"), href: consultHref, external: false }
           : { label: t("bookWhatsapp"), href: wa ?? "#contact", external: !!wa },
     }));
-  const teamDepts = [...new Set(team.map((d) => d.dept))].map((k) => ({ key: k, name: deptName(k) }));
+  const teamDepts = [...new Set(team.map((d) => d.dept))].map((k) => ({
+    key: k,
+    name: deptName(k),
+  }));
 
   const years = s.since ? new Date().getFullYear() - s.since : null;
   const facts = [
@@ -126,7 +137,7 @@ export async function ClinicSite({
   ];
 
   return (
-    <div className="font-site text-site-slate flex min-h-screen flex-col bg-card pb-20 sm:pb-0">
+    <div className="font-site text-site-slate bg-card flex min-h-screen flex-col pb-20 sm:pb-0">
       <div
         className="bg-site-champagne-soft text-site-champagne-ink px-4 py-1.5 text-center text-[11px]"
         role="note"
@@ -166,7 +177,10 @@ export async function ClinicSite({
                 <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {facts.map((f) => (
                     <div key={f.label} className="bg-site-mist rounded-2xl p-5">
-                      <dd className="font-display text-site-primary text-3xl font-semibold" dir="ltr">
+                      <dd
+                        className="font-display text-site-primary text-3xl font-semibold"
+                        dir="ltr"
+                      >
                         {f.value}
                       </dd>
                       <dt className="text-site-subtle mt-1 text-sm">{f.label}</dt>
@@ -175,12 +189,20 @@ export async function ClinicSite({
                 </dl>
               )}
             </div>
-            <div className="bg-site-mist flex flex-col gap-6 rounded-2xl p-7 lg:col-span-5 lg:p-9" id="clinics">
-              <h3 className="font-display text-site-ink text-2xl font-semibold">{t("clinicsTitle")}</h3>
+            <div
+              className="bg-site-mist flex flex-col gap-6 rounded-2xl p-7 lg:col-span-5 lg:p-9"
+              id="clinics"
+            >
+              <h3 className="font-display text-site-ink text-2xl font-semibold">
+                {t("clinicsTitle")}
+              </h3>
               <div className="grid grid-cols-2 gap-3">
                 {(["brand-clinics", "brand-dental", "brand-light", "brand-hair"] as const).map(
                   (slot) => (
-                    <div key={slot} className="bg-card flex aspect-[3/2] items-center justify-center rounded-xl shadow-sm">
+                    <div
+                      key={slot}
+                      className="bg-card flex aspect-[3/2] items-center justify-center rounded-xl shadow-sm"
+                    >
                       <SiteImage
                         slot={slot}
                         src={s.images?.[slot]}
@@ -287,9 +309,13 @@ export async function ClinicSite({
                     <h3 className="font-display text-site-ink text-3xl font-semibold">
                       {L(founder.nameAr, founder.nameEn)}
                     </h3>
-                    <p className="text-site-primary font-medium">{L(founder.titleAr, founder.titleEn)}</p>
+                    <p className="text-site-primary font-medium">
+                      {L(founder.titleAr, founder.titleEn)}
+                    </p>
                     {L(founder.bioAr, founder.bioEn) && (
-                      <p className="text-[15px] leading-relaxed">{L(founder.bioAr, founder.bioEn)}</p>
+                      <p className="text-[15px] leading-relaxed">
+                        {L(founder.bioAr, founder.bioEn)}
+                      </p>
                     )}
                   </div>
                 </article>
@@ -307,7 +333,11 @@ export async function ClinicSite({
         {data.offers.length > 0 && (
           <section id="offers" className="scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
-              <Heading eyebrow={t("offersEyebrow")} title={t("offersTitle")} text={t("offersText")} />
+              <Heading
+                eyebrow={t("offersEyebrow")}
+                title={t("offersTitle")}
+                text={t("offersText")}
+              />
               <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {data.offers.map((o) => {
                   const full = o.servicePrice !== null ? o.servicePrice * o.sessions : null;
@@ -321,7 +351,10 @@ export async function ClinicSite({
                       className="bg-card shadow-soft border-site-champagne/30 relative flex flex-col gap-5 overflow-hidden rounded-2xl border p-7"
                       data-testid="site-offer"
                     >
-                      <span className="bg-site-champagne absolute inset-x-0 top-0 h-1" aria-hidden />
+                      <span
+                        className="bg-site-champagne absolute inset-x-0 top-0 h-1"
+                        aria-hidden
+                      />
                       <div className="flex items-start justify-between gap-3">
                         <span className="text-site-champagne-ink flex items-center gap-1.5 text-xs font-semibold">
                           <Crown className="size-3.5" aria-hidden />
@@ -384,9 +417,16 @@ export async function ClinicSite({
         <section id="results" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 lg:grid-cols-12 lg:px-8">
             <div className="flex flex-col gap-6 lg:col-span-5">
-              <Heading eyebrow={t("resultsEyebrow")} title={t("resultsTitle")} text={t("resultsText")} />
+              <Heading
+                eyebrow={t("resultsEyebrow")}
+                title={t("resultsTitle")}
+                text={t("resultsText")}
+              />
               <p className="text-site-subtle flex items-start gap-2 text-sm">
-                <ShieldCheck className="text-site-champagne-ink mt-0.5 size-4 shrink-0" aria-hidden />
+                <ShieldCheck
+                  className="text-site-champagne-ink mt-0.5 size-4 shrink-0"
+                  aria-hidden
+                />
                 {t("resultsConsent")}
               </p>
             </div>
@@ -494,7 +534,10 @@ export async function ClinicSite({
                   </a>
                 )}
                 {data.videoService && canBook && (
-                  <Link href={videoHref} className="text-site-ivory/85 flex items-center gap-3 text-sm hover:underline">
+                  <Link
+                    href={videoHref}
+                    className="text-site-ivory/85 flex items-center gap-3 text-sm hover:underline"
+                  >
                     <Video className="size-4" aria-hidden />
                     {t("videoCta")}
                   </Link>
@@ -524,7 +567,9 @@ export async function ClinicSite({
               {(s.licence || (s.credentials?.length ?? 0) > 0) && (
                 <ul className="flex flex-wrap justify-center gap-3 text-sm">
                   {s.licence && <Badge>{t("licence", { n: s.licence })}</Badge>}
-                  {s.credentials?.map((c) => <Badge key={c.en}>{L(c.ar, c.en)}</Badge>)}
+                  {s.credentials?.map((c) => (
+                    <Badge key={c.en}>{L(c.ar, c.en)}</Badge>
+                  ))}
                 </ul>
               )}
               {s.partners && s.partners.length > 0 && (
@@ -559,10 +604,14 @@ export async function ClinicSite({
             ) : (
               <span className="font-display text-site-ivory text-2xl">{name}</span>
             )}
-            {L(s.footerAr, s.footerEn) && <p className="max-w-md leading-relaxed">{L(s.footerAr, s.footerEn)}</p>}
+            {L(s.footerAr, s.footerEn) && (
+              <p className="max-w-md leading-relaxed">{L(s.footerAr, s.footerEn)}</p>
+            )}
             <div className="flex gap-4">
               {s.x && <Social href={`https://x.com/${s.x}`}>X</Social>}
-              {s.instagram && <Social href={`https://www.instagram.com/${s.instagram}`}>Instagram</Social>}
+              {s.instagram && (
+                <Social href={`https://www.instagram.com/${s.instagram}`}>Instagram</Social>
+              )}
               {s.tiktok && <Social href={`https://www.tiktok.com/@${s.tiktok}`}>TikTok</Social>}
             </div>
           </div>
@@ -582,7 +631,12 @@ export async function ClinicSite({
               </a>
             )}
             {wa && (
-              <a href={wa} target="_blank" rel="noopener noreferrer" className="hover:text-site-ivory w-fit">
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-site-ivory w-fit"
+              >
                 {t("utilityWhatsapp")}
               </a>
             )}

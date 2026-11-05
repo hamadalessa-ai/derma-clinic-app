@@ -140,7 +140,9 @@ export async function SiteHeader({
                           href={`#dept-${d.key}`}
                           className="hover:bg-site-mist flex flex-col rounded-xl px-4 py-3"
                         >
-                          <span className="text-site-ink font-semibold">{L(d.nameAr, d.nameEn)}</span>
+                          <span className="text-site-ink font-semibold">
+                            {L(d.nameAr, d.nameEn)}
+                          </span>
                           {L(d.textAr, d.textEn) && (
                             <span className="text-site-subtle line-clamp-1 text-xs">
                               {L(d.textAr, d.textEn)}
