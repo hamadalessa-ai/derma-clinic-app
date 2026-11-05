@@ -59,7 +59,7 @@ jobs:
       - name: Publish the pictures on the review-screenshots branch
         run: |
           src="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          mkdir -p /tmp/pub && cp screenshots/*.png /tmp/pub/
+          mkdir -p /tmp/pub && cp screenshots/* /tmp/pub/
           cd /tmp/pub
           git init -q -b review-screenshots
           git config user.name "github-actions[bot]"
