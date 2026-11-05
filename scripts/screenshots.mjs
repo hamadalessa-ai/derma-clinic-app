@@ -22,6 +22,15 @@ for (const locale of ["ar", "en"]) {
     for (const [name, path] of PAGES) {
       await page.goto(BASE + path, { waitUntil: "networkidle" });
       await page.evaluate(() => document.fonts.ready);
+      // Scroll through once so lazy-loaded photos are in before the full-page picture.
+      await page.evaluate(async () => {
+        for (let y = 0; y < document.body.scrollHeight; y += 600) {
+          window.scrollTo(0, y);
+          await new Promise((r) => setTimeout(r, 120));
+        }
+        window.scrollTo(0, 0);
+      });
+      await page.waitForLoadState("networkidle");
       await page.screenshot({ path: `screenshots/${name}-${locale}-${view}.png`, fullPage: true });
       // The first screen as a visitor sees it.
       await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-fold.png` });

@@ -128,19 +128,31 @@ export async function SiteHeader({
       <header className="border-site-line bg-card/95 sticky top-0 z-40 border-b backdrop-blur-md">
         <div className="relative mx-auto flex h-20 max-w-7xl items-center gap-8 px-5 lg:px-8">
           <Link href="/" className="flex min-w-0 items-center gap-3" aria-label={name}>
-            <span className="bg-brand text-brand-foreground flex size-10 shrink-0 items-center justify-center rounded-lg text-lg font-bold">
-              {name.charAt(0)}
-            </span>
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className="text-site-ink truncate text-lg font-bold whitespace-nowrap">
-                {name}
-              </span>
-              {site.since && (
-                <span className="text-site-subtle hidden text-[11px] whitespace-nowrap sm:block">
-                  {t("sinceShort", { year: site.since })}
+            {site.images?.logo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- the clinic's own logo, any host
+              <img
+                src={site.images.logo}
+                alt={name}
+                className="h-10 w-auto max-w-[11rem] object-contain"
+                data-slot="logo"
+              />
+            ) : (
+              <>
+                <span className="bg-brand text-brand-foreground flex size-10 shrink-0 items-center justify-center rounded-lg text-lg font-bold">
+                  {name.charAt(0)}
                 </span>
-              )}
-            </span>
+                <span className="flex min-w-0 flex-col leading-tight">
+                  <span className="text-site-ink truncate text-lg font-bold whitespace-nowrap">
+                    {name}
+                  </span>
+                  {site.since && (
+                    <span className="text-site-subtle hidden text-[11px] whitespace-nowrap sm:block">
+                      {t("sinceShort", { year: site.since })}
+                    </span>
+                  )}
+                </span>
+              </>
+            )}
           </Link>
 
           <nav className="hidden h-full items-stretch gap-6 xl:flex" aria-label={name}>

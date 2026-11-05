@@ -78,8 +78,14 @@ export async function SiteAbout({
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="overflow-hidden rounded-2xl lg:col-span-5">
-            <div className="aspect-[4/5]">
-              <SiteImage slot="about" src={s.images?.about} locale={ctx.locale} />
+            {/* The clinic's own artwork may carry text (e.g. the founder's card): never cropped. */}
+            <div className={s.images?.about ? "" : "aspect-[4/5]"}>
+              <SiteImage
+                slot="about"
+                src={s.images?.about}
+                locale={ctx.locale}
+                className={s.images?.about ? "h-auto" : undefined}
+              />
             </div>
           </div>
           <div className="flex flex-col gap-6 lg:col-span-7">
@@ -126,24 +132,19 @@ export async function SiteAbout({
               <p className="text-site-slate mt-2">{t("clinicsText", { cities: ctx.cityList })}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:h-[30rem] lg:grid-cols-4 lg:grid-rows-2 lg:gap-4">
-            {(["clinic-1", "clinic-2", "clinic-3", "clinic-4"] as const).map((slot, i) => (
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            {(["clinic-1", "clinic-2", "clinic-3", "clinic-4"] as const).map((slot) => (
               <div
                 key={slot}
-                className={cn(
-                  "overflow-hidden rounded-xl",
-                  i === 0
-                    ? "col-span-2 aspect-[16/10] lg:row-span-2 lg:aspect-auto"
-                    : "aspect-[4/3] lg:aspect-auto",
-                  i === 3 && "col-span-2 aspect-[16/7] lg:col-span-1 lg:aspect-auto",
-                  i === 1 && "lg:col-span-2",
-                )}
+                className="border-site-line bg-card flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl border"
               >
                 <SiteImage
                   slot={slot}
                   src={s.images?.[slot]}
                   locale={ctx.locale}
-                  showSpec={i === 0}
+                  fit="contain"
+                  className="p-6 lg:p-8"
+                  showSpec={false}
                 />
               </div>
             ))}
@@ -188,7 +189,7 @@ export async function SiteDepartments({ ctx }: { ctx: Ctx }) {
                       src={ctx.site.images?.[slot]}
                       locale={ctx.locale}
                       showSpec
-                      className="items-start pt-16"
+                      placeholderClassName="items-start pt-16"
                     />
                   </div>
                   <div

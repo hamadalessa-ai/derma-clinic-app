@@ -133,7 +133,8 @@ export async function SiteHero({
               src={site.images?.hero}
               locale={locale}
               priority
-              className="rounded-none lg:items-start lg:pt-28"
+              className="rounded-none"
+              placeholderClassName="lg:items-start lg:pt-28"
             />
           </div>
         </div>
