@@ -885,6 +885,9 @@ export const STAFF_PROFILE: Record<string, Record<string, unknown>> = {
  * doctors, accreditations, statistics or reviews, so none are added here.
  */
 const I = (ar: string, en: string) => ({ ar, en });
+/** Derma's own photos, as published on dermaclinics.net (served from their site's image CDN). */
+const DERMA_IMG = (file: string, width = 1200) =>
+  `https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=${width},f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/${file}`;
 export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
   derma: {
     eyebrowAr: "نحن نبتكر المستقبل",
@@ -919,6 +922,57 @@ export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
     aboutEn:
       "Derma Clinics is a leading destination in Saudi Arabia for dermatology, aesthetic medicine, plastic surgery, hair transplantation and dental care. Every patient starts with a personalised consultation, and your safety and comfort come first, with the latest medical technologies.",
     since: 1996,
+    images: {
+      logo: DERMA_IMG("3a213be0-b312-6824-9841-00091fad37e5.png", 416),
+      hero: DERMA_IMG(
+        "3a227765-84cc-8c5d-70a3-815449f9448f33cb4186-45ab-407f-9754-e20d32d1aca0-imageSrc_ar..jpg?v=0",
+        1800,
+      ),
+      "clinic-1": DERMA_IMG(
+        "3a22693b-e4c4-1202-7d4c-279dce26c2aa769eb594-5739-4d7b-ba09-7bf79e1b1aa9-src_ar..png?v=0",
+        1600,
+      ),
+      "clinic-2": DERMA_IMG(
+        "3a226cac-be67-9d06-85bd-5d46439603fc6c5648bd-44d2-4d3f-b24d-f0b0b1694f61-src_ar..png?v=0",
+      ),
+      "clinic-3": DERMA_IMG(
+        "3a226cbf-e01f-2017-6e96-9a202b74c7854d13d545-fd86-493c-922f-015dca73786a-src_ar..png?v=0",
+      ),
+      "clinic-4": DERMA_IMG(
+        "3a226cbf-e01f-2017-6e96-9a202b74c78521a12dfb-fe0d-49bf-b6ac-1c90d4d54ef0-src_ar..png?v=0",
+      ),
+      "service-skin": DERMA_IMG(
+        "3a226846-3c98-d4a0-5c98-cbd6ba17a49dafc2b28e-aaae-4e0c-b2ba-de41d655cc7c-imageSrc_ar..png?v=0",
+      ),
+      "service-dental": DERMA_IMG(
+        "3a226846-3c98-d4a0-5c98-cbd6ba17a49d58133624-9fd2-4869-a6c3-fd35173b2ca3-imageSrc_ar..png?v=0",
+      ),
+      "service-hair": DERMA_IMG(
+        "3a226846-3c98-d4a0-5c98-cbd6ba17a49db2cb11bf-b6a6-46b8-acb1-713ff0f16dba-imageSrc_ar..png?v=0",
+      ),
+      "service-plastic": DERMA_IMG(
+        "3a226846-3c98-d4a0-5c98-cbd6ba17a49db8907f42-6208-445f-8674-09112d47b8f6-imageSrc_ar..png?v=0",
+      ),
+      // Departments use the matching service photos.
+      "dept-skin": DERMA_IMG(
+        "3a226846-3c98-d4a0-5c98-cbd6ba17a49dafc2b28e-aaae-4e0c-b2ba-de41d655cc7c-imageSrc_ar..png?v=0",
+      ),
+      "dept-dental": DERMA_IMG(
+        "3a226846-3c98-d4a0-5c98-cbd6ba17a49d58133624-9fd2-4869-a6c3-fd35173b2ca3-imageSrc_ar..png?v=0",
+      ),
+      "dept-plastic": DERMA_IMG(
+        "3a226846-3c98-d4a0-5c98-cbd6ba17a49db8907f42-6208-445f-8674-09112d47b8f6-imageSrc_ar..png?v=0",
+      ),
+      // Their "Meet Our Doctors" photo.
+      about: DERMA_IMG(
+        "3a226d58-57be-88ab-f201-49a54c0fd79a71971d19-8928-441e-95a9-4a36db83d769-imageUrl_ar..jpg",
+      ),
+      // Their "Find a Clinic Near You" photo.
+      visit: DERMA_IMG(
+        "3a226d23-54da-ed47-082c-d8b14601347d95b59545-b5ee-4bb9-834b-338e9fa1af32-imageUrl_ar..png?v=0",
+        1600,
+      ),
+    },
     phone: "9200 33055",
     whatsapp: "+966550883080",
     instagram: "dermaclinics",

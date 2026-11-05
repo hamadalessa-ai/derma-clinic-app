@@ -370,7 +370,12 @@ export async function ClinicSite({
           <section id="visit" className="bg-site-ivory scroll-mt-24 py-24 lg:py-32">
             <div className="mx-auto max-w-7xl px-5 lg:px-8">
               <SectionHead eyebrow={t("visitEyebrow")} title={cityList || t("visitTitle")} />
-              <ul className="mt-14 grid gap-5 md:grid-cols-2">
+              {s.images?.visit && (
+                <div className="mt-10 aspect-[16/9] overflow-hidden rounded-2xl sm:aspect-[21/8]">
+                  <SiteImage slot="visit" src={s.images.visit} locale={locale} />
+                </div>
+              )}
+              <ul className="mt-8 grid gap-5 md:grid-cols-2">
                 {data.branches.map((b) => (
                   <li
                     key={b.id}

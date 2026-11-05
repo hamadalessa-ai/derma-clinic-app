@@ -92,6 +92,18 @@ export const SITE_IMAGE_SLOTS = {
     altAr: "طبيب أسنان يعالج مريضًا في عيادة الأسنان",
     altEn: "Dentist treating a patient in the dental clinic",
   },
+  logo: {
+    file: "logo.png",
+    size: "416×96, transparent",
+    altAr: "شعار عيادات ديرما",
+    altEn: "Derma Clinics logo",
+  },
+  visit: {
+    file: "find-a-clinic.jpg",
+    size: "1600×700, landscape",
+    altAr: "عيادات ديرما — اعثر على أقرب عيادة",
+    altEn: "Derma Clinics — find a clinic near you",
+  },
   video: {
     file: "video-consultation.jpg",
     size: "1200×900",
