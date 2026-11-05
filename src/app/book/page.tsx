@@ -33,9 +33,11 @@ export default async function BookPage({
   // Verified earlier in this browser (step 1 done) or signed in on the patient page.
   const identity = await bookingIdentity(tenant.id);
   const UUID = /^[0-9a-f-]{36}$/i;
+  const mode: "video" | "clinic" | undefined =
+    sp.mode === "video" ? "video" : sp.mode === "clinic" ? "clinic" : undefined;
   const initial = {
     serviceId: sp.service && UUID.test(sp.service) ? sp.service : undefined,
-    mode: sp.mode === "video" || sp.mode === "clinic" ? sp.mode : undefined,
+    mode,
   };
   const today = todayRiyadh();
   const days = Array.from({ length: catalog.settings.horizonDays + 1 }, (_, i) =>
