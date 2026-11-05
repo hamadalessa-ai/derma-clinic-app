@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, CalendarCheck, MessageCircle, Sparkles, Syringe, Zap } from "lucide-react";
+import { CalendarCheck, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface TreatmentSilo {
@@ -14,109 +14,82 @@ export interface TreatmentSilo {
   cta: { label: string; href: string; external: boolean };
 }
 
-const ICONS: Record<string, typeof Zap> = { laser: Zap, injectables: Syringe };
-
 /**
- * Treatments browsed by category (Laser, Injectables, Skin, Hair, Face, Body, Dental) instead of
- * one long list; department tabs on top. Treatments bookable online link straight into booking.
+ * Procedures in one compact panel: a row of categories (Laser, Injectables, …); the chosen one
+ * shows its treatments as chips. Treatments bookable online open booking directly.
  */
-export function SiteTreatments({
-  silos,
-  depts,
-  labels,
-}: {
-  silos: TreatmentSilo[];
-  depts: { key: string; name: string }[];
-  labels: { all: string; book: string; count: string };
-}) {
-  const [dept, setDept] = useState<string>("all");
-  const shown = silos.filter((s) => dept === "all" || s.dept === dept);
+export function SiteTreatments({ silos }: { silos: TreatmentSilo[] }) {
+  const [key, setKey] = useState(silos[0]?.key);
+  const s = silos.find((x) => x.key === key) ?? silos[0];
+  if (!s) return null;
 
   return (
-    <div className="flex flex-col gap-10">
-      <div className="flex flex-wrap gap-2" role="tablist">
-        {[{ key: "all", name: labels.all }, ...depts].map((d) => (
+    <div className="bg-site-mist overflow-hidden rounded-2xl">
+      <div
+        className="border-site-line flex gap-1 overflow-x-auto border-b px-3 [scrollbar-width:none]"
+        role="tablist"
+      >
+        {silos.map((x) => (
           <button
-            key={d.key}
+            key={x.key}
             type="button"
             role="tab"
-            aria-selected={dept === d.key}
-            onClick={() => setDept(d.key)}
+            aria-selected={x.key === s.key}
+            onClick={() => setKey(x.key)}
             className={cn(
-              "h-11 rounded-full px-5 text-sm font-semibold transition-colors",
-              dept === d.key
-                ? "bg-site-primary text-site-ivory shadow-sm"
-                : "bg-site-mist text-site-slate hover:text-site-primary",
+              "relative h-14 shrink-0 px-4 text-sm font-semibold whitespace-nowrap transition-colors",
+              x.key === s.key
+                ? "text-site-primary after:bg-site-primary after:absolute after:inset-x-4 after:bottom-0 after:h-0.5"
+                : "text-site-subtle hover:text-site-ink",
             )}
-            data-testid={`silo-tab-${d.key}`}
+            data-testid={`silo-tab-${x.key}`}
           >
-            {d.name}
+            {x.name}
           </button>
         ))}
       </div>
-
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {shown.map((s) => {
-          const Icon = ICONS[s.key] ?? Sparkles;
-          return (
-            <article
-              key={s.key}
-              className="bg-card shadow-soft flex flex-col gap-5 rounded-2xl p-7"
-              data-testid="site-silo"
-            >
-              <div className="flex items-center gap-3">
-                <span className="bg-site-champagne-soft text-site-champagne-ink flex size-11 items-center justify-center rounded-xl">
-                  <Icon className="size-5" aria-hidden />
-                </span>
-                <div>
-                  <h3 className="font-display text-site-ink text-xl font-semibold">{s.name}</h3>
-                  <p className="text-site-subtle text-xs">
-                    {labels.count.replace("#", String(s.items.length))}
-                  </p>
-                </div>
-              </div>
-              <ul className="flex flex-1 flex-col">
-                {s.items.map((it) => (
-                  <li key={it.name} className="border-site-line border-b last:border-b-0">
-                    {it.href ? (
-                      <Link
-                        href={it.href}
-                        className="group text-site-ink hover:text-site-primary flex items-center justify-between gap-3 py-2.5 text-[15px]"
-                      >
-                        <span>{it.name}</span>
-                        <span className="text-site-primary flex shrink-0 items-center gap-1 text-xs font-semibold opacity-80 group-hover:opacity-100">
-                          {labels.book}
-                          <ArrowUpRight className="size-3.5 rtl:-scale-x-100" aria-hidden />
-                        </span>
-                      </Link>
-                    ) : (
-                      <span className="text-site-slate block py-2.5 text-[15px]">{it.name}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {s.cta.external ? (
-                <a
-                  href={s.cta.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="border-site-primary/30 text-site-primary hover:bg-site-primary hover:text-site-ivory inline-flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition-colors"
-                >
-                  <MessageCircle className="size-4" aria-hidden />
-                  {s.cta.label}
-                </a>
-              ) : (
+      <div className="flex flex-col gap-6 p-6 lg:flex-row lg:items-start lg:gap-10 lg:p-8" role="tabpanel">
+        <ul className="flex flex-1 flex-wrap gap-2.5" data-testid="site-silo">
+          {s.items.map((it) =>
+            it.href ? (
+              <li key={it.name}>
                 <Link
-                  href={s.cta.href}
-                  className="border-site-primary/30 text-site-primary hover:bg-site-primary hover:text-site-ivory inline-flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition-colors"
+                  href={it.href}
+                  className="border-site-primary/25 bg-card text-site-primary hover:bg-site-primary hover:text-site-ivory inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors"
                 >
-                  <CalendarCheck className="size-4" aria-hidden />
-                  {s.cta.label}
+                  {it.name}
+                  <CalendarCheck className="size-3.5" aria-hidden />
                 </Link>
-              )}
-            </article>
-          );
-        })}
+              </li>
+            ) : (
+              <li
+                key={it.name}
+                className="bg-card text-site-slate inline-flex h-10 items-center rounded-full px-4 text-sm"
+              >
+                {it.name}
+              </li>
+            ),
+          )}
+        </ul>
+        {s.cta.external ? (
+          <a
+            href={s.cta.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-site-primary text-site-ivory hover:bg-site-primary-hover inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors"
+          >
+            <MessageCircle className="size-4" aria-hidden />
+            {s.cta.label}
+          </a>
+        ) : (
+          <Link
+            href={s.cta.href}
+            className="bg-site-primary text-site-ivory hover:bg-site-primary-hover inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors"
+          >
+            <CalendarCheck className="size-4" aria-hidden />
+            {s.cta.label}
+          </Link>
+        )}
       </div>
     </div>
   );

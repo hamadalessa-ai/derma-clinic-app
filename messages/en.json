@@ -1108,7 +1108,7 @@
     "requests": "Requests"
   },
   "site": {
-    "concept": "Concept redesign prepared for {name} — not the official website. Bookings here go to a demo system.",
+    "concept": "Concept redesign prepared for {name}. Not the official website; bookings go to a demo system.",
     "navHome": "Home",
     "navDepartments": "Our Departments",
     "navDoctors": "Our Doctors",
@@ -1127,7 +1127,7 @@
     "heroSince": "Caring for skin, hair and smiles in Saudi Arabia since {year}.",
     "heroExplore": "Explore our departments",
     "quickBook": "Book Appointment",
-    "quickBookText": "Verify your mobile, choose a time — done in a minute",
+    "quickBookText": "Online in about a minute",
     "heroNext": "Next available consultation",
     "quickDoctor": "Find a Doctor",
     "quickDoctorCount": "{n} consultants & specialists",
@@ -1181,7 +1181,7 @@
     "faq3q": "Do I need a consultation before treatment?",
     "faq3a": "Yes. Every patient starts with a personalised consultation, so your plan fits your skin, hair or smile.",
     "faq4q": "Are your treatments performed by qualified specialists?",
-    "faq4a": "Yes — consultants and specialists in every department, using advanced medical technology.",
+    "faq4a": "Yes. Every treatment is performed by consultants and specialists in its department.",
     "faq5q": "Where are {name} located?",
     "faq5a": "{cities}.",
     "contactEyebrow": "Find a Clinic Near You",
@@ -1197,9 +1197,11 @@
     "rights": "All rights reserved {name} © {year}",
     "metaTitle": "{name} — Dermatology, Plastic Surgery, Hair & Dental",
     "metaDescription": "{name}: dermatology, aesthetic medicine, plastic surgery, hair transplant and dental care. Book online in a minute.",
-    "samplePrices": "Sample prices for this demo — the clinic sets its own.",
-    "licencePending": "Ministry of Health licence no. — to be added",
+    "samplePrices": "Sample prices for this demo.",
+    "licencePending": "Ministry of Health licence no. (to be added)",
     "deptCounts": "{doctors} doctors · {treatments} treatments",
-    "conceptShort": "Concept demo — not the official website"
+    "conceptShort": "Concept demo. Not the official website.",
+    "prev": "Previous doctor",
+    "next": "Next doctor"
   }
 }

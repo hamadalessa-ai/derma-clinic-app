@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { ArrowLeft, ArrowRight, CalendarCheck, Clock, LayoutGrid, Stethoscope } from "lucide-react";
-import { formatGregorian, formatTime } from "@/lib/format";
+import { ArrowLeft, ArrowRight, CalendarCheck, LayoutGrid, Stethoscope } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteContent } from "@/db/schema";
 import { SiteImage } from "./site-image";
@@ -16,16 +15,12 @@ export async function SiteHero({
   name,
   site,
   canBook,
-  consultHref,
-  nextFree,
   doctorCount,
 }: {
   locale: Locale;
   name: string;
   site: SiteContent;
   canBook: boolean;
-  consultHref: string;
-  nextFree: string[];
   doctorCount: number;
 }) {
   const t = await getTranslations("site");
@@ -51,19 +46,13 @@ export async function SiteHero({
         <div className="relative mx-auto flex min-h-[36rem] max-w-7xl flex-col justify-center px-5 pt-14 pb-28 sm:min-h-[38rem] lg:h-full lg:px-8 lg:pt-0">
           <div className="flex max-w-2xl flex-col gap-6">
             {L(site.eyebrowAr, site.eyebrowEn) && (
-              <span className="text-site-champagne flex items-center gap-3 text-sm font-semibold ltr:tracking-[0.18em] ltr:uppercase">
-                <span className="bg-site-champagne h-px w-10" aria-hidden />
+              <span className="text-site-champagne text-base font-medium">
                 {L(site.eyebrowAr, site.eyebrowEn)}
               </span>
             )}
             <h1 className="font-display text-site-ivory max-w-[22ch] text-[2.1rem] leading-[1.15] font-semibold text-balance sm:text-5xl lg:text-[3.1rem]">
               {L(site.headlineAr, site.headlineEn) || name}
             </h1>
-            {site.since && (
-              <p className="text-site-ivory/80 max-w-xl text-lg leading-relaxed">
-                {t("heroSince", { year: site.since })}
-              </p>
-            )}
             <div className="flex flex-wrap items-center gap-4 pt-2">
               {canBook && (
                 <Link
@@ -108,31 +97,6 @@ export async function SiteHero({
                   aria-hidden
                 />
               </Link>
-              {nextFree.length > 0 && (
-                <div className="flex flex-col gap-2" data-testid="next-free">
-                  <span className="text-site-ivory/70 flex items-center gap-1.5 text-xs">
-                    <Clock className="size-3.5" aria-hidden />
-                    {t("heroNext")}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {nextFree.map((iso) => {
-                      const d = new Date(iso);
-                      return (
-                        <Link
-                          key={iso}
-                          href={consultHref}
-                          className="bg-site-ivory/10 hover:bg-site-ivory/20 rounded-lg px-2.5 py-1 text-xs transition-colors"
-                        >
-                          {formatGregorian(d, locale, "medium")} ·{" "}
-                          <span dir="ltr" className="font-semibold">
-                            {formatTime(d, locale)}
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
             </div>
           )}
           <a

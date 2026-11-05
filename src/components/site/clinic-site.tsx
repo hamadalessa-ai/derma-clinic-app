@@ -85,10 +85,6 @@ export async function ClinicSite({
     }),
     cta: deptBook(x.dept),
   }));
-  const siloDepts = [...new Set(silos.map((x) => deptOf(x.dept)))].map((k) => ({
-    key: k,
-    name: deptName(k),
-  }));
 
   const founder = doctors.find((d) => d.founder);
   const team: DoctorCard[] = doctors
@@ -110,6 +106,11 @@ export async function ClinicSite({
     name: deptName(k),
   }));
 
+  // Offers fill complete rows (no gaps): 4 per row when that divides evenly, else 3.
+  const n = data.offers.length;
+  const offerCols: 1 | 2 | 3 | 4 =
+    n <= 1 ? 1 : n === 2 ? 2 : n % 4 === 0 || n === 7 ? 4 : 3;
+  const offerSlack = (offerCols - (n % offerCols)) % offerCols;
   const years = s.since ? new Date().getFullYear() - s.since : null;
   const facts = [
     s.since ? { value: String(s.since), label: t("factFounded") } : null,
@@ -161,8 +162,6 @@ export async function ClinicSite({
           name={name}
           site={s}
           canBook={canBook}
-          consultHref={consultHref}
-          nextFree={data.nextFree}
           doctorCount={doctors.length}
         />
 
@@ -170,7 +169,7 @@ export async function ClinicSite({
         <section id="about" className="scroll-mt-28 pt-24 pb-24 lg:pt-32 lg:pb-32">
           <div className="mx-auto grid max-w-7xl gap-16 px-5 lg:grid-cols-12 lg:px-8">
             <div className="flex flex-col gap-8 lg:col-span-7">
-              <Heading eyebrow={t("aboutEyebrow")} title={t("aboutTitle", { name })} />
+              <Heading title={t("aboutEyebrow")} />
               {L(s.aboutAr, s.aboutEn) && (
                 <p className="text-[17px] leading-[1.9]">{L(s.aboutAr, s.aboutEn)}</p>
               )}
@@ -227,7 +226,7 @@ export async function ClinicSite({
         {departments.length > 0 && (
           <section id="departments" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto max-w-7xl px-5 lg:px-8">
-              <Heading eyebrow={t("deptEyebrow")} title={t("deptTitle")} />
+              <Heading title={t("deptEyebrow")} />
               <ul className="mt-14 grid gap-6 lg:grid-cols-3">
                 {departments.map((d) => {
                   const slot = `dept-${d.key}`;
@@ -271,14 +270,10 @@ export async function ClinicSite({
 
         {/* ── Treatments by category ──────────────────────────────────────── */}
         {treatmentSilos.length > 0 && (
-          <section id="treatments" className="scroll-mt-28 py-24 lg:py-32">
-            <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
-              <Heading eyebrow={t("treatEyebrow")} title={t("treatTitle")} text={t("treatText")} />
-              <SiteTreatments
-                silos={treatmentSilos}
-                depts={siloDepts}
-                labels={{ all: t("all"), book: t("bookShort"), count: t("treatCount") }}
-              />
+          <section id="treatments" className="scroll-mt-28 py-20 lg:py-24">
+            <div className="mx-auto flex max-w-7xl flex-col gap-10 px-5 lg:px-8">
+              <Heading title={t("treatEyebrow")} />
+              <SiteTreatments silos={treatmentSilos} />
             </div>
           </section>
         )}
@@ -288,8 +283,7 @@ export async function ClinicSite({
           <section id="doctors" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
               <Heading
-                eyebrow={t("doctorsEyebrow")}
-                title={t("doctorsTitle")}
+                title={t("doctorsEyebrow")}
                 text={L(s.doctorsAr, s.doctorsEn) || undefined}
               />
               {founder && (
@@ -324,7 +318,7 @@ export async function ClinicSite({
               <SiteDoctors
                 doctors={team}
                 depts={teamDepts}
-                labels={{ all: t("all"), more: t("doctorsMore") }}
+                labels={{ all: t("all"), prev: t("prev"), next: t("next") }}
               />
             </div>
           </section>
@@ -334,13 +328,9 @@ export async function ClinicSite({
         {data.offers.length > 0 && (
           <section id="offers" className="scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
-              <Heading
-                eyebrow={t("offersEyebrow")}
-                title={t("offersTitle")}
-                text={t("offersText")}
-              />
-              <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {data.offers.map((o) => {
+              <Heading title={t("offersEyebrow")} />
+              <ul className={cn("grid gap-6 md:grid-cols-2", OFFER_COLS[offerCols])}>
+                {data.offers.map((o, i) => {
                   const full = o.servicePrice !== null ? o.servicePrice * o.sessions : null;
                   const save =
                     full && o.priceHalalas !== null && full > o.priceHalalas
@@ -349,7 +339,12 @@ export async function ClinicSite({
                   return (
                     <li
                       key={o.id}
-                      className="bg-card shadow-soft border-site-champagne/30 relative flex flex-col gap-5 overflow-hidden rounded-2xl border p-7"
+                      className={cn(
+                        "bg-card shadow-soft border-site-champagne/30 relative flex flex-col gap-5 overflow-hidden rounded-2xl border p-7",
+                        // No empty cells: the first offers widen to fill the last row.
+                        n % 2 === 1 && i === 0 && "md:col-span-2",
+                        i < offerSlack ? "lg:col-span-2" : "lg:col-span-1",
+                      )}
                       data-testid="site-offer"
                     >
                       <span
@@ -357,8 +352,7 @@ export async function ClinicSite({
                         aria-hidden
                       />
                       <div className="flex items-start justify-between gap-3">
-                        <span className="text-site-champagne-ink flex items-center gap-1.5 text-xs font-semibold">
-                          <Crown className="size-3.5" aria-hidden />
+                        <span className="text-site-champagne-ink text-xs font-semibold">
                           {t("offerSessions", { n: o.sessions })}
                         </span>
                         {save !== null && save > 0 && (
@@ -419,11 +413,7 @@ export async function ClinicSite({
           <section id="results" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 lg:grid-cols-12 lg:px-8">
               <div className="flex flex-col gap-6 lg:col-span-5">
-                <Heading
-                  eyebrow={t("resultsEyebrow")}
-                  title={t("resultsTitle")}
-                  text={t("resultsText")}
-                />
+                <Heading title={t("resultsTitle")} text={t("resultsText")} />
                 <p className="text-site-subtle flex items-start gap-2 text-sm">
                   <ShieldCheck
                     className="text-site-champagne-ink mt-0.5 size-4 shrink-0"
@@ -452,7 +442,7 @@ export async function ClinicSite({
         <section id="faq" className="scroll-mt-28 py-24 lg:py-32">
           <div className="mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-12 lg:px-8">
             <div className="lg:col-span-4">
-              <Heading eyebrow={t("faqEyebrow")} title={t("faqTitle")} />
+              <Heading title={t("faqEyebrow")} />
             </div>
             <div className="flex flex-col gap-3 lg:col-span-8">
               {faqs.map((f) => (
@@ -476,11 +466,7 @@ export async function ClinicSite({
         {/* ── Contact ─────────────────────────────────────────────────────── */}
         <section id="contact" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
           <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
-            <Heading
-              eyebrow={t("contactEyebrow")}
-              title={t("contactTitle")}
-              text={L(s.findAr, s.findEn) || undefined}
-            />
+            <Heading title={t("contactEyebrow")} text={L(s.findAr, s.findEn) || undefined} />
             <div className="grid gap-6 lg:grid-cols-3">
               {data.branches.map((b) => (
                 <div key={b.id} className="bg-card shadow-soft flex flex-col gap-5 rounded-2xl p-7">
@@ -685,13 +671,16 @@ export async function ClinicSite({
   );
 }
 
-function Heading({ eyebrow, title, text }: { eyebrow: string; title: string; text?: string }) {
+const OFFER_COLS = {
+  1: "lg:grid-cols-1 lg:max-w-md",
+  2: "lg:grid-cols-2",
+  3: "lg:grid-cols-3",
+  4: "lg:grid-cols-4",
+} as const;
+
+function Heading({ title, text }: { title: string; text?: string }) {
   return (
     <div className="flex max-w-3xl flex-col gap-4">
-      <span className="text-site-champagne-ink flex items-center gap-3 text-sm font-semibold">
-        <span className="bg-site-champagne h-px w-8" aria-hidden />
-        {eyebrow}
-      </span>
       <h2 className="font-display text-site-ink text-3xl leading-tight font-semibold text-balance lg:text-[2.75rem]">
         {title}
       </h2>
