@@ -859,14 +859,14 @@ export async function updateSettingsAction(input: z.input<typeof settingsInput>)
   });
 }
 
-const text = (max: number) => z.string().trim().max(max).optional();
+const siteText = (max: number) => z.string().trim().max(max).optional();
 const siteInput = z.object({
-  headlineAr: text(120),
-  headlineEn: text(120),
-  taglineAr: text(300),
-  taglineEn: text(300),
-  aboutAr: text(1000),
-  aboutEn: text(1000),
+  headlineAr: siteText(120),
+  headlineEn: siteText(120),
+  taglineAr: siteText(300),
+  taglineEn: siteText(300),
+  aboutAr: siteText(1000),
+  aboutEn: siteText(1000),
   since: z.number().int().min(1900).max(2100).optional(),
   phone: z
     .string()
@@ -883,13 +883,13 @@ const siteInput = z.object({
     .trim()
     .regex(/^@?[\w.]{1,30}$/)
     .optional(),
-  licence: text(40),
+  licence: siteText(40),
   reviews: z
     .array(
       z.object({
         quote: z.string().trim().min(3).max(400),
         name: z.string().trim().min(1).max(60),
-        treatment: text(60),
+        treatment: siteText(60),
       }),
     )
     .max(6)
