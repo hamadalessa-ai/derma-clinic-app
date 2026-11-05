@@ -3,6 +3,7 @@ import {
   IBM_Plex_Mono,
   IBM_Plex_Sans_Arabic,
   Inter,
+  Noto_Naskh_Arabic,
   Playfair_Display,
   Tajawal,
 } from "next/font/google";
