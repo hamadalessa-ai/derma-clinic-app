@@ -92,6 +92,12 @@ export const SITE_IMAGE_SLOTS = {
     altAr: "طبيب أسنان يعالج مريضًا في عيادة الأسنان",
     altEn: "Dentist treating a patient in the dental clinic",
   },
+  video: {
+    file: "video-consultation.jpg",
+    size: "1200×900",
+    altAr: "مريضة في استشارة فيديو مع طبيبة ديرما عبر الجوال",
+    altEn: "Patient in a video consultation with a Derma Clinics doctor on a phone",
+  },
 } satisfies Record<string, ImageSlot>;
 
 /** A doctor's portrait slot (one per doctor; set by the doctor's member id). */

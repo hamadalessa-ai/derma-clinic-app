@@ -200,9 +200,11 @@ export async function SiteDepartments({ ctx }: { ctx: Ctx }) {
                       {t("deptTreatments", { n: items.length })}
                     </span>
                     <h3 className="text-site-ivory text-2xl font-bold">{L(d.nameAr, d.nameEn)}</h3>
-                    <p className="text-site-ivory/80 text-sm leading-relaxed">
-                      {own.map((x) => L(x.nameAr, x.nameEn)).join(" · ")}
-                    </p>
+                    {own.length > 1 && (
+                      <p className="text-site-ivory/80 text-sm leading-relaxed">
+                        {own.map((x) => L(x.nameAr, x.nameEn)).join(" · ")}
+                      </p>
+                    )}
                     {/* Revealed on hover / focus on large screens; always visible on phones. */}
                     <div className="grid transition-[grid-template-rows,opacity] duration-300 lg:grid-rows-[0fr] lg:opacity-0 lg:group-hover:grid-rows-[1fr] lg:group-hover:opacity-100 lg:group-focus-visible:grid-rows-[1fr] lg:group-focus-visible:opacity-100">
                       <ul className="text-site-ivory/90 flex flex-col gap-1.5 overflow-hidden text-sm">

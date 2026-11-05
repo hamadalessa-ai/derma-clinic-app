@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { SiteHeader, doctorsForHeader } from "./site-header";
 import { SiteHero } from "./site-hero";
+import { SiteImage } from "./site-image";
 import { SiteAbout, SiteDepartments, SiteDoctors, SiteServices } from "./site-sections";
 import { pick } from "@/lib/brand";
 import { formatSAR } from "@/lib/format";
@@ -68,7 +69,6 @@ export async function ClinicSite({
     new Intl.DateTimeFormat(ar ? "ar-SA" : "en-SA", { weekday: "short" }).format(
       new Date(Date.UTC(2023, 0, 1 + d)), // 1 Jan 2023 was a Sunday
     );
-  const monogram = (clinic.nameEn || clinic.nameAr).charAt(0);
 
   const cta =
     "inline-flex h-12 items-center justify-center gap-2 rounded-full bg-site-cta px-7 text-[15px] font-medium text-brand-foreground shadow-raised transition-colors hover:bg-site-cta-hover active:scale-[.98] [&_svg]:size-4";
@@ -328,7 +328,7 @@ export async function ClinicSite({
         {/* ── Video consultations ──────────────────────────────────────────── */}
         {data.videoService && canBook && (
           <section className="px-5 py-24 lg:px-8 lg:py-32">
-            <div className="bg-site-champagne-soft mx-auto grid max-w-7xl items-center gap-10 overflow-hidden rounded-[2rem] p-7 lg:grid-cols-2 lg:gap-16 lg:p-16">
+            <div className="bg-brand-soft mx-auto grid max-w-7xl items-center gap-10 overflow-hidden rounded-2xl p-7 lg:grid-cols-2 lg:gap-16 lg:p-16">
               <div className="flex flex-col gap-5">
                 <Eyebrow>{t("videoEyebrow")}</Eyebrow>
                 <h2 className="font-display text-site-ink text-3xl leading-tight font-bold lg:text-5xl">
@@ -358,11 +358,9 @@ export async function ClinicSite({
                   )}
                 </div>
               </div>
-              <Photo
-                label={pick(locale, data.videoService.nameAr, data.videoService.nameEn)}
-                monogram={monogram}
-                className="aspect-[4/3] w-full rounded-3xl"
-              />
+              <div className="aspect-[4/3] w-full overflow-hidden rounded-xl">
+                <SiteImage slot="video" src={s.images?.video} locale={locale} />
+              </div>
             </div>
           </section>
         )}
@@ -589,11 +587,11 @@ function Eyebrow({ children, center = false }: { children: ReactNode; center?: b
   return (
     <span
       className={cn(
-        "text-site-champagne-ink flex items-center gap-3 text-xs font-medium ltr:tracking-[0.2em] ltr:uppercase",
+        "text-brand-strong flex items-center gap-2 text-sm font-semibold",
         center && "justify-center",
       )}
     >
-      <span className="bg-site-champagne h-px w-8" aria-hidden />
+      <span className="bg-brand h-0.5 w-6 rounded-full" aria-hidden />
       {children}
     </span>
   );
@@ -601,9 +599,9 @@ function Eyebrow({ children, center = false }: { children: ReactNode; center?: b
 
 function SectionHead({ eyebrow, title, text }: { eyebrow: string; title: string; text?: string }) {
   return (
-    <div className="flex max-w-2xl flex-col gap-4">
+    <div className="flex max-w-3xl flex-col gap-3">
       <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="font-display text-site-ink text-4xl leading-[1.1] font-bold lg:text-[3.25rem]">
+      <h2 className="text-site-ink text-3xl leading-tight font-bold text-balance lg:text-[2.6rem]">
         {title}
       </h2>
       {text && <p className="text-lg leading-relaxed">{text}</p>}
