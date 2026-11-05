@@ -1163,7 +1163,6 @@
     "licence": "Ministry of Health licence {n}",
     "results": "Before & after",
     "resultsNote": "Shown only with each patient's written consent.",
-    "resultsSlot": "Before / after",
     "reviewsTitle": "In our patients' words",
     "videoEyebrow": "From home",
     "videoTitle": "See your doctor by video",
@@ -1206,6 +1205,8 @@
     "tiktok": "TikTok",
     "metaTitle": "{name} — Dermatology, Plastic Surgery, Hair & Dental",
     "metaDescription": "{name}: dermatology, aesthetic medicine, plastic surgery, hair transplant and dental care. Book online in a minute.",
-    "and": " and "
+    "and": " and ",
+    "resultsBefore": "Before",
+    "resultsAfter": "After"
   }
 }

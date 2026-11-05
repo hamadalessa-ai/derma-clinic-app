@@ -223,8 +223,9 @@ export async function ClinicSite({
             <div className="relative lg:col-span-5">
               <Photo
                 label={t("photoHero")}
+                hideLabel
                 monogram={monogram}
-                className="mx-auto aspect-[4/5] w-full max-w-md rounded-t-full rounded-b-3xl"
+                className="mx-auto aspect-[16/11] w-full max-w-md rounded-3xl sm:aspect-[4/5] sm:rounded-t-full sm:rounded-b-3xl"
               />
               {canBook && (
                 <div
@@ -401,42 +402,40 @@ export async function ClinicSite({
                 title={t("treatmentsTitle")}
                 text={t("treatmentsText")}
               />
-              <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="mt-14 grid gap-x-16 md:grid-cols-2">
                 {data.catalog.departments
                   .flatMap((d) => d.services)
                   .map((svc) => (
-                    <li key={svc.id}>
+                    <li key={svc.id} className="border-site-line border-b first:border-t md:[&:nth-child(2)]:border-t">
                       <Link
                         href={`/book?mode=${svc.isVirtual ? "video" : "clinic"}&service=${svc.id}`}
-                        className="border-site-line bg-card hover:border-site-ink/30 hover:shadow-raised group flex h-full flex-col gap-6 rounded-2xl border p-7 transition-[border-color,box-shadow]"
+                        className="group flex items-center gap-5 py-6"
                         data-testid="site-service"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <span className="font-display text-site-ink text-2xl leading-snug font-medium">
-                            {pick(locale, svc.nameAr, svc.nameEn)}
-                          </span>
-                          {svc.isVirtual && (
-                            <span className="bg-site-champagne-soft text-site-champagne-ink inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium">
-                              <Video className="size-3" aria-hidden />
-                              {t("videoBadge")}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="font-display text-site-ink text-2xl leading-snug font-medium">
+                              {pick(locale, svc.nameAr, svc.nameEn)}
                             </span>
-                          )}
-                        </div>
-                        <div className="mt-auto flex items-end justify-between gap-3 text-sm">
-                          <div className="flex flex-col gap-0.5">
-                            {svc.priceHalalas !== null && (
-                              <span className="text-site-ink font-medium">
-                                {t("fromPrice", { price: formatSAR(svc.priceHalalas, locale) })}
+                            {svc.isVirtual && (
+                              <span className="bg-site-champagne-soft text-site-champagne-ink inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                                <Video className="size-3" aria-hidden />
+                                {t("videoBadge")}
                               </span>
                             )}
-                            <span className="text-site-subtle">
-                              {t("minutes", { n: svc.durationMinutes })}
-                            </span>
                           </div>
-                          <span className="border-site-line text-site-ink group-hover:bg-site-ink group-hover:text-site-ivory flex size-10 items-center justify-center rounded-full border transition-colors">
-                            <Forward className="size-4" aria-hidden />
-                          </span>
+                          <div className="text-site-subtle mt-1 text-sm">
+                            {t("minutes", { n: svc.durationMinutes })}
+                          </div>
                         </div>
+                        {svc.priceHalalas !== null && (
+                          <span className="text-site-ink shrink-0 text-sm font-medium">
+                            {t("fromPrice", { price: formatSAR(svc.priceHalalas, locale) })}
+                          </span>
+                        )}
+                        <span className="border-site-line text-site-ink group-hover:bg-site-ink group-hover:text-site-ivory flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors">
+                          <Forward className="size-4" aria-hidden />
+                        </span>
                       </Link>
                     </li>
                   ))}
@@ -499,7 +498,16 @@ export async function ClinicSite({
                   {t("teamDemo")}
                 </p>
               )}
-              <ul className="mt-14 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-4 lg:gap-x-8">
+              <ul
+                className={cn(
+                  "mt-14 grid grid-cols-2 gap-x-5 gap-y-12 lg:gap-x-8",
+                  data.doctors.length === 5
+                    ? "lg:grid-cols-5"
+                    : data.doctors.length === 3 || data.doctors.length === 6
+                      ? "lg:grid-cols-3"
+                      : "lg:grid-cols-4",
+                )}
+              >
                 {data.doctors.map((d) => {
                   const branch = data.branches.find((b) => b.id === d.branchId);
                   const docName = pick(locale, d.nameAr, d.nameEn);
@@ -558,14 +566,14 @@ export async function ClinicSite({
                 <div className="lg:col-span-8">
                   <div className="text-site-ink text-sm font-medium">{t("results")}</div>
                   <p className="text-site-subtle text-sm">{t("resultsNote")}</p>
-                  <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                    {[0, 1, 2].map((i) => (
+                  <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    {[0, 1].map((i) => (
                       <div
                         key={i}
-                        className="border-site-line bg-card grid grid-cols-2 gap-1 overflow-hidden rounded-2xl border p-1"
+                        className="border-site-line bg-card grid grid-cols-2 gap-1.5 overflow-hidden rounded-3xl border p-1.5"
                       >
-                        <Photo label={t("resultsSlot")} className="aspect-[3/4] rounded-xl" />
-                        <Photo className="aspect-[3/4] rounded-xl" />
+                        <Photo label={t("resultsBefore")} className="aspect-[3/4] rounded-[1.25rem]" />
+                        <Photo label={t("resultsAfter")} className="aspect-[3/4] rounded-[1.25rem]" />
                       </div>
                     ))}
                   </div>
@@ -599,7 +607,7 @@ export async function ClinicSite({
 
         {/* ── Video consultations ──────────────────────────────────────────── */}
         {data.videoService && canBook && (
-          <section className="px-5 pb-24 lg:px-8 lg:pb-32">
+          <section className="px-5 py-24 lg:px-8 lg:py-32">
             <div className="bg-site-champagne-soft mx-auto grid max-w-7xl items-center gap-10 overflow-hidden rounded-[2rem] p-7 lg:grid-cols-2 lg:gap-16 lg:p-16">
               <div className="flex flex-col gap-5">
                 <Eyebrow>{t("videoEyebrow")}</Eyebrow>
@@ -906,17 +914,19 @@ function Social({ href, children }: { href: string; children: ReactNode }) {
  */
 function Photo({
   label,
+  hideLabel = false,
   monogram,
   className,
 }: {
   label?: string;
+  hideLabel?: boolean;
   monogram?: string;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "from-brand-soft via-site-mist to-site-champagne-soft relative overflow-hidden bg-linear-to-br",
+        "from-site-photo-from to-site-photo-to relative overflow-hidden bg-linear-to-br",
         className,
       )}
       role={label ? "img" : undefined}
@@ -926,13 +936,13 @@ function Photo({
       <div className="border-site-ivory/80 absolute inset-3 rounded-[inherit] border" aria-hidden />
       {monogram && (
         <span
-          className="font-display text-site-ivory absolute inset-0 flex items-center justify-center text-[clamp(4rem,14vw,10rem)] leading-none select-none"
+          className="font-display text-site-ivory/85 absolute inset-0 flex items-center justify-center text-[clamp(4rem,14vw,10rem)] leading-none select-none"
           aria-hidden
         >
           {monogram}
         </span>
       )}
-      {label && (
+      {label && !hideLabel && (
         <span className="bg-site-ivory/85 text-site-subtle absolute start-5 bottom-5 max-w-[80%] truncate rounded-full px-3 py-1 text-[11px] font-medium">
           {label}
         </span>
