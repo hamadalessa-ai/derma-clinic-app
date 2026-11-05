@@ -18,7 +18,13 @@ export function FormError({ message }: { message: string | null }) {
  * Confirms a finished action ("Saved", "Checked in") as a toast at the bottom of the screen.
  * `inline`: keep it on the page instead (when the message holds something to read later).
  */
-export function FormSuccess({ message, inline = false }: { message: string | null; inline?: boolean }) {
+export function FormSuccess({
+  message,
+  inline = false,
+}: {
+  message: string | null;
+  inline?: boolean;
+}) {
   const toast = useToast();
   useEffect(() => {
     if (message && !inline) toast(message);

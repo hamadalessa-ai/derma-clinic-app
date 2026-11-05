@@ -88,7 +88,10 @@ export default async function PatientsPage({
                   <TableCell className="font-mono text-xs">{p.fileNumber}</TableCell>
                   <TableCell className="font-medium">
                     <span className="flex items-center gap-2">
-                      <Link href={`/patients/${p.id}`} className="hover:text-brand-strong hover:underline">
+                      <Link
+                        href={`/patients/${p.id}`}
+                        className="hover:text-brand-strong hover:underline"
+                      >
                         {pick(locale, p.fullNameAr, p.fullNameEn)}
                       </Link>
                       <AlertBadge alerts={alerts.get(p.id)} label={tc("allergy")} compact />
