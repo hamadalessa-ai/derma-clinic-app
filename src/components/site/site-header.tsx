@@ -132,7 +132,9 @@ export async function SiteHeader({
               {name.charAt(0)}
             </span>
             <span className="flex min-w-0 flex-col leading-tight">
-              <span className="text-site-ink truncate text-lg font-bold whitespace-nowrap">{name}</span>
+              <span className="text-site-ink truncate text-lg font-bold whitespace-nowrap">
+                {name}
+              </span>
               {site.since && (
                 <span className="text-site-subtle hidden text-[11px] whitespace-nowrap sm:block">
                   {t("sinceShort", { year: site.since })}
