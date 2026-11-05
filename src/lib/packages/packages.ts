@@ -147,7 +147,8 @@ export async function recordPayment(
  */
 export async function deductForAppointment(
   tx: TenantTx,
-  actor: Actor,
+  /** Staff at check-in, or the system (userId null) when a video patient joins the call. */
+  actor: { tenantId: string; userId: string | null },
   appt: { id: string; patientId: string; serviceId: string },
 ): Promise<{
   deducted: boolean;

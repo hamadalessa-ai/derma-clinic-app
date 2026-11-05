@@ -18,6 +18,7 @@ import { withActor, type Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
 import { addMinutes } from "@/lib/booking/time";
 import { consentStatusFor } from "@/lib/consents/consents";
+import { videoCheckIn } from "@/lib/visits/check-in";
 import { videoRoomName, parseVideoToken } from "./link";
 import type { VideoProvider } from "./provider";
 
@@ -189,6 +190,12 @@ export async function patientJoin(
       entityId: v.appointmentId,
     }),
   );
+  // Joining is the patient's arrival (reception doesn't need to check them in). Never blocks the call.
+  try {
+    await withTenant(tenantId, (tx) => videoCheckIn(tx, tenantId, v.appointmentId));
+  } catch (err) {
+    console.warn("video check-in failed", err instanceof Error ? err.message : err);
+  }
   return { url };
 }
 

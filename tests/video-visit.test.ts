@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import sharp from "sharp";
 import { closeDb } from "@/db/client";
-import { auditLogs, reservations, rooms } from "@/db/schema";
+import { appointments, auditLogs, reservations, rooms } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { withActor, type Actor } from "@/lib/auth/db";
 import { PermissionError } from "@/lib/auth/permissions";
@@ -204,6 +204,16 @@ describe("joining", () => {
 
     const r = await join(at("12:05"));
     expect(r.url).toBe(`https://demo.daily.co/${videoRoomName(DERMA, a.id)}?t=tok-guest`);
+    // Joining = arrived (no check-in at reception needed); joining again changes nothing.
+    const status = async () =>
+      (
+        await withActor(reception, (tx) =>
+          tx.select({ s: appointments.status }).from(appointments).where(eq(appointments.id, a.id)),
+        )
+      )[0].s;
+    expect(await status()).toBe("arrived");
+    await join(at("12:06"));
+    expect(await status()).toBe("arrived");
     const room = fake.calls.find((c) => c.kind === "room")!.input;
     expect(room.name).toBe(videoRoomName(DERMA, a.id));
     // Open from the doctor's early window until 30 minutes after the planned end.
