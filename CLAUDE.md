@@ -63,6 +63,10 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   signature + who/when). The print page and PDF are views of it. Files go through `getFileStore()` only.
 - Screens use theme tokens (`src/app/globals.css`, `src/app/theme.ts`) and shared components only;
   `tests/theme.test.ts` fails on hard-coded colours.
+  The look follows the "Clinic App Design System" (Claude artifact): brand fill only for the ONE main action,
+  brand text = `text-brand-strong`, packages = `gold`, cards `rounded-xl border shadow-card`, controls `rounded-lg`,
+  dialogs `rounded-2xl` (bottom sheet on phones). Success after an action = `FormSuccess` (a toast; `inline` to
+  keep it on the page); errors stay inline (`FormError`). Busy buttons: `<Button loading>`. Empty lists: `EmptyState`.
 - Server actions live in `src/app/actions/clinic.ts`, validate with Zod and run through `staffAction()`.
   Public pages (`/book`, `/my`) use `src/app/actions/patient.ts` + `publicAction()`: a verified mobile code
   or a patient session (`src/lib/portal/session.ts`) decides what the visitor may do; patient reads run with

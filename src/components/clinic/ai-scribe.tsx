@@ -150,7 +150,7 @@ export function AiScribe({
   return (
     <div className="bg-muted flex flex-col gap-2 rounded-md border p-3" data-testid="ai-scribe">
       <div className="flex items-center gap-2 font-medium">
-        <Sparkles className="text-brand size-4" />
+        <Sparkles className="text-brand-strong size-4" />
         {t("title")}
       </div>
       <p className="text-muted-foreground text-xs">{t("hint")}</p>
@@ -213,7 +213,8 @@ export function AiScribe({
       />
       <Button
         className="self-start"
-        disabled={pending || listening || text.trim().length < 5}
+        disabled={listening || text.trim().length < 5}
+        loading={pending}
         onClick={() =>
           run(
             () => scribeDraftAction({ patientId, noteId, transcript: text }),
@@ -227,7 +228,7 @@ export function AiScribe({
         }
         data-testid="scribe-write"
       >
-        <Sparkles />
+        {!pending && <Sparkles />}
         {pending ? t("writing") : t("write")}
       </Button>
       {tidy && (

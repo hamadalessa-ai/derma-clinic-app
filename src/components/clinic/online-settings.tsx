@@ -244,7 +244,7 @@ export function BookingLink({ url, qrPng }: { url: string; qrPng: string }) {
           target="_blank"
           rel="noreferrer"
           dir="ltr"
-          className="text-brand font-mono text-sm break-all underline"
+          className="text-brand-strong font-mono text-sm break-all underline"
           data-testid="booking-link"
         >
           {url}

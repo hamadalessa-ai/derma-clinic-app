@@ -2,7 +2,7 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const noticeVariants = cva("rounded-md px-3 py-2 text-sm", {
+const noticeVariants = cva("rounded-xl px-3.5 py-3 text-sm leading-[22px] animate-fade-in", {
   variants: {
     tone: {
       info: "bg-info text-info-foreground",
@@ -14,7 +14,7 @@ const noticeVariants = cva("rounded-md px-3 py-2 text-sm", {
   defaultVariants: { tone: "info" },
 });
 
-/** A coloured message box (demo notices, errors, confirmations). */
+/** A message about this page (unsigned consent, demo mode, a rule). Results of an action: a toast. */
 export function Notice({
   className,
   tone,

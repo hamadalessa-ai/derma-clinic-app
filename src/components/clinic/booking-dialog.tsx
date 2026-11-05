@@ -128,7 +128,7 @@ export function BookingDialog({
                 <li className="text-muted-foreground px-3 py-2 text-sm">{t("noResults")}</li>
               )}
             </ul>
-            <Link href="/patients/new" className="text-brand text-xs underline">
+            <Link href="/patients/new" className="text-brand-strong text-xs underline">
               {t("newPatient")}
             </Link>
           </>

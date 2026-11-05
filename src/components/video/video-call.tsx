@@ -34,8 +34,8 @@ export function VideoCall(
   if (!url) {
     return (
       <div className="flex flex-col gap-3" data-testid="video-join">
-        <Button className="self-start" disabled={pending} onClick={join}>
-          <Video />
+        <Button size="lg" className="self-start" loading={pending} onClick={join}>
+          {!pending && <Video />}
           {pending ? t("joining") : t("join")}
         </Button>
         <p className="text-muted-foreground text-xs">{t("permissionsHint")}</p>

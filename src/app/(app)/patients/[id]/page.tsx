@@ -187,7 +187,7 @@ export default async function PatientProfilePage({
     fullNameEn: string | null;
     fileNumber: string;
   }) => (
-    <Link key={f.id} href={`/patients/${f.id}`} className="text-brand underline">
+    <Link key={f.id} href={`/patients/${f.id}`} className="text-brand-strong underline">
       {pick(locale, f.fullNameAr, f.fullNameEn)} ({f.fileNumber})
     </Link>
   );

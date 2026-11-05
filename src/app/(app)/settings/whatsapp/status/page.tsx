@@ -169,7 +169,7 @@ export default async function WhatsAppStatusPage() {
                   {link && (
                     <div className="text-muted-foreground text-xs">
                       {tp("opens")}{" "}
-                      <Link href={link} className="text-brand underline" dir="ltr">
+                      <Link href={link} className="text-brand-strong underline" dir="ltr">
                         {link.split(/[?#]/)[0]}
                       </Link>
                     </div>

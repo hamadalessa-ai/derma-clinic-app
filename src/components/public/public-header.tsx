@@ -33,7 +33,7 @@ export async function PublicHeader({
         <div className="bg-brand text-brand-foreground flex size-9 shrink-0 items-center justify-center rounded-full font-bold">
           {clinicName.charAt(0)}
         </div>
-        <div className="text-brand min-w-0 flex-1 truncate font-semibold">{clinicName}</div>
+        <div className="text-brand-strong min-w-0 flex-1 truncate font-semibold">{clinicName}</div>
         {toggle}
       </div>
     </header>

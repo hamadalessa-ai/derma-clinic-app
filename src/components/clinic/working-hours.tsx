@@ -178,7 +178,7 @@ export function WeeklyHoursEditor({
       <p className="text-muted-foreground text-xs">{t("breakHint")}</p>
       <Button
         className="self-start"
-        disabled={pending}
+        loading={pending}
         data-testid="save-hours"
         onClick={() =>
           run(
@@ -351,7 +351,8 @@ export function HoursExceptions({
       <p className="text-muted-foreground text-xs">{t("changeHint")}</p>
       <Button
         className="self-start"
-        disabled={pending || !day}
+        disabled={!day}
+        loading={pending}
         data-testid="add-exception"
         onClick={() =>
           run(

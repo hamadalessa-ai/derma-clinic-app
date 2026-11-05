@@ -21,7 +21,7 @@ export default async function PlatformPage() {
       <p className="text-muted-foreground text-sm">{t("noPatientAccess")}</p>
       <Link
         href="/platform/push-keys"
-        className="text-brand self-start text-sm font-medium underline"
+        className="text-brand-strong self-start text-sm font-medium underline"
         data-testid="push-keys-link"
       >
         {t("pushKeys")}

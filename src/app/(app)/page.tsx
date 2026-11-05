@@ -177,7 +177,7 @@ export default async function DashboardPage() {
           <Card key={s.label}>
             <CardHeader className="pb-2">
               <div className="text-muted-foreground text-sm">{s.label}</div>
-              <div className="text-brand text-3xl font-bold">{s.value}</div>
+              <div className="text-brand-strong text-3xl font-bold">{s.value}</div>
               {s.sub && <div className="text-muted-foreground text-xs">{s.sub}</div>}
             </CardHeader>
           </Card>

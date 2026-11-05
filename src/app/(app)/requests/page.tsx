@@ -1,3 +1,5 @@
+import { EmptyState } from "@/components/ui/empty-state";
+import { Inbox } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { inArray } from "drizzle-orm";
 import { Card, CardContent } from "@/components/ui/card";
@@ -173,7 +175,9 @@ export default async function RequestsPage() {
       {data.reqs.length === 0 &&
         data.pendingBookings.length === 0 &&
         data.followUps.length === 0 && (
-          <p className="text-muted-foreground py-8 text-center">{t("empty")}</p>
+          <Card>
+            <EmptyState icon={<Inbox />} title={t("empty")} />
+          </Card>
         )}
       {data.reqs.map((r) => {
         const a = data.appts.find((x) => x.id === r.appointmentId);

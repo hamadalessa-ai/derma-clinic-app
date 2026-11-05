@@ -119,7 +119,7 @@ export default async function MyDayPage({
       {data.settings.doctorsEditOwnHours && (
         <Link
           href="/working-hours"
-          className="text-brand self-start text-sm font-medium underline"
+          className="text-brand-strong self-start text-sm font-medium underline"
           data-testid="my-hours-link"
         >
           {th("myHours")}

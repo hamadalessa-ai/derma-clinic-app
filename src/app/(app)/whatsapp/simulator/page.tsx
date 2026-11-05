@@ -83,7 +83,7 @@ export default async function SimulatorPage({
               <div className="flex flex-wrap gap-3 text-sm">
                 <Link
                   href={`/simulator/${thread.conversation.id}`}
-                  className="text-brand inline-flex items-center gap-1 font-medium underline"
+                  className="text-brand-strong inline-flex items-center gap-1 font-medium underline"
                   data-testid="patient-view-link"
                 >
                   <Maximize2 className="size-4" />
@@ -91,7 +91,7 @@ export default async function SimulatorPage({
                 </Link>
                 <Link
                   href={`/whatsapp?c=${thread.conversation.id}&f=all`}
-                  className="text-brand underline"
+                  className="text-brand-strong underline"
                 >
                   {t("staffView")}
                 </Link>

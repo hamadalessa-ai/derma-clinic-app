@@ -1,6 +1,7 @@
+import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { BellOff, Flag, UserPlus } from "lucide-react";
+import { BellOff, Flag, MessageCircle, UserPlus } from "lucide-react";
 import { riyadhParts } from "@/components/clinic/time";
 import type { listConversations } from "@/lib/whatsapp/staff";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,7 @@ export async function ConversationList({
 }) {
   const t = await getTranslations("whatsapp");
   if (!items.length) {
-    return <p className="text-muted-foreground p-4 text-sm">{t("empty")}</p>;
+    return <EmptyState icon={<MessageCircle />} title={t("empty")} />;
   }
   return (
     <ul className="flex flex-col divide-y" data-testid="conversation-list">

@@ -70,7 +70,7 @@ export default async function SettingsPage() {
       <PageHeader title={t("title")} />
       <Link
         href="/settings/whatsapp"
-        className="text-brand self-start text-sm font-medium underline"
+        className="text-brand-strong self-start text-sm font-medium underline"
         data-testid="whatsapp-settings-link"
       >
         {tw("settingsLink")}
@@ -158,7 +158,7 @@ export default async function SettingsPage() {
                 </span>
                 <Link
                   href={`/settings/consents/${tpl.code}`}
-                  className="text-brand text-sm underline"
+                  className="text-brand-strong text-sm underline"
                 >
                   {t("editTemplate")}
                 </Link>
