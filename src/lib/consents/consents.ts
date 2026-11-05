@@ -31,7 +31,8 @@ export type PatientConsent = typeof patientConsents.$inferSelect;
 
 export class ConsentError extends Error {
   constructor(
-    public code: | "not_found"
+    public code:
+      | "not_found"
       | "not_current"
       | "bad_signature"
       | "signer_required"

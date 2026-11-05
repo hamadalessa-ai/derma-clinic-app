@@ -67,9 +67,7 @@ describe("consent links", () => {
     const a = await peel("D-0032", "10:00");
     const ctx = await withTenant(DERMA, (tx) => loadAppointmentContext(tx, a.id));
     const vars = appointmentVars(ctx!, "en", "https://clinic.example");
-    expect(vars.consent_note).toContain(
-      `https://clinic.example/sign/${consentToken(DERMA, a.id)}`,
-    );
+    expect(vars.consent_note).toContain(`https://clinic.example/sign/${consentToken(DERMA, a.id)}`);
   });
 
   it("signs this visit's consent as the patient; once only", async () => {

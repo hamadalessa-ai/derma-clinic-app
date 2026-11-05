@@ -42,7 +42,10 @@ export function ConsentLinkForm({
 
   if (done) {
     return (
-      <div className="bg-card flex flex-col items-center gap-3 rounded-xl border p-6 text-center" data-testid="sign-done">
+      <div
+        className="bg-card flex flex-col items-center gap-3 rounded-xl border p-6 text-center"
+        data-testid="sign-done"
+      >
         <CheckCircle2 className="text-success-foreground size-10" />
         <p className="text-[17px] font-semibold">{t("done")}</p>
         <p className="text-muted-foreground text-sm">{t("doneHint")}</p>
@@ -97,7 +100,11 @@ export function ConsentLinkForm({
           if (!png) return setError(te("bad_signature"));
           setError(null);
           setPending(true);
-          const r = await signConsentByLinkAction({ token, signerName: name, signatureDataUrl: png });
+          const r = await signConsentByLinkAction({
+            token,
+            signerName: name,
+            signatureDataUrl: png,
+          });
           setPending(false);
           if (!r.ok) return setError(te.has(r.error) ? te(r.error) : te("unexpected"));
           setDone(true);
