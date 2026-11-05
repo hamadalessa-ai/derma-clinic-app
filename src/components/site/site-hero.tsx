@@ -41,6 +41,10 @@ export async function SiteHero({
           <SiteImage slot="hero" src={site.images?.hero} locale={locale} priority />
         </div>
         <div
+          className="from-site-night absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t to-transparent"
+          aria-hidden
+        />
+        <div
           className="from-site-night/90 via-site-night/60 absolute inset-0 bg-linear-to-r to-transparent rtl:bg-linear-to-l"
           aria-hidden
         />
@@ -52,7 +56,7 @@ export async function SiteHero({
                 {L(site.eyebrowAr, site.eyebrowEn)}
               </span>
             )}
-            <h1 className="font-display text-site-ivory text-[2.3rem] leading-[1.12] font-semibold text-balance sm:text-5xl lg:text-[3.6rem]">
+            <h1 className="font-display text-site-ivory max-w-[22ch] text-[2.1rem] leading-[1.15] font-semibold text-balance sm:text-5xl lg:text-[3.1rem]">
               {L(site.headlineAr, site.headlineEn) || name}
             </h1>
             {site.since && (

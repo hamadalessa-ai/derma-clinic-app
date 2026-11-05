@@ -3,6 +3,7 @@ import {
   IBM_Plex_Mono,
   IBM_Plex_Sans_Arabic,
   Inter,
+  Noto_Naskh_Arabic,
   Playfair_Display,
   Tajawal,
 } from "next/font/google";
@@ -51,6 +52,15 @@ const tajawal = Tajawal({
   preload: false,
 });
 
+/** Arabic headings on the clinic website: a refined Naskh to pair with Tajawal body text. */
+const naskh = Noto_Naskh_Arabic({
+  variable: "--font-naskh",
+  subsets: ["arabic"],
+  weight: ["600", "700"],
+  display: "swap",
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: "منصة العيادات | Clinic Platform (Demo)",
   description: "Demo — fake data only",
@@ -67,7 +77,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       dir={directionOf(locale)}
-      className={`${plexArabic.variable} ${plexMono.variable} ${playfair.variable} ${inter.variable} ${tajawal.variable} h-full antialiased`}
+      className={`${plexArabic.variable} ${plexMono.variable} ${playfair.variable} ${inter.variable} ${tajawal.variable} ${naskh.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { LanguageToggle } from "@/components/language-toggle";
+import { SiteLangSwitch } from "@/components/site/site-lang-switch";
 import { OnlineBookingFlow } from "@/components/public/online-booking-flow";
 import { PublicHeader } from "@/components/public/public-header";
 import { Notice } from "@/components/ui/notice";
@@ -46,15 +46,18 @@ export default async function BookPage({
   );
 
   return (
-    <div style={brandStyle(tenant.brandColor)} className="bg-background flex min-h-screen flex-col">
+    <div
+      style={brandStyle(tenant.brandColor)}
+      className="font-site bg-site-mist flex min-h-screen flex-col"
+    >
       <PublicHeader
         clinicName={pick(locale, tenant.nameAr, tenant.nameEn)}
         demoMode={demoMessagingAllowed(tenant) ? t("demoMode") : null}
-        toggle={<LanguageToggle />}
+        toggle={<SiteLangSwitch tone="light" className="text-site-slate" />}
       />
-      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 px-4 pt-4 pb-12">
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-8 pb-12">
         <div>
-          <h1 className="text-xl font-bold">{t("title")}</h1>
+          <h1 className="font-display text-site-ink text-3xl font-semibold">{t("title")}</h1>
           <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         {catalog.enabled && catalog.departments.length > 0 ? (

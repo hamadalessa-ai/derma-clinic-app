@@ -616,10 +616,9 @@ export const DERMA_SITE = {
   partners: DERMA_PARTNERS,
   images: {
     logo: DERMA_IMG("3a213be0-b312-6824-9841-00091fad37e5.png", 416),
-    hero: DERMA_IMG(
-      "3a227765-84cc-8c5d-70a3-815449f9448f33cb4186-45ab-407f-9754-e20d32d1aca0-imageSrc_ar..jpg?v=0",
-      1800,
-    ),
+    // Their banner is a collage with a strip of thumbnails at the bottom: cropped to the
+    // reception photo at the image server.
+    hero: `https://img.rekaz.io/cdn-cgi/image/quality=85,fit=crop,gravity=top,width=1800,height=700,f=auto/${TENANT}3a227765-84cc-8c5d-70a3-815449f9448f33cb4186-45ab-407f-9754-e20d32d1aca0-imageSrc_ar..jpg?v=0`,
     "brand-clinics": DERMA_IMG(
       "3a22693b-e4c4-1202-7d4c-279dce26c2aa769eb594-5739-4d7b-ba09-7bf79e1b1aa9-src_ar..png?v=0",
       800,

@@ -143,11 +143,16 @@ export async function SiteHeader({
                           <span className="text-site-ink font-semibold">
                             {L(d.nameAr, d.nameEn)}
                           </span>
-                          {L(d.textAr, d.textEn) && (
-                            <span className="text-site-subtle line-clamp-1 text-xs">
-                              {L(d.textAr, d.textEn)}
-                            </span>
-                          )}
+                          <span className="text-site-subtle text-xs">
+                            {t("deptCounts", {
+                              doctors: doctors.filter(
+                                (x) => (x.dept === "hair" ? "skin" : x.dept) === d.key,
+                              ).length,
+                              treatments: (site.silos ?? [])
+                                .filter((x) => (x.dept === "hair" ? "skin" : x.dept) === d.key)
+                                .reduce((n, x) => n + x.items.length, 0),
+                            })}
+                          </span>
                         </a>
                       </li>
                     ))}
@@ -231,6 +236,8 @@ export async function SiteHeader({
               ]}
               book={canBook ? { label: t("book"), href: "/book" } : null}
               labels={{ open: t("menuOpen"), close: t("menuClose") }}
+              logo={site.images?.logo ?? null}
+              name={name}
               phone={site.phone && tel ? { label: site.phone, href: tel } : null}
             />
           </div>
