@@ -501,6 +501,25 @@ export const TENANT_TABLES = [
 // PHASE 1 — clinic workflow
 // ════════════════════════════════════════════════════════════════════════════
 
+/** What the clinic writes for its public website (Settings → Website). All optional. */
+export interface SiteContent {
+  headlineAr?: string;
+  headlineEn?: string;
+  taglineAr?: string;
+  taglineEn?: string;
+  aboutAr?: string;
+  aboutEn?: string;
+  /** Year the clinic opened (e.g. 1996). */
+  since?: number;
+  phone?: string;
+  whatsapp?: string;
+  instagram?: string;
+  /** Ministry of Health licence number, shown only when filled in. */
+  licence?: string;
+  /** Real patient reviews the clinic has permission to show. */
+  reviews?: { quote: string; name: string; treatment?: string }[];
+}
+
 /** One row per clinic. */
 export const tenantSettings = pgTable("tenant_settings", {
   tenantId: uuid("tenant_id")
@@ -534,6 +553,8 @@ export const tenantSettings = pgTable("tenant_settings", {
   aiDailyLimit: smallint("ai_daily_limit").notNull().default(200),
   /** ON: doctors can dictate and get an AI-drafted clinical note to review and sign. */
   aiScribeEnabled: boolean("ai_scribe_enabled").notNull().default(false),
+  /** The clinic's public website (the clinic's address, for visitors): texts and contact details. */
+  site: jsonb("site").$type<SiteContent>().notNull().default({}),
   /** When Meta last verified our webhook (WhatsApp status page). */
   whatsappWebhookVerifiedAt: timestamp("whatsapp_webhook_verified_at", { withTimezone: true }),
   updatedAt: updatedAt(),

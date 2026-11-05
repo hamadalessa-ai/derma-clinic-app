@@ -29,6 +29,7 @@ import {
   WHATSAPP_OPTED_OUT,
   WORK_HOURS,
   WORK_WEEK,
+  SITE_CONTENT,
   VIRTUAL_ROOMS,
   type SeedTenant,
 } from "./seed-data";
@@ -293,6 +294,7 @@ function tenantSql(t: SeedTenant): string {
         show_prices_online: ONLINE_SETTINGS[t.slug]?.showPrices ?? true,
         ai_receptionist_enabled: AI_RECEPTIONIST[t.slug] ?? false,
         ai_scribe_enabled: AI_SCRIBE[t.slug] ?? false,
+        site: JSON.stringify(SITE_CONTENT[t.slug] ?? {}),
         demo_anchor_day: raw("(select demo_anchor from pg_temp.setup_params)"),
       },
     ]),

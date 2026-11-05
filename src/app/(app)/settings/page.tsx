@@ -10,6 +10,7 @@ import {
   ScheduleSettingForm,
   ScribeSettingForm,
 } from "@/components/clinic/settings-forms";
+import { SiteSettingsForm } from "@/components/clinic/site-settings";
 import {
   BookingLink,
   OnlineSettingsForm,
@@ -60,6 +61,7 @@ export default async function SettingsPage({
   const allowed: SettingsTab[] = [
     "clinic",
     "booking",
+    "website",
     "consents",
     ...(ctx.tenant.isDemo ? (["demo"] as const) : []),
   ];
@@ -106,6 +108,16 @@ export default async function SettingsPage({
             </CardContent>
           </Card>
         </>
+      )}
+      {tab === "website" && (
+        <Card data-testid="site-settings">
+          <CardHeader>
+            <CardTitle>{t("tabWebsite")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SiteSettingsForm initial={settings.site ?? {}} />
+          </CardContent>
+        </Card>
       )}
       {tab === "booking" && (
         <>

@@ -10,7 +10,7 @@ export default async function ForbiddenPage() {
       <ShieldX className="text-destructive size-12" />
       <h1 className="text-2xl font-bold">{t("forbiddenTitle")}</h1>
       <p className="text-muted-foreground">{t("forbidden")}</p>
-      <Link href="/" className={buttonVariants({ variant: "outline" })}>
+      <Link href="/home" className={buttonVariants({ variant: "outline" })}>
         {t("backHome")}
       </Link>
     </main>

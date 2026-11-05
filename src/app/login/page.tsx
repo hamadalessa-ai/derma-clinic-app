@@ -26,7 +26,7 @@ const DEMO_ACCOUNTS: Record<string, { role: string; email: string }[]> = {
 export default async function LoginPage() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
-  if (await getStaffContext()) redirect("/");
+  if (await getStaffContext()) redirect("/home");
 
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("login");

@@ -24,7 +24,7 @@ import { can } from "@/lib/auth/permissions";
 import { APPOINTMENT_STATUSES } from "@/lib/booking/status";
 import { atRiyadh, riyadhTime } from "@/lib/booking/time";
 import { saveConsentRule, saveTemplateVersion, signConsent } from "@/lib/consents/consents";
-import { CONSENT_RULES } from "@/db/schema";
+import { CONSENT_RULES, type SiteContent } from "@/db/schema";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { anthropicClient } from "@/lib/ai/claude";
@@ -70,7 +70,7 @@ import {
 } from "@/lib/whatsapp/staff";
 import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
-import { setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
+import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
@@ -855,6 +855,60 @@ export async function updateSettingsAction(input: z.input<typeof settingsInput>)
     const v = parse(settingsInput, input);
     await withActor(actor, (tx) => updateSettings(tx, actor, v));
     revalidatePath("/settings");
+    return null;
+  });
+}
+
+const siteText = (max: number) => z.string().trim().max(max).optional();
+const siteInput = z.object({
+  headlineAr: siteText(120),
+  headlineEn: siteText(120),
+  taglineAr: siteText(300),
+  taglineEn: siteText(300),
+  aboutAr: siteText(1000),
+  aboutEn: siteText(1000),
+  since: z.number().int().min(1900).max(2100).optional(),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[\d\s-]{6,20}$/)
+    .optional(),
+  whatsapp: z
+    .string()
+    .trim()
+    .regex(/^\+?[\d\s-]{6,20}$/)
+    .optional(),
+  instagram: z
+    .string()
+    .trim()
+    .regex(/^@?[\w.]{1,30}$/)
+    .optional(),
+  licence: siteText(40),
+  reviews: z
+    .array(
+      z.object({
+        quote: z.string().trim().min(3).max(400),
+        name: z.string().trim().min(1).max(60),
+        treatment: siteText(60),
+      }),
+    )
+    .max(6)
+    .optional(),
+});
+
+/** Settings → Website: the clinic website's texts, contacts and real reviews. Admins only. */
+export async function saveSiteAction(input: z.input<typeof siteInput>) {
+  return staffAction("settings:manage", async (_ctx, actor) => {
+    const v = parse(siteInput, input);
+    // Empty fields are left out, so the website hides them.
+    const site = Object.fromEntries(
+      Object.entries(v).filter(
+        ([, x]) => x !== undefined && x !== "" && !(Array.isArray(x) && !x.length),
+      ),
+    ) as SiteContent;
+    await withActor(actor, (tx) => saveSiteContent(tx, actor, site));
+    revalidatePath("/settings");
+    revalidatePath("/");
     return null;
   });
 }
