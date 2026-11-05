@@ -53,6 +53,7 @@ export interface VisitInfo {
   patientFirstAr: string;
   patientFirstEn: string;
   practitionerId: string;
+  serviceId: string;
   doctorAr: string;
   doctorEn: string | null;
   serviceAr: string;
@@ -100,6 +101,7 @@ export async function loadVisit(tx: TenantTx, appointmentId: string): Promise<Vi
     patientFirstAr: first(row.nameAr),
     patientFirstEn: first(row.nameEn || row.nameAr),
     practitionerId: row.a.practitionerId,
+    serviceId: row.a.serviceId,
     doctorAr: doctor?.nameAr ?? "",
     doctorEn: doctor?.nameEn ?? null,
     serviceAr: row.serviceAr,

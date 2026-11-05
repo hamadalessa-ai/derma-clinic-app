@@ -328,7 +328,10 @@
     "installHint": "To add this app to your home screen: open the browser menu and choose “Add to Home screen”.",
     "count": "{count} appointments",
     "proposedTime": "Proposed time",
-    "startVideo": "Start video"
+    "startVideo": "Start video",
+    "startVisit": "Start visit",
+    "continueVisit": "Continue visit",
+    "openVisit": "Open visit"
   },
   "patientsX": {
     "searchPlaceholder": "Search name (Arabic or English), mobile, file or ID number",
@@ -421,7 +424,10 @@
     "recent": "Recent signed notes",
     "placeholder": "Complaint, examination, procedure, plan…",
     "forVisit": "Visit {date}",
-    "noDrafts": "No drafts"
+    "noDrafts": "No drafts",
+    "signComplete": "Sign & complete",
+    "signCompleteConfirm": "Sign this note and complete the visit? A signed note can't be edited (you can add an addendum).",
+    "signedCompleted": "Note signed and visit completed."
   },
   "requests": {
     "title": "Reschedule requests",
@@ -1024,5 +1030,19 @@
     "addChange": "Add change",
     "conflicts": "{count, plural, one {# booked appointment is} other {# booked appointments are}} outside the new hours",
     "conflictsHint": "Nothing was moved or cancelled. Open each one in the calendar to move it, or tell the patient."
+  },
+  "visit": {
+    "back": "My Day",
+    "fullFile": "Full patient file",
+    "consentMissing": "The consent for this visit isn't signed yet. Reception asks for it at check-in (video patients sign before joining).",
+    "note": "Note for this visit",
+    "start": "Start visit",
+    "openNote": "Prepare the note",
+    "startHint": "The patient has arrived. Start the visit to open the note and the AI scribe.",
+    "prepareHint": "The patient hasn't been checked in yet. You can prepare the note now.",
+    "package": "Package",
+    "left": "{remaining} of {total} left",
+    "earlier": "Earlier notes",
+    "noEarlier": "No earlier signed notes."
   }
 }

@@ -94,6 +94,9 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   Join only around the visit time and after the `telehealth` consent (`visit.ts`). The provider (Daily today,
   key `DAILY_API_KEY`) sits behind `provider.ts` so it can be swapped for a Saudi-hosted server. Never recorded.
   The patient joining = check-in (`videoCheckIn`: consent → package deduction once → "arrived").
+- Doctor's visit screen `/visits/<id>` (`src/lib/visits/visit.ts`): "Start visit" (arrived → in_session + the
+  visit's ONE note draft) and "Sign & complete" (sign + complete in ONE transaction). Own appointments only.
+  Video calls show on the same screen (`/visits/<id>/video` redirects there).
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly
   pattern (`staff_schedules`, several shifts per weekday, each at a branch; old rows with a break = two shifts)
   unless `schedule_exceptions` has a change for that date (off / special hours, which also adds extra days).
