@@ -23,7 +23,12 @@ const sign = (tenantId: string, phone: string, exp: number, env: Env) =>
     .digest("base64url")
     .slice(0, 32);
 
-export function phonePass(tenantId: string, phone: string, now = new Date(), env: Env = process.env) {
+export function phonePass(
+  tenantId: string,
+  phone: string,
+  now = new Date(),
+  env: Env = process.env,
+) {
   const exp = Math.floor(now.getTime() / 1000) + BOOKING_PASS_MINUTES * 60;
   return `${phone}.${exp}.${sign(tenantId, phone, exp, env)}`;
 }

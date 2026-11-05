@@ -79,7 +79,9 @@ export function OnlineBookingFlow({
       : null,
   );
   /** Chosen on the website for a clinic visit: picked once a branch is chosen. */
-  const [wantedService] = useState(initialService && !initialService.isVirtual ? initialService.id : null);
+  const [wantedService] = useState(
+    initialService && !initialService.isVirtual ? initialService.id : null,
+  );
   const [verified, setVerified] = useState<BookingIdentity | null>(identity);
   const [phoneInput, setPhoneInput] = useState("");
   const [doctor, setDoctor] = useState<DoctorChoice | null>(null);
@@ -298,7 +300,13 @@ export function OnlineBookingFlow({
   if (!verified) {
     return (
       <div className="flex flex-col gap-3" data-testid="online-booking">
-        <Step n={1} title={t("stepMobile")} done={false} changeLabel={t("change")} testId="step-mobile">
+        <Step
+          n={1}
+          title={t("stepMobile")}
+          done={false}
+          changeLabel={t("change")}
+          testId="step-mobile"
+        >
           <form
             className="flex flex-col gap-3"
             onSubmit={(e) => {
@@ -369,7 +377,13 @@ export function OnlineBookingFlow({
             </Button>
             {codeStage && (
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={sendCode}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={pending}
+                  onClick={sendCode}
+                >
                   {t("resend")}
                 </Button>
                 <Button
@@ -682,7 +696,10 @@ export function OnlineBookingFlow({
                 onChange={(e) => setDetails({ ...details, fullName: e.target.value })}
               />
             </div>
-            <p className="text-muted-foreground flex items-center gap-1.5 text-sm" data-testid="verified-phone">
+            <p
+              className="text-muted-foreground flex items-center gap-1.5 text-sm"
+              data-testid="verified-phone"
+            >
               <CheckCircle2 className="text-success-foreground size-4" />
               {t("verifiedMobile")}{" "}
               <span dir="ltr" className="font-mono">

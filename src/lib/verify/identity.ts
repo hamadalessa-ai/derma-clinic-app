@@ -34,7 +34,6 @@ export async function adultByPhone(tx: TenantTx, phone: string) {
   return p ?? null;
 }
 
-
 /** For the booking page: who is already verified in this browser (null = start with the mobile). */
 export async function bookingIdentity(tenantId: string) {
   const phone = await verifiedPhone(tenantId);
