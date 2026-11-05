@@ -1,7 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/components/ui/tabs";
 
-export const SETTINGS_TABS = ["clinic", "booking", "website", "consents", "messages", "demo"] as const;
+export const SETTINGS_TABS = [
+  "clinic",
+  "booking",
+  "website",
+  "consents",
+  "messages",
+  "demo",
+] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 /** The settings sections as tabs (WhatsApp & AI lives on its own page, same tabs on top). */

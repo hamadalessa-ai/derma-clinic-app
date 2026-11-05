@@ -70,12 +70,7 @@ import {
 } from "@/lib/whatsapp/staff";
 import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
-import {
-  saveSiteContent,
-  setMemberGender,
-  setServiceOnline,
-  updateSettings,
-} from "@/lib/settings";
+import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
@@ -873,9 +868,21 @@ const siteInput = z.object({
   aboutAr: text(1000),
   aboutEn: text(1000),
   since: z.number().int().min(1900).max(2100).optional(),
-  phone: z.string().trim().regex(/^\+?[\d\s-]{6,20}$/).optional(),
-  whatsapp: z.string().trim().regex(/^\+?[\d\s-]{6,20}$/).optional(),
-  instagram: z.string().trim().regex(/^@?[\w.]{1,30}$/).optional(),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[\d\s-]{6,20}$/)
+    .optional(),
+  whatsapp: z
+    .string()
+    .trim()
+    .regex(/^\+?[\d\s-]{6,20}$/)
+    .optional(),
+  instagram: z
+    .string()
+    .trim()
+    .regex(/^@?[\w.]{1,30}$/)
+    .optional(),
   licence: text(40),
   reviews: z
     .array(

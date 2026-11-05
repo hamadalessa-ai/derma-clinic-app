@@ -62,14 +62,22 @@ export async function loadClinicSite(tenantId: string, now = new Date()) {
         ...b,
         days: [...new Set(rows.map((r) => r.weekday))].sort((x, y) => x - y),
         from: rows.map((r) => String(r.start).slice(0, 5)).sort()[0] ?? null,
-        to: rows.map((r) => String(r.end).slice(0, 5)).sort().at(-1) ?? null,
+        to:
+          rows
+            .map((r) => String(r.end).slice(0, 5))
+            .sort()
+            .at(-1) ?? null,
         video: catalog.videoBranches.includes(b.id),
       };
     });
 
     // Doctors with their titles (public: name + title only).
     const titled = await tx
-      .select({ id: tenantMembers.id, titleAr: tenantMembers.titleAr, titleEn: tenantMembers.titleEn })
+      .select({
+        id: tenantMembers.id,
+        titleAr: tenantMembers.titleAr,
+        titleEn: tenantMembers.titleEn,
+      })
       .from(tenantMembers)
       .innerJoin(users, eq(users.id, tenantMembers.userId));
     const titles = new Map(titled.map((m) => [m.id, m]));

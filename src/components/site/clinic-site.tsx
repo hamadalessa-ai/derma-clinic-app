@@ -51,7 +51,9 @@ export async function ClinicSite({
   const videoHref = data.videoService
     ? `/book?mode=video&service=${data.videoService.id}`
     : "/book?mode=video";
-  const firstHref = data.firstService ? `/book?mode=clinic&service=${data.firstService.id}` : bookHref;
+  const firstHref = data.firstService
+    ? `/book?mode=clinic&service=${data.firstService.id}`
+    : bookHref;
   const weekday = (d: number) =>
     new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-SA", { weekday: "short" }).format(
       new Date(Date.UTC(2023, 0, 1 + d)), // 1 Jan 2023 was a Sunday
@@ -204,7 +206,8 @@ export async function ClinicSite({
                 )}
                 <div className="text-muted-foreground mt-4 flex items-center justify-between gap-2 text-xs">
                   <span>
-                    {data.firstService && pick(locale, data.firstService.nameAr, data.firstService.nameEn)}
+                    {data.firstService &&
+                      pick(locale, data.firstService.nameAr, data.firstService.nameEn)}
                     {nextBranch && ` · ${pick(locale, nextBranch.nameAr, nextBranch.nameEn)}`}
                   </span>
                   <Link
@@ -262,7 +265,9 @@ export async function ClinicSite({
                         data-testid="site-service"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold">{pick(locale, svc.nameAr, svc.nameEn)}</span>
+                          <span className="font-semibold">
+                            {pick(locale, svc.nameAr, svc.nameEn)}
+                          </span>
                           {svc.isVirtual && (
                             <span className="bg-info/10 text-info inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
                               <Video className="size-3" aria-hidden />
@@ -419,10 +424,15 @@ export async function ClinicSite({
             <SectionTitle title={t("branchesTitle")} />
             <ul className="mt-8 grid gap-4 md:grid-cols-2">
               {data.branches.map((b) => (
-                <li key={b.id} className="bg-card shadow-card flex flex-col gap-3 rounded-xl border p-5">
+                <li
+                  key={b.id}
+                  className="bg-card shadow-card flex flex-col gap-3 rounded-xl border p-5"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-lg font-semibold">{pick(locale, b.nameAr, b.nameEn)}</div>
+                      <div className="text-lg font-semibold">
+                        {pick(locale, b.nameAr, b.nameEn)}
+                      </div>
                       <div className="text-muted-foreground flex items-center gap-1 text-sm">
                         <MapPin className="size-3.5" aria-hidden />
                         {pick(locale, b.cityAr, b.cityEn)}
@@ -469,10 +479,16 @@ export async function ClinicSite({
           <SectionTitle title={t("faqTitle")} />
           <div className="mt-8 flex flex-col gap-2">
             {([1, 2, 3, 4, 5] as const).map((n) => (
-              <details key={n} className="bg-card group rounded-xl border px-4 py-3 open:shadow-card">
+              <details
+                key={n}
+                className="bg-card group open:shadow-card rounded-xl border px-4 py-3"
+              >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-medium">
                   {t(`faq${n}q`)}
-                  <span className="text-muted-foreground transition-transform group-open:rotate-45" aria-hidden>
+                  <span
+                    className="text-muted-foreground transition-transform group-open:rotate-45"
+                    aria-hidden
+                  >
                     +
                   </span>
                 </summary>
@@ -518,7 +534,12 @@ export async function ClinicSite({
               </a>
             )}
             {wa && (
-              <a href={wa} target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+              <a
+                href={wa}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground"
+              >
                 {t("whatsapp")}
               </a>
             )}
@@ -542,7 +563,11 @@ export async function ClinicSite({
       {/* Phones: the booking button stays under the thumb. */}
       {canBook && (
         <div className="bg-card/95 fixed inset-x-0 bottom-0 z-30 flex gap-2 border-t p-3 backdrop-blur sm:hidden">
-          <Link href={bookHref} className={cn(buttonVariants({ size: "lg" }), "flex-1")} data-testid="sticky-book">
+          <Link
+            href={bookHref}
+            className={cn(buttonVariants({ size: "lg" }), "flex-1")}
+            data-testid="sticky-book"
+          >
             <CalendarCheck />
             {t("book")}
           </Link>

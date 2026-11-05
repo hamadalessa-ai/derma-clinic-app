@@ -90,7 +90,10 @@ export async function setMemberGender(
  */
 export async function saveSiteContent(tx: TenantTx, actor: Actor, site: SiteContent) {
   assertCan(actor.roles, "settings:manage");
-  const [row] = await tx.update(tenantSettings).set({ site }).returning({ site: tenantSettings.site });
+  const [row] = await tx
+    .update(tenantSettings)
+    .set({ site })
+    .returning({ site: tenantSettings.site });
   await audit(tx, {
     actorUserId: actor.userId,
     action: "settings.site",

@@ -34,7 +34,8 @@ describe("clinic website", () => {
     const site = await loadClinicSite(DERMA, new Date("2030-01-12T06:00:00Z"));
     expect(site.firstService?.id).toBe(service("consultation"));
     expect(site.nextFree.length).toBeGreaterThan(0);
-    for (const iso of site.nextFree) expect(new Date(iso).getTime()).toBeGreaterThan(Date.parse("2030-01-12T06:00:00Z"));
+    for (const iso of site.nextFree)
+      expect(new Date(iso).getTime()).toBeGreaterThan(Date.parse("2030-01-12T06:00:00Z"));
   });
 
   it("each clinic sees only its own website", async () => {
@@ -45,11 +46,18 @@ describe("clinic website", () => {
   });
 
   it("only admins change the texts; the change is audited", async () => {
-    const before = await withTenant(DERMA, async (tx) => (await tx.select().from(tenantSettings))[0].site);
+    const before = await withTenant(
+      DERMA,
+      async (tx) => (await tx.select().from(tenantSettings))[0].site,
+    );
     await expect(
       withActor(reception, (tx) => saveSiteContent(tx, reception, { headlineEn: "x" })),
     ).rejects.toThrow();
-    const next = { ...before, phone: "+966 11 000 0000", reviews: [{ quote: "Great care", name: "N. A." }] };
+    const next = {
+      ...before,
+      phone: "+966 11 000 0000",
+      reviews: [{ quote: "Great care", name: "N. A." }],
+    };
     await withActor(admin, (tx) => saveSiteContent(tx, admin, next));
     const site = await loadClinicSite(DERMA);
     expect(site.site.phone).toBe("+966 11 000 0000");

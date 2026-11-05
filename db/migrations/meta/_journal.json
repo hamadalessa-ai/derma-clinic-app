@@ -43,6 +43,13 @@
       "when": 1793896270913,
       "tag": "0005_futuristic_doctor_spectrum",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793899430406,
+      "tag": "0006_stale_roland_deschain",
+      "breakpoints": true
     }
   ]
 }
