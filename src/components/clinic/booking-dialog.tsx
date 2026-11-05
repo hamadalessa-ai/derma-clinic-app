@@ -3,14 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import { bookAction, freeSlotsAction, searchPatientsAction } from "@/app/actions/clinic";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import { Choice } from "@/components/public/choice";
 import { FormError } from "./form-message";
 import { riyadhParts, timeOptions } from "./time";
 import { useAction } from "./use-action";
@@ -49,6 +52,7 @@ export function BookingDialog({
   const t = useTranslations("calendar");
   const tc = useTranslations("common");
   const locale = useLocale();
+  const toast = useToast();
   const name = (o: { nameAr: string; nameEn: string | null }) =>
     locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
 
@@ -56,13 +60,16 @@ export function BookingDialog({
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<PatientHit[]>([]);
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
-  const [doctorId, setDoctorId] = useState(defaults.doctorId ?? doctors[0]?.id ?? "");
+  /** "" = any doctor (the first one free). From a calendar column: that doctor. */
+  const [doctorId, setDoctorId] = useState(defaults.doctorId ?? "");
   const [day, setDay] = useState(defaults.day);
   const [time, setTime] = useState(defaults.time ?? "10:00");
   const [note, setNote] = useState("");
   const [slots, setSlots] = useState<{ startsAt: string; practitionerId: string }[] | null>(null);
+  const [chosen, setChosen] = useState<{ startsAt: string; practitionerId: string } | null>(null);
+  /** Exact day/time/doctor typed in, instead of tapping a free time. */
+  const [manual, setManual] = useState(false);
   const { run, pending, error } = useAction();
-  const slotSearch = useAction();
 
   useEffect(() => {
     if (!open || patient) return;
@@ -73,18 +80,55 @@ export function BookingDialog({
     return () => clearTimeout(id);
   }, [query, open, patient]);
 
+  // Slot-first: the next free times appear as soon as the service (or doctor/day) is chosen.
+  useEffect(() => {
+    if (!open || !serviceId || manual) return;
+    let cancelled = false;
+    freeSlotsAction({
+      branchId,
+      serviceId,
+      practitionerId: doctorId || undefined,
+      day,
+      time: day === defaults.day ? defaults.time : undefined,
+      limit: 8,
+    }).then((r) => {
+      if (cancelled) return;
+      const list = r.ok ? r.data : [];
+      setSlots(list);
+      // Opened from a calendar cell: that exact time is pre-chosen when it's free.
+      const exact =
+        defaults.time &&
+        list.find((x) => {
+          const p = riyadhParts(x.startsAt);
+          return p.day === defaults.day && p.time === defaults.time;
+        });
+      setChosen(exact || null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, serviceId, doctorId, day, manual, branchId, defaults.day, defaults.time]);
+
+  const doctorName = (id: string) => {
+    const d = doctors.find((x) => x.id === id);
+    return d ? name(d) : "";
+  };
+  const ready = !!patient && !!serviceId && (manual ? !!doctorId : !!chosen);
+
   return (
     <Dialog open={open} onClose={onClose} title={t("newBooking")} closeLabel={tc("close")}>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="patient-search">{tc("patient")}</Label>
         {patient ? (
           <div
-            className="bg-muted flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+            className="bg-muted flex items-center justify-between rounded-lg px-3 py-2 text-sm"
             data-testid="selected-patient"
           >
             <span>
               <span className="font-medium">{name(patient)}</span> ·{" "}
-              <span dir="ltr">{patient.fileNumber}</span>
+              <span dir="ltr" className="font-mono">
+                {patient.fileNumber}
+              </span>
             </span>
             <Button variant="ghost" size="sm" onClick={() => setPatient(null)}>
               {t("change")}
@@ -101,10 +145,11 @@ export function BookingDialog({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 autoComplete="off"
+                autoFocus
               />
             </div>
             <ul
-              className="max-h-44 overflow-y-auto rounded-md border"
+              className="max-h-44 overflow-y-auto rounded-lg border"
               role="listbox"
               aria-label={t("pickPatient")}
             >
@@ -114,11 +159,11 @@ export function BookingDialog({
                     type="button"
                     role="option"
                     aria-selected={false}
-                    className="hover:bg-accent flex w-full justify-between gap-2 px-3 py-2 text-start text-sm"
+                    className="hover:bg-muted flex w-full justify-between gap-2 px-3 py-2 text-start text-sm"
                     onClick={() => setPatient(h)}
                   >
                     <span className="font-medium">{name(h)}</span>
-                    <span className="text-muted-foreground text-xs" dir="ltr">
+                    <span className="text-muted-foreground font-mono text-xs" dir="ltr">
                       {h.fileNumber} · {h.phone}
                     </span>
                   </button>
@@ -138,11 +183,7 @@ export function BookingDialog({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="service">{tc("service")}</Label>
-          <Select
-            id="service"
-            value={serviceId}
-            onChange={(e) => (setServiceId(e.target.value), setSlots(null))}
-          >
+          <Select id="service" value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
             {services.map((s) => (
               <option key={s.id} value={s.id}>
                 {name(s)} ({tc("minutes", { count: s.durationMinutes })})
@@ -152,11 +193,8 @@ export function BookingDialog({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="doctor">{tc("doctor")}</Label>
-          <Select
-            id="doctor"
-            value={doctorId}
-            onChange={(e) => (setDoctorId(e.target.value), setSlots(null))}
-          >
+          <Select id="doctor" value={doctorId} onChange={(e) => setDoctorId(e.target.value)}>
+            {!manual && <option value="">{t("anyDoctor")}</option>}
             {doctors.map((d) => (
               <option key={d.id} value={d.id}>
                 {name(d)}
@@ -164,116 +202,139 @@ export function BookingDialog({
             ))}
           </Select>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="day">{tc("date")}</Label>
-          <Input
-            id="day"
-            type="date"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-            dir="ltr"
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="time">{tc("time")}</Label>
-          <Select id="time" value={time} onChange={(e) => setTime(e.target.value)} dir="ltr">
-            {timeOptions().map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </Select>
-        </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="self-start"
-          disabled={slotSearch.pending}
-          onClick={() =>
-            slotSearch.run(
-              () =>
-                freeSlotsAction({
-                  branchId,
-                  serviceId,
-                  practitionerId: doctorId || undefined,
-                  day,
-                  time,
-                }),
-              (data) => setSlots(data),
-            )
-          }
-        >
-          <Sparkles />
-          {t("findNextSlot")}
-        </Button>
-        {slots && (
-          <div className="flex flex-wrap gap-2" aria-label={t("nextSlots")}>
-            {slots.length === 0 && (
-              <span className="text-muted-foreground text-sm">{t("noSlots")}</span>
-            )}
-            {slots.map((s) => {
-              const p = riyadhParts(s.startsAt);
-              return (
-                <Button
-                  key={s.startsAt + s.practitionerId}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  data-testid="free-slot"
-                  onClick={() => {
-                    setDay(p.day);
-                    setTime(p.time);
-                    setDoctorId(s.practitionerId);
-                  }}
-                >
-                  <span dir="ltr">
-                    {p.day.slice(5)} {p.time}
-                  </span>
-                </Button>
-              );
-            })}
+      {!manual ? (
+        <div className="flex flex-col gap-2" data-testid="slot-picker">
+          <div className="flex items-center justify-between gap-2">
+            <Label>{t("nextSlots")}</Label>
+            <Input
+              type="date"
+              value={day}
+              onChange={(e) => setDay(e.target.value)}
+              dir="ltr"
+              className="h-8 w-auto text-sm"
+              aria-label={tc("date")}
+            />
           </div>
-        )}
-        <FormError message={slotSearch.error} />
-      </div>
+          {slots === null ? (
+            <div className="flex gap-2">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-11 w-24 rounded-lg" />
+              ))}
+            </div>
+          ) : slots.length === 0 ? (
+            <p className="text-muted-foreground text-sm">{t("noSlots")}</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {slots.map((s) => {
+                const p = riyadhParts(s.startsAt);
+                const on =
+                  chosen?.startsAt === s.startsAt && chosen.practitionerId === s.practitionerId;
+                return (
+                  <Choice
+                    key={s.startsAt + s.practitionerId}
+                    selected={on}
+                    className="items-center text-center"
+                    data-testid="free-slot"
+                    data-day={p.day}
+                    onClick={() => setChosen(s)}
+                  >
+                    <span dir="ltr" className="font-mono font-medium">
+                      {p.time}
+                    </span>
+                    <span className="text-muted-foreground text-[11px] leading-4">
+                      {p.day !== day ? `${p.day.slice(5)} · ` : ""}
+                      {!doctorId ? doctorName(s.practitionerId) : ""}
+                    </span>
+                  </Choice>
+                );
+              })}
+            </div>
+          )}
+          <button
+            type="button"
+            className="text-brand-strong self-start text-xs underline"
+            onClick={() => {
+              setManual(true);
+              if (!doctorId) setDoctorId(defaults.doctorId ?? doctors[0]?.id ?? "");
+            }}
+          >
+            {t("otherTime")}
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="day">{tc("date")}</Label>
+            <Input
+              id="day"
+              type="date"
+              value={day}
+              onChange={(e) => setDay(e.target.value)}
+              dir="ltr"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="time">{tc("time")}</Label>
+            <Select id="time" value={time} onChange={(e) => setTime(e.target.value)} dir="ltr">
+              {timeOptions().map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <button
+            type="button"
+            className="text-brand-strong self-start text-xs underline sm:col-span-2"
+            onClick={() => setManual(false)}
+          >
+            {t("showFreeTimes")}
+          </button>
+        </div>
+      )}
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="note">
+      <details className="text-sm">
+        <summary className="text-muted-foreground cursor-pointer">
           {t("note")} ({tc("optional")})
-        </Label>
+        </summary>
         <Textarea
           id="note"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="min-h-16"
+          className="mt-2 min-h-16"
+          aria-label={t("note")}
         />
-      </div>
+      </details>
       <FormError message={error} />
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onClose}>
           {tc("cancel")}
         </Button>
         <Button
-          disabled={pending || !patient || !serviceId || !doctorId}
-          onClick={() =>
+          disabled={!ready}
+          loading={pending}
+          data-testid="book-submit"
+          onClick={() => {
+            const p = chosen && !manual ? riyadhParts(chosen.startsAt) : null;
             run(
               () =>
                 bookAction({
                   branchId,
                   patientId: patient!.id,
                   serviceId,
-                  practitionerId: doctorId,
-                  day,
-                  time,
+                  practitionerId: p ? chosen!.practitionerId : doctorId,
+                  day: p ? p.day : day,
+                  time: p ? p.time : time,
                   note: note || undefined,
                 }),
-              () => onClose(),
-            )
-          }
+              () => {
+                toast(t("bookedOk", { name: name(patient!) }));
+                onClose();
+              },
+            );
+          }}
         >
           {t("book")}
         </Button>

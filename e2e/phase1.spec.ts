@@ -92,9 +92,10 @@ test.describe("done-when journey", () => {
     await reception
       .getByLabel("الطبيب", { exact: true })
       .selectOption({ label: "د. سارة العتيبي" });
-    await reception.getByRole("button", { name: "أقرب موعد متاح" }).click();
-    await reception.getByTestId("free-slot").first().click();
-    const day = await reception.getByLabel("التاريخ", { exact: true }).inputValue();
+    // Slot-first: the next free times appear by themselves.
+    const slot = reception.getByTestId("free-slot").first();
+    await slot.click();
+    const day = (await slot.getAttribute("data-day"))!;
     await reception.getByRole("button", { name: "احجز", exact: true }).click();
     await expect(reception.getByTestId("selected-patient")).toBeHidden();
 

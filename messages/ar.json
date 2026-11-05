@@ -237,7 +237,7 @@
     "findNextSlot": "أقرب موعد متاح",
     "nextSlots": "أقرب المواعيد المتاحة",
     "noSlots": "لا توجد مواعيد متاحة خلال الأسبوعين القادمين",
-    "bookedOk": "تم الحجز",
+    "bookedOk": "تم حجز موعد {name}",
     "appointment": "الموعد",
     "checkIn": "تسجيل الحضور",
     "confirm": "تأكيد الموعد",
@@ -258,7 +258,7 @@
     "alreadyCheckedIn": "تم تسجيل حضور هذا الموعد مسبقًا",
     "consentRequired": "يجب توقيع نموذج الموافقة قبل تسجيل الحضور",
     "selectDoctor": "اختر الطبيب",
-    "anyDoctor": "أي طبيب متاح",
+    "anyDoctor": "أي طبيب (الأقرب)",
     "empty": "لا توجد مواعيد",
     "weekOf": "أسبوع {date}",
     "liveHint": "يتحدّث تلقائيًا",
@@ -281,7 +281,9 @@
     "nobodyFreeThatDay": "لا توجد أوقات متاحة مع أي طبيب في هذا اليوم.",
     "arrivals": "قائمة الحضور",
     "noArrivals": "لا توجد مواعيد في هذا اليوم.",
-    "checkedInName": "تم تسجيل حضور {name}"
+    "checkedInName": "تم تسجيل حضور {name}",
+    "otherTime": "حجز وقت محدد بدلًا من ذلك",
+    "showFreeTimes": "عرض أقرب الأوقات المتاحة"
   },
   "consent": {
     "sign": "توقيع الموافقة",
