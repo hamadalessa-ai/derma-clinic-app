@@ -567,7 +567,9 @@ export function NotesPanel({
           mine={n.authorUserId === userId}
           canWrite={canWrite}
           scribe={scribe}
-          completes={visit && appointmentId && n.appointmentId === appointmentId ? appointmentId : null}
+          completes={
+            visit && appointmentId && n.appointmentId === appointmentId ? appointmentId : null
+          }
         />
       ))}
     </div>

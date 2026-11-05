@@ -143,7 +143,8 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             <span>{pick(locale, visit.serviceAr, visit.serviceEn)}</span>
             <span>·</span>
             <span>
-              {formatGregorian(visit.startsAt, locale, "medium")} {formatTime(visit.startsAt, locale)}
+              {formatGregorian(visit.startsAt, locale, "medium")}{" "}
+              {formatTime(visit.startsAt, locale)}
             </span>
           </p>
         </div>
@@ -168,7 +169,9 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             <Card>
               <CardContent className="flex flex-col gap-3 pt-4 md:pt-5">
                 {videoNow === "too_early" && (
-                  <Notice tone="info">{tv("doctorTooEarly", { minutes: DOCTOR_EARLY_MINUTES })}</Notice>
+                  <Notice tone="info">
+                    {tv("doctorTooEarly", { minutes: DOCTOR_EARLY_MINUTES })}
+                  </Notice>
                 )}
                 {videoNow === "ended" && <Notice tone="info">{tv("ended")}</Notice>}
                 {videoNow === "cancelled" && <Notice tone="warning">{tv("cancelled")}</Notice>}

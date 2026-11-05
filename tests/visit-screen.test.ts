@@ -11,7 +11,16 @@ import { bookAppointment, BookingError } from "@/lib/booking/engine";
 import { NoteError } from "@/lib/notes/notes";
 import { checkIn } from "@/lib/visits/check-in";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
-import { drFaisal, drSara, member, patient, reception, RIYADH, riyadhAt, service } from "./fixtures";
+import {
+  drFaisal,
+  drSara,
+  member,
+  patient,
+  reception,
+  RIYADH,
+  riyadhAt,
+  service,
+} from "./fixtures";
 
 afterAll(closeDb);
 
@@ -35,7 +44,9 @@ const status = async (id: string) =>
     )
   )[0].s;
 const note = async (id: string) =>
-  (await withActor(drSara, (tx) => tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, id))))[0];
+  (
+    await withActor(drSara, (tx) => tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, id)))
+  )[0];
 
 async function code(p: Promise<unknown>) {
   try {

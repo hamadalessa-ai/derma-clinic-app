@@ -143,7 +143,12 @@ export function MyDayList({
                 )}
                 {/* The patient is here: one tap starts the visit and opens its screen. */}
                 {a.status === "arrived" && !a.isVirtual && (
-                  <StartVisitButton appointmentId={a.id} label={t("startVisit")} size="sm" navigate />
+                  <StartVisitButton
+                    appointmentId={a.id}
+                    label={t("startVisit")}
+                    size="sm"
+                    navigate
+                  />
                 )}
                 {a.isVirtual && !["completed", "cancelled", "no_show"].includes(a.status) ? (
                   <Link
