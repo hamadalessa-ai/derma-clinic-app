@@ -803,6 +803,12 @@ ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_tenant_id_
 ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_member_fk" FOREIGN KEY ("tenant_id","member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "schedule_exceptions" ADD CONSTRAINT "schedule_exceptions_branch_fk" FOREIGN KEY ("tenant_id","branch_id") REFERENCES "public"."branches"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "schedule_exceptions_member_day_idx" ON "schedule_exceptions" USING btree ("tenant_id","member_id","day");
+-- 0005_futuristic_doctor_spectrum.sql
+CREATE INDEX "appointments_status_start_idx" ON "appointments" USING btree ("tenant_id","status","starts_at");
+CREATE INDEX "audit_logs_entity_idx" ON "audit_logs" USING btree ("tenant_id","entity_type","entity_id");
+CREATE INDEX "clinical_notes_author_status_idx" ON "clinical_notes" USING btree ("tenant_id","author_user_id","status");
+CREATE INDEX "clinical_notes_appointment_idx" ON "clinical_notes" USING btree ("tenant_id","appointment_id");
+CREATE INDEX "messages_patient_idx" ON "messages" USING btree ("tenant_id","patient_id","created_at");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════

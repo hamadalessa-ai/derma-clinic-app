@@ -21,7 +21,10 @@ const nextConfig: NextConfig = {
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-      { key: "Permissions-Policy", value: "geolocation=(), payment=(), usb=(), interest-cohort=()" },
+      {
+        key: "Permissions-Policy",
+        value: "geolocation=(), payment=(), usb=(), interest-cohort=()",
+      },
       { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
     ];
     // Signed patient links (/visit, /sign): never cached, never leaked in a Referer, never indexed.

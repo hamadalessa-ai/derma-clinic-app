@@ -7,6 +7,7 @@ checks on real phones before a demo or a pilot.
 ## A. Edge cases to test (manual, on a phone and a tablet)
 
 ### Booking and the calendar
+
 - [ ] Two people book the SAME doctor and time at the same moment (two phones) → one succeeds, the other sees "This time was just booked".
 - [ ] A laser booking when the only laser device is busy → the time is not offered.
 - [ ] Booking across a break (13:45 for a 30-minute service with a 14:00 break) → refused "during break".
@@ -19,6 +20,7 @@ checks on real phones before a demo or a pilot.
 - [ ] Riyadh time: a booking at 23:30 Riyadh shows on the right day for staff and patient (never UTC's day).
 
 ### Check-in, packages and consents
+
 - [ ] Check-in with an unsigned consent → the signature sheet opens; signing finishes the check-in.
 - [ ] Tapping Check in twice quickly (or two receptionists) → one session deducted, never two.
 - [ ] Package expired or used up → no deduction, check-in still works, shows "no package".
@@ -29,6 +31,7 @@ checks on real phones before a demo or a pilot.
 - [ ] Child's file (guardian) → consent link says "signing as guardian"; record shows relation guardian.
 
 ### Doctor's visit and notes
+
 - [ ] Start visit → status "with the doctor"; the note opens with the AI scribe.
 - [ ] Sign & complete with an empty note → refused; nothing changes.
 - [ ] Sign & complete → note signed AND visit completed; back on My Day.
@@ -38,6 +41,7 @@ checks on real phones before a demo or a pilot.
 - [ ] AI scribe fails (no internet) → the spoken text stays in the box; the note is unchanged.
 
 ### Video consultations
+
 - [ ] Join link before the time → "opens 15 minutes before"; page opens by itself when it's time.
 - [ ] Patient joins without the telehealth consent → asked to sign first (via the consent link).
 - [ ] Patient joins → appointment becomes "arrived" automatically (once).
@@ -47,6 +51,7 @@ checks on real phones before a demo or a pilot.
 - [ ] Phone camera/microphone permission denied → clear message; allowing it and re-joining works.
 
 ### WhatsApp and the AI receptionist
+
 - [ ] Patient replies "yes" twice → booked once (confirmation only after a newer message).
 - [ ] Medical worry ("redness after laser") → handed to staff, never advice; 997 only for emergency signs.
 - [ ] Staff replies in a chat → the AI stops answering that chat until "Let AI answer" again.
@@ -55,6 +60,7 @@ checks on real phones before a demo or a pilot.
 - [ ] The same reminder job runs twice (cron retry) → each message sent once.
 
 ### Separation and privacy
+
 - [ ] Lamsa staff can never see Derma's data (any page, any URL, any search).
 - [ ] Platform owner sees no patient data.
 - [ ] A receptionist restricted to Riyadh never sees Jeddah appointments.
@@ -62,6 +68,7 @@ checks on real phones before a demo or a pilot.
 - [ ] Lock-screen notifications show initials + service + time only.
 
 ### Phones, languages, accessibility
+
 - [ ] Every main screen at 360px wide: no sideways scrolling, bottom bar never covers buttons.
 - [ ] Arabic (RTL) and English (LTR): times, phone and file numbers stay left-to-right in Arabic text.
 - [ ] Keyboard only (laptop): every button reachable, focus ring visible.
@@ -70,6 +77,7 @@ checks on real phones before a demo or a pilot.
 ## B. Deployment checklist
 
 ### Accounts and settings (one-time)
+
 - [ ] Vercel project: production branch `main`; region `bom1` (or the Saudi host later).
 - [ ] Environment variables in Vercel (Production):
   - `DATABASE_URL` (transaction pooler, port 6543, user `clinic_app.<project-ref>`, `prepare: false`)
@@ -84,12 +92,14 @@ checks on real phones before a demo or a pilot.
 - [ ] Spending alerts: Anthropic console, Daily billing, Vercel, Supabase.
 
 ### Database
+
 - [ ] Demo: merges that change `db/setup.sql` reset the demo database automatically (Part G).
 - [ ] **Before the first real clinic:** switch OFF the automatic reset; from then on only numbered `db/upgrades/NNNN_*.sql` files that keep data, applied in one transaction, tested on a copy first.
 - [ ] Daily backups switched on (Supabase PITR or the Saudi host's equivalent); a restore tested once.
 - [ ] The app connects as `clinic_app` only (never the admin user); RLS forced on every clinic table (tests check this).
 
 ### Before real patients (not technical, but blocking)
+
 - [ ] Commercial Registration → Meta business verification → real WhatsApp number and approved templates.
 - [ ] Saudi hosting for patient data (database, files, video) per PDPL; data-processing agreements with Anthropic and the video provider, or Saudi-hosted alternatives.
 - [ ] Legal review: privacy notice, consent wording (incl. telehealth and AI scribe), record retention.
@@ -98,6 +108,7 @@ checks on real phones before a demo or a pilot.
 - [ ] `MESSAGE_DEMO_MODE` off, demo banner off, demo clinics removed from the real database.
 
 ### Release routine (every change)
+
 1. Pull request → GitHub "Tests" green (lint, format, types and all tests on a fresh database).
 2. Merge → Vercel deploys (check the deployment is "Ready"); database workflow runs if SQL changed.
 3. Smoke test on a phone: sign in as reception and as a doctor, book, check in, start visit, sign.
