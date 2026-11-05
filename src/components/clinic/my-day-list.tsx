@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   DoorOpen,
   FileText,
-  Play,
   Trash2,
   UserRound,
   Video,
@@ -25,6 +24,7 @@ import { AppointmentDialog } from "./appointment-dialog";
 import type { PickOption } from "./booking-dialog";
 import { FormError, FormSuccess } from "./form-message";
 import { riyadhParts } from "./time";
+import { StartVisitButton } from "./start-visit";
 import { useAction } from "./use-action";
 
 export function MyDayList({
@@ -66,11 +66,9 @@ export function MyDayList({
   const next = (a: ApptView) =>
     a.status === "booked"
       ? { to: "confirmed", label: t("confirm"), icon: CalendarCheck }
-      : a.status === "arrived"
-        ? { to: "in_session", label: t("start"), icon: Play }
-        : a.status === "in_session"
-          ? { to: "completed", label: t("complete"), icon: CheckCircle2 }
-          : null;
+      : a.status === "in_session"
+        ? { to: "completed", label: t("complete"), icon: CheckCircle2 }
+        : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -135,6 +133,7 @@ export function MyDayList({
                 {n && (
                   <Button
                     size="sm"
+                    variant="outline"
                     disabled={pending}
                     onClick={() => run(() => statusAction({ appointmentId: a.id, to: n.to }))}
                   >
@@ -142,23 +141,39 @@ export function MyDayList({
                     {n.label}
                   </Button>
                 )}
-                {a.isVirtual && !["completed", "cancelled", "no_show"].includes(a.status) && (
+                {/* The patient is here: one tap starts the visit and opens its screen. */}
+                {a.status === "arrived" && !a.isVirtual && (
+                  <StartVisitButton
+                    appointmentId={a.id}
+                    label={t("startVisit")}
+                    size="sm"
+                    navigate
+                  />
+                )}
+                {a.isVirtual && !["completed", "cancelled", "no_show"].includes(a.status) ? (
                   <Link
-                    href={`/visits/${a.id}/video`}
+                    href={`/visits/${a.id}`}
                     className={buttonVariants({ size: "sm" })}
                     data-testid="start-video"
                   >
                     <Video />
                     {t("startVideo")}
                   </Link>
+                ) : (
+                  a.status !== "arrived" && (
+                    <Link
+                      href={`/visits/${a.id}`}
+                      className={buttonVariants({
+                        variant: a.status === "in_session" ? "default" : "outline",
+                        size: "sm",
+                      })}
+                      data-testid="open-visit"
+                    >
+                      <FileText />
+                      {a.status === "in_session" ? t("continueVisit") : t("openVisit")}
+                    </Link>
+                  )
                 )}
-                <Link
-                  href={`/patients/${a.patient.id}?tab=notes&appointment=${a.id}`}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  <FileText />
-                  {t("writeNote")}
-                </Link>
                 <Link
                   href={`/patients/${a.patient.id}`}
                   className={buttonVariants({ variant: "ghost", size: "sm" })}

@@ -1,0 +1,64 @@
+/**
+ * The doctor's visit screen (/visits/<id>): one place to start the visit, write the note
+ * (with the AI scribe) and finish with "Sign & complete".
+ *
+ * Rules: only the appointment's own doctor (practitioner role); status changes go through the
+ * booking engine; signing goes through the notes module. Both happen in ONE transaction, so a
+ * visit is never completed without its signed note (or the other way round).
+ */
+import type { TenantTx } from "@/db/tenant";
+import type { Actor } from "@/lib/auth/db";
+import { assertCan } from "@/lib/auth/permissions";
+import { BookingError, changeStatus, getAppointment } from "@/lib/booking/engine";
+import { NoteError, openDraft, signNote } from "@/lib/notes/notes";
+
+async function ownAppointment(tx: TenantTx, actor: Actor, appointmentId: string) {
+  assertCan(actor.roles, "notes:write");
+  const appt = await getAppointment(tx, appointmentId, true);
+  if (!actor.memberId || appt.practitionerId !== actor.memberId) {
+    throw new BookingError("not_allowed");
+  }
+  return appt;
+}
+
+/**
+ * "Start visit": the patient has arrived → "with the doctor", and this visit's note draft is
+ * ready (created once; the same draft is reused). Before arrival the note can still be prepared.
+ */
+export async function startVisit(
+  tx: TenantTx,
+  actor: Actor,
+  appointmentId: string,
+): Promise<{ noteId: string; patientId: string }> {
+  const appt = await ownAppointment(tx, actor, appointmentId);
+  if (["cancelled", "no_show", "pending"].includes(appt.status)) {
+    throw new BookingError("bad_status");
+  }
+  if (appt.status === "arrived") await changeStatus(tx, actor, appt.id, "in_session");
+  const note = await openDraft(tx, actor, { patientId: appt.patientId, appointmentId: appt.id });
+  return { noteId: note.id, patientId: appt.patientId };
+}
+
+/**
+ * "Sign & complete": signs this visit's note and completes the visit. If the patient was never
+ * checked in, the note is signed and the visit stays as it is (reception checks them in).
+ */
+export async function signAndComplete(
+  tx: TenantTx,
+  actor: Actor,
+  input: { appointmentId: string; noteId: string; body: string },
+): Promise<{ completed: boolean }> {
+  const appt = await ownAppointment(tx, actor, input.appointmentId);
+  const note = await signNote(tx, actor, input.noteId, input.body);
+  if (note.appointmentId !== appt.id) throw new NoteError("not_found");
+  let status = appt.status;
+  if (status === "arrived") {
+    await changeStatus(tx, actor, appt.id, "in_session");
+    status = "in_session";
+  }
+  if (status === "in_session") {
+    await changeStatus(tx, actor, appt.id, "completed");
+    return { completed: true };
+  }
+  return { completed: status === "completed" };
+}

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { FileDown, Plus, Printer, Sparkles, Trash2 } from "lucide-react";
+import { Check, FileDown, Plus, Printer, Sparkles, Trash2 } from "lucide-react";
 import {
   addAddendumAction,
   addMedicalFlagAction,
@@ -13,6 +14,7 @@ import {
   removeMedicalFlagAction,
   saveDraftAction,
   sellPackageAction,
+  signAndCompleteAction,
   signNoteAction,
 } from "@/app/actions/clinic";
 import { Badge } from "@/components/ui/badge";
@@ -526,6 +528,7 @@ export function NotesPanel({
   canWrite,
   appointmentId,
   scribe = false,
+  visit = false,
 }: {
   patientId: string;
   notes: NoteView[];
@@ -534,6 +537,8 @@ export function NotesPanel({
   appointmentId: string | null;
   /** The AI scribe is available (clinic setting + key). */
   scribe?: boolean;
+  /** On the visit screen: "Sign & complete" signs the note AND completes the visit. */
+  visit?: boolean;
 }) {
   const t = useTranslations("notes");
   const create = useAction();
@@ -562,6 +567,9 @@ export function NotesPanel({
           mine={n.authorUserId === userId}
           canWrite={canWrite}
           scribe={scribe}
+          completes={
+            visit && appointmentId && n.appointmentId === appointmentId ? appointmentId : null
+          }
         />
       ))}
     </div>
@@ -574,13 +582,17 @@ function NoteCard({
   mine,
   canWrite,
   scribe,
+  completes = null,
 }: {
   patientId: string;
   note: NoteView;
   mine: boolean;
   canWrite: boolean;
   scribe: boolean;
+  /** This visit's appointment: signing also completes it, then back to My Day. */
+  completes?: string | null;
 }) {
+  const router = useRouter();
   const t = useTranslations("notes");
   const ts = useTranslations("scribe");
   const locale = useLocale() as Locale;
@@ -633,16 +645,30 @@ function NoteCard({
                 {t("saveDraft")}
               </Button>
               <Button
-                disabled={pending || !body.trim()}
+                disabled={!body.trim()}
+                loading={pending}
+                data-testid={completes ? "sign-complete" : "sign-note"}
                 onClick={() => {
-                  if (window.confirm(t("signConfirm")))
+                  if (!window.confirm(t(completes ? "signCompleteConfirm" : "signConfirm"))) return;
+                  if (completes) {
+                    run(
+                      () =>
+                        signAndCompleteAction({ appointmentId: completes, noteId: note.id, body }),
+                      (r) => {
+                        setMsg(t(r.completed ? "signedCompleted" : "signedOk"));
+                        if (r.completed) router.push("/my-day");
+                      },
+                    );
+                  } else {
                     run(
                       () => signNoteAction({ patientId, noteId: note.id, body }),
                       () => setMsg(t("signedOk")),
                     );
+                  }
                 }}
               >
-                {t("sign")}
+                {!pending && <Check />}
+                {completes ? t("signComplete") : t("sign")}
               </Button>
             </div>
           </>

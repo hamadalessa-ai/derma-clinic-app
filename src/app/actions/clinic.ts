@@ -72,6 +72,7 @@ import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
+import { signAndComplete, startVisit } from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
 import { parse, staffAction, ValidationError } from "@/lib/actions";
 
@@ -670,6 +671,36 @@ export async function signNoteAction(input: { patientId: string; noteId: string;
     revalidatePath(`/patients/${v.patientId}`);
     revalidatePath("/clinical-notes");
     return null;
+  });
+}
+
+/** The doctor starts the visit: patient → "with the doctor", the visit's note draft ready. */
+export async function startVisitAction(input: { appointmentId: string }) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(z.object({ appointmentId: uuid }), input);
+    const r = await withActor(actor, (tx) => startVisit(tx, actor, v.appointmentId));
+    refreshScreens();
+    revalidatePath(`/visits/${v.appointmentId}`);
+    return r;
+  });
+}
+
+/** "Sign & complete": the visit's note is signed and the visit completed, together. */
+export async function signAndCompleteAction(input: {
+  appointmentId: string;
+  noteId: string;
+  body: string;
+}) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ appointmentId: uuid, noteId: uuid, body: z.string().max(20000) }),
+      input,
+    );
+    const r = await withActor(actor, (tx) => signAndComplete(tx, actor, v));
+    refreshScreens();
+    revalidatePath("/clinical-notes");
+    revalidatePath(`/visits/${v.appointmentId}`);
+    return r;
   });
 }
 
