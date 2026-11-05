@@ -564,6 +564,24 @@ async function applyStatus(
   return updated;
 }
 
+/**
+ * Video consultations: the patient joining the call is their arrival ("arrived"), like check-in
+ * at the desk. Only for video services, only from booked/confirmed. Callers check the consent and
+ * deduct a package session first (lib/visits/check-in.ts → videoCheckIn).
+ */
+export async function markArrivedByVideo(tx: TenantTx, appointmentId: string) {
+  const appt = await getAppointment(tx, appointmentId, true);
+  const service = await getService(tx, appt.serviceId);
+  if (!service.isVirtual) throw new BookingError("not_allowed");
+  if (appt.status === "arrived") return appt;
+  return applyStatus(
+    tx,
+    { userId: null, source: "online", patientId: appt.patientId },
+    appt,
+    "arrived",
+  );
+}
+
 // ─── Blocked time ───────────────────────────────────────────────────────────
 
 export async function blockTime(

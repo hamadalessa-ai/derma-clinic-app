@@ -6,7 +6,12 @@ import type { TenantTx } from "@/db/tenant";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
-import { BookingError, changeStatus, getAppointment } from "@/lib/booking/engine";
+import {
+  BookingError,
+  changeStatus,
+  getAppointment,
+  markArrivedByVideo,
+} from "@/lib/booking/engine";
 import { missingConsent, type ConsentTemplate } from "@/lib/consents/consents";
 import { deductForAppointment } from "@/lib/packages/packages";
 
@@ -49,4 +54,30 @@ export async function checkIn(
     packageId: deduction.packageId,
     remaining: deduction.remaining,
   };
+}
+
+/**
+ * Video consultation: the patient joined the call, so they have "arrived" — the same steps as
+ * check-in at the desk (consent signed → package session deducted once → arrived), done by the
+ * system. Does nothing when already arrived/started, or when the consent is still missing.
+ */
+export async function videoCheckIn(tx: TenantTx, tenantId: string, appointmentId: string) {
+  const appt = await getAppointment(tx, appointmentId, true);
+  if (!["booked", "confirmed"].includes(appt.status)) return { status: "unchanged" as const };
+  if (await missingConsent(tx, appt)) return { status: "unchanged" as const };
+  const deduction = await deductForAppointment(tx, { tenantId, userId: null }, appt);
+  await markArrivedByVideo(tx, appt.id);
+  await audit(tx, {
+    actorUserId: null,
+    action: "appointment.check_in",
+    entityType: "appointment",
+    entityId: appt.id,
+    metadata: {
+      via: "video",
+      packageId: deduction.packageId,
+      deducted: deduction.deducted,
+      remaining: deduction.remaining,
+    },
+  });
+  return { status: "arrived" as const };
 }

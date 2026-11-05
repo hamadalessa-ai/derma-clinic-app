@@ -89,7 +89,7 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   (`/visit/<appointmentId>.<sig>`, `link.ts`), doctors from My Day (`/visits/<id>/video`, own appointments only).
   Join only around the visit time and after the `telehealth` consent (`visit.ts`). The provider (Daily today,
   key `DAILY_API_KEY`) sits behind `provider.ts` so it can be swapped for a Saudi-hosted server. Never recorded.
-
+  The patient joining = check-in (`videoCheckIn`: consent → package deduction once → "arrived").
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly
   pattern (`staff_schedules`, several shifts per weekday, each at a branch; old rows with a break = two shifts)
   unless `schedule_exceptions` has a change for that date (off / special hours, which also adds extra days).
