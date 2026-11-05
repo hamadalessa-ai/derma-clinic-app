@@ -13,6 +13,8 @@ export function SiteImage({
   src,
   locale,
   className,
+  placeholderClassName,
+  fit = "cover",
   showSpec = true,
   priority = false,
 }: {
@@ -22,6 +24,10 @@ export function SiteImage({
   src?: string;
   locale: "ar" | "en";
   className?: string;
+  /** Extra classes for the empty frame only (e.g. where its label sits). */
+  placeholderClassName?: string;
+  /** "contain" for logos and artwork that must not be cropped. */
+  fit?: "cover" | "contain";
   showSpec?: boolean;
   priority?: boolean;
 }) {
@@ -33,7 +39,11 @@ export function SiteImage({
       <img
         src={src}
         alt={alt}
-        className={cn("h-full w-full object-cover", className)}
+        className={cn(
+          "h-full w-full",
+          fit === "contain" ? "object-contain" : "object-cover",
+          className,
+        )}
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : undefined}
         data-slot={slot}
@@ -48,6 +58,7 @@ export function SiteImage({
       className={cn(
         "from-site-mist via-brand-soft to-site-mist relative flex h-full w-full items-center justify-center overflow-hidden bg-linear-to-br",
         className,
+        placeholderClassName,
       )}
     >
       <div

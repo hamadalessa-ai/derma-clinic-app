@@ -44,29 +44,30 @@ export const SITE_IMAGE_SLOTS = {
     altAr: "فريق عيادات ديرما الطبي في العيادة",
     altEn: "Derma Clinics medical team at the clinic",
   },
+  // "Our Clinics": on dermaclinics.net these are the logos of the clinic's brands.
   "clinic-1": {
     file: "clinic-1-reception.jpg",
     size: "1200×900",
-    altAr: "منطقة الاستقبال في عيادات ديرما",
-    altEn: "Derma Clinics reception area",
+    altAr: "شعار عيادات ديرما",
+    altEn: "Derma Clinics logo",
   },
   "clinic-2": {
     file: "clinic-2-treatment-room.jpg",
     size: "1200×900",
-    altAr: "غرفة علاج مجهزة في عيادات ديرما",
-    altEn: "Equipped treatment room at Derma Clinics",
+    altAr: "شعار ديرما لطب الأسنان",
+    altEn: "Derma Dental logo",
   },
   "clinic-3": {
     file: "clinic-3-laser-suite.jpg",
     size: "1200×900",
-    altAr: "جناح الليزر وأجهزته في عيادات ديرما",
-    altEn: "Laser suite and devices at Derma Clinics",
+    altAr: "شعار ديرما لايت",
+    altEn: "Derma Light logo",
   },
   "clinic-4": {
     file: "clinic-4-waiting-lounge.jpg",
     size: "1200×900",
-    altAr: "صالة الانتظار في عيادات ديرما",
-    altEn: "Patient waiting lounge at Derma Clinics",
+    altAr: "شعار ديرما هير للشعر",
+    altEn: "Derma Hair logo",
   },
   "service-skin": {
     file: "service-dermatology-aesthetic.jpg",
