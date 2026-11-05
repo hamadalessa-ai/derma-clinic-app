@@ -15,8 +15,8 @@ import type { Locale } from "@/i18n/config";
 export default async function ClinicalNotesPage() {
   const ctx = await requirePermission("clinical_notes:read");
   const locale = (await getLocale()) as Locale;
-  const t = await getTranslations("clinicalNotes");
   const tn = await getTranslations("notes");
+  const tnav = await getTranslations("nav");
   const rows = await withActor(actorOf(ctx), (tx) =>
     tx
       .select({ note: clinicalNotes, patient: patients })
@@ -31,7 +31,11 @@ export default async function ClinicalNotesPage() {
   const item = (r: (typeof rows)[number]) => (
     <li key={r.note.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
       <Link
-        href={`/patients/${r.patient.id}?tab=notes`}
+        href={
+          r.note.status === "draft" && r.note.appointmentId
+            ? `/visits/${r.note.appointmentId}`
+            : `/patients/${r.patient.id}?tab=notes`
+        }
         className="hover:text-brand-strong font-medium hover:underline"
       >
         {pick(locale, r.patient.fullNameAr, r.patient.fullNameEn)}{" "}
@@ -49,7 +53,7 @@ export default async function ClinicalNotesPage() {
   );
   return (
     <div className="flex max-w-3xl flex-col gap-4">
-      <PageHeader title={t("title")} />
+      <PageHeader title={tnav("clinicalNotes")} />
       <Card>
         <CardHeader>
           <CardTitle>{tn("myDrafts")}</CardTitle>

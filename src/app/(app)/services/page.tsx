@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
@@ -12,7 +12,10 @@ import {
 } from "@/components/ui/table";
 import { withTenant } from "@/db/tenant";
 import { departments, services } from "@/db/schema";
+import { can } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/session";
+import { PageHeader } from "@/components/ui/page-header";
+import { ServiceOnlineToggle } from "@/components/clinic/online-settings";
 import { pick } from "@/lib/brand";
 import { formatSAR } from "@/lib/format";
 import type { Locale } from "@/i18n/config";
@@ -22,21 +25,24 @@ export default async function ServicesPage() {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("services");
   const tDevices = await getTranslations("deviceTypes");
+  const canEdit = can(ctx.roles, "settings:manage");
 
   const rows = await withTenant(ctx.tenant.id, (tx) =>
     tx
       .select({ service: services, department: departments })
       .from(services)
       .innerJoin(departments, eq(departments.id, services.departmentId))
+      // Only what the clinic offers (inactive departments and services stay hidden).
+      .where(and(eq(services.isActive, true), eq(departments.isActive, true)))
       .orderBy(asc(services.sortOrder), asc(services.code)),
   );
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <span className="text-muted-foreground text-sm">{t("count", { count: rows.length })}</span>
-      </div>
+      <PageHeader
+        title={t("title")}
+        subtitle={`${t("count", { count: rows.length })}${canEdit ? ` · ${t("onlineHint")}` : ""}`}
+      />
       <Notice tone="warning">{t("demoPrices")}</Notice>
       <Card>
         <CardContent className="p-0">
@@ -49,6 +55,7 @@ export default async function ServicesPage() {
                 <TableHead className="hidden sm:table-cell">{t("buffer")}</TableHead>
                 <TableHead>{t("price")}</TableHead>
                 <TableHead className="hidden sm:table-cell">{t("device")}</TableHead>
+                <TableHead>{t("online")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,6 +83,19 @@ export default async function ServicesPage() {
                   </TableCell>
                   <TableCell className="hidden whitespace-nowrap sm:table-cell">
                     {s.requiredDeviceType ? tDevices(s.requiredDeviceType) : t("none")}
+                  </TableCell>
+                  <TableCell>
+                    {canEdit ? (
+                      <ServiceOnlineToggle
+                        serviceId={s.id}
+                        initial={s.onlineBookable}
+                        label={t("online")}
+                      />
+                    ) : s.onlineBookable ? (
+                      t("yes")
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
