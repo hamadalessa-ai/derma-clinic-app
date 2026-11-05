@@ -14,6 +14,28 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/consents/**": ["src/lib/pdf/fonts/**/*"],
   },
+  // Security headers for every page. Camera/microphone stay allowed (AI scribe dictation,
+  // the video call frame); everything else a clinic app never needs is switched off.
+  async headers() {
+    const common = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Permissions-Policy", value: "geolocation=(), payment=(), usb=(), interest-cohort=()" },
+      { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+    ];
+    // Signed patient links (/visit, /sign): never cached, never leaked in a Referer, never indexed.
+    const tokenPages = [
+      { key: "Cache-Control", value: "private, no-store" },
+      { key: "Referrer-Policy", value: "no-referrer" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow" },
+    ];
+    return [
+      { source: "/:path*", headers: common },
+      { source: "/visit/:token", headers: tokenPages },
+      { source: "/sign/:token", headers: tokenPages },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

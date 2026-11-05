@@ -447,7 +447,11 @@ export const auditLogs = pgTable(
     ipAddress: text("ip_address"),
     createdAt: createdAt(),
   },
-  (t) => [index("audit_logs_tenant_created_idx").on(t.tenantId, t.createdAt)],
+  (t) => [
+    index("audit_logs_tenant_created_idx").on(t.tenantId, t.createdAt),
+    // "What happened to this appointment / note / patient?"
+    index("audit_logs_entity_idx").on(t.tenantId, t.entityType, t.entityId),
+  ],
 );
 
 /** Tables protected by tenant RLS. Keep in sync with db/rls.sql (a test checks this). */
@@ -616,6 +620,8 @@ export const appointments = pgTable(
     index("appointments_branch_start_idx").on(t.tenantId, t.branchId, t.startsAt),
     index("appointments_practitioner_start_idx").on(t.tenantId, t.practitionerId, t.startsAt),
     index("appointments_patient_idx").on(t.tenantId, t.patientId),
+    // Clinic-wide time windows (WhatsApp reminders, pending approvals) without a branch filter.
+    index("appointments_status_start_idx").on(t.tenantId, t.status, t.startsAt),
     check(
       "appointments_times",
       sql`${t.startsAt} < ${t.endsAt} and ${t.endsAt} <= ${t.blockedUntil}`,
@@ -1057,6 +1063,9 @@ export const clinicalNotes = pgTable(
   (t) => [
     unique("clinical_notes_tenant_id_id_key").on(t.tenantId, t.id),
     index("clinical_notes_patient_idx").on(t.tenantId, t.patientId),
+    // A doctor's own drafts ("My drafts") and the visit screen's note.
+    index("clinical_notes_author_status_idx").on(t.tenantId, t.authorUserId, t.status),
+    index("clinical_notes_appointment_idx").on(t.tenantId, t.appointmentId),
     check("clinical_notes_signed", sql`(${t.status} = 'signed') = (${t.signedAt} is not null)`),
     foreignKey({
       name: "clinical_notes_patient_fk",
@@ -1301,6 +1310,8 @@ export const messages = pgTable(
       .where(sql`${t.providerMessageId} is not null`),
     index("messages_conversation_idx").on(t.tenantId, t.conversationId, t.createdAt),
     index("messages_appointment_idx").on(t.tenantId, t.appointmentId),
+    // Photos a patient sent (visit screen), a patient's WhatsApp history.
+    index("messages_patient_idx").on(t.tenantId, t.patientId, t.createdAt),
     check("messages_direction", sql`${t.direction} in ('in', 'out')`),
     check(
       "messages_status",
