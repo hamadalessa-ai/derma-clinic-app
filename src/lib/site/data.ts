@@ -77,6 +77,7 @@ export async function loadClinicSite(tenantId: string, now = new Date()) {
         id: tenantMembers.id,
         titleAr: tenantMembers.titleAr,
         titleEn: tenantMembers.titleEn,
+        profile: tenantMembers.profile,
       })
       .from(tenantMembers)
       .innerJoin(users, eq(users.id, tenantMembers.userId));

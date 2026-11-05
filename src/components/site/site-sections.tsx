@@ -16,7 +16,7 @@ import { doctorImageSlot, type ImageSlotKey } from "@/lib/site/images";
 import type { ClinicSiteData } from "@/lib/site/data";
 import { cn } from "@/lib/utils";
 import type { Locale } from "@/i18n/config";
-import type { SiteContent } from "@/db/schema";
+import type { MemberProfile, SiteContent } from "@/db/schema";
 import { SiteImage } from "./site-image";
 
 type Ctx = {
@@ -377,7 +377,7 @@ export async function SiteDoctors({
           {doctors.map((d) => {
             const docName = pick(ctx.locale, d.nameAr, d.nameEn);
             const branch = branches.find((b) => b.id === d.branchId);
-            const p = d.profile ?? {};
+            const p: MemberProfile = d.profile ?? {};
             const specialty =
               L(p.specialtyAr, p.specialtyEn) || L(d.titleAr ?? "", d.titleEn ?? "");
             return (

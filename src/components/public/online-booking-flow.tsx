@@ -95,7 +95,9 @@ export function OnlineBookingFlow({
   );
   const [verified, setVerified] = useState<BookingIdentity | null>(identity);
   const [phoneInput, setPhoneInput] = useState("");
-  const [doctor, setDoctor] = useState<DoctorChoice | null>(null);
+  const [doctor, setDoctor] = useState<DoctorChoice | null>(
+    wantedDoctor && initialService ? { kind: "doctor", id: wantedDoctor.id } : null,
+  );
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [slots, setSlots] = useState<Slot[] | null>(null);
@@ -143,14 +145,6 @@ export function OnlineBookingFlow({
     return d ? name(d) : "";
   };
 
-  // "Book with this doctor" from the website: choose them once a service is picked (if they
-  // offer it at this branch). Changing the doctor afterwards is always possible.
-  useEffect(() => {
-    if (serviceId && !doctor && wantedDoctor && branchDoctors.some((d) => d.id === wantedDoctor.id))
-      setDoctor({ kind: "doctor", id: wantedDoctor.id });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serviceId, branchDoctors]);
-
   // Free times for the chosen day (for video: from every video branch, merged).
   useEffect(() => {
     if (!searchBranches.length || !serviceId || !doctor || !day) return;
@@ -195,6 +189,16 @@ export function OnlineBookingFlow({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchBranches, serviceId, doctor, day, reload]);
+
+  /**
+   * Choose a service. "Book with this doctor" from the website: the doctor is chosen too when
+   * they work where the patient is booking (they can still change the doctor afterwards).
+   */
+  const chooseService = (id: string, where: string[]) => {
+    setServiceId(id);
+    if (wantedDoctor && (!wantedDoctor.branchId || where.includes(wantedDoctor.branchId)))
+      setDoctor({ kind: "doctor", id: wantedDoctor.id });
+  };
 
   /** Changing an earlier step clears everything after it. */
   const reset = (from: "mode" | "branch" | "service" | "doctor" | "day" | "slot") => {
@@ -470,7 +474,7 @@ export function OnlineBookingFlow({
                 setMode("video");
                 // Only one video service: choose it straight away.
                 const video = allServices.filter((s) => s.isVirtual);
-                if (video.length === 1) setServiceId(video[0].id);
+                if (video.length === 1) chooseService(video[0].id, catalog.videoBranches);
               }}
               data-testid="mode-video"
             >
@@ -503,7 +507,7 @@ export function OnlineBookingFlow({
                 key={b.id}
                 onClick={() => {
                   setBranchId(b.id);
-                  if (wantedService) setServiceId(wantedService);
+                  if (wantedService) chooseService(wantedService, [b.id]);
                 }}
               >
                 <span className="font-medium">{name(b)}</span>
@@ -532,7 +536,11 @@ export function OnlineBookingFlow({
                 <h3 className="text-muted-foreground text-xs font-semibold">{name(dep)}</h3>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {dep.services.map((s) => (
-                    <Choice key={s.id} onClick={() => setServiceId(s.id)} data-service={s.id}>
+                    <Choice
+                      key={s.id}
+                      onClick={() => chooseService(s.id, searchBranches)}
+                      data-service={s.id}
+                    >
                       <span className="font-medium">{name(s)}</span>
                       <span className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
                         <span className="inline-flex items-center gap-1">
