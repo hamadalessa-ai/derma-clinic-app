@@ -36,7 +36,7 @@ export async function SiteHero({
   return (
     <section className="relative">
       {/* Photograph, edge to edge, with a soft wash for the text side */}
-      <div className="bg-site-night relative h-[34rem] overflow-hidden sm:h-[38rem] lg:h-[44rem]">
+      <div className="bg-site-night relative min-h-[36rem] overflow-hidden sm:min-h-[38rem] lg:h-[44rem]">
         <div className="absolute inset-0">
           <SiteImage slot="hero" src={site.images?.hero} locale={locale} priority />
         </div>
@@ -44,7 +44,7 @@ export async function SiteHero({
           className="from-site-night/90 via-site-night/60 absolute inset-0 bg-linear-to-r to-transparent rtl:bg-linear-to-l"
           aria-hidden
         />
-        <div className="relative mx-auto flex h-full max-w-7xl flex-col justify-center px-5 pb-24 lg:px-8 lg:pb-28">
+        <div className="relative mx-auto flex min-h-[36rem] max-w-7xl flex-col justify-center px-5 pt-14 pb-28 sm:min-h-[38rem] lg:h-full lg:px-8 lg:pt-0">
           <div className="flex max-w-2xl flex-col gap-6">
             {L(site.eyebrowAr, site.eyebrowEn) && (
               <span className="text-site-champagne flex items-center gap-3 text-sm font-semibold ltr:tracking-[0.18em] ltr:uppercase">
