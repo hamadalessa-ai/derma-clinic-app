@@ -1,80 +1,68 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { CalendarCheck, ChevronDown, MapPin, MessageCircle, Phone, UserRound } from "lucide-react";
-import { LanguageToggle } from "@/components/language-toggle";
-import { pick } from "@/lib/brand";
 import type { Locale } from "@/i18n/config";
 import type { SiteContent } from "@/db/schema";
-import { SiteImage } from "./site-image";
+import { SiteLangSwitch } from "./site-lang-switch";
 import { SiteMobileMenu, type MobileMenuGroup } from "./site-mobile-menu";
 
-export interface HeaderDoctor {
-  id: string;
-  name: string;
-  title: string | null;
-  city: string | null;
-}
+export const telHref = (phone?: string) =>
+  phone ? `tel:+966${phone.replace(/\D/g, "").replace(/^0/, "")}` : null;
+export const waHref = (n?: string) => (n ? `https://wa.me/${n.replace(/\D/g, "")}` : null);
 
 /**
- * Utility bar (contact, branches, patient portal, Book, language) + sticky main navigation with
- * dropdowns: Our Departments, Medical Services (mega menu with every treatment), Our Doctors.
- * Desktop menus open on hover and on keyboard focus (no script); phones get a full-screen menu.
+ * The "double header": a thin utility strip (phone, WhatsApp, patient portal, Book, strict
+ * EN | AR switch) above a sticky main navigation: Home, Our Departments (dropdown),
+ * Our Doctors (dropdown by department), Offers, Contact — and the Book appointment button.
  */
 export async function SiteHeader({
   locale,
   name,
   site,
-  doctors,
   canBook,
+  hasOffers,
 }: {
   locale: Locale;
   name: string;
   site: SiteContent;
-  doctors: HeaderDoctor[];
   canBook: boolean;
+  hasOffers: boolean;
 }) {
   const t = await getTranslations("site");
-  const ar = locale === "ar";
-  const L = (a?: string, e?: string) => (ar ? a || e : e || a) ?? "";
-  const tel = site.phone ? `tel:+966${site.phone.replace(/\D/g, "").replace(/^0/, "")}` : null;
-  const wa = site.whatsapp ? `https://wa.me/${site.whatsapp.replace(/\D/g, "")}` : null;
-  const specialties = site.specialties ?? [];
+  const L = (a?: string, e?: string) => (locale === "ar" ? a || e : e || a) ?? "";
+  const tel = telHref(site.phone);
+  const wa = waHref(site.whatsapp);
   const departments = site.departments ?? [];
-  const firstSpecialty = (keys: string[]) => keys.find((k) => specialties.some((x) => x.key === k));
+  const doctors = site.doctors ?? [];
+  const deptName = (key: string) => {
+    const d = departments.find((x) => x.key === key || x.specialties.includes(key));
+    return d ? L(d.nameAr, d.nameEn) : key;
+  };
+  const doctorDepts = [...new Set(doctors.map((d) => (d.dept === "hair" ? "skin" : d.dept)))];
 
   const groups: MobileMenuGroup[] = [
     {
       label: t("navDepartments"),
-      links: departments.map((d) => ({
-        label: L(d.nameAr, d.nameEn),
-        href: `#service-${firstSpecialty(d.specialties) ?? d.key}`,
-      })),
-    },
-    {
-      label: t("navServices"),
-      links: specialties.map((x) => ({
-        label: L(x.nameAr, x.nameEn),
-        href: `#service-${x.key}`,
-      })),
+      links: departments.map((d) => ({ label: L(d.nameAr, d.nameEn), href: `#dept-${d.key}` })),
     },
     {
       label: t("navDoctors"),
       links: [
-        ...doctors.map((d) => ({ label: d.name, href: "#doctors" })),
+        ...doctorDepts.map((k) => ({ label: deptName(k), href: `#doctors` })),
         { label: t("menuAllDoctors"), href: "#doctors" },
       ],
     },
   ].filter((g) => g.links.length > 0);
 
-  const navTrigger =
-    "flex h-full items-center gap-1 border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap text-site-ink transition-colors group-hover/nav:border-brand group-hover/nav:text-brand-strong group-focus-within/nav:border-brand";
+  const item =
+    "flex h-full items-center gap-1 border-b-2 border-transparent px-1 text-[15px] font-medium whitespace-nowrap text-site-slate transition-colors hover:text-site-primary";
   const panel =
     "invisible absolute top-full z-50 translate-y-1 opacity-0 transition-[opacity,transform,visibility] duration-150 group-focus-within/nav:visible group-focus-within/nav:translate-y-0 group-focus-within/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 group-hover/nav:opacity-100";
 
   return (
     <>
-      {/* ── Utility bar ─────────────────────────────────────────────────── */}
-      <div className="bg-site-ink text-site-ivory/80 text-xs" data-testid="site-utility">
+      {/* ── Top utility bar ─────────────────────────────────────────────── */}
+      <div className="bg-site-night text-site-ivory/85 text-xs" data-testid="site-utility">
         <div className="mx-auto flex h-10 max-w-7xl items-center gap-5 px-5 lg:px-8">
           {tel && (
             <a href={tel} className="hover:text-site-ivory flex items-center gap-1.5">
@@ -97,10 +85,10 @@ export async function SiteHeader({
             <MapPin className="size-3.5" aria-hidden />
             {t("utilityLocations")}
           </span>
-          <div className="ms-auto flex items-center gap-1 sm:gap-3">
+          <div className="ms-auto flex items-center gap-4">
             <Link
               href="/my"
-              className="hover:text-site-ivory flex items-center gap-1.5 px-1"
+              className="hover:text-site-ivory hidden items-center gap-1.5 sm:flex"
               data-testid="utility-portal"
             >
               <UserRound className="size-3.5" aria-hidden />
@@ -109,200 +97,123 @@ export async function SiteHeader({
             {canBook && (
               <Link
                 href="/book"
-                className="text-site-ivory hover:bg-site-ivory/10 hidden items-center gap-1.5 rounded-md px-2 py-1 font-medium sm:flex"
+                className="text-site-champagne hover:text-site-ivory hidden items-center gap-1.5 font-semibold md:flex"
                 data-testid="utility-book"
               >
                 <CalendarCheck className="size-3.5" aria-hidden />
                 {t("book")}
               </Link>
             )}
-            <LanguageToggle
-              variant="ghost"
-              className="text-site-ivory/80 hover:bg-site-ivory/10 hover:text-site-ivory h-7 px-2 text-xs"
-            />
+            <SiteLangSwitch />
           </div>
         </div>
       </div>
 
-      {/* ── Main navigation ─────────────────────────────────────────────── */}
-      <header className="border-site-line bg-card/95 sticky top-0 z-40 border-b backdrop-blur-md">
-        <div className="relative mx-auto flex h-20 max-w-7xl items-center gap-8 px-5 lg:px-8">
-          <Link href="/" className="flex min-w-0 items-center gap-3" aria-label={name}>
+      {/* ── Main navigation (sticky) ────────────────────────────────────── */}
+      <header className="bg-card/95 shadow-soft sticky top-0 z-40 backdrop-blur-md">
+        <div className="relative mx-auto flex h-20 max-w-7xl items-center gap-10 px-5 lg:px-8">
+          <Link href="/" className="flex shrink-0 items-center" aria-label={name}>
             {site.images?.logo ? (
               // eslint-disable-next-line @next/next/no-img-element -- the clinic's own logo, any host
-              <img
-                src={site.images.logo}
-                alt={name}
-                className="h-10 w-auto max-w-[11rem] object-contain"
-                data-slot="logo"
-              />
+              <img src={site.images.logo} alt={name} className="h-11 w-auto" data-slot="logo" />
             ) : (
-              <>
-                <span className="bg-brand text-brand-foreground flex size-10 shrink-0 items-center justify-center rounded-lg text-lg font-bold">
-                  {name.charAt(0)}
-                </span>
-                <span className="flex min-w-0 flex-col leading-tight">
-                  <span className="text-site-ink truncate text-lg font-bold whitespace-nowrap">
-                    {name}
-                  </span>
-                  {site.since && (
-                    <span className="text-site-subtle hidden text-[11px] whitespace-nowrap sm:block">
-                      {t("sinceShort", { year: site.since })}
-                    </span>
-                  )}
-                </span>
-              </>
+              <span className="font-display text-site-ink text-2xl font-semibold">{name}</span>
             )}
           </Link>
 
-          <nav className="hidden h-full items-stretch gap-6 xl:flex" aria-label={name}>
-            <Link
-              href="/"
-              className="text-site-ink hover:border-brand flex items-center border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap"
-            >
+          <nav className="hidden h-full items-stretch gap-8 lg:flex" aria-label={name}>
+            <Link href="/" className={item}>
               {t("navHome")}
             </Link>
 
-            {/* Our Departments */}
             {departments.length > 0 && (
               <div className="group/nav relative flex">
-                <button type="button" className={navTrigger} aria-haspopup="true">
+                <a href="#departments" className={item} aria-haspopup="true">
                   {t("navDepartments")}
-                  <ChevronDown className="size-4 opacity-60" aria-hidden />
-                </button>
-                <div className={`${panel} start-0 w-[34rem]`}>
-                  <div className="border-site-line bg-card shadow-float mt-px grid gap-2 rounded-b-xl border p-3">
-                    {departments.map((d) => {
-                      const slot = `dept-${d.key}` as "dept-skin" | "dept-dental" | "dept-plastic";
-                      return (
+                  <ChevronDown className="size-4 opacity-50" aria-hidden />
+                </a>
+                <div className={`${panel} start-0 w-[26rem]`}>
+                  <ul className="bg-card shadow-float mt-px flex flex-col gap-1 rounded-2xl p-3">
+                    {departments.map((d) => (
+                      <li key={d.key}>
                         <a
-                          key={d.key}
-                          href={`#service-${firstSpecialty(d.specialties) ?? d.key}`}
-                          className="hover:bg-site-mist flex items-center gap-4 rounded-lg p-2"
+                          href={`#dept-${d.key}`}
+                          className="hover:bg-site-mist flex flex-col rounded-xl px-4 py-3"
                         >
-                          <span className="h-14 w-20 shrink-0 overflow-hidden rounded-md">
-                            <SiteImage
-                              slot={slot}
-                              src={site.images?.[slot]}
-                              locale={locale}
-                              showSpec={false}
-                              className="[&_span]:hidden"
-                            />
-                          </span>
-                          <span className="flex flex-col">
-                            <span className="text-site-ink font-medium">
-                              {L(d.nameAr, d.nameEn)}
+                          <span className="text-site-ink font-semibold">{L(d.nameAr, d.nameEn)}</span>
+                          {L(d.textAr, d.textEn) && (
+                            <span className="text-site-subtle line-clamp-1 text-xs">
+                              {L(d.textAr, d.textEn)}
                             </span>
-                            <span className="text-site-subtle text-xs">
-                              {d.specialties
-                                .map((k) => specialties.find((x) => x.key === k))
-                                .filter(Boolean)
-                                .map((x) => L(x!.nameAr, x!.nameEn))
-                                .join(" · ")}
-                            </span>
-                          </span>
+                          )}
                         </a>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Medical Services: mega menu with every treatment */}
-            {specialties.length > 0 && (
-              <div className="group/nav flex">
-                <button type="button" className={navTrigger} aria-haspopup="true">
-                  {t("navServices")}
-                  <ChevronDown className="size-4 opacity-60" aria-hidden />
-                </button>
-                <div className={`${panel} inset-x-5 lg:inset-x-8`}>
-                  <div className="border-site-line bg-card shadow-float mt-px grid grid-cols-4 gap-8 rounded-b-xl border p-8">
-                    {specialties.map((x) => (
-                      <div key={x.key} className="flex flex-col gap-3">
-                        <a
-                          href={`#service-${x.key}`}
-                          className="text-brand-strong text-sm font-semibold hover:underline"
-                        >
-                          {L(x.nameAr, x.nameEn)}
-                        </a>
-                        <ul className="text-site-slate flex flex-col gap-1.5 text-[13px] leading-snug">
-                          {(x.items ?? []).map((it) => (
-                            <li key={it.en}>
-                              <a href={`#service-${x.key}`} className="hover:text-site-ink">
-                                {L(it.ar, it.en)}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                    <li>
+                      <a
+                        href="#treatments"
+                        className="text-site-primary mt-1 block px-4 py-2 text-sm font-semibold hover:underline"
+                      >
+                        {t("menuAllTreatments")}
+                      </a>
+                    </li>
+                  </ul>
                 </div>
               </div>
             )}
 
-            {/* Our Doctors */}
             {doctors.length > 0 && (
               <div className="group/nav relative flex">
-                <button type="button" className={navTrigger} aria-haspopup="true">
+                <a href="#doctors" className={item} aria-haspopup="true">
                   {t("navDoctors")}
-                  <ChevronDown className="size-4 opacity-60" aria-hidden />
-                </button>
+                  <ChevronDown className="size-4 opacity-50" aria-hidden />
+                </a>
                 <div className={`${panel} start-0 w-80`}>
-                  <div className="border-site-line bg-card shadow-float mt-px rounded-b-xl border p-2">
-                    <ul>
-                      {doctors.map((d) => (
-                        <li key={d.id}>
-                          <a
-                            href="#doctors"
-                            className="hover:bg-site-mist flex items-center gap-3 rounded-lg p-2"
-                          >
-                            <span className="bg-brand-soft text-brand-strong flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                              {d.name.replace(/^(د\.|Dr\.?)\s*/i, "").charAt(0)}
-                            </span>
-                            <span className="flex min-w-0 flex-col">
-                              <span className="text-site-ink truncate text-sm font-medium">
-                                {d.name}
-                              </span>
-                              <span className="text-site-subtle truncate text-xs">
-                                {[d.title, d.city].filter(Boolean).join(" · ")}
-                              </span>
-                            </span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                    <a
-                      href="#doctors"
-                      className="text-brand-strong border-site-line mt-1 block border-t px-2 pt-3 pb-2 text-sm font-medium hover:underline"
-                    >
-                      {t("menuAllDoctors")}
-                    </a>
-                  </div>
+                  <ul className="bg-card shadow-float mt-px flex flex-col gap-1 rounded-2xl p-3">
+                    {doctorDepts.map((k) => (
+                      <li key={k}>
+                        <a
+                          href="#doctors"
+                          className="hover:bg-site-mist flex items-center justify-between rounded-xl px-4 py-3"
+                        >
+                          <span className="text-site-ink text-sm font-semibold">{deptName(k)}</span>
+                          <span className="text-site-subtle text-xs">
+                            {t("doctorsCount", {
+                              n: doctors.filter((d) => (d.dept === "hair" ? "skin" : d.dept) === k)
+                                .length,
+                            })}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                    <li>
+                      <a
+                        href="#doctors"
+                        className="text-site-primary mt-1 block px-4 py-2 text-sm font-semibold hover:underline"
+                      >
+                        {t("menuAllDoctors")}
+                      </a>
+                    </li>
+                  </ul>
                 </div>
               </div>
             )}
 
-            <a
-              href="#visit"
-              className="text-site-ink hover:border-brand flex items-center border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap"
-            >
-              {t("navClinics")}
-            </a>
-            <a
-              href="#faq"
-              className="text-site-ink hover:border-brand hidden items-center border-b-2 border-transparent px-1 text-sm font-medium whitespace-nowrap 2xl:flex"
-            >
-              {t("navFaq")}
+            {hasOffers && (
+              <a href="#offers" className={item}>
+                {t("navOffers")}
+              </a>
+            )}
+            <a href="#contact" className={item}>
+              {t("navContact")}
             </a>
           </nav>
 
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-3">
             {canBook && (
               <Link
                 href="/book"
-                className="bg-brand text-brand-foreground hover:bg-brand-strong hidden h-11 items-center gap-2 rounded-lg px-5 text-sm font-semibold whitespace-nowrap transition-colors sm:inline-flex"
+                className="bg-site-primary text-site-ivory hover:bg-site-primary-hover hidden h-12 items-center gap-2 rounded-xl px-6 text-sm font-semibold whitespace-nowrap shadow-sm transition-colors sm:inline-flex"
                 data-testid="nav-book"
               >
                 <CalendarCheck className="size-4" aria-hidden />
@@ -312,8 +223,8 @@ export async function SiteHeader({
             <SiteMobileMenu
               groups={groups}
               extra={[
-                { label: t("navClinics"), href: "#visit" },
-                { label: t("navFaq"), href: "#faq" },
+                ...(hasOffers ? [{ label: t("navOffers"), href: "#offers" }] : []),
+                { label: t("navContact"), href: "#contact" },
                 { label: t("utilityPortal"), href: "/my" },
               ]}
               book={canBook ? { label: t("book"), href: "/book" } : null}
@@ -325,27 +236,4 @@ export async function SiteHeader({
       </header>
     </>
   );
-}
-
-export function doctorsForHeader(
-  locale: Locale,
-  doctors: {
-    id: string;
-    nameAr: string;
-    nameEn: string | null;
-    titleAr: string | null;
-    titleEn: string | null;
-    branchId: string | null;
-  }[],
-  branches: { id: string; cityAr: string; cityEn: string }[],
-): HeaderDoctor[] {
-  return doctors.map((d) => {
-    const b = branches.find((x) => x.id === d.branchId);
-    return {
-      id: d.id,
-      name: pick(locale, d.nameAr, d.nameEn),
-      title: d.titleAr || d.titleEn ? pick(locale, d.titleAr ?? d.titleEn ?? "", d.titleEn) : null,
-      city: b ? pick(locale, b.cityAr, b.cityEn) : null,
-    };
-  });
 }

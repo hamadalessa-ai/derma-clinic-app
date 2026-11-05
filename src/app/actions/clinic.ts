@@ -904,11 +904,23 @@ const siteInput = z.object({
         key: z.string().trim().min(1).max(30),
         nameAr: z.string().trim().min(1).max(80),
         nameEn: z.string().trim().min(1).max(80),
+        textAr: z.string().trim().max(600).optional(),
+        textEn: z.string().trim().max(600).optional(),
         specialties: z.array(z.string().trim().min(1).max(30)).max(8),
       }),
     )
     .max(8)
     .optional(),
+  clinicsAr: siteText(1500),
+  clinicsEn: siteText(1500),
+  doctorsAr: siteText(1500),
+  doctorsEn: siteText(1500),
+  findAr: siteText(400),
+  findEn: siteText(400),
+  // Lists kept as they are by the form (edited with the clinic's content): shape-checked only.
+  silos: z.array(z.record(z.string(), z.unknown())).max(20).optional(),
+  doctors: z.array(z.record(z.string(), z.unknown())).max(80).optional(),
+  partners: z.array(z.record(z.string(), z.unknown())).max(60).optional(),
   images: z
     .record(
       z.string().max(40),

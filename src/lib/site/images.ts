@@ -105,6 +105,22 @@ export const SITE_IMAGE_SLOTS = {
     altAr: "عيادات ديرما — اعثر على أقرب عيادة",
     altEn: "Derma Clinics — find a clinic near you",
   },
+  "brand-clinics": { file: "brand-derma-clinics.png", size: "800×400, transparent", altAr: "شعار عيادات ديرما", altEn: "Derma Clinics logo" },
+  "brand-dental": { file: "brand-derma-dental.png", size: "800×400, transparent", altAr: "شعار ديرما لطب الأسنان", altEn: "Derma Dental logo" },
+  "brand-light": { file: "brand-derma-light.png", size: "800×400, transparent", altAr: "شعار ديرما لايت", altEn: "Derma Light logo" },
+  "brand-hair": { file: "brand-derma-hair.png", size: "800×400, transparent", altAr: "شعار ديرما هير", altEn: "Derma Hair logo" },
+  "dept-hair": {
+    file: "dept-hair-transplant.jpg",
+    size: "1600×900, 16:9",
+    altAr: "فريق زراعة الشعر أثناء إجراء في عيادات ديرما",
+    altEn: "Hair transplant team during a procedure at Derma Clinics",
+  },
+  "plastic-face": {
+    file: "plastic-face.jpg",
+    size: "1200×800",
+    altAr: "تخطيط جراحة تجميل الوجه",
+    altEn: "Facial plastic surgery planning",
+  },
   video: {
     file: "video-consultation.jpg",
     size: "1200×900",

@@ -37,6 +37,8 @@ export function SiteSettingsForm({ initial }: { initial: SiteContent }) {
         run(
           () =>
             saveSiteAction({
+              // Content not edited on this form is kept as it is.
+              ...initial,
               headlineAr: clean(v.headlineAr),
               headlineEn: clean(v.headlineEn),
               taglineAr: clean(v.taglineAr),
