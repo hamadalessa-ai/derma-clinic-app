@@ -78,8 +78,14 @@ export async function SiteAbout({
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="overflow-hidden rounded-2xl lg:col-span-5">
-            <div className="aspect-[4/5]">
-              <SiteImage slot="about" src={s.images?.about} locale={ctx.locale} />
+            {/* The clinic's own artwork may carry text (e.g. the founder's card): never cropped. */}
+            <div className={s.images?.about ? "" : "aspect-[4/5]"}>
+              <SiteImage
+                slot="about"
+                src={s.images?.about}
+                locale={ctx.locale}
+                className={s.images?.about ? "h-auto" : undefined}
+              />
             </div>
           </div>
           <div className="flex flex-col gap-6 lg:col-span-7">

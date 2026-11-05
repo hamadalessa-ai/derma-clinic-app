@@ -371,8 +371,14 @@ export async function ClinicSite({
             <div className="mx-auto max-w-7xl px-5 lg:px-8">
               <SectionHead eyebrow={t("visitEyebrow")} title={cityList || t("visitTitle")} />
               {s.images?.visit && (
-                <div className="mt-10 aspect-[16/9] overflow-hidden rounded-2xl sm:aspect-[21/8]">
-                  <SiteImage slot="visit" src={s.images.visit} locale={locale} />
+                <div className="border-site-line bg-card mt-10 h-44 overflow-hidden rounded-2xl border sm:h-56">
+                  <SiteImage
+                    slot="visit"
+                    src={s.images.visit}
+                    locale={locale}
+                    fit="contain"
+                    className="p-4"
+                  />
                 </div>
               )}
               <ul className="mt-8 grid gap-5 md:grid-cols-2">
