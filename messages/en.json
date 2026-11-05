@@ -20,7 +20,7 @@
     "dashboard": "Dashboard",
     "patients": "Patients",
     "services": "Services",
-    "clinicalNotes": "Clinical notes",
+    "clinicalNotes": "My notes",
     "platform": "Platform",
     "logout": "Sign out",
     "branch": "Branch",
@@ -80,7 +80,10 @@
     "device": "Required device",
     "minutes": "{count} min",
     "none": "—",
-    "demoPrices": "Prices and durations are demo estimates only"
+    "demoPrices": "Prices and durations are demo estimates only",
+    "online": "Online booking",
+    "onlineHint": "tick a service to let patients book it online",
+    "yes": "Yes"
   },
   "clinicalNotes": {
     "title": "Clinical notes",
@@ -502,7 +505,13 @@
     "qrAlt": "QR code for the booking link",
     "bookingLinkHint": "Share the link on WhatsApp or Instagram, or print the QR code for reception.",
     "doctorsEditHours": "Doctors set their own working hours",
-    "doctorsEditHoursHint": "Admins and reception can always change doctors' hours (Calendar → Working hours)."
+    "doctorsEditHoursHint": "Admins and reception can always change doctors' hours (Calendar → Working hours).",
+    "tabClinic": "Clinic",
+    "tabBooking": "Online booking",
+    "tabConsents": "Consent forms",
+    "tabMessages": "WhatsApp & AI",
+    "tabDemo": "Demo tools",
+    "servicesOnlineLink": "Choose which services patients can book online on the Services page."
   },
   "book": {
     "title": "Book your appointment",

@@ -232,9 +232,9 @@ describe("phone navigation", () => {
 
   it.each([
     [["practitioner"], ["myDay", "calendar", "patients", "clinicalNotes"]],
-    [["receptionist"], ["calendar", "patients", "whatsapp", "dashboard"]],
-    [["clinic_admin"], ["calendar", "patients", "whatsapp", "dashboard"]],
-    [["platform_owner"], ["dashboard", "platform"]],
+    [["receptionist"], ["calendar", "patients", "whatsapp", "services"]],
+    [["clinic_admin"], ["calendar", "patients", "whatsapp", "settings"]],
+    [["platform_owner"], ["platform"]],
   ] as [Role[], string[]][])("%s: the bottom bar shows the most-used pages", (roles, expected) => {
     expect(splitForMobile(itemsFor(roles)).bar.map((i) => i.key)).toEqual(expected);
   });

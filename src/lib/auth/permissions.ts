@@ -93,7 +93,6 @@ export function assertCan(roles: readonly Role[] | null | undefined, permission:
 
 /** Sidebar pages and the permission each one needs. */
 export const NAV_ITEMS = [
-  { href: "/", key: "dashboard", permission: "dashboard:view" },
   { href: "/my-day", key: "myDay", permission: "my_day:view" },
   { href: "/calendar", key: "calendar", permission: "calendar:view" },
   { href: "/patients", key: "patients", permission: "patients:read" },
@@ -124,10 +123,9 @@ export const MOBILE_PRIORITY = [
   "patients",
   "whatsapp",
   "clinicalNotes",
-  "dashboard",
   "platform",
-  "services",
   "settings",
+  "services",
   "whatsapp",
   "simulator",
   "account",

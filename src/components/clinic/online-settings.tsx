@@ -278,3 +278,35 @@ export function BookingLink({ url, qrPng }: { url: string; qrPng: string }) {
     </div>
   );
 }
+
+/** One service's "bookable online" switch (Services page). Saves on tap. */
+export function ServiceOnlineToggle({
+  serviceId,
+  initial,
+  label,
+}: {
+  serviceId: string;
+  initial: boolean;
+  label: string;
+}) {
+  const [on, setOn] = useState(initial);
+  const { run, pending, error } = useAction();
+  return (
+    <label className="inline-flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        className="accent-brand size-4"
+        checked={on}
+        disabled={pending}
+        aria-label={label}
+        data-service-online={serviceId}
+        onChange={(e) => {
+          const value = e.target.checked;
+          setOn(value);
+          run(() => setServiceOnlineAction({ serviceId, online: value }));
+        }}
+      />
+      {error && <span className="text-danger-foreground text-xs">{error}</span>}
+    </label>
+  );
+}
