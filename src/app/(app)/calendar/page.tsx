@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
+import { ArrivalsList } from "@/components/clinic/arrivals-list";
 import { CalendarBoard, type BoardColumn } from "@/components/clinic/calendar-board";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
@@ -35,7 +36,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   if (!branch) return null;
 
   const day = isDay(sp.date) ? sp.date : riyadhDay(new Date());
-  const view = sp.view === "week" ? "week" : "day";
+  const view = sp.view === "week" ? "week" : sp.view === "list" ? "list" : "day";
   const by = sp.by === "room" ? "room" : "doctor";
   const actor = actorOf(ctx);
   const th = await getTranslations("hours");
@@ -182,6 +183,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         <Link href={qs({ view: "week" })} className={tab(view === "week")}>
           {t("week")}
         </Link>
+        <Link
+          href={qs({ view: "list" })}
+          className={tab(view === "list")}
+          data-testid="arrivals-tab"
+        >
+          {t("arrivals")}
+        </Link>
         {can(ctx.roles, "hours:edit") && (
           <Link href="/working-hours" className={tab(false)} data-testid="working-hours-link">
             {th("title")}
@@ -197,7 +205,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               {t("byRoom")}
             </Link>
           </>
-        ) : (
+        ) : view === "week" ? (
           data.doctors.map((d) => (
             <Link
               key={d.id}
@@ -207,40 +215,50 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               {pick(locale, d.nameAr, d.nameEn)}
             </Link>
           ))
-        )}
+        ) : null}
         <span className="text-muted-foreground ms-auto text-xs">
           {visible.length} · {tw("doctor")}: {data.doctors.length}
         </span>
       </div>
 
-      <CalendarBoard
-        columns={columns}
-        startMin={10 * 60}
-        endMin={20 * 60}
-        branchId={branch.id}
-        services={data.services.map((s) => ({
-          id: s.id,
-          nameAr: s.nameAr,
-          nameEn: s.nameEn,
-          durationMinutes: s.durationMinutes,
-        }))}
-        doctors={doctorOptions}
-        canBook={can(ctx.roles, "appointments:manage")}
-        canManage={can(ctx.roles, "appointments:manage")}
-        memberId={ctx.memberId}
-        doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
-        preselectPatient={
-          pre
-            ? {
-                id: pre.id,
-                fileNumber: pre.fileNumber,
-                nameAr: pre.fullNameAr,
-                nameEn: pre.fullNameEn,
-                phone: pre.phone,
-              }
-            : null
-        }
-      />
+      {view === "list" ? (
+        <ArrivalsList
+          appointments={data.appointments}
+          doctors={doctorOptions}
+          canManage={can(ctx.roles, "appointments:manage")}
+          memberId={ctx.memberId}
+          doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
+        />
+      ) : (
+        <CalendarBoard
+          columns={columns}
+          startMin={10 * 60}
+          endMin={20 * 60}
+          branchId={branch.id}
+          services={data.services.map((s) => ({
+            id: s.id,
+            nameAr: s.nameAr,
+            nameEn: s.nameEn,
+            durationMinutes: s.durationMinutes,
+          }))}
+          doctors={doctorOptions}
+          canBook={can(ctx.roles, "appointments:manage")}
+          canManage={can(ctx.roles, "appointments:manage")}
+          memberId={ctx.memberId}
+          doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
+          preselectPatient={
+            pre
+              ? {
+                  id: pre.id,
+                  fileNumber: pre.fileNumber,
+                  nameAr: pre.fullNameAr,
+                  nameEn: pre.fullNameEn,
+                  phone: pre.phone,
+                }
+              : null
+          }
+        />
+      )}
       <AutoRefresh
         versionUrl={`/api/calendar/version?from=${encodeURIComponent(data.from.toISOString())}&to=${encodeURIComponent(data.to.toISOString())}`}
       />
