@@ -7,7 +7,13 @@ import { Languages } from "lucide-react";
 import { setLocale } from "@/app/actions/locale";
 import { Button } from "@/components/ui/button";
 
-export function LanguageToggle() {
+export function LanguageToggle({
+  className,
+  variant = "outline",
+}: {
+  className?: string;
+  variant?: "outline" | "ghost";
+} = {}) {
   const t = useTranslations("app");
   const locale = useLocale();
   const router = useRouter();
@@ -15,8 +21,9 @@ export function LanguageToggle() {
 
   return (
     <Button
-      variant="outline"
+      variant={variant}
       size="sm"
+      className={className}
       aria-label={t("languageLabel")}
       disabled={pending}
       onClick={() =>

@@ -11,9 +11,10 @@ import {
   ShieldCheck,
   Video,
 } from "lucide-react";
-import { LanguageToggle } from "@/components/language-toggle";
+import { SiteHeader, doctorsForHeader } from "./site-header";
+import { SiteHero } from "./site-hero";
 import { pick } from "@/lib/brand";
-import { formatGregorian, formatSAR, formatTime } from "@/lib/format";
+import { formatSAR } from "@/lib/format";
 import type { ClinicSiteData } from "@/lib/site/data";
 import { cn } from "@/lib/utils";
 import type { Locale } from "@/i18n/config";
@@ -45,7 +46,7 @@ export async function ClinicSite({
   const Forward = ar ? ArrowLeft : ArrowRight;
 
   const wa = s.whatsapp ? `https://wa.me/${s.whatsapp.replace(/\D/g, "")}` : null;
-  const tel = s.phone ? `tel:${s.phone.replace(/[^\d+]/g, "")}` : null;
+  const tel = s.phone ? `tel:+966${s.phone.replace(/\D/g, "").replace(/^0/, "")}` : null;
   const canBook = data.catalog.enabled && data.catalog.departments.length > 0;
   const bookHref = "/book";
   const consultHref = data.firstService
@@ -62,7 +63,6 @@ export async function ClinicSite({
       : (cities[0] ?? "");
   const years = s.since ? new Date().getFullYear() - s.since : null;
   const specialties = s.specialties ?? [];
-  const nextBranch = data.branches.find((b) => b.id === data.nextFreeBranchId);
   const weekday = (d: number) =>
     new Intl.DateTimeFormat(ar ? "ar-SA" : "en-SA", { weekday: "short" }).format(
       new Date(Date.UTC(2023, 0, 1 + d)), // 1 Jan 2023 was a Sunday
@@ -119,163 +119,26 @@ export async function ClinicSite({
         {tApp("demoBanner")} · {t("concept", { name })}
       </div>
 
-      {/* Sticky header: wordmark, sections, phone, language, Book. */}
-      <header className="border-site-line bg-site-ivory/90 sticky top-0 z-40 border-b backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center gap-6 px-5 lg:px-8">
-          <Link href="/" className="text-site-ink flex min-w-0 flex-col leading-none">
-            <span
-              className={cn(
-                "font-display truncate",
-                ar ? "text-2xl font-semibold" : "text-xl font-semibold tracking-[0.22em] uppercase",
-              )}
-            >
-              {name}
-            </span>
-            {s.since && (
-              <span className="text-site-subtle mt-1 hidden text-[11px] sm:block">
-                {t("eyebrow", { year: s.since, cities: cityList })}
-              </span>
-            )}
-          </Link>
-          <nav className="text-site-slate ms-4 hidden items-center gap-8 text-sm lg:flex">
-            {specialties.length > 0 && (
-              <a href="#specialties" className="hover:text-site-ink transition-colors">
-                {t("navSpecialties")}
-              </a>
-            )}
-            {canBook && (
-              <a href="#treatments" className="hover:text-site-ink transition-colors">
-                {t("navTreatments")}
-              </a>
-            )}
-            {data.doctors.length > 0 && (
-              <a href="#team" className="hover:text-site-ink transition-colors">
-                {t("navTeam")}
-              </a>
-            )}
-            <a href="#visit" className="hover:text-site-ink transition-colors">
-              {t("navVisit")}
-            </a>
-            <a href="#faq" className="hover:text-site-ink transition-colors">
-              {t("navFaq")}
-            </a>
-          </nav>
-          <div className="ms-auto flex items-center gap-3">
-            {tel && (
-              <a
-                href={tel}
-                className="text-site-ink hidden items-center gap-2 text-sm font-medium xl:inline-flex"
-              >
-                <Phone className="size-4" aria-hidden />
-                <span dir="ltr">{s.phone}</span>
-              </a>
-            )}
-            <LanguageToggle />
-            {canBook && (
-              <Link
-                href={bookHref}
-                className={cn(cta, "hidden h-11 px-6 sm:inline-flex")}
-                data-testid="nav-book"
-              >
-                {t("book")}
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        locale={locale}
+        name={name}
+        site={s}
+        doctors={doctorsForHeader(locale, data.doctors, data.branches)}
+        canBook={canBook}
+      />
 
       <main className="flex-1">
-        {/* ── Hero ─────────────────────────────────────────────────────────── */}
-        <section className="bg-site-ivory relative overflow-hidden">
-          <div className="mx-auto grid max-w-7xl gap-14 px-5 pt-14 pb-24 lg:grid-cols-12 lg:gap-10 lg:px-8 lg:pt-24 lg:pb-32">
-            <div className="flex flex-col justify-center gap-8 lg:col-span-7">
-              {s.since && <Eyebrow>{t("eyebrow", { year: s.since, cities: cityList })}</Eyebrow>}
-              <h1 className="font-display text-site-ink text-[2.5rem] leading-[1.08] font-medium sm:text-6xl lg:text-[4.6rem] lg:leading-[1.02]">
-                {L(s.headlineAr, s.headlineEn) || name}
-              </h1>
-              {L(s.taglineAr, s.taglineEn) && (
-                <p className="text-site-slate max-w-xl text-lg leading-relaxed">
-                  {L(s.taglineAr, s.taglineEn)}
-                </p>
-              )}
-              {canBook && (
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-                  <Link href={bookHref} className={cta} data-testid="hero-book">
-                    <CalendarCheck />
-                    {t("book")}
-                  </Link>
-                  {data.videoService && (
-                    <Link href={videoHref} className={textLink} data-testid="hero-video">
-                      <Video className="size-4" aria-hidden />
-                      {t("videoCta")}
-                    </Link>
-                  )}
-                  {tel && (
-                    <a href={tel} className={cn(textLink, "sm:hidden")}>
-                      <Phone className="size-4" aria-hidden />
-                      <span dir="ltr">{s.phone}</span>
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="relative lg:col-span-5">
-              <Photo
-                label={t("photoHero")}
-                hideLabel
-                monogram={monogram}
-                className="mx-auto aspect-[16/11] w-full max-w-md rounded-3xl sm:aspect-[4/5] sm:rounded-t-full sm:rounded-b-3xl"
-              />
-              {canBook && (
-                <div
-                  className="border-site-line bg-card shadow-float relative mx-4 -mt-24 rounded-2xl border p-6 sm:mx-auto sm:max-w-sm lg:absolute lg:-start-10 lg:bottom-8 lg:mx-0 lg:mt-0 lg:w-80"
-                  data-testid="next-free"
-                >
-                  <div className="text-site-subtle text-xs font-medium">{t("nextTitle")}</div>
-                  {data.nextFree.length > 0 ? (
-                    <ul className="divide-site-line mt-3 divide-y">
-                      {data.nextFree.map((iso) => {
-                        const d = new Date(iso);
-                        return (
-                          <li key={iso}>
-                            <Link
-                              href={consultHref}
-                              className="hover:text-site-ink flex items-center justify-between gap-3 py-2.5 transition-colors"
-                            >
-                              <span className="text-sm">
-                                {formatGregorian(d, locale, "medium")}
-                              </span>
-                              <span className="text-site-ink font-mono text-sm" dir="ltr">
-                                {formatTime(d, locale)}
-                              </span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-sm">{t("nextNone")}</p>
-                  )}
-                  <div className="border-site-line mt-3 flex items-center justify-between gap-2 border-t pt-3 text-xs">
-                    <span className="text-site-subtle truncate">
-                      {data.firstService &&
-                        pick(locale, data.firstService.nameAr, data.firstService.nameEn)}
-                      {nextBranch && ` · ${pick(locale, nextBranch.cityAr, nextBranch.cityEn)}`}
-                    </span>
-                    <Link
-                      href={consultHref}
-                      className="text-site-ink inline-flex shrink-0 items-center gap-1 font-medium hover:underline"
-                    >
-                      {t("nextMore")}
-                      <Forward className="size-3.5" aria-hidden />
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        <SiteHero
+          locale={locale}
+          name={name}
+          site={s}
+          canBook={canBook}
+          bookHref={bookHref}
+          consultHref={consultHref}
+          videoHref={data.videoService ? videoHref : null}
+          hasDoctors={data.doctors.length > 0}
+          nextFree={data.nextFree}
+        />
 
         {/* ── Facts (only real ones) ───────────────────────────────────────── */}
         {facts.length > 0 && (
@@ -309,7 +172,7 @@ export async function ClinicSite({
 
         {/* ── Specialties (the clinic's own departments and treatments) ────── */}
         {specialties.length > 0 && (
-          <section id="specialties" className="scroll-mt-24 py-24 lg:py-32">
+          <section id="services" className="scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto max-w-7xl px-5 lg:px-8">
               <SectionHead
                 eyebrow={t("specialtiesEyebrow")}
@@ -322,7 +185,8 @@ export async function ClinicSite({
                   return (
                     <article
                       key={sp.key}
-                      className="grid items-center gap-10 lg:grid-cols-12 lg:gap-20"
+                      id={`service-${sp.key}`}
+                      className="scroll-mt-28 grid items-center gap-10 lg:grid-cols-12 lg:gap-20"
                       data-testid="site-specialty"
                     >
                       <Photo
@@ -493,7 +357,7 @@ export async function ClinicSite({
 
         {/* ── Medical team ─────────────────────────────────────────────────── */}
         {data.doctors.length > 0 && (
-          <section id="team" className="scroll-mt-24 py-24 lg:py-32">
+          <section id="doctors" className="scroll-mt-24 py-24 lg:py-32">
             <div className="mx-auto max-w-7xl px-5 lg:px-8">
               <SectionHead eyebrow={t("teamEyebrow")} title={t("teamTitle")} text={t("teamText")} />
               {clinic.isDemo && (
@@ -793,7 +657,7 @@ export async function ClinicSite({
             <div className="flex flex-col gap-3 md:col-span-3">
               <div className="text-site-ivory font-medium">{t("footerSpecialties")}</div>
               {specialties.map((x) => (
-                <a key={x.key} href="#specialties" className="hover:text-site-ivory">
+                <a key={x.key} href="#services" className="hover:text-site-ivory">
                   {L(x.nameAr, x.nameEn)}
                 </a>
               ))}

@@ -518,6 +518,21 @@ export interface SiteContent {
   licence?: string;
   x?: string;
   tiktok?: string;
+  /** Short line above the hero headline, e.g. the clinic's motto. */
+  eyebrowAr?: string;
+  eyebrowEn?: string;
+  /** One-line description in the footer. */
+  footerAr?: string;
+  footerEn?: string;
+  /** Departments (top level), each grouping specialty keys from `specialties`. */
+  departments?: {
+    key: string;
+    nameAr: string;
+    nameEn: string;
+    specialties: string[];
+  }[];
+  /** Real photos per website slot (see src/lib/site/images.ts): slot → URL. */
+  images?: Record<string, string>;
   /** Real patient reviews the clinic has permission to show. */
   reviews?: { quote: string; name: string; treatment?: string }[];
   /** Real accreditations / licences / memberships, shown only when filled in. */

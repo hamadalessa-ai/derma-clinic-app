@@ -837,9 +837,28 @@ export const AI_RECEPTIONIST: Record<string, boolean> = { derma: true, lamsa: fa
 const I = (ar: string, en: string) => ({ ar, en });
 export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
   derma: {
-    headlineAr: "وجهتك المتكاملة للجلدية وجراحة التجميل وزراعة الشعر وطب الأسنان",
+    eyebrowAr: "نحن نبتكر المستقبل",
+    eyebrowEn: "We Innovate the Future",
+    headlineAr: "وجهتك المتكاملة للجلدية وجراحة التجميل وزراعة الشعر وطب الأسنان في الرياض",
     headlineEn:
-      "Your complete destination for dermatology, plastic surgery, hair transplant & dental care",
+      "Your Complete Destination for Dermatology, Plastic Surgery, Hair Transplant & Dental Care in Riyadh",
+    footerAr: "عيادات ديرما | أفضل عيادات جلدية وتجميل بالرياض بخبرة +30 عاماً",
+    footerEn: "Derma Clinics | Leading dermatology and aesthetic clinics in Riyadh, with 30+ years of experience",
+    departments: [
+      {
+        key: "skin",
+        nameAr: "البشرة والتجميل والشعر",
+        nameEn: "Skin, Aesthetics & Hair",
+        specialties: ["skin", "hair"],
+      },
+      { key: "dental", nameAr: "طب الأسنان", nameEn: "Dental Care", specialties: ["dental"] },
+      {
+        key: "plastic",
+        nameAr: "جراحة التجميل",
+        nameEn: "Plastic Surgery",
+        specialties: ["plastic"],
+      },
+    ],
     taglineAr:
       "منذ عام 1996 نقدّم رعاية مبنية على الدليل العلمي بأيدي أطباء استشاريين وأخصائيين، بخطة علاج مخصّصة لكل مريض ونتائج طبيعية تدوم.",
     taglineEn:
@@ -873,7 +892,7 @@ export const SITE_CONTENT: Record<string, Record<string, unknown>> = {
       },
       {
         key: "hair",
-        nameAr: "زراعة الشعر واستعادته",
+        nameAr: "زراعة واستعادة الشعر",
         nameEn: "Hair Restoration & Transplantation",
         textAr: "استعد ثقتك بحلول متقدمة لاستعادة الشعر وزراعته، لنتائج أكثف وتدوم.",
         textEn:
