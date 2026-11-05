@@ -15,6 +15,8 @@ import {
   ReplyBox,
 } from "@/components/whatsapp/inbox-actions";
 import { withActor } from "@/lib/auth/db";
+import { InboxTabs } from "@/components/clinic/inbox-tabs";
+import { inboxCounts } from "@/lib/views/inbox";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { pick } from "@/lib/brand";
 
@@ -55,6 +57,8 @@ export default async function WhatsAppInboxPage({
     : "needs_reply";
   const activeId = sp.c && UUID.test(sp.c) ? sp.c : null;
   const actor = actorOf(ctx);
+  const ti = await getTranslations("inbox");
+  const counts = await withActor(actor, (tx) => inboxCounts(tx));
   const { items, thread, names, events, concerns, aiEnabled } = await withActor(
     actor,
     async (tx) => {
@@ -118,7 +122,8 @@ export default async function WhatsAppInboxPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={t("inboxTitle")} />
+      <PageHeader title={ti("title")} />
+      <InboxTabs active="messages" counts={counts} />
       {mode === "demo" && <Notice tone="info">{t("demoLabel")}</Notice>}
       {mode === "off" && <Notice tone="warning">{t("modes.off")}</Notice>}
       <LinkTabs
