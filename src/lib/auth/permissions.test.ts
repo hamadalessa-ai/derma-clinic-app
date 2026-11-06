@@ -191,6 +191,12 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "support:grant": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: false,
+  },
   "platform:billing": {
     platform_owner: true,
     clinic_admin: false,

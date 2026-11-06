@@ -1,4 +1,4 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -11,6 +11,8 @@ import { can, NAV_ITEMS } from "@/lib/auth/permissions";
 import { requireStaff } from "@/lib/auth/session";
 import { brandStyle, pick } from "@/lib/brand";
 import { limitWarnings } from "@/lib/platform/overview";
+import { activeGrant } from "@/lib/support/grants";
+import { withTenant } from "@/db/tenant";
 import { whatsappMode } from "@/lib/whatsapp/config";
 import type { Locale } from "@/i18n/config";
 
@@ -22,6 +24,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const tStatus = await getTranslations("clinicStatus");
   // Clinic admins see when this month's AI / WhatsApp use reaches 80 % of the platform's limit.
   const warnings = can(ctx.roles, "settings:manage") ? await limitWarnings(ctx.tenant) : [];
+  const tSupport = await getTranslations("support");
+  const format = await getFormatter();
+  // Clinic admins always see when the platform's support has access to their clinic.
+  const clinicGrant =
+    !ctx.support && can(ctx.roles, "support:grant")
+      ? await withTenant(ctx.tenant.id, (tx) => activeGrant(tx))
+      : null;
 
   const demo = whatsappMode(ctx.tenant) === "demo";
   const items = NAV_ITEMS.filter(
@@ -58,6 +67,29 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           })}
         </div>
       ))}
+      {ctx.support && (
+        <div
+          className="bg-info text-info-foreground px-4 py-1.5 text-center text-xs font-medium"
+          data-testid="support-banner"
+        >
+          {tSupport(ctx.support.allowChanges ? "bannerChanges" : "bannerView", {
+            time: format.dateTime(ctx.support.expiresAt, {
+              timeStyle: "short",
+              dateStyle: "short",
+            }),
+          })}
+        </div>
+      )}
+      {clinicGrant && (
+        <div className="bg-info text-info-foreground px-4 py-1.5 text-center text-xs font-medium">
+          {tSupport("bannerClinic", {
+            time: format.dateTime(clinicGrant.expiresAt, {
+              timeStyle: "short",
+              dateStyle: "short",
+            }),
+          })}
+        </div>
+      )}
       <header className="bg-card/95 sticky top-0 z-10 border-b backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 md:px-6">
           <div className="flex items-center gap-3">

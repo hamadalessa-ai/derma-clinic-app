@@ -63,9 +63,13 @@ export interface PlatformClinicRow {
     status: "issued" | "paid" | "void";
     overdue: boolean;
   }[];
+  /** Support access the clinic's admin has granted (null = none in force). */
+  support: { expiresAt: string; allowChanges: boolean; reason: string | null } | null;
+  /** Where the owner opens the clinic during support (null = needs the platform's own domain). */
+  openUrl: string | null;
 }
 
-type Tab = "overview" | "billing" | "status";
+type Tab = "overview" | "billing" | "status" | "support";
 
 const WARN_AT = 0.8;
 const pct = (used: number, limit: number | null) =>
@@ -112,6 +116,11 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
               </Badge>
               <Badge variant="outline">{t(`plan.${clinic.plan}`)}</Badge>
               {clinic.isDemo && <Badge variant="secondary">{t("demo")}</Badge>}
+              {clinic.support && (
+                <Badge variant="outline" data-testid="support-badge">
+                  {t("supportOpen")}
+                </Badge>
+              )}
               {overdue && (
                 <Badge variant="destructive" data-testid="overdue-badge">
                   {t("overdue")}
@@ -151,7 +160,7 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
         {open && (
           <div className="flex flex-col gap-4 border-t pt-4">
             <div className="flex flex-wrap gap-1" role="tablist">
-              {(["overview", "billing", "status"] as const).map((k) => (
+              {(["overview", "billing", "status", "support"] as const).map((k) => (
                 <button
                   key={k}
                   type="button"
@@ -193,6 +202,7 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
               </div>
             )}
             {tab === "billing" && <BillingPanel clinic={clinic} />}
+            {tab === "support" && <SupportPanel clinic={clinic} />}
             {tab === "status" && (
               <div className="max-w-xl">
                 <StatusControl clinic={clinic} />
@@ -701,5 +711,43 @@ function Statement({
       )}
       <FormError message={error} />
     </li>
+  );
+}
+
+function SupportPanel({ clinic }: { clinic: PlatformClinicRow }) {
+  const t = useTranslations("platformClinic");
+  const format = useFormatter();
+  const g = clinic.support;
+  return (
+    <section className="flex max-w-xl flex-col gap-3 text-sm" data-testid="support-panel">
+      {g ? (
+        <>
+          <p className="font-semibold">
+            {t("supportUntil", {
+              time: format.dateTime(new Date(g.expiresAt), {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }),
+            })}
+          </p>
+          <p>{g.allowChanges ? t("supportChanges") : t("supportView")}</p>
+          {g.reason && <p className="text-muted-foreground">{g.reason}</p>}
+          {clinic.openUrl ? (
+            <a
+              href={clinic.openUrl}
+              className="bg-brand text-brand-foreground self-start rounded-lg px-4 py-2 text-sm font-medium"
+              data-testid="support-open"
+            >
+              {t("supportOpenClinic")}
+            </a>
+          ) : (
+            <p className="text-muted-foreground text-xs">{t("supportNeedsDomain")}</p>
+          )}
+          <p className="text-muted-foreground text-xs">{t("supportRecorded")}</p>
+        </>
+      ) : (
+        <p className="text-muted-foreground">{t("supportNone")}</p>
+      )}
+    </section>
   );
 }

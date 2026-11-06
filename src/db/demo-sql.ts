@@ -536,6 +536,21 @@ export function demoSql(): string {
   );
   out.push(phase2bRows(week));
   out.push(platformBillingRows());
+  // Support access given once in each clinic, long expired (so the isolation tests cover the table).
+  for (const slug of ["derma", "lamsa"] as const) {
+    out.push(
+      insert("support_grants", [
+        {
+          tenant_id: demoId(`tenant:${slug}`),
+          granted_by: `usr_${slug}-admin`,
+          reason: "Demo: help with setup",
+          allow_changes: false,
+          expires_at: daysAgo(30),
+          created_at: daysAgo(31),
+        },
+      ]),
+    );
+  }
   return out.filter(Boolean).join("\n");
 }
 

@@ -194,7 +194,10 @@
     "billing_exists": "This month already has a statement.",
     "billing_free": "Set a monthly price first.",
     "scribe_not_in_plan": "The AI scribe isn't part of this clinic's plan.",
-    "video_not_in_plan": "Video consultations aren't part of this clinic's plan. Please contact the clinic."
+    "video_not_in_plan": "Video consultations aren't part of this clinic's plan. Please contact the clinic.",
+    "support_view_only": "Support access is view only. The clinic didn't allow changes.",
+    "support_already_active": "Support access is already on.",
+    "support_none_active": "There is no support access to end."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -571,7 +574,8 @@
     "export_packages": "Packages",
     "tabSubscription": "Subscription",
     "subscriptionStatus": "Account status",
-    "subscriptionHint": "Monthly price before 15% VAT. Payment details come with each statement; for questions contact the platform."
+    "subscriptionHint": "Monthly price before 15% VAT. Payment details come with each statement; for questions contact the platform.",
+    "supportTitle": "Platform support access"
   },
   "book": {
     "title": "Book your appointment",
@@ -1405,7 +1409,8 @@
     "tabs": {
       "overview": "Overview",
       "billing": "Plan & billing",
-      "status": "Status"
+      "status": "Status",
+      "support": "Support access"
     },
     "planDefault": "Plan: {value}",
     "planTitle": "Plan",
@@ -1445,6 +1450,35 @@
     },
     "reference": "Reference (e.g. transfer number)",
     "savePayment": "Save payment",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "supportOpen": "Support access on",
+    "supportUntil": "The clinic allowed support access until {time}.",
+    "supportChanges": "View and change.",
+    "supportView": "View only.",
+    "supportOpenClinic": "Open the clinic",
+    "supportNeedsDomain": "This clinic opens on its own address, which needs the platform's own domain.",
+    "supportRecorded": "Every page you open is recorded in the clinic's log, and the clinic can end access at any time. Clinical notes and data downloads stay closed.",
+    "supportNone": "No support access. You can't see this clinic's patients. If the clinic needs help, its admin can allow access for a few hours in Settings → Team."
+  },
+  "support": {
+    "intro": "If you need help, you can let the platform's support team open your clinic for a few hours. They work like a clinic admin but can never read clinical notes or download your data. Every page they open is recorded below, and you can end access at any time.",
+    "activeUntil": "Support access is on until {time}",
+    "modeChanges": "They can view and make changes.",
+    "modeView": "They can view only.",
+    "endNow": "End access now",
+    "ended": "Support access ended.",
+    "duration": "For how long",
+    "hours": "{n, plural, one {# hour} other {# hours}}",
+    "reason": "What do you need help with? (optional)",
+    "reasonHint": "e.g. Setting up working hours",
+    "allowChanges": "Also allow them to make changes (otherwise view only)",
+    "rules": "Access ends automatically at the end of the time you choose. You can't extend it; give access again if needed.",
+    "grant": "Allow support access",
+    "granted": "Support access is on.",
+    "activityTitle": "What support did recently",
+    "didChange": "Made a change",
+    "bannerView": "Support session (view only): ends {time}. Every page you open is recorded in the clinic's log.",
+    "bannerChanges": "Support session (changes allowed): ends {time}. Every page and change is recorded in the clinic's log.",
+    "bannerClinic": "Platform support can access your clinic until {time}. End it any time in Settings → Team."
   }
 }

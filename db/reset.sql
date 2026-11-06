@@ -45,6 +45,7 @@ drop table if exists
   public.services,
   public.sessions,
   public.staff_schedules,
+  public.support_grants,
   public.tenant_members,
   public.tenant_settings,
   public.tenants,
@@ -61,8 +62,10 @@ drop function if exists public.app_current_tenant;
 drop function if exists public.app_current_user;
 drop function if exists public.app_has_role;
 drop function if exists public.app_is_patient;
+drop function if exists public.app_is_platform_owner;
 drop function if exists public.app_patient;
 drop function if exists public.app_patient_scope;
+drop function if exists public.app_platform_gate;
 drop function if exists public.app_set_clinic_limits;
 drop function if exists public.app_set_clinic_plan;
 drop function if exists public.app_set_clinic_status;

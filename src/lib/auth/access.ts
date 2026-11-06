@@ -3,6 +3,7 @@ import { getDb } from "@/db/client";
 import { withTenant } from "@/db/tenant";
 import { branches, tenantMembers, tenants, users } from "@/db/schema";
 import { staffMaySignIn } from "@/lib/tenant/status";
+import { activeGrant } from "@/lib/support/grants";
 import type { Role } from "./permissions";
 
 export type Branch = typeof branches.$inferSelect;
@@ -17,6 +18,8 @@ export interface StaffAccess {
   branches: Branch[];
   titleAr: string | null;
   titleEn: string | null;
+  /** Set while the platform owner works in this clinic under a support grant from its admin. */
+  support: { grantId: string; expiresAt: Date; allowChanges: boolean } | null;
 }
 
 /**
@@ -45,13 +48,24 @@ export async function getStaffAccess(
       .orderBy(asc(branches.sortOrder), asc(branches.nameEn));
     const visible = member?.branchId ? all.filter((b) => b.id === member.branchId) : all;
 
+    const isMember = !!member && !member.deactivatedAt;
+    // The platform owner (not a member): platform pages only — or, while the clinic's admin has
+    // granted support access, a clinic admin's view (never clinical notes).
+    const grant = !isMember && user.isPlatformOwner ? await activeGrant(tx) : null;
     return {
-      roles: member && !member.deactivatedAt ? member.roles : ["platform_owner"],
-      memberId: member && !member.deactivatedAt ? member.id : null,
-      restrictedBranchId: member && !member.deactivatedAt ? member.branchId : null,
+      roles: isMember
+        ? member.roles
+        : grant
+          ? (["platform_owner", "clinic_admin"] as Role[])
+          : (["platform_owner"] as Role[]),
+      memberId: isMember ? member.id : null,
+      restrictedBranchId: isMember ? member.branchId : null,
       branches: visible,
       titleAr: member?.titleAr ?? null,
       titleEn: member?.titleEn ?? null,
+      support: grant
+        ? { grantId: grant.id, expiresAt: grant.expiresAt, allowChanges: grant.allowChanges }
+        : null,
     };
   });
 }

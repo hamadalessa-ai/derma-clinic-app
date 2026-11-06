@@ -206,10 +206,34 @@ $$;
 revoke all on function public.app_billing_enforce(uuid) from public;
 grant execute on function public.app_billing_enforce(uuid) to clinic_app;
 
+-- Is the signed-in user a platform owner?
+create or replace function public.app_is_platform_owner() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.users u
+                  where u.id = public.app_current_user() and u.is_platform_owner)
+$$;
+
+-- No backdoor to patient data: a platform owner who is not a member of this clinic sees its patient
+-- tables ONLY while the clinic's admin has granted support access (support_grants, not expired or
+-- ended). Everyone else (staff, patients, system work without a user) is not affected by this rule.
+create or replace function public.app_platform_gate() returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when not public.app_is_platform_owner() then true
+    when exists (select 1 from public.tenant_members m
+                  where m.user_id = public.app_current_user()
+                    and m.tenant_id = public.app_current_tenant()
+                    and m.deactivated_at is null) then true
+    else exists (select 1 from public.support_grants g
+                  where g.tenant_id = public.app_current_tenant()
+                    and g.revoked_at is null and g.expires_at > now())
+  end
+$$;
+
 grant execute on function public.app_current_tenant(), public.app_current_user(),
   public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
   public.demo_workday(date, integer), public.app_patient(), public.app_is_patient(),
-  public.app_patient_scope(uuid)
+  public.app_patient_scope(uuid), public.app_is_platform_owner(), public.app_platform_gate()
   to clinic_app;
 
 -- Clinic directory: read-only (needed to resolve the subdomain before login).
@@ -261,6 +285,9 @@ grant delete on public.verification_codes, public.patient_sessions to clinic_app
 -- Platform billing: the clinic reads its own; only platform work writes (policies below).
 grant select, insert on public.platform_statements, public.platform_payments to clinic_app;
 grant update (status, paid_at, voided_at) on public.platform_statements to clinic_app;
+-- Support access: granted and ended by the clinic admin (policies below); never deleted.
+grant select, insert on public.support_grants to clinic_app;
+grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -287,7 +314,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments'
+    'platform_statements', 'platform_payments', 'support_grants'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -369,6 +396,39 @@ begin
   end loop;
 end $$;
 
+-- Support grants: only a clinic admin of this clinic (never a platform owner, even during a
+-- support session) may give or end access.
+create policy support_grants_admin_insert on public.support_grants as restrictive
+  for insert to clinic_app
+  with check (public.app_has_role('clinic_admin') and not public.app_is_platform_owner());
+create policy support_grants_admin_update on public.support_grants as restrictive
+  for update to clinic_app
+  using (public.app_has_role('clinic_admin') and not public.app_is_platform_owner());
+-- The gate functions (running as the table owner) read memberships and grants.
+create policy tenant_members_owner_read on public.tenant_members for select
+  using (current_user <> 'clinic_app');
+create policy support_grants_owner_read on public.support_grants for select
+  using (current_user <> 'clinic_app');
+
+-- The platform gate on every table holding patient data (see app_platform_gate()).
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'patients', 'patient_medical_flags', 'appointments', 'patient_packages', 'package_payments',
+    'package_session_events', 'files', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
+    'conversations', 'messages', 'concern_events', 'reschedule_requests'
+  ] loop
+    execute format(
+      -- Cheap first test: no signed-in user (patients, system work) → not a platform owner.
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using (public.app_current_user() is null or (select public.app_platform_gate()))
+         with check (public.app_current_user() is null or (select public.app_platform_gate()))',
+      t || '_platform_gate', t);
+  end loop;
+end $$;
+
 -- Staff login tables: global by design (one person can work at several clinics).
 -- What a user may see inside a clinic is decided by tenant_members, which IS isolated.
 do $$
@@ -409,7 +469,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments',
+    'platform_statements', 'platform_payments', 'support_grants',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case

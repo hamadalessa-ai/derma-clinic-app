@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { SupportAccess } from "@/components/clinic/support-access";
+import { activeGrant, supportActivity } from "@/lib/support/grants";
 import { Badge } from "@/components/ui/badge";
 import { statementsIn } from "@/lib/platform/billing";
 import { FEATURES, planAllows } from "@/lib/platform/plans";
@@ -81,6 +83,14 @@ export default async function SettingsPage({
     ? (sp.tab as SettingsTab)
     : "clinic";
   const team = tab === "team" ? await withActor(actorOf(ctx), (tx) => listTeam(tx)) : null;
+  // Support access is the clinic's own decision: not shown to the platform during a support session.
+  const support =
+    tab === "team" && can(ctx.roles, "support:grant") && !ctx.support
+      ? await withActor(actorOf(ctx), async (tx) => ({
+          active: await activeGrant(tx),
+          activity: await supportActivity(tx),
+        }))
+      : null;
   const statements =
     tab === "subscription" && can(ctx.roles, "billing:view")
       ? await withActor(actorOf(ctx), (tx) => statementsIn(tx))
@@ -232,6 +242,30 @@ export default async function SettingsPage({
                 name: pick(locale, b.nameAr, b.nameEn),
               }))}
               selfId={ctx.memberId}
+            />
+          </CardContent>
+        </Card>
+      )}
+      {tab === "team" && support && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("supportTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SupportAccess
+              active={
+                support.active
+                  ? {
+                      expiresAt: support.active.expiresAt.toISOString(),
+                      allowChanges: support.active.allowChanges,
+                    }
+                  : null
+              }
+              activity={support.activity.map((a) => ({
+                at: a.at.toISOString(),
+                action: a.action,
+                path: ((a.metadata ?? {}) as { path?: string | null }).path ?? null,
+              }))}
             />
           </CardContent>
         </Card>

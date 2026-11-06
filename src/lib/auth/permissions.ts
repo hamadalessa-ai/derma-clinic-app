@@ -37,6 +37,8 @@ export const PERMISSIONS = {
   "data:export": ["clinic_admin"],
   /** Settings → Subscription: the clinic's plan, statements and payments (read only). */
   "billing:view": ["clinic_admin"],
+  /** Settings → Team: allow the platform's support to open the clinic for a few hours. */
+  "support:grant": ["clinic_admin"],
   "demo:refresh": ["clinic_admin"],
 
   // ── Phase 2a ──
