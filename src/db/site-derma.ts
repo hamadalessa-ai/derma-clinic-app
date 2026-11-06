@@ -41,9 +41,12 @@ const doc = (
   photo: DERMA_IMG(file, 900),
   // Clean portrait (background removed) made from the published photo by the
   // "Doctor portraits" workflow (scripts/cutouts/).
-  portrait: `/site/derma/doctors/${portraitSlug(nameEn)}.webp`,
+  portrait: NO_PHOTO.has(nameEn) ? undefined : `/site/derma/doctors/${portraitSlug(nameEn)}.webp`,
   ...extra,
 });
+
+/** Their published cards for these doctors have no photo (name only). */
+const NO_PHOTO = new Set(["Dr. Asmaa Al-Hudaity", "Dr. Dalal Almadha"]);
 
 /** Same slug as scripts/cutouts/doctors.json. */
 function portraitSlug(nameEn: string) {

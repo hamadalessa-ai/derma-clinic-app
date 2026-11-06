@@ -93,7 +93,7 @@ export async function ClinicSite({
       title: L(d.titleAr, d.titleEn),
       dept: deptOf(d.dept),
       branch: d.branchAr || d.branchEn ? L(d.branchAr, d.branchEn) : null,
-      photo: d.portrait ?? d.photo,
+      photo: d.portrait ?? "",
       portrait: !!d.portrait,
       book: d.memberId
         ? { label: t("doctorBook"), href: `/book?doctor=${d.memberId}`, external: false }
