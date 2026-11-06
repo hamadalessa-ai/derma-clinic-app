@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { CalendarCheck, ChevronDown, MapPin, MessageCircle, Phone, UserRound } from "lucide-react";
+import {
+  BriefcaseMedical,
+  CalendarCheck,
+  ChevronDown,
+  MapPin,
+  MessageCircle,
+  Phone,
+  UserRound,
+} from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { SiteContent } from "@/db/schema";
 import { SiteLangSwitch } from "./site-lang-switch";
@@ -93,6 +101,14 @@ export async function SiteHeader({
             >
               <UserRound className="size-3.5" aria-hidden />
               {t("utilityPortal")}
+            </Link>
+            <Link
+              href="/login"
+              className="hover:text-site-ivory hidden items-center gap-1.5 sm:flex"
+              data-testid="utility-staff"
+            >
+              <BriefcaseMedical className="size-3.5" aria-hidden />
+              {t("staff")}
             </Link>
             {canBook && (
               <Link
@@ -233,6 +249,7 @@ export async function SiteHeader({
                 ...(hasOffers ? [{ label: t("navOffers"), href: "#offers" }] : []),
                 { label: t("navContact"), href: "#contact" },
                 { label: t("utilityPortal"), href: "/my" },
+                { label: t("staff"), href: "/login" },
               ]}
               book={canBook ? { label: t("book"), href: "/book" } : null}
               labels={{ open: t("menuOpen"), close: t("menuClose") }}
