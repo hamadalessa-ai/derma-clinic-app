@@ -69,7 +69,7 @@ export function NewClinicForm() {
 
   return (
     <form
-      className="flex flex-col gap-5 rounded-xl border p-4 shadow-card"
+      className="shadow-card flex flex-col gap-5 rounded-xl border p-4"
       data-testid="clinic-add-form"
       onSubmit={(e) => {
         e.preventDefault();
@@ -194,7 +194,9 @@ function Created({ done, onClose }: { done: Done; onClose: () => void }) {
           <Button
             size="sm"
             className="self-start"
-            onClick={() => navigator.clipboard?.writeText(done.inviteUrl!).then(() => setCopied(true))}
+            onClick={() =>
+              navigator.clipboard?.writeText(done.inviteUrl!).then(() => setCopied(true))
+            }
           >
             {copied ? <Check /> : <Copy />}
             {copied ? t("copied") : t("copy")}

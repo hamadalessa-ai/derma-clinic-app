@@ -1636,7 +1636,12 @@ export async function createClinicAction(input: z.input<typeof newClinicInput>) 
         nameEn: v.nameEn,
         brandColor: v.brandColor,
         isDemo: v.isDemo,
-        branch: { nameAr: v.branchNameAr, nameEn: v.branchNameEn, cityAr: v.cityAr, cityEn: v.cityEn },
+        branch: {
+          nameAr: v.branchNameAr,
+          nameEn: v.branchNameEn,
+          cityAr: v.cityAr,
+          cityEn: v.cityEn,
+        },
         department: { nameAr: v.departmentAr, nameEn: v.departmentEn },
         admin: { nameAr: v.adminNameAr, nameEn: v.adminNameEn ?? null, email: v.adminEmail },
       },

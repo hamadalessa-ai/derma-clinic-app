@@ -99,7 +99,10 @@ describe("add a clinic", () => {
         );
       }),
     ).rejects.toThrow(/platform owner/);
-    const [none] = await getDb().select().from(tenants).where(eq(tenants.slug, `y-${stamp}`));
+    const [none] = await getDb()
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, `y-${stamp}`));
     expect(none).toBeUndefined();
   });
 
@@ -119,14 +122,18 @@ describe("add a clinic", () => {
 
 describe("clinic address", () => {
   it("is a subdomain of the platform's own domain, or none on a borrowed address", () => {
-    expect(clinicAddress("elite", { host: "derma.clinicapp.sa", proto: "https" }, "clinicapp.sa")).toBe(
-      "https://elite.clinicapp.sa",
-    );
-    expect(clinicAddress("elite", { host: "derma.localhost:3000", proto: "http" }, "localhost")).toBe(
-      "http://elite.localhost:3000",
-    );
     expect(
-      clinicAddress("elite", { host: "derma-clinic-app.vercel.app", proto: "https" }, "clinicapp.sa"),
+      clinicAddress("elite", { host: "derma.clinicapp.sa", proto: "https" }, "clinicapp.sa"),
+    ).toBe("https://elite.clinicapp.sa");
+    expect(
+      clinicAddress("elite", { host: "derma.localhost:3000", proto: "http" }, "localhost"),
+    ).toBe("http://elite.localhost:3000");
+    expect(
+      clinicAddress(
+        "elite",
+        { host: "derma-clinic-app.vercel.app", proto: "https" },
+        "clinicapp.sa",
+      ),
     ).toBeNull();
   });
 });

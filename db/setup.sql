@@ -2057,6 +2057,36 @@ $$;
 
 -- ─── Privileges ─────────────────────────────────────────────────────────────
 grant usage on schema public to clinic_app;
+-- New clinic (platform owner, checked in the app): creates the clinic and its settings row only.
+-- clinic_app can't write the clinic directory itself; this function does exactly this one insert.
+create or replace function public.app_create_clinic(
+  p_slug text, p_name_ar text, p_name_en text, p_brand text, p_is_demo boolean
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  tid uuid;
+begin
+  -- Only a platform owner (the signed-in user the app told us about) may open a new clinic.
+  if not exists (select 1 from public.users u
+                 where u.id = public.app_current_user() and u.is_platform_owner) then
+    raise exception 'only the platform owner can add a clinic' using errcode = '42501';
+  end if;
+  if p_slug !~ '^[a-z][a-z0-9-]{0,28}[a-z0-9]$' or p_slug in ('www', 'app', 'api', 'admin') then
+    raise exception 'invalid clinic address' using errcode = '22023';
+  end if;
+  if p_brand !~ '^#[0-9a-f]{6}$' then
+    raise exception 'invalid colour' using errcode = '22023';
+  end if;
+  insert into public.tenants (slug, name_ar, name_en, brand_color, is_demo)
+    values (p_slug, p_name_ar, p_name_en, p_brand, p_is_demo)
+    returning id into tid;
+  insert into public.tenant_settings (tenant_id) values (tid);
+  return tid;
+end;
+$$;
+revoke all on function public.app_create_clinic(text, text, text, text, boolean) from public;
+grant execute on function public.app_create_clinic(text, text, text, text, boolean) to clinic_app;
+
 grant execute on function public.app_current_tenant(), public.app_current_user(),
   public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
   public.demo_workday(date, integer), public.app_patient(), public.app_is_patient(),
@@ -2186,6 +2216,11 @@ create policy clinical_note_addenda_author_insert on public.clinical_note_addend
 alter table public.tenants enable row level security;
 alter table public.tenants force row level security;
 create policy tenants_read on public.tenants for select to clinic_app using (true);
+-- New clinics are created only by public.app_create_clinic() (runs as its owner, not clinic_app).
+create policy tenants_create on public.tenants for insert
+  with check (current_user <> 'clinic_app');
+create policy tenant_settings_create on public.tenant_settings for insert
+  with check (current_user <> 'clinic_app');
 
 -- Staff login tables: global by design (one person can work at several clinics).
 -- What a user may see inside a clinic is decided by tenant_members, which IS isolated.
@@ -2201,6 +2236,9 @@ begin
       t || '_app_access', t);
   end loop;
 end $$;
+-- app_create_clinic() (runs as the table owner) checks that the caller is a platform owner.
+create policy users_owner_lookup on public.users for select
+  using (current_user <> 'clinic_app');
 
 -- ─── Patient walls ──────────────────────────────────────────────────────────
 -- When a PATIENT is signed in (role "patient"), every table is limited further ("restrictive" = AND):
