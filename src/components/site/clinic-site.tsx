@@ -12,7 +12,15 @@ import { SiteDoctors, type DoctorCard } from "./site-doctors";
 import { SiteHeader, telHref, waHref } from "./site-header";
 import { SiteHero } from "./site-hero";
 import { SiteImage } from "./site-image";
-import { SiteTreatments, type TreatmentSilo } from "./site-treatments";
+import { SiteChapters, type Chapter } from "./site-chapters";
+
+type TreatmentSilo = {
+  key: string;
+  dept: string;
+  name: string;
+  items: { name: string; href: string | null }[];
+  cta: { label: string; href: string; external: boolean };
+};
 
 /**
  * The clinic's public website ("/") — "clinical luxury": true white and soft clinical gray,
@@ -77,6 +85,36 @@ export async function ClinicSite({
     }),
     cta: deptBook(x.dept),
   }));
+
+  // Procedures & Services as chapters, one per specialty, in the clinic's order of services.
+  const CHAPTER_IMAGES: Record<string, string[]> = {
+    skin: ["dept-skin", "service-skin"],
+    hair: ["dept-hair", "service-hair"],
+    plastic: ["dept-plastic", "plastic-face"],
+    dental: ["service-dental", "dept-dental"],
+  };
+  const chapterOrder = ["skin", "hair", "plastic", "dental"];
+  const chapters: Chapter[] = chapterOrder
+    .map((k): Chapter | null => {
+      const sp = (s.specialties ?? []).find((x) => x.key === k);
+      const dep = departments.find((x) => x.key === k);
+      const groups = treatmentSilos.filter((x) =>
+        k === "skin" || k === "hair"
+          ? silos.find((y) => y.key === x.key)?.dept === k
+          : x.dept === k,
+      );
+      if (!sp && !groups.length) return null;
+      return {
+        key: k,
+        anchor: dep ? `dept-${k}` : `chapter-${k}`,
+        title: sp ? L(sp.nameAr, sp.nameEn) : dep ? L(dep.nameAr, dep.nameEn) : k,
+        intro: (dep && L(dep.textAr, dep.textEn)) || (sp ? L(sp.textAr, sp.textEn) : ""),
+        images: (CHAPTER_IMAGES[k] ?? []).map((slot) => ({ slot, src: s.images?.[slot] })),
+        groups: groups.map((g) => ({ name: g.name, items: g.items })),
+        cta: deptBook(k),
+      };
+    })
+    .filter((c): c is Chapter => c !== null);
 
   const founder = doctors.find((d) => d.founder);
   const team: DoctorCard[] = doctors
@@ -214,65 +252,25 @@ export async function ClinicSite({
           </div>
         </section>
 
-        {/* ── Departments ─────────────────────────────────────────────────── */}
-        {departments.length > 0 && (
+        {/* ── Procedures & Services: one magazine spread per specialty ───── */}
+        {chapters.length > 0 && (
           <section id="departments" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
-            <div className="mx-auto max-w-7xl px-5 lg:px-8">
-              <Heading title={t("deptEyebrow")} />
-              <ul className="mt-14 grid gap-6 lg:grid-cols-3">
-                {departments.map((d) => {
-                  const slot = `dept-${d.key}`;
-                  const cta = deptBook(d.key);
-                  return (
-                    <li
-                      key={d.key}
-                      id={`dept-${d.key}`}
-                      className="bg-card shadow-soft group flex scroll-mt-28 flex-col overflow-hidden rounded-2xl"
-                      data-testid="site-department"
-                    >
-                      <div className="aspect-video overflow-hidden">
-                        <div className="h-full transition-transform duration-700 group-hover:scale-[1.04]">
-                          <SiteImage slot={slot} src={s.images?.[slot]} locale={locale} />
-                        </div>
-                      </div>
-                      <div className="flex flex-1 flex-col gap-4 p-7">
-                        <h3 className="font-display text-site-ink text-2xl leading-snug font-semibold">
-                          {L(d.nameAr, d.nameEn)}
-                        </h3>
-                        {L(d.textAr, d.textEn) && (
-                          <p className="text-[15px] leading-relaxed">{L(d.textAr, d.textEn)}</p>
-                        )}
-                        <div className="mt-auto flex flex-wrap items-center gap-3 pt-2">
-                          <CtaLink cta={cta} solid />
-                          <a
-                            href="#treatments"
-                            className="text-site-primary text-sm font-semibold hover:underline"
-                          >
-                            {t("deptTreatments")}
-                          </a>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </section>
-        )}
-
-        {/* ── Treatments by category ──────────────────────────────────────── */}
-        {treatmentSilos.length > 0 && (
-          <section id="treatments" className="scroll-mt-28 py-20 lg:py-24">
-            <div className="mx-auto flex max-w-7xl flex-col gap-10 px-5 lg:px-8">
+            <span id="treatments" className="block scroll-mt-28" aria-hidden />
+            <div className="mx-auto flex max-w-7xl flex-col gap-16 px-5 lg:gap-24 lg:px-8">
               <Heading title={t("treatEyebrow")} />
-              <SiteTreatments silos={treatmentSilos} />
+              <SiteChapters
+                chapters={chapters}
+                locale={locale}
+                phone={s.phone && tel ? { label: s.phone, href: tel } : null}
+                labels={{ call: t("callShort"), bookable: t("bookShort") }}
+              />
             </div>
           </section>
         )}
 
         {/* ── Our doctors ─────────────────────────────────────────────────── */}
         {doctors.length > 0 && (
-          <section id="doctors" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
+          <section id="doctors" className="scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
               <Heading
                 title={t("doctorsEyebrow")}
@@ -326,7 +324,7 @@ export async function ClinicSite({
 
         {/* ── Offers ──────────────────────────────────────────────────────── */}
         {data.offers.length > 0 && (
-          <section id="offers" className="scroll-mt-28 py-24 lg:py-32">
+          <section id="offers" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
             <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
               <Heading title={t("offersEyebrow")} />
               {clinic.isDemo && (
@@ -691,32 +689,6 @@ function Heading({ title, text }: { title: string; text?: string }) {
       </h2>
       {text && <p className="text-[17px] leading-relaxed">{text}</p>}
     </div>
-  );
-}
-
-function CtaLink({
-  cta,
-  solid = false,
-}: {
-  cta: { label: string; href: string; external: boolean };
-  solid?: boolean;
-}) {
-  const cls = cn(
-    "inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors",
-    solid
-      ? "bg-site-primary text-site-ivory hover:bg-site-primary-hover"
-      : "border border-site-primary/30 text-site-primary",
-  );
-  return cta.external ? (
-    <a href={cta.href} target="_blank" rel="noopener noreferrer" className={cls}>
-      <MessageCircle className="size-4" aria-hidden />
-      {cta.label}
-    </a>
-  ) : (
-    <Link href={cta.href} className={cls}>
-      <CalendarCheck className="size-4" aria-hidden />
-      {cta.label}
-    </Link>
   );
 }
 

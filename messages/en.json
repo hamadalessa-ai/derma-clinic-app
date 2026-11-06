@@ -1202,6 +1202,7 @@
     "deptCounts": "{doctors} doctors · {treatments} treatments",
     "conceptShort": "Concept demo. Not the official website.",
     "prev": "Previous doctor",
-    "next": "Next doctor"
+    "next": "Next doctor",
+    "callShort": "Call"
   }
 }
