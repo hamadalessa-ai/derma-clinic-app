@@ -59,5 +59,19 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     person = person.resize((max(1, int(pw * scale)), max(1, int(ph * scale))), Image.LANCZOS)
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     canvas.paste(person, ((W - person.width) // 2, H - person.height), person)
+    # Soften the frame edges: semi-transparent leftovers of the card on the left go, and the
+    # left edge (where the card's text met the coat) and the bottom fade out gently.
+    c = np.array(canvas).astype(np.float32)
+    al = c[:, :, 3]
+    left = np.zeros_like(al, dtype=bool)
+    left[:, : int(W * 0.4)] = True
+    al[left & (al < 200)] = 0
+    xs_ = np.arange(W, dtype=np.float32)
+    ys_ = np.arange(H, dtype=np.float32)
+    fade_x = np.clip((xs_ - W * 0.02) / (W * 0.16), 0, 1)
+    fade_y = np.clip((H - ys_) / (H * 0.08), 0, 1)
+    al *= fade_x[None, :] * fade_y[:, None]
+    c[:, :, 3] = al
+    canvas = Image.fromarray(c.clip(0, 255).astype(np.uint8))
     canvas.save(OUT / f"{d['slug']}.webp", "WEBP", quality=88, method=6)
     print("ok", d["slug"])
