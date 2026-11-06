@@ -141,14 +141,18 @@ describe("statements and payments", () => {
         }),
       ),
     ).rejects.toThrow();
-    await expect(
-      withActor(admin, (tx) =>
-        tx
-          .update(platformStatements)
-          .set({ status: "paid" })
-          .where(eq(platformStatements.tenantId, DERMA)),
-      ),
-    ).rejects.toThrow();
+    // An update by clinic staff simply finds nothing it may change.
+    const changed = await withActor(admin, (tx) =>
+      tx
+        .update(platformStatements)
+        .set({ status: "paid" })
+        .where(eq(platformStatements.tenantId, DERMA))
+        .returning({ id: platformStatements.id }),
+    );
+    expect(changed).toEqual([]);
+    expect((await withActor(admin, (tx) => statementsIn(tx))).map((x) => x.status)).toContain(
+      "issued",
+    );
   });
 });
 
