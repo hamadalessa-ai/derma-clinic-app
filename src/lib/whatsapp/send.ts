@@ -11,6 +11,8 @@
  * Storing first means a crash between the two can never cause a second send ("at most once").
  */
 import type { ClinicStatus } from "@/lib/tenant/status";
+import type { ClinicLimits } from "@/db/schema";
+import { effectiveLimits, whatsappSentThisMonth } from "@/lib/platform/limits";
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { messageDispatches, messages, messageTemplates, patients } from "@/db/schema";
@@ -37,7 +39,13 @@ import {
 } from "./transport";
 
 type Env = Record<string, string | undefined>;
-export type Tenant = { id: string; slug: string; isDemo: boolean; status?: ClinicStatus | null };
+export type Tenant = {
+  id: string;
+  slug: string;
+  isDemo: boolean;
+  status?: ClinicStatus | null;
+  limits?: ClinicLimits | null;
+};
 export type MessageKind = TemplateKind | ReplyKind;
 
 export interface ButtonSpec {
@@ -68,7 +76,13 @@ export interface SendInput {
 export type Prepared =
   | {
       outcome: "skipped";
-      reason: "not_configured" | "duplicate" | "no_consent" | "disabled" | "no_phone";
+      reason:
+        | "not_configured"
+        | "duplicate"
+        | "no_consent"
+        | "disabled"
+        | "no_phone"
+        | "monthly_limit";
     }
   | {
       outcome: "ready";
@@ -125,6 +139,16 @@ export async function prepareMessage(
 
   const convo = await ensureConversation(tx, { phone });
   const essential = ESSENTIAL_KINDS.includes(input.kind);
+  // The clinic's monthly WhatsApp limit (platform owner) stops automatic extras (reminders, AI…),
+  // never essential messages or a staff member's own reply.
+  const { whatsappMonthly } = effectiveLimits(tenant);
+  if (
+    !essential &&
+    input.kind !== "staff_reply" &&
+    whatsappMonthly !== null &&
+    (await whatsappSentThisMonth(tx)) >= whatsappMonthly
+  )
+    return { outcome: "skipped", reason: "monthly_limit" };
   const consentHolder = patient ?? null;
   const consented =
     !!consentHolder?.whatsappOptInAt && !consentHolder.whatsappOptedOutAt && !convo.optedOutAt;

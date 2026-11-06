@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Check, ChevronDown, Circle, Play } from "lucide-react";
-import { setClinicStatusAction } from "@/app/actions/clinic";
+import { setClinicLimitsAction, setClinicStatusAction } from "@/app/actions/clinic";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,23 @@ export interface PlatformClinicRow {
   statusReason: string | null;
   statusChangedAt: string | null;
   setup: { step: string; done: boolean }[];
+  usage: {
+    staff: number;
+    doctors: number;
+    branches: number;
+    appointmentsThisMonth: number;
+    whatsappThisMonth: number;
+    aiRepliesThisMonth: number;
+    aiScribeThisMonth: number;
+    files: number;
+    lastSignInAt: string | null;
+    limits: { aiMonthly: number | null; whatsappMonthly: number | null };
+  };
 }
+
+const WARN_AT = 0.8;
+const pct = (used: number, limit: number | null) =>
+  limit === null ? null : limit === 0 ? 100 : Math.round((used / limit) * 100);
 
 const STATUS_BADGE: Record<ClinicStatus, "default" | "secondary" | "destructive" | "gold"> = {
   active: "default",
@@ -40,6 +56,9 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
   const [open, setOpen] = useState(false);
   const done = clinic.setup.filter((s) => s.done).length;
   const total = clinic.setup.length;
+  const u = clinic.usage;
+  const aiPct = pct(u.aiRepliesThisMonth + u.aiScribeThisMonth, u.limits.aiMonthly);
+  const waPct = pct(u.whatsappThisMonth, u.limits.whatsappMonthly);
 
   return (
     <Card data-testid="platform-clinic" data-slug={clinic.slug}>
@@ -62,6 +81,16 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
                 {t(`status.${clinic.status}`)}
               </Badge>
               {clinic.isDemo && <Badge variant="secondary">{t("demo")}</Badge>}
+              {aiPct !== null && aiPct >= WARN_AT * 100 && (
+                <Badge variant={aiPct >= 100 ? "destructive" : "gold"} data-testid="limit-badge">
+                  {t("aiPct", { pct: aiPct })}
+                </Badge>
+              )}
+              {waPct !== null && waPct >= WARN_AT * 100 && (
+                <Badge variant={waPct >= 100 ? "destructive" : "gold"} data-testid="limit-badge">
+                  {t("waPct", { pct: waPct })}
+                </Badge>
+              )}
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
               <span dir="ltr">{clinic.slug}</span>
@@ -84,7 +113,7 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
         </button>
 
         {open && (
-          <div className="grid gap-6 border-t pt-4 md:grid-cols-2">
+          <div className="grid gap-6 border-t pt-4 md:grid-cols-2 xl:grid-cols-3">
             <section className="flex flex-col gap-2">
               <h3 className="text-sm font-semibold">{t("setupTitle")}</h3>
               <ul className="flex flex-col gap-1.5" data-testid="setup-checklist">
@@ -102,6 +131,7 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
                 ))}
               </ul>
             </section>
+            <UsagePanel clinic={clinic} />
             <StatusControl clinic={clinic} />
           </div>
         )}
@@ -198,5 +228,134 @@ function StatusControl({ clinic }: { clinic: PlatformClinicRow }) {
       <FormError message={error} />
       <FormSuccess message={msg} />
     </section>
+  );
+}
+
+function UsagePanel({ clinic }: { clinic: PlatformClinicRow }) {
+  const t = useTranslations("platformClinic");
+  const format = useFormatter();
+  const u = clinic.usage;
+  const { run, pending, error } = useAction();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [ai, setAi] = useState(u.limits.aiMonthly?.toString() ?? "");
+  const [wa, setWa] = useState(u.limits.whatsappMonthly?.toString() ?? "");
+  const num = (v: string) => (v.trim() === "" ? null : Math.max(0, Math.floor(Number(v))));
+  const aiUsed = u.aiRepliesThisMonth + u.aiScribeThisMonth;
+
+  return (
+    <section className="flex flex-col gap-3" data-testid="usage-panel">
+      <h3 className="text-sm font-semibold">{t("usageTitle")}</h3>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+        {(
+          [
+            ["staff", u.staff],
+            ["doctors", u.doctors],
+            ["branches", u.branches],
+            ["appointments", u.appointmentsThisMonth],
+            ["files", u.files],
+          ] as const
+        ).map(([k, n]) => (
+          <div key={k} className="contents">
+            <dt className="text-muted-foreground">{t(`usage.${k}`)}</dt>
+            <dd className="font-medium tabular-nums">{n}</dd>
+          </div>
+        ))}
+        <dt className="text-muted-foreground">{t("usage.lastSignIn")}</dt>
+        <dd className="font-medium">
+          {u.lastSignInAt
+            ? format.relativeTime(new Date(u.lastSignInAt), new Date())
+            : t("usage.never")}
+        </dd>
+      </dl>
+      <Meter
+        label={t("usage.ai", { replies: u.aiRepliesThisMonth, scribe: u.aiScribeThisMonth })}
+        used={aiUsed}
+        limit={u.limits.aiMonthly}
+      />
+      <Meter label={t("usage.whatsapp")} used={u.whatsappThisMonth} limit={u.limits.whatsappMonthly} />
+      <form
+        className="flex flex-col gap-2 border-t pt-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          run(
+            () =>
+              setClinicLimitsAction({
+                tenantId: clinic.id,
+                aiMonthly: num(ai),
+                whatsappMonthly: num(wa),
+              }),
+            () => setMsg(t("limitsSaved")),
+          );
+        }}
+      >
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`ai-${clinic.id}`}>{t("aiLimit")}</Label>
+            <Input
+              id={`ai-${clinic.id}`}
+              type="number"
+              min={0}
+              dir="ltr"
+              value={ai}
+              placeholder={t("noLimit")}
+              onChange={(e) => setAi(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={`wa-${clinic.id}`}>{t("waLimit")}</Label>
+            <Input
+              id={`wa-${clinic.id}`}
+              type="number"
+              min={0}
+              dir="ltr"
+              value={wa}
+              placeholder={t("noLimit")}
+              onChange={(e) => setWa(e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="text-muted-foreground text-xs">{t("limitsHint")}</p>
+        <Button
+          type="submit"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          loading={pending}
+          data-testid="limits-save"
+        >
+          {t("saveLimits")}
+        </Button>
+        <FormError message={error} />
+        <FormSuccess message={msg} />
+      </form>
+    </section>
+  );
+}
+
+function Meter({ label, used, limit }: { label: string; used: number; limit: number | null }) {
+  const t = useTranslations("platformClinic");
+  const p = pct(used, limit);
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      <div className="flex justify-between gap-2">
+        <span>{label}</span>
+        <span className="text-muted-foreground tabular-nums" dir="ltr">
+          {limit === null ? `${used}` : `${used} / ${limit}`}
+        </span>
+      </div>
+      {p !== null ? (
+        <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+          <div
+            className={cn(
+              "h-full rounded-full",
+              p >= 100 ? "bg-danger-foreground" : p >= WARN_AT * 100 ? "bg-gold-foreground" : "bg-brand",
+            )}
+            style={{ width: `${Math.min(p, 100)}%` }}
+          />
+        </div>
+      ) : (
+        <span className="text-muted-foreground text-xs">{t("noLimitSet")}</span>
+      )}
+    </div>
   );
 }

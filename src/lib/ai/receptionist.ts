@@ -19,6 +19,7 @@
  * key is set, staff took over the chat (or replied in it), or today's limit is reached. A chat already
  * waiting for staff (a hand-off) keeps its flag; the AI still helps with other things there.
  */
+import { aiUsedThisMonth } from "@/lib/platform/limits";
 import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import {
   appointments,
@@ -76,6 +77,8 @@ export async function aiCanAnswer(
   convo: { aiPausedAt: Date | null; needsReply: boolean },
   client: ClaudeClient | null,
   now: Date = new Date(),
+  /** The clinic's monthly AI limit (platform owner); null = none. */
+  aiMonthly: number | null = null,
 ): Promise<boolean> {
   // A chat waiting for staff (e.g. after a medical hand-off) is still answered for OTHER things
   // (booking, questions); the prompt keeps the AI off the handed-off topic. Staff taking over
@@ -83,6 +86,7 @@ export async function aiCanAnswer(
   if (!client || convo.aiPausedAt) return false;
   const settings = await getSettings(tx);
   if (!settings.aiReceptionistEnabled) return false;
+  if (aiMonthly !== null && (await aiUsedThisMonth(tx, now)) >= aiMonthly) return false;
   return (await aiRepliesToday(tx, now)) < settings.aiDailyLimit;
 }
 

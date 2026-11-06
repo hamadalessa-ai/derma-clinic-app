@@ -12,8 +12,9 @@
  * Not a medical device: it writes down only what the doctor said — no diagnoses, codes, doses or
  * recommendations of its own (see SYSTEM below).
  */
+import { aiUsedThisMonth, effectiveLimits } from "@/lib/platform/limits";
 import { eq, sql } from "drizzle-orm";
-import { appointments, clinicalNotes, services } from "@/db/schema";
+import { appointments, clinicalNotes, services, tenants } from "@/db/schema";
 import { withActor, type Actor } from "@/lib/auth/db";
 import { audit } from "@/lib/audit";
 import { assertCan } from "@/lib/auth/permissions";
@@ -27,7 +28,14 @@ const MAX_NOTE = 20_000;
 export class ScribeError extends Error {
   constructor(
     public code:
-      "not_configured" | "disabled" | "empty" | "not_found" | "signed" | "not_author" | "failed",
+      | "not_configured"
+      | "disabled"
+      | "empty"
+      | "not_found"
+      | "signed"
+      | "not_author"
+      | "failed"
+      | "monthly_limit",
   ) {
     super(code);
     this.name = "ScribeError";
@@ -89,6 +97,14 @@ export async function scribeDraft(
   const { context, current } = await withActor(actor, async (tx) => {
     const settings = await getSettings(tx);
     if (!settings.aiScribeEnabled) throw new ScribeError("disabled");
+    // The clinic's monthly AI limit (platform owner).
+    const [clinic] = await tx
+      .select({ limits: tenants.limits })
+      .from(tenants)
+      .where(eq(tenants.id, actor.tenantId));
+    const { aiMonthly } = effectiveLimits(clinic ?? {});
+    if (aiMonthly !== null && (await aiUsedThisMonth(tx)) >= aiMonthly)
+      throw new ScribeError("monthly_limit");
     const [note] = await tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, input.noteId));
     if (!note) throw new ScribeError("not_found");
     if (note.status === "signed") throw new ScribeError("signed");

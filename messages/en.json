@@ -182,7 +182,8 @@
     "clinic_slug_taken": "That web address is already used by another clinic.",
     "clinic_slug_invalid": "The web address may only use lower-case English letters, numbers and dashes (2–30 characters).",
     "clinic_paused": "This clinic's account is paused, so changes can't be made right now.",
-    "clinic_unavailable": "This clinic's online services are temporarily unavailable."
+    "clinic_unavailable": "This clinic's online services are temporarily unavailable.",
+    "scribe_monthly_limit": "This month's AI limit for the clinic has been reached."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -1317,6 +1318,14 @@
       "read_only": "Read-only mode: you can view, but changes, online booking, WhatsApp and the AI are paused",
       "suspended": "This clinic's account is suspended",
       "closed": "This clinic's account is closed: view and download only"
+    },
+    "limitNear": {
+      "ai": "AI: {used} of this month's {limit} uses. When the limit is reached, the AI pauses until next month.",
+      "whatsapp": "WhatsApp: {used} of this month's {limit} messages. When the limit is reached, reminders pause until next month."
+    },
+    "limitReached": {
+      "ai": "AI limit reached for this month ({used} of {limit}). The AI receptionist and scribe are paused; contact the platform to raise it.",
+      "whatsapp": "WhatsApp limit reached for this month ({used} of {limit}). Reminders are paused; codes and your own replies still go out."
     }
   },
   "platformClinic": {
@@ -1350,6 +1359,27 @@
     "reasonHint": "e.g. Payment overdue since 1 November",
     "apply": "Change status",
     "resume": "Resume: make active again",
-    "changed": "Status changed to {status}."
+    "changed": "Status changed to {status}.",
+    "aiPct": "AI {pct}%",
+    "waPct": "WhatsApp {pct}%",
+    "usageTitle": "Usage this month",
+    "usage": {
+      "staff": "Active staff",
+      "doctors": "Doctors",
+      "branches": "Branches",
+      "appointments": "Appointments this month",
+      "files": "Files stored",
+      "lastSignIn": "Last staff sign-in",
+      "never": "Never",
+      "ai": "AI uses ({replies} receptionist replies, {scribe} scribe drafts)",
+      "whatsapp": "WhatsApp messages sent"
+    },
+    "aiLimit": "AI limit per month",
+    "waLimit": "WhatsApp limit per month",
+    "noLimit": "No limit",
+    "noLimitSet": "No limit set",
+    "limitsHint": "Leave empty for no limit. At 80% you and the clinic admin are warned. At the limit the AI stops and automatic WhatsApp messages (reminders) pause until next month; sign-in codes and staff replies always go out.",
+    "saveLimits": "Save limits",
+    "limitsSaved": "Limits saved."
   }
 }

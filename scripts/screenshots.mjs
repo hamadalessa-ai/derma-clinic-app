@@ -118,6 +118,14 @@ try {
   await card.getByTestId("clinic-status-apply").click();
   await card.getByTestId("clinic-resume").waitFor({ timeout: 15000 });
   await page.screenshot({ path: "screenshots/platform-ar-suspended.png", fullPage: true });
+  // Usage and limits on Derma's card.
+  const derma = page.locator('[data-testid="platform-clinic"][data-slug="derma"]');
+  await derma.locator("button").first().click();
+  await derma.locator('input[id^="ai-"]').fill("10");
+  await derma.locator('input[id^="wa-"]').fill("2000");
+  await derma.getByTestId("limits-save").click();
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: "screenshots/platform-ar-usage.png", fullPage: true });
   await context.close();
 } catch (e) {
   console.error("platform screenshots failed:", e);
