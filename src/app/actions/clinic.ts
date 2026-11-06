@@ -72,6 +72,8 @@ import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
+import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
+import { inviteToken } from "@/lib/team/invite";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
 import { parse, staffAction, ValidationError } from "@/lib/actions";
@@ -1508,5 +1510,92 @@ export async function simulatorPhotoAction(input: {
     revalidatePath("/whatsapp", "layout");
     refreshConcern();
     return null;
+  });
+}
+
+// ─── Settings → Team ────────────────────────────────────────────────────────
+
+const clinicRole = z.enum(["clinic_admin", "practitioner", "receptionist"]);
+const memberFields = {
+  roles: z.array(clinicRole).min(1).max(3),
+  branchId: uuid.nullable(),
+  gender: z.enum(["male", "female"]).nullable().optional(),
+  titleAr: z.string().trim().max(120).nullish(),
+  titleEn: z.string().trim().max(120).nullish(),
+};
+const addMemberInput = z.object({
+  ...memberFields,
+  nameAr: z.string().trim().min(2).max(120),
+  nameEn: z.string().trim().max(120).nullish(),
+  email: z.string().trim().toLowerCase().email().max(200),
+  websiteDoctor: z.number().int().min(0).max(200).nullish(),
+});
+
+/** The address of THIS clinic (the admin is on it), for invitation links. */
+async function clinicUrl() {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+export async function addTeamMemberAction(input: z.input<typeof addMemberInput>) {
+  return staffAction("team:manage", async (_ctx, actor) => {
+    const v = parse(addMemberInput, input);
+    const r = await withActor(actor, (tx) => addMember(tx, actor, v));
+    revalidatePath("/settings");
+    revalidatePath("/");
+    return {
+      inviteUrl: r.needsPassword
+        ? `${await clinicUrl()}/invite/${inviteToken(actor.tenantId, r.userId)}`
+        : null,
+    };
+  });
+}
+
+export async function updateTeamMemberAction(
+  input: { memberId: string } & z.input<z.ZodObject<typeof memberFields>>,
+) {
+  return staffAction("team:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ memberId: uuid, ...memberFields }), input);
+    await withActor(actor, (tx) => updateMember(tx, actor, v.memberId, v));
+    revalidatePath("/settings");
+    return null;
+  });
+}
+
+export async function setTeamMemberActiveAction(input: { memberId: string; active: boolean }) {
+  return staffAction("team:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ memberId: uuid, active: z.boolean() }), input);
+    await withActor(actor, (tx) => setActive(tx, actor, v.memberId, v.active));
+    revalidatePath("/settings");
+    revalidatePath("/");
+    return null;
+  });
+}
+
+export async function linkWebsiteDoctorAction(input: {
+  memberId: string;
+  websiteDoctor: number | null;
+}) {
+  return staffAction("team:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ memberId: uuid, websiteDoctor: z.number().int().min(0).max(200).nullable() }),
+      input,
+    );
+    await withActor(actor, (tx) => linkWebsiteDoctor(tx, actor, v.memberId, v.websiteDoctor));
+    revalidatePath("/settings");
+    revalidatePath("/");
+    return null;
+  });
+}
+
+/** A fresh invitation link for someone who hasn't set a password yet. */
+export async function inviteLinkAction(input: { userId: string }) {
+  return staffAction("team:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ userId: z.string().regex(/^[A-Za-z0-9_-]{4,80}$/) }), input);
+    const info = await withActor(actor, (tx) => inviteInfo(tx, v.userId));
+    if (!info || info.passwordSet) throw new ValidationError("no open invitation");
+    return { inviteUrl: `${await clinicUrl()}/invite/${inviteToken(actor.tenantId, v.userId)}` };
   });
 }

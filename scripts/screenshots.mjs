@@ -57,5 +57,30 @@ for (const locale of ["ar", "en"]) {
     await context.close();
   }
 }
+// Settings → Team, signed in as the demo admin (desktop, English).
+try {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE }]);
+  const page = await context.newPage();
+  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  await page.locator('input[type="email"]').fill("admin@derma.demo");
+  await page.locator('input[type="password"]').fill(process.env.DEMO_PASSWORD ?? "Demo-Local-2026");
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/settings?tab=team`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/team-en-desktop.png", fullPage: true });
+  await page.getByTestId("team-add").click();
+  await page.locator("#from-web").selectOption({ index: 2 });
+  await page.locator("#email").fill("demo.doctor@derma.demo");
+  await page.getByTestId("team-add-save").click();
+  await page.getByTestId("team-invite-link").waitFor({ timeout: 15000 });
+  await page.screenshot({ path: "screenshots/team-en-invite.png", fullPage: true });
+  const url = await page.getByTestId("team-invite-link").locator("input").inputValue();
+  await page.goto(url.replace(/^https?:\/\/[^/]+/, BASE), { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/invite-en-desktop.png", fullPage: true });
+  await context.close();
+} catch (e) {
+  console.error("team screenshots failed:", e);
+}
 await browser.close();
 console.log("Screenshots saved in screenshots/");

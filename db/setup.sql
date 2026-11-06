@@ -813,6 +813,8 @@ CREATE INDEX "messages_patient_idx" ON "messages" USING btree ("tenant_id","pati
 ALTER TABLE "tenant_settings" ADD COLUMN "site" jsonb DEFAULT '{}'::jsonb NOT NULL;
 -- 0007_special_elektra.sql
 ALTER TABLE "tenant_members" ADD COLUMN "profile" jsonb;
+-- 0008_flippant_sister_grimm.sql
+ALTER TABLE "tenant_members" ADD COLUMN "deactivated_at" timestamp with time zone;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════

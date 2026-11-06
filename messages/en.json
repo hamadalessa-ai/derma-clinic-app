@@ -170,7 +170,13 @@
     "hours_overlap": "Two shifts on the same day overlap.",
     "hours_wrong_branch": "This doctor doesn't work at that branch.",
     "hours_in_past": "That date has passed.",
-    "already_signed": "This consent is already signed."
+    "already_signed": "This consent is already signed.",
+    "team_already_member": "This email already belongs to someone in the clinic.",
+    "team_not_found": "Not found.",
+    "team_last_admin": "The clinic needs at least one active admin.",
+    "team_self": "You can't deactivate yourself.",
+    "team_invite_invalid": "This invitation link isn't valid or has expired.",
+    "team_password_already_set": "Your password is already set. Please sign in."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -538,7 +544,8 @@
     "siteCredentialsHint": "Only real ones the clinic holds. Leave empty to show nothing.",
     "siteCredentialAdd": "Add a credential",
     "siteCredentialAr": "In Arabic",
-    "siteCredentialEn": "In English"
+    "siteCredentialEn": "In English",
+    "tabTeam": "Team"
   },
   "book": {
     "title": "Book your appointment",
@@ -1204,5 +1211,54 @@
     "prev": "Previous doctor",
     "next": "Next doctor",
     "callShort": "Call"
+  },
+  "team": {
+    "intro": "Everyone who signs in to the clinic. New people get an invitation link to set their own password. Link a doctor to their website profile so the website's Book button books them.",
+    "add": "Add staff member",
+    "fromWebsite": "From the website's doctors (optional)",
+    "fromWebsiteNone": "Not on the website",
+    "nameAr": "Name in Arabic",
+    "nameEn": "Name in English",
+    "titleAr": "Title in Arabic",
+    "titleEn": "Title in English",
+    "email": "Email",
+    "branch": "Branch",
+    "allBranches": "All branches",
+    "addHint": "Doctors start with the clinic's usual hours (Sun–Thu 10:00–20:00); change them on Working hours.",
+    "addSave": "Add and create invitation",
+    "cancel": "Cancel",
+    "inviteTitle": "Invitation for {name}",
+    "inviteText": "Send this link to them (WhatsApp or email). They set their own password; the link works for 7 days.",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "close": "Close",
+    "invited": "Invitation sent",
+    "deactivated": "Deactivated",
+    "you": "You",
+    "inviteLink": "Invitation link",
+    "edit": "Edit",
+    "save": "Save",
+    "saved": "Saved",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "confirmDeactivate": "Deactivate this person? They can no longer sign in or be booked. Their history stays.",
+    "websiteProfile": "Website profile",
+    "notOnWebsite": "Not on the website",
+    "linked": "Website updated",
+    "former": "Former staff"
+  },
+  "invite": {
+    "title": "Welcome to {clinic}",
+    "text": "{name}, choose your password to start using the clinic system.",
+    "email": "Email",
+    "password": "Password",
+    "password2": "Password again",
+    "hint": "At least 10 characters.",
+    "submit": "Set password",
+    "tooShort": "The password needs at least 10 characters.",
+    "mismatch": "The two passwords are different.",
+    "invalid": "This invitation link isn't valid or has expired. Ask the clinic admin for a new one.",
+    "alreadySet": "Your password is already set.",
+    "signIn": "Sign in"
   }
 }

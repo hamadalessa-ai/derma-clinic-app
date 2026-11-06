@@ -113,6 +113,12 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "team:manage": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: false,
+  },
   "demo:refresh": {
     platform_owner: false,
     clinic_admin: true,

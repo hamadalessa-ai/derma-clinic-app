@@ -139,7 +139,7 @@ export async function branchPractitioners(tx: TenantTx, branchId: string): Promi
     .from(tenantMembers)
     .where(or(isNull(tenantMembers.branchId), eq(tenantMembers.branchId, branchId)))
     .orderBy(asc(tenantMembers.createdAt));
-  return rows.filter((m) => m.roles.includes("practitioner"));
+  return rows.filter((m) => m.roles.includes("practitioner") && !m.deactivatedAt);
 }
 
 // ─── Working hours ──────────────────────────────────────────────────────────
