@@ -6,6 +6,7 @@ import { can } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/session";
 import { pick } from "@/lib/brand";
 import { platformOverview, SETUP_STEPS } from "@/lib/platform/overview";
+import { PLANS } from "@/lib/platform/plans";
 import type { Locale } from "@/i18n/config";
 
 export default async function PlatformPage() {
@@ -14,6 +15,9 @@ export default async function PlatformPage() {
   const t = await getTranslations("platform");
   // Clinics with counts only; patient data stays locked by RLS.
   const clinics = await platformOverview();
+  const open = clinics.flatMap((c) => c.statements.filter((x) => x.status === "issued"));
+  const outstanding = open.reduce((n, x) => n + x.totalHalalas - x.paidHalalas, 0);
+  const overdueClinics = clinics.filter((c) => c.statements.some((x) => x.overdue)).length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -26,9 +30,21 @@ export default async function PlatformPage() {
       >
         {t("pushKeys")}
       </Link>
+      <div className="grid gap-3 sm:grid-cols-3" data-testid="platform-summary">
+        {[
+          [t("summaryClinics"), String(clinics.length)],
+          [t("summaryOutstanding"), `${(outstanding / 100).toFixed(2)} ${t("sar")}`],
+          [t("summaryOverdue"), String(overdueClinics)],
+        ].map(([label, value]) => (
+          <div key={label} className="bg-card shadow-card rounded-xl border p-4">
+            <div className="text-muted-foreground text-xs">{label}</div>
+            <div className="text-xl font-semibold tabular-nums">{value}</div>
+          </div>
+        ))}
+      </div>
       {can(ctx.roles, "platform:clinics") && <NewClinicForm />}
       <div className="flex flex-col gap-3">
-        {clinics.map(({ tenant, setup, usage }) => (
+        {clinics.map(({ tenant, setup, usage, statements }) => (
           <PlatformClinic
             key={tenant.id}
             clinic={{
@@ -42,6 +58,17 @@ export default async function PlatformPage() {
               statusChangedAt: tenant.statusChangedAt?.toISOString() ?? null,
               setup: SETUP_STEPS.map((step) => ({ step, done: setup[step] })),
               usage: { ...usage, lastSignInAt: usage.lastSignInAt?.toISOString() ?? null },
+              ownLimits: {
+                aiMonthly: tenant.limits.aiMonthly ?? null,
+                whatsappMonthly: tenant.limits.whatsappMonthly ?? null,
+              },
+              plan: tenant.plan,
+              planLimits: PLANS[tenant.plan].limits,
+              priceHalalas: tenant.monthlyPriceHalalas,
+              trialEndsOn: tenant.trialEndsOn,
+              graceDays: tenant.billingGraceDays,
+              pausedForBilling: tenant.pausedForBilling,
+              statements,
             }}
           />
         ))}

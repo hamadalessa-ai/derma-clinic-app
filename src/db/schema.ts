@@ -45,6 +45,9 @@ export const gender = pgEnum("gender", ["male", "female"]);
  * (like read_only for staff so they can take their records out, public pages closed).
  */
 export const clinicStatus = pgEnum("clinic_status", ["active", "read_only", "suspended", "closed"]);
+/** Subscription plan (features + default monthly limits): src/lib/platform/plans.ts. */
+export const planTier = pgEnum("plan_tier", ["basic", "pro", "enterprise"]);
+export const statementStatus = pgEnum("statement_status", ["issued", "paid", "void"]);
 export const idType = pgEnum("id_type", ["national_id", "iqama", "passport"]);
 export const appointmentStatus = pgEnum("appointment_status", [
   "pending", // online booking waiting for reception approval (still holds the slot)
@@ -96,6 +99,16 @@ export const tenants = pgTable("tenants", {
   statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
   /** Monthly usage limits set by the platform owner (null / missing = no limit). */
   limits: jsonb("limits").$type<ClinicLimits>().notNull().default({}),
+  // ── Subscription (platform owner; billing is recorded by hand for now) ──
+  plan: planTier("plan").notNull().default("pro"),
+  /** Monthly price before VAT, in halalas (0 = free / not billed). */
+  monthlyPriceHalalas: integer("monthly_price_halalas").notNull().default(0),
+  /** No statements are issued before this day. */
+  trialEndsOn: date("trial_ends_on"),
+  /** Days after a statement's due date before the clinic becomes read-only automatically. */
+  billingGraceDays: smallint("billing_grace_days").notNull().default(7),
+  /** Read-only because of an unpaid statement: lifted automatically once it is paid. */
+  pausedForBilling: boolean("paused_for_billing").notNull().default(false),
   createdAt: createdAt(),
 });
 
@@ -517,6 +530,8 @@ export const TENANT_TABLES = [
   "consent_rules",
   "concern_events",
   "schedule_exceptions",
+  "platform_statements",
+  "platform_payments",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1589,4 +1604,61 @@ export const pushLog = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("push_log_created_idx").on(t.tenantId, t.createdAt)],
+);
+
+// ─── Platform billing (recorded by the platform owner; the clinic admin can read its own) ───
+
+/** A monthly billing statement for a clinic's subscription (not a ZATCA tax invoice). */
+export const platformStatements = pgTable(
+  "platform_statements",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    number: text("number").notNull(),
+    periodStart: date("period_start").notNull(),
+    periodEnd: date("period_end").notNull(),
+    amountHalalas: integer("amount_halalas").notNull(),
+    vatHalalas: integer("vat_halalas").notNull(),
+    totalHalalas: integer("total_halalas").notNull(),
+    dueOn: date("due_on").notNull(),
+    status: statementStatus("status").notNull().default("issued"),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    note: text("note"),
+    createdBy: text("created_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("platform_statements_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("platform_statements_number_key").on(t.number),
+    // One live statement per clinic and month.
+    uniqueIndex("platform_statements_one_per_period")
+      .on(t.tenantId, t.periodStart)
+      .where(sql`${t.status} <> 'void'`),
+    check("platform_statements_amounts", sql`${t.amountHalalas} >= 0 and ${t.vatHalalas} >= 0 and ${t.totalHalalas} = ${t.amountHalalas} + ${t.vatHalalas}`),
+  ],
+);
+
+/** Money received for a statement (append-only). */
+export const platformPayments = pgTable(
+  "platform_payments",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    statementId: uuid("statement_id").notNull(),
+    amountHalalas: integer("amount_halalas").notNull(),
+    method: paymentMethod("method").notNull(),
+    reference: text("reference"),
+    receivedOn: date("received_on").notNull(),
+    recordedBy: text("recorded_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("platform_payments_positive", sql`${t.amountHalalas} > 0`),
+    foreignKey({
+      name: "platform_payments_statement_fk",
+      columns: [t.tenantId, t.statementId],
+      foreignColumns: [platformStatements.tenantId, platformStatements.id],
+    }),
+  ],
 );

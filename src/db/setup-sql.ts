@@ -65,7 +65,15 @@ function tenantSql(t: SeedTenant): string {
 
   out.push(
     insert("tenants", [
-      { id: tid, slug: t.slug, name_ar: t.nameAr, name_en: t.nameEn, brand_color: t.brandColor },
+      {
+        id: tid,
+        slug: t.slug,
+        name_ar: t.nameAr,
+        name_en: t.nameEn,
+        brand_color: t.brandColor,
+        plan: "pro",
+        monthly_price_halalas: 100000, // sample price; demo clinics are never billed automatically
+      },
     ]),
   );
   out.push(

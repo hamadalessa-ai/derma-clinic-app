@@ -13,6 +13,7 @@
  * recommendations of its own (see SYSTEM below).
  */
 import { aiUsedThisMonth, effectiveLimits } from "@/lib/platform/limits";
+import { planAllows } from "@/lib/platform/plans";
 import { eq, sql } from "drizzle-orm";
 import { appointments, clinicalNotes, services, tenants } from "@/db/schema";
 import { withActor, type Actor } from "@/lib/auth/db";
@@ -35,7 +36,8 @@ export class ScribeError extends Error {
       | "signed"
       | "not_author"
       | "failed"
-      | "monthly_limit",
+      | "monthly_limit"
+      | "not_in_plan",
   ) {
     super(code);
     this.name = "ScribeError";
@@ -97,12 +99,13 @@ export async function scribeDraft(
   const { context, current } = await withActor(actor, async (tx) => {
     const settings = await getSettings(tx);
     if (!settings.aiScribeEnabled) throw new ScribeError("disabled");
-    // The clinic's monthly AI limit (platform owner).
+    // The clinic's plan and monthly AI limit (platform owner).
     const [clinic] = await tx
-      .select({ limits: tenants.limits })
+      .select({ limits: tenants.limits, plan: tenants.plan })
       .from(tenants)
       .where(eq(tenants.id, actor.tenantId));
-    const { aiMonthly } = effectiveLimits(clinic ?? {});
+    if (!clinic || !planAllows(clinic, "aiScribe")) throw new ScribeError("not_in_plan");
+    const { aiMonthly } = effectiveLimits(clinic);
     if (aiMonthly !== null && (await aiUsedThisMonth(tx)) >= aiMonthly)
       throw new ScribeError("monthly_limit");
     const [note] = await tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, input.noteId));

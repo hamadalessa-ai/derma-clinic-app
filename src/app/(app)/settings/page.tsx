@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { statementsIn } from "@/lib/platform/billing";
+import { FEATURES, planAllows } from "@/lib/platform/plans";
 import { Download } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { EXPORT_KINDS } from "@/lib/export/clinic-export";
@@ -42,6 +45,7 @@ export default async function SettingsPage({
   const ctx = await requirePermission("settings:manage");
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("settings");
+  const tp = await getTranslations("platformClinic");
   const tr = await getTranslations("consentRules");
   const { settings, templates, rules, doctors } = await withActor(actorOf(ctx), async (tx) => ({
     settings: await getSettings(tx),
@@ -67,6 +71,7 @@ export default async function SettingsPage({
   const allowed: SettingsTab[] = [
     "clinic",
     "team",
+    "subscription",
     "booking",
     "website",
     "consents",
@@ -76,6 +81,10 @@ export default async function SettingsPage({
     ? (sp.tab as SettingsTab)
     : "clinic";
   const team = tab === "team" ? await withActor(actorOf(ctx), (tx) => listTeam(tx)) : null;
+  const statements =
+    tab === "subscription" && can(ctx.roles, "billing:view")
+      ? await withActor(actorOf(ctx), (tx) => statementsIn(tx))
+      : null;
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -139,6 +148,72 @@ export default async function SettingsPage({
             </Card>
           )}
         </>
+      )}
+      {tab === "subscription" && statements && (
+        <Card data-testid="subscription">
+          <CardHeader>
+            <CardTitle>{t("tabSubscription")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-muted-foreground text-xs">{tp("plan.label")}</dt>
+                <dd className="font-semibold">{tp(`plan.${ctx.tenant.plan}`)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">{tp("price")}</dt>
+                <dd className="font-semibold tabular-nums">
+                  {(ctx.tenant.monthlyPriceHalalas / 100).toFixed(2)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">{tp("trialEnds")}</dt>
+                <dd className="font-semibold" dir="ltr">
+                  {ctx.tenant.trialEndsOn ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">{t("subscriptionStatus")}</dt>
+                <dd className="font-semibold">{tp(`status.${ctx.tenant.status}`)}</dd>
+              </div>
+            </dl>
+            <ul className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              {FEATURES.map((f) => (
+                <li key={f}>
+                  {planAllows(ctx.tenant, f) ? "✓" : "–"} {tp(`feature.${f}`)}
+                </li>
+              ))}
+            </ul>
+            {statements.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{tp("noStatements")}</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {statements.map((st) => (
+                  <li
+                    key={st.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"
+                  >
+                    <span className="font-medium" dir="ltr">
+                      {st.number}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {tp("statementTotal", { amount: (st.totalHalalas / 100).toFixed(2) })} ·{" "}
+                      {tp("statementDue", { day: st.dueOn })}
+                    </span>
+                    <Badge
+                      variant={
+                        st.status === "paid" ? "default" : st.overdue ? "destructive" : "secondary"
+                      }
+                    >
+                      {st.overdue ? tp("overdue") : tp(`statementStatus.${st.status}`)}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-muted-foreground text-xs">{t("subscriptionHint")}</p>
+          </CardContent>
+        </Card>
       )}
       {tab === "team" && team && (
         <Card data-testid="team-settings">

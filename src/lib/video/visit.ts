@@ -40,7 +40,8 @@ export class VideoVisitError extends Error {
       | "ended"
       | "consent"
       | "not_yours"
-      | "failed",
+      | "failed"
+      | "not_in_plan",
   ) {
     super(code);
     this.name = "VideoVisitError";

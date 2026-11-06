@@ -10,6 +10,7 @@ import { and, count, eq, gte } from "drizzle-orm";
 import { auditLogs, messages, type ClinicLimits } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
 import { atRiyadh, riyadhDay } from "@/lib/booking/time";
+import { planOf, type PlanTier } from "./plans";
 
 /** At this share of a limit, the owner and the clinic admin are warned. */
 export const WARN_AT = 0.8;
@@ -18,10 +19,18 @@ export function monthStart(now: Date = new Date()) {
   return atRiyadh(`${riyadhDay(now).slice(0, 8)}01`, "00:00");
 }
 
-export function effectiveLimits(t: { limits?: ClinicLimits | null }) {
-  const n = (v: number | null | undefined) =>
-    typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : null;
-  return { aiMonthly: n(t.limits?.aiMonthly), whatsappMonthly: n(t.limits?.whatsappMonthly) };
+/**
+ * The clinic's limits: its own (set by the platform owner) where given, else its plan's defaults.
+ * null = no limit.
+ */
+export function effectiveLimits(t: { limits?: ClinicLimits | null; plan?: PlanTier | null }) {
+  const own = (v: number | null | undefined) =>
+    typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : undefined;
+  const plan = t.plan === undefined ? null : planOf(t).limits;
+  return {
+    aiMonthly: own(t.limits?.aiMonthly) ?? plan?.aiMonthly ?? null,
+    whatsappMonthly: own(t.limits?.whatsappMonthly) ?? plan?.whatsappMonthly ?? null,
+  };
 }
 
 export async function aiUsedThisMonth(tx: TenantTx, now: Date = new Date()) {

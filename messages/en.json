@@ -95,7 +95,11 @@
     "noPatientAccess": "The platform owner cannot view patient data in any clinic.",
     "pushKeys": "Push notification keys",
     "demo": "Demo",
-    "live": "Live clinic"
+    "live": "Live clinic",
+    "summaryClinics": "Clinics",
+    "summaryOutstanding": "Outstanding",
+    "summaryOverdue": "Clinics overdue",
+    "sar": "SAR"
   },
   "errors": {
     "forbiddenTitle": "Not allowed",
@@ -183,7 +187,14 @@
     "clinic_slug_invalid": "The web address may only use lower-case English letters, numbers and dashes (2–30 characters).",
     "clinic_paused": "This clinic's account is paused, so changes can't be made right now.",
     "clinic_unavailable": "This clinic's online services are temporarily unavailable.",
-    "scribe_monthly_limit": "This month's AI limit for the clinic has been reached."
+    "scribe_monthly_limit": "This month's AI limit for the clinic has been reached.",
+    "billing_not_found": "Statement not found.",
+    "billing_not_open": "This statement is already paid or cancelled.",
+    "billing_too_much": "The amount is more than what is still due.",
+    "billing_exists": "This month already has a statement.",
+    "billing_free": "Set a monthly price first.",
+    "scribe_not_in_plan": "The AI scribe isn't part of this clinic's plan.",
+    "video_not_in_plan": "Video consultations aren't part of this clinic's plan. Please contact the clinic."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -557,7 +568,10 @@
     "exportHint": "Your clinic's records as spreadsheet files (CSV, opens in Excel). Clinical notes are not included; doctors keep access to them in the app. Each download is recorded.",
     "export_patients": "Patients",
     "export_appointments": "Appointments",
-    "export_packages": "Packages"
+    "export_packages": "Packages",
+    "tabSubscription": "Subscription",
+    "subscriptionStatus": "Account status",
+    "subscriptionHint": "Monthly price before 15% VAT. Payment details come with each statement; for questions contact the platform."
   },
   "book": {
     "title": "Book your appointment",
@@ -1378,8 +1392,59 @@
     "waLimit": "WhatsApp limit per month",
     "noLimit": "No limit",
     "noLimitSet": "No limit set",
-    "limitsHint": "Leave empty for no limit. At 80% you and the clinic admin are warned. At the limit the AI stops and automatic WhatsApp messages (reminders) pause until next month; sign-in codes and staff replies always go out.",
+    "limitsHint": "Leave empty to use the plan's limit. At 80% you and the clinic admin are warned. At the limit the AI stops and automatic WhatsApp messages (reminders) pause until next month; sign-in codes and staff replies always go out.",
     "saveLimits": "Save limits",
-    "limitsSaved": "Limits saved."
+    "limitsSaved": "Limits saved.",
+    "plan": {
+      "label": "Plan",
+      "basic": "Basic",
+      "pro": "Pro",
+      "enterprise": "Enterprise"
+    },
+    "overdue": "Overdue",
+    "tabs": {
+      "overview": "Overview",
+      "billing": "Plan & billing",
+      "status": "Status"
+    },
+    "planDefault": "Plan: {value}",
+    "planTitle": "Plan",
+    "price": "Monthly price (SAR, before VAT)",
+    "trialEnds": "Free trial until",
+    "graceDays": "Grace days after due date",
+    "feature": {
+      "aiReceptionist": "AI receptionist",
+      "aiScribe": "AI scribe",
+      "video": "Video consultations"
+    },
+    "priceHint": "No statements are issued for demo clinics, a price of 0, or during the free trial. 15% VAT is added to each statement.",
+    "savePlan": "Save plan",
+    "planSaved": "Plan saved.",
+    "statementsTitle": "Statements",
+    "issue": "Issue this month's statement",
+    "issued": "Statement {number} issued.",
+    "pausedForBilling": "Read-only because a statement is overdue. It becomes active again automatically once it is paid.",
+    "noStatements": "No statements yet.",
+    "statementsHint": "Payment records kept by hand (bank transfer etc.), not ZATCA tax invoices. Live clinics get a statement automatically each month; unpaid after the due date plus grace days, the clinic becomes read-only until paid.",
+    "statementStatus": {
+      "issued": "Open",
+      "paid": "Paid",
+      "void": "Cancelled"
+    },
+    "statementTotal": "Total {amount} SAR (incl. VAT)",
+    "statementPaid": "Paid {amount}",
+    "statementDue": "Due {day}",
+    "recordPayment": "Record payment",
+    "void": "Cancel statement",
+    "amount": "Amount (SAR)",
+    "method": "Method",
+    "methods": {
+      "transfer": "Bank transfer",
+      "card": "Card",
+      "cash": "Cash"
+    },
+    "reference": "Reference (e.g. transfer number)",
+    "savePayment": "Save payment",
+    "cancel": "Cancel"
   }
 }

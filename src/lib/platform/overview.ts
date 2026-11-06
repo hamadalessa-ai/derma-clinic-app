@@ -22,6 +22,7 @@ import {
 } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { whatsappMode } from "@/lib/whatsapp/config";
+import { statementsOf, type StatementView } from "./billing";
 import {
   aiUsedThisMonth,
   effectiveLimits,
@@ -60,6 +61,7 @@ export interface ClinicOverview {
   tenant: Tenant;
   setup: Record<SetupStep, boolean>;
   usage: ClinicUsage;
+  statements: StatementView[];
 }
 
 async function one(q: Promise<{ n: number }[]>) {
@@ -153,7 +155,12 @@ export async function platformOverview(now: Date = new Date()): Promise<ClinicOv
   const rows = await getDb().select().from(tenants).orderBy(asc(tenants.createdAt));
   const out: ClinicOverview[] = [];
   for (const tenant of rows) {
-    out.push({ tenant, setup: await setupOf(tenant), usage: await usageOf(tenant, now) });
+    out.push({
+      tenant,
+      setup: await setupOf(tenant),
+      usage: await usageOf(tenant, now),
+      statements: await statementsOf(tenant.id),
+    });
   }
   return out;
 }

@@ -12,6 +12,7 @@
  */
 import type { ClinicStatus } from "@/lib/tenant/status";
 import type { ClinicLimits } from "@/db/schema";
+import type { PlanTier } from "@/lib/platform/plans";
 import { effectiveLimits, whatsappSentThisMonth } from "@/lib/platform/limits";
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
@@ -45,6 +46,7 @@ export type Tenant = {
   isDemo: boolean;
   status?: ClinicStatus | null;
   limits?: ClinicLimits | null;
+  plan?: PlanTier | null;
 };
 export type MessageKind = TemplateKind | ReplyKind;
 

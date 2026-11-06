@@ -67,6 +67,8 @@ try {
   await page.locator('input[type="password"]').fill(process.env.DEMO_PASSWORD ?? "Demo-Local-2026");
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/settings?tab=subscription`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/settings-en-subscription.png", fullPage: true });
   await page.goto(`${BASE}/settings?tab=team`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/team-en-desktop.png", fullPage: true });
   await page.getByTestId("team-add").click();
@@ -126,6 +128,12 @@ try {
   await derma.getByTestId("limits-save").click();
   await page.waitForTimeout(2500);
   await page.screenshot({ path: "screenshots/platform-ar-usage.png", fullPage: true });
+  await derma.getByTestId("clinic-tab-billing").click();
+  await page.screenshot({ path: "screenshots/platform-ar-billing.png", fullPage: true });
+  await derma.getByTestId("statement-pay").first().click();
+  await derma.getByTestId("statement-pay-save").click();
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: "screenshots/platform-ar-paid.png", fullPage: true });
   await context.close();
 } catch (e) {
   console.error("platform screenshots failed:", e);

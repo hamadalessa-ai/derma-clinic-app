@@ -15,6 +15,7 @@
  */
 import { clinicIsActive } from "@/lib/tenant/status";
 import { effectiveLimits } from "@/lib/platform/limits";
+import { planAllows } from "@/lib/platform/plans";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { conversations, messages, patients, webhookEvents } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
@@ -108,8 +109,9 @@ export async function handleInbound(
 ) {
   const env = options.env ?? process.env;
   const notify = options.notify ?? ((e: PushEvent[]) => sendPushEvents(tenant.id, e, env));
-  // The AI receptionist only works for an active clinic (whatsappMode is "off" otherwise anyway).
-  const ai = !clinicIsActive(tenant)
+  // The AI receptionist only works for an active clinic whose plan includes it.
+  const ai =
+    !clinicIsActive(tenant) || !planAllows(tenant, "aiReceptionist")
     ? null
     : options.ai === undefined
       ? anthropicClient(env)
