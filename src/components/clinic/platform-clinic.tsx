@@ -116,7 +116,9 @@ function StatusControl({ clinic }: { clinic: PlatformClinicRow }) {
   const choices = (["read_only", "suspended", "closed"] as const).filter(
     (s) => s !== clinic.status,
   );
-  const [status, setStatus] = useState<ClinicStatus>(choices[0]);
+  const [picked, setStatus] = useState<ClinicStatus>(choices[0]);
+  // After a change the list of choices changes too; never show a choice that isn't offered.
+  const status = choices.includes(picked as (typeof choices)[number]) ? picked : choices[0];
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const apply = (to: ClinicStatus, why: string) =>
