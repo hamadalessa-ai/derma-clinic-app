@@ -60,6 +60,7 @@ drop function if exists public.app_has_role;
 drop function if exists public.app_is_patient;
 drop function if exists public.app_patient;
 drop function if exists public.app_patient_scope;
+drop function if exists public.app_set_clinic_limits;
 drop function if exists public.app_set_clinic_status;
 drop function if exists public.apply_package_session_event;
 drop function if exists public.demo_workday;

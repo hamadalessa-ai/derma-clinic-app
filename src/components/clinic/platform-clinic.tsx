@@ -272,7 +272,11 @@ function UsagePanel({ clinic }: { clinic: PlatformClinicRow }) {
         used={aiUsed}
         limit={u.limits.aiMonthly}
       />
-      <Meter label={t("usage.whatsapp")} used={u.whatsappThisMonth} limit={u.limits.whatsappMonthly} />
+      <Meter
+        label={t("usage.whatsapp")}
+        used={u.whatsappThisMonth}
+        limit={u.limits.whatsappMonthly}
+      />
       <form
         className="flex flex-col gap-2 border-t pt-3"
         onSubmit={(e) => {
@@ -348,7 +352,11 @@ function Meter({ label, used, limit }: { label: string; used: number; limit: num
           <div
             className={cn(
               "h-full rounded-full",
-              p >= 100 ? "bg-danger-foreground" : p >= WARN_AT * 100 ? "bg-gold-foreground" : "bg-brand",
+              p >= 100
+                ? "bg-danger-foreground"
+                : p >= WARN_AT * 100
+                  ? "bg-gold-foreground"
+                  : "bg-brand",
             )}
             style={{ width: `${Math.min(p, 100)}%` }}
           />

@@ -166,7 +166,8 @@ export async function limitWarnings(tenant: Tenant, now: Date = new Date()) {
     const out: { kind: "ai" | "whatsapp"; used: number; limit: number }[] = [];
     if (limits.aiMonthly !== null) {
       const used = await aiUsedThisMonth(tx, now);
-      if (used >= limits.aiMonthly * WARN_AT) out.push({ kind: "ai", used, limit: limits.aiMonthly });
+      if (used >= limits.aiMonthly * WARN_AT)
+        out.push({ kind: "ai", used, limit: limits.aiMonthly });
     }
     if (limits.whatsappMonthly !== null) {
       const used = await whatsappSentThisMonth(tx, now);

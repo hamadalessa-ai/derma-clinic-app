@@ -1733,10 +1733,7 @@ export async function setClinicLimitsAction(input: {
 }) {
   return staffAction("platform:clinics", async (ctx) => {
     const limit = z.number().int().min(0).max(10_000_000).nullable();
-    const v = parse(
-      z.object({ tenantId: uuid, aiMonthly: limit, whatsappMonthly: limit }),
-      input,
-    );
+    const v = parse(z.object({ tenantId: uuid, aiMonthly: limit, whatsappMonthly: limit }), input);
     await setClinicLimits({ userId: ctx.user.id, roles: ctx.roles }, v.tenantId, {
       aiMonthly: v.aiMonthly,
       whatsappMonthly: v.whatsappMonthly,

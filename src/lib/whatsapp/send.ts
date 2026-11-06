@@ -77,12 +77,7 @@ export type Prepared =
   | {
       outcome: "skipped";
       reason:
-        | "not_configured"
-        | "duplicate"
-        | "no_consent"
-        | "disabled"
-        | "no_phone"
-        | "monthly_limit";
+        "not_configured" | "duplicate" | "no_consent" | "disabled" | "no_phone" | "monthly_limit";
     }
   | {
       outcome: "ready";

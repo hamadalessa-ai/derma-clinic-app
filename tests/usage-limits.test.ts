@@ -21,7 +21,8 @@ afterAll(closeDb);
 const OWNER = { userId: "usr_platform-owner", roles: ["platform_owner"] as const };
 const stamp = Date.now().toString(36);
 const DEMO_ENV = { MESSAGE_DEMO_MODE: "on" };
-const row = async (id: string) => (await getDb().select().from(tenants).where(eq(tenants.id, id)))[0];
+const row = async (id: string) =>
+  (await getDb().select().from(tenants).where(eq(tenants.id, id)))[0];
 
 async function newClinic(tag: string) {
   return createClinic(OWNER, {
@@ -47,8 +48,12 @@ describe("limits", () => {
 
   it("count from the first of the Riyadh month", () => {
     // 1 Nov 00:30 Riyadh = 31 Oct 21:30 UTC → still November in Riyadh.
-    expect(monthStart(new Date("2026-10-31T21:30:00Z")).toISOString()).toBe("2026-10-31T21:00:00.000Z");
-    expect(monthStart(new Date("2026-11-20T10:00:00Z")).toISOString()).toBe("2026-10-31T21:00:00.000Z");
+    expect(monthStart(new Date("2026-10-31T21:30:00Z")).toISOString()).toBe(
+      "2026-10-31T21:00:00.000Z",
+    );
+    expect(monthStart(new Date("2026-11-20T10:00:00Z")).toISOString()).toBe(
+      "2026-10-31T21:00:00.000Z",
+    );
   });
 
   it("are set by the platform owner only (app AND database)", async () => {
@@ -81,7 +86,12 @@ describe("the WhatsApp limit", () => {
     await setClinicLimits(OWNER, c.tenantId, { aiMonthly: null, whatsappMonthly: 0 });
     const tenant = await row(c.tenantId);
     const out = await withTenant(c.tenantId, async (tx) => ({
-      reminder: await prepareMessage(tx, tenant, { kind: "reminder", phone: "0551234567" }, DEMO_ENV),
+      reminder: await prepareMessage(
+        tx,
+        tenant,
+        { kind: "reminder", phone: "0551234567" },
+        DEMO_ENV,
+      ),
       code: await prepareMessage(
         tx,
         tenant,
