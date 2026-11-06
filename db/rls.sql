@@ -108,7 +108,8 @@ begin
   update public.tenants
      set status = p_status,
          status_reason = nullif(left(trim(coalesce(p_reason, '')), 300), ''),
-         status_changed_at = now()
+         status_changed_at = now(),
+         paused_for_billing = false  -- the owner decided by hand
    where id = p_tenant;
   return old_status;
 end;
@@ -139,6 +140,71 @@ end;
 $$;
 revoke all on function public.app_set_clinic_limits(uuid, integer, integer) from public;
 grant execute on function public.app_set_clinic_limits(uuid, integer, integer) to clinic_app;
+
+-- Subscription: plan, monthly price (halalas, before VAT), trial end, grace days. Platform owner only.
+create or replace function public.app_set_clinic_plan(
+  p_tenant uuid, p_plan public.plan_tier, p_price integer, p_trial_ends date, p_grace integer
+) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.users u
+                 where u.id = public.app_current_user() and u.is_platform_owner) then
+    raise exception 'only the platform owner can change a subscription' using errcode = '42501';
+  end if;
+  if p_price < 0 or p_grace < 0 or p_grace > 90 then
+    raise exception 'invalid subscription values' using errcode = '22023';
+  end if;
+  update public.tenants
+     set plan = p_plan, monthly_price_halalas = p_price, trial_ends_on = p_trial_ends,
+         billing_grace_days = p_grace
+   where id = p_tenant;
+  if not found then
+    raise exception 'clinic not found' using errcode = '22023';
+  end if;
+end;
+$$;
+revoke all on function public.app_set_clinic_plan(uuid, public.plan_tier, integer, date, integer) from public;
+grant execute on function public.app_set_clinic_plan(uuid, public.plan_tier, integer, date, integer) to clinic_app;
+
+-- Billing rule, decided by the data itself (so anyone may ask it to run, e.g. the daily job):
+-- an unpaid statement past its due date + grace days → an ACTIVE clinic becomes read-only
+-- ("paused for billing"); once nothing is overdue, a clinic paused for billing becomes active again.
+-- A status the owner set by hand is never changed here. Returns the clinic's status afterwards.
+create or replace function public.app_billing_enforce(p_tenant uuid) returns public.clinic_status
+language plpgsql security definer set search_path = public as $$
+declare
+  t record;
+  overdue boolean;
+  today date := (now() at time zone 'Asia/Riyadh')::date;
+begin
+  select status, paused_for_billing, billing_grace_days into t
+    from public.tenants where id = p_tenant for update;
+  if not found then
+    raise exception 'clinic not found' using errcode = '22023';
+  end if;
+  select exists (
+    select 1 from public.platform_statements s
+     where s.tenant_id = p_tenant and s.status = 'issued'
+       and s.due_on + t.billing_grace_days < today
+  ) into overdue;
+  if overdue and t.status = 'active' then
+    update public.tenants
+       set status = 'read_only', paused_for_billing = true, status_changed_at = now(),
+           status_reason = 'Payment overdue · السداد متأخر'
+     where id = p_tenant;
+    return 'read_only';
+  elsif not overdue and t.paused_for_billing and t.status = 'read_only' then
+    update public.tenants
+       set status = 'active', paused_for_billing = false, status_changed_at = now(),
+           status_reason = null
+     where id = p_tenant;
+    return 'active';
+  end if;
+  return t.status;
+end;
+$$;
+revoke all on function public.app_billing_enforce(uuid) from public;
+grant execute on function public.app_billing_enforce(uuid) to clinic_app;
 
 grant execute on function public.app_current_tenant(), public.app_current_user(),
   public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
@@ -192,6 +258,9 @@ grant select, insert, update on public.consent_rules to clinic_app;
 grant select, insert on public.concern_events to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
+-- Platform billing: the clinic reads its own; only platform work writes (policies below).
+grant select, insert on public.platform_statements, public.platform_payments to clinic_app;
+grant update (status, paid_at, voided_at) on public.platform_statements to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -217,7 +286,8 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs', 'schedule_exceptions'
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
+    'platform_statements', 'platform_payments'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -280,6 +350,25 @@ create policy tenants_owner_read on public.tenants for select
 create policy tenants_owner_update on public.tenants for update
   using (current_user <> 'clinic_app') with check (current_user <> 'clinic_app');
 
+-- Platform billing rows: written only by platform work (the platform owner, or the daily job
+-- acting for the platform), never by clinic staff. The billing rule above may read them.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['platform_statements', 'platform_payments'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for insert to clinic_app
+         with check (public.app_has_role(''platform_owner''))', t || '_platform_insert', t);
+    execute format(
+      'create policy %I on public.%I as restrictive for update to clinic_app
+         using (public.app_has_role(''platform_owner''))', t || '_platform_update', t);
+    execute format(
+      'create policy %I on public.%I for select using (current_user <> ''clinic_app'')',
+      t || '_owner_read', t);
+  end loop;
+end $$;
+
 -- Staff login tables: global by design (one person can work at several clinics).
 -- What a user may see inside a clinic is decided by tenant_members, which IS isolated.
 do $$
@@ -320,6 +409,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
+    'platform_statements', 'platform_payments',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case

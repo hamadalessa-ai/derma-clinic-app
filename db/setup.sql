@@ -822,6 +822,50 @@ ALTER TABLE "tenants" ADD COLUMN "status_reason" text;
 ALTER TABLE "tenants" ADD COLUMN "status_changed_at" timestamp with time zone;
 -- 0010_flowery_living_mummy.sql
 ALTER TABLE "tenants" ADD COLUMN "limits" jsonb DEFAULT '{}'::jsonb NOT NULL;
+-- 0011_empty_champions.sql
+CREATE TYPE "public"."plan_tier" AS ENUM('basic', 'pro', 'enterprise');
+CREATE TYPE "public"."statement_status" AS ENUM('issued', 'paid', 'void');
+CREATE TABLE "platform_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"statement_id" uuid NOT NULL,
+	"amount_halalas" integer NOT NULL,
+	"method" "payment_method" NOT NULL,
+	"reference" text,
+	"received_on" date NOT NULL,
+	"recorded_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "platform_payments_positive" CHECK ("platform_payments"."amount_halalas" > 0)
+);
+CREATE TABLE "platform_statements" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"number" text NOT NULL,
+	"period_start" date NOT NULL,
+	"period_end" date NOT NULL,
+	"amount_halalas" integer NOT NULL,
+	"vat_halalas" integer NOT NULL,
+	"total_halalas" integer NOT NULL,
+	"due_on" date NOT NULL,
+	"status" "statement_status" DEFAULT 'issued' NOT NULL,
+	"paid_at" timestamp with time zone,
+	"voided_at" timestamp with time zone,
+	"note" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "platform_statements_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "platform_statements_number_key" UNIQUE("number"),
+	CONSTRAINT "platform_statements_amounts" CHECK ("platform_statements"."amount_halalas" >= 0 and "platform_statements"."vat_halalas" >= 0 and "platform_statements"."total_halalas" = "platform_statements"."amount_halalas" + "platform_statements"."vat_halalas")
+);
+ALTER TABLE "tenants" ADD COLUMN "plan" "plan_tier" DEFAULT 'pro' NOT NULL;
+ALTER TABLE "tenants" ADD COLUMN "monthly_price_halalas" integer DEFAULT 0 NOT NULL;
+ALTER TABLE "tenants" ADD COLUMN "trial_ends_on" date;
+ALTER TABLE "tenants" ADD COLUMN "billing_grace_days" smallint DEFAULT 7 NOT NULL;
+ALTER TABLE "tenants" ADD COLUMN "paused_for_billing" boolean DEFAULT false NOT NULL;
+ALTER TABLE "platform_payments" ADD CONSTRAINT "platform_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "platform_payments" ADD CONSTRAINT "platform_payments_statement_fk" FOREIGN KEY ("tenant_id","statement_id") REFERENCES "public"."platform_statements"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "platform_statements" ADD CONSTRAINT "platform_statements_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+CREATE UNIQUE INDEX "platform_statements_one_per_period" ON "platform_statements" USING btree ("tenant_id","period_start") WHERE "platform_statements"."status" <> 'void';
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1030,8 +1074,8 @@ insert into public.users (id, name, name_en, email, email_verified, is_platform_
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_platform-owner', 'usr_platform-owner', 'credential', 'usr_platform-owner', (select demo_password_hash from pg_temp.setup_params));
 
 -- ── Derma Clinics (derma) ──
-insert into public.tenants (id, slug, name_ar, name_en, brand_color) values
-  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'derma', 'عيادات ديرما', 'Derma Clinics', '#0b5d4c');
+insert into public.tenants (id, slug, name_ar, name_en, brand_color, plan, monthly_price_halalas) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'derma', 'عيادات ديرما', 'Derma Clinics', '#0b5d4c', 'pro', 100000);
 
 insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, map_url, sort_order) values
   ('476edfa8-32de-5660-8aad-64aef84f81c4', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'فرع الرياض', 'Riyadh Branch', 'الرياض', 'Riyadh', 'https://maps.google.com/?q=Derma%20Clinics%20Riyadh', 0),
@@ -1341,8 +1385,8 @@ insert into public.audit_logs (tenant_id, actor_user_id, action, entity_type, en
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', null, 'tenant.seed', 'tenant', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602');
 
 -- ── Lamsa Clinic (lamsa) ──
-insert into public.tenants (id, slug, name_ar, name_en, brand_color) values
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'lamsa', 'عيادة لمسة', 'Lamsa Clinic', '#8a4f9e');
+insert into public.tenants (id, slug, name_ar, name_en, brand_color, plan, monthly_price_halalas) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'lamsa', 'عيادة لمسة', 'Lamsa Clinic', '#8a4f9e', 'pro', 100000);
 
 insert into public.branches (id, tenant_id, name_ar, name_en, city_ar, city_en, map_url, sort_order) values
   ('582af1ea-4eca-5c50-bef7-54515ca85695', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'فرع الدمام', 'Dammam Branch', 'الدمام', 'Dammam', 'https://maps.google.com/?q=Lamsa%20Clinic%20Dammam', 0);
@@ -1983,6 +2027,20 @@ insert into public.concern_events (tenant_id, appointment_id, conversation_id, p
 insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, source, created_by) values
   ('6cb8e300-9258-5346-a5b6-b2a191792506', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'f81befe7-9561-50af-adc9-2553e96b6277', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', null, date_trunc('day', now() - interval '125 days') + interval '8 hours', date_trunc('day', now() - interval '125 days') + interval '8 hours 30 minutes', date_trunc('day', now() - interval '125 days') + interval '8 hours 40 minutes', 'completed', null, null, null, 'reception', 'usr_derma-rec-ruh1');
 
+insert into public.platform_statements (id, tenant_id, number, period_start, period_end, amount_halalas, vat_halalas, total_halalas, due_on, status, paid_at, note, created_by) values
+  ('960d71fe-eec4-5a5b-851e-a09ce63d2333', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-1', (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date, (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date - 1), 100000, 15000, 115000, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 7), 'paid', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3)::timestamptz, 'Sample', 'usr_platform-owner'),
+  ('9aa6cb6f-2bd3-5269-82f6-90213377f8c1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-2', date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date + interval '1 month')::date - 1), 100000, 15000, 115000, ((now() at time zone 'Asia/Riyadh')::date + 10), 'issued', null, 'Sample', 'usr_platform-owner');
+
+insert into public.platform_payments (tenant_id, statement_id, amount_halalas, method, reference, received_on, recorded_by) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '960d71fe-eec4-5a5b-851e-a09ce63d2333', 115000, 'transfer', 'DEMO-TRANSFER', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3), 'usr_platform-owner');
+
+insert into public.platform_statements (id, tenant_id, number, period_start, period_end, amount_halalas, vat_halalas, total_halalas, due_on, status, paid_at, note, created_by) values
+  ('aeef94d6-31ad-5550-91bc-7e46db8212d4', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'LAMSA-DEMO-1', (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date, (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date - 1), 100000, 15000, 115000, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 7), 'paid', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3)::timestamptz, 'Sample', 'usr_platform-owner'),
+  ('9794fcf6-af24-52ac-9d9b-6f19fb33de41', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'LAMSA-DEMO-2', date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date + interval '1 month')::date - 1), 100000, 15000, 115000, ((now() at time zone 'Asia/Riyadh')::date + 10), 'issued', null, 'Sample', 'usr_platform-owner');
+
+insert into public.platform_payments (tenant_id, statement_id, amount_halalas, method, reference, received_on, recorded_by) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'aeef94d6-31ad-5550-91bc-7e46db8212d4', 115000, 'transfer', 'DEMO-TRANSFER', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3), 'usr_platform-owner');
+
 
 -- ─── STEP 4: RESTRICTED APP LOGIN (clinic_app) ──────────────────────────────
 do $$
@@ -2114,7 +2172,8 @@ begin
   update public.tenants
      set status = p_status,
          status_reason = nullif(left(trim(coalesce(p_reason, '')), 300), ''),
-         status_changed_at = now()
+         status_changed_at = now(),
+         paused_for_billing = false  -- the owner decided by hand
    where id = p_tenant;
   return old_status;
 end;
@@ -2145,6 +2204,71 @@ end;
 $$;
 revoke all on function public.app_set_clinic_limits(uuid, integer, integer) from public;
 grant execute on function public.app_set_clinic_limits(uuid, integer, integer) to clinic_app;
+
+-- Subscription: plan, monthly price (halalas, before VAT), trial end, grace days. Platform owner only.
+create or replace function public.app_set_clinic_plan(
+  p_tenant uuid, p_plan public.plan_tier, p_price integer, p_trial_ends date, p_grace integer
+) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.users u
+                 where u.id = public.app_current_user() and u.is_platform_owner) then
+    raise exception 'only the platform owner can change a subscription' using errcode = '42501';
+  end if;
+  if p_price < 0 or p_grace < 0 or p_grace > 90 then
+    raise exception 'invalid subscription values' using errcode = '22023';
+  end if;
+  update public.tenants
+     set plan = p_plan, monthly_price_halalas = p_price, trial_ends_on = p_trial_ends,
+         billing_grace_days = p_grace
+   where id = p_tenant;
+  if not found then
+    raise exception 'clinic not found' using errcode = '22023';
+  end if;
+end;
+$$;
+revoke all on function public.app_set_clinic_plan(uuid, public.plan_tier, integer, date, integer) from public;
+grant execute on function public.app_set_clinic_plan(uuid, public.plan_tier, integer, date, integer) to clinic_app;
+
+-- Billing rule, decided by the data itself (so anyone may ask it to run, e.g. the daily job):
+-- an unpaid statement past its due date + grace days → an ACTIVE clinic becomes read-only
+-- ("paused for billing"); once nothing is overdue, a clinic paused for billing becomes active again.
+-- A status the owner set by hand is never changed here. Returns the clinic's status afterwards.
+create or replace function public.app_billing_enforce(p_tenant uuid) returns public.clinic_status
+language plpgsql security definer set search_path = public as $$
+declare
+  t record;
+  overdue boolean;
+  today date := (now() at time zone 'Asia/Riyadh')::date;
+begin
+  select status, paused_for_billing, billing_grace_days into t
+    from public.tenants where id = p_tenant for update;
+  if not found then
+    raise exception 'clinic not found' using errcode = '22023';
+  end if;
+  select exists (
+    select 1 from public.platform_statements s
+     where s.tenant_id = p_tenant and s.status = 'issued'
+       and s.due_on + t.billing_grace_days < today
+  ) into overdue;
+  if overdue and t.status = 'active' then
+    update public.tenants
+       set status = 'read_only', paused_for_billing = true, status_changed_at = now(),
+           status_reason = 'Payment overdue · السداد متأخر'
+     where id = p_tenant;
+    return 'read_only';
+  elsif not overdue and t.paused_for_billing and t.status = 'read_only' then
+    update public.tenants
+       set status = 'active', paused_for_billing = false, status_changed_at = now(),
+           status_reason = null
+     where id = p_tenant;
+    return 'active';
+  end if;
+  return t.status;
+end;
+$$;
+revoke all on function public.app_billing_enforce(uuid) from public;
+grant execute on function public.app_billing_enforce(uuid) to clinic_app;
 
 grant execute on function public.app_current_tenant(), public.app_current_user(),
   public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
@@ -2198,6 +2322,9 @@ grant select, insert, update on public.consent_rules to clinic_app;
 grant select, insert on public.concern_events to clinic_app;
 grant select, insert, update, delete on public.push_subscriptions, public.notification_prefs to clinic_app;
 grant delete on public.verification_codes, public.patient_sessions to clinic_app;
+-- Platform billing: the clinic reads its own; only platform work writes (policies below).
+grant select, insert on public.platform_statements, public.platform_payments to clinic_app;
+grant update (status, paid_at, voided_at) on public.platform_statements to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -2223,7 +2350,8 @@ begin
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
-    'push_subscriptions', 'notification_prefs', 'schedule_exceptions'
+    'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
+    'platform_statements', 'platform_payments'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2286,6 +2414,25 @@ create policy tenants_owner_read on public.tenants for select
 create policy tenants_owner_update on public.tenants for update
   using (current_user <> 'clinic_app') with check (current_user <> 'clinic_app');
 
+-- Platform billing rows: written only by platform work (the platform owner, or the daily job
+-- acting for the platform), never by clinic staff. The billing rule above may read them.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['platform_statements', 'platform_payments'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for insert to clinic_app
+         with check (public.app_has_role(''platform_owner''))', t || '_platform_insert', t);
+    execute format(
+      'create policy %I on public.%I as restrictive for update to clinic_app
+         using (public.app_has_role(''platform_owner''))', t || '_platform_update', t);
+    execute format(
+      'create policy %I on public.%I for select using (current_user <> ''clinic_app'')',
+      t || '_owner_read', t);
+  end loop;
+end $$;
+
 -- Staff login tables: global by design (one person can work at several clinics).
 -- What a user may see inside a clinic is decided by tenant_members, which IS isolated.
 do $$
@@ -2326,6 +2473,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
+    'platform_statements', 'platform_payments',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case

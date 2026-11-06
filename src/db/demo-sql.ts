@@ -535,7 +535,71 @@ export function demoSql(): string {
     ]),
   );
   out.push(phase2bRows(week));
+  out.push(platformBillingRows());
   return out.filter(Boolean).join("\n");
+}
+
+/**
+ * Platform billing in BOTH clinics (sample amounts): last month's statement, paid by bank
+ * transfer, and this month's, open and not yet due. Demo clinics are never billed automatically.
+ */
+function platformBillingRows(): string {
+  const riyadhToday = "(now() at time zone 'Asia/Riyadh')::date";
+  const thisMonth = `date_trunc('month', ${riyadhToday})::date`;
+  const lastMonth = `(date_trunc('month', ${riyadhToday}) - interval '1 month')::date`;
+  const out: string[] = [];
+  for (const slug of ["derma", "lamsa"] as const) {
+    const tenant = demoId(`tenant:${slug}`);
+    const paid = demoId(`${slug}:statement:last-month`);
+    out.push(
+      insert("platform_statements", [
+        {
+          id: paid,
+          tenant_id: tenant,
+          number: `${slug.toUpperCase()}-DEMO-1`,
+          period_start: raw(lastMonth),
+          period_end: raw(`(${thisMonth} - 1)`),
+          amount_halalas: 100000,
+          vat_halalas: 15000,
+          total_halalas: 115000,
+          due_on: raw(`(${lastMonth} + 7)`),
+          status: "paid",
+          paid_at: raw(`(${lastMonth} + 3)::timestamptz`),
+          note: "Sample",
+          created_by: "usr_platform-owner",
+        },
+        {
+          id: demoId(`${slug}:statement:this-month`),
+          tenant_id: tenant,
+          number: `${slug.toUpperCase()}-DEMO-2`,
+          period_start: raw(thisMonth),
+          period_end: raw(`((${thisMonth} + interval '1 month')::date - 1)`),
+          amount_halalas: 100000,
+          vat_halalas: 15000,
+          total_halalas: 115000,
+          due_on: raw(`(${riyadhToday} + 10)`),
+          status: "issued",
+          paid_at: null,
+          note: "Sample",
+          created_by: "usr_platform-owner",
+        },
+      ]),
+    );
+    out.push(
+      insert("platform_payments", [
+        {
+          tenant_id: tenant,
+          statement_id: paid,
+          amount_halalas: 115000,
+          method: "transfer",
+          reference: "DEMO-TRANSFER",
+          received_on: raw(`(${lastMonth} + 3)`),
+          recorded_by: "usr_platform-owner",
+        },
+      ]),
+    );
+  }
+  return out.join("\n");
 }
 
 /**

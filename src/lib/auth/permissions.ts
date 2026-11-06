@@ -35,6 +35,8 @@ export const PERMISSIONS = {
   "team:manage": ["clinic_admin"],
   /** Settings → Download clinic data (CSV: patients, appointments, packages). No clinical notes. */
   "data:export": ["clinic_admin"],
+  /** Settings → Subscription: the clinic's plan, statements and payments (read only). */
+  "billing:view": ["clinic_admin"],
   "demo:refresh": ["clinic_admin"],
 
   // ── Phase 2a ──
@@ -44,6 +46,8 @@ export const PERMISSIONS = {
   "platform:keys": ["platform_owner"],
   /** Add a new clinic (its first branch and first admin). Never patient data. */
   "platform:clinics": ["platform_owner"],
+  /** Plans, prices, billing statements and payments (recorded by hand). */
+  "platform:billing": ["platform_owner"],
 
   // ── Phase 2b: WhatsApp ──
   /** Inbox: read chats, reply, link new contacts, "doctor running late", record WhatsApp consent. */

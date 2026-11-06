@@ -5,6 +5,7 @@
  * No staff login here: a visitor proves their mobile with a code; the patient page uses a short
  * patient session. All booking goes through the booking engine.
  */
+import { planAllows } from "@/lib/platform/plans";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { asc, eq, sql } from "drizzle-orm";
@@ -41,7 +42,7 @@ import { checkCode, sendCode } from "@/lib/verify/codes";
 import { BOOKING_PASS_COOKIE, BOOKING_PASS_MINUTES, phonePass } from "@/lib/verify/pass";
 import { adultByPhone, verifiedPhone } from "@/lib/verify/identity";
 import { videoProvider } from "@/lib/video/provider";
-import { patientJoin } from "@/lib/video/visit";
+import { patientJoin, VideoVisitError } from "@/lib/video/visit";
 import { parseConsentToken } from "@/lib/video/link";
 
 const uuid = z.string().uuid();
@@ -466,6 +467,7 @@ export async function joinVideoAsPatientAction(input: { token: string }) {
   return publicAction(async (tenant) => {
     const v = parse(z.object({ token: z.string().min(40).max(80) }), input);
     const lang = (await getLocale()) === "en" ? "en" : "ar";
+    if (!planAllows(tenant, "video")) throw new VideoVisitError("not_in_plan");
     return patientJoin(tenant.id, v.token, { provider: videoProvider(), lang });
   });
 }

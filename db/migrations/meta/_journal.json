@@ -78,6 +78,13 @@
       "when": 1793979383025,
       "tag": "0010_flowery_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793980680376,
+      "tag": "0011_empty_champions",
+      "breakpoints": true
     }
   ]
 }

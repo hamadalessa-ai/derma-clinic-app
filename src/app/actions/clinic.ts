@@ -20,7 +20,7 @@ import {
   rescheduleOptions,
 } from "@/lib/booking/engine";
 import { doctorNames } from "@/lib/booking/doctor-names";
-import { can } from "@/lib/auth/permissions";
+import { can, type Role } from "@/lib/auth/permissions";
 import { APPOINTMENT_STATUSES } from "@/lib/booking/status";
 import { atRiyadh, riyadhTime } from "@/lib/booking/time";
 import { saveConsentRule, saveTemplateVersion, signConsent } from "@/lib/consents/consents";
@@ -30,7 +30,7 @@ import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { anthropicClient } from "@/lib/ai/claude";
 import { scribeDraft } from "@/lib/ai/scribe";
 import { videoProvider } from "@/lib/video/provider";
-import { doctorJoin } from "@/lib/video/visit";
+import { doctorJoin, VideoVisitError } from "@/lib/video/visit";
 import {
   addHoursException,
   removeHoursException,
@@ -74,6 +74,13 @@ import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } fr
 import { checkIn } from "@/lib/visits/check-in";
 import { createClinic, clinicAddress, SLUG_RULE } from "@/lib/platform/clinics";
 import { setClinicLimits, setClinicStatus } from "@/lib/platform/status";
+import { planAllows, PLAN_TIERS } from "@/lib/platform/plans";
+import {
+  issueStatement,
+  recordStatementPayment,
+  setClinicPlan,
+  voidStatement,
+} from "@/lib/platform/billing";
 import { CLINIC_STATUSES } from "@/lib/tenant/status";
 import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
 import { inviteToken } from "@/lib/team/invite";
@@ -814,8 +821,9 @@ export async function removeHoursExceptionAction(input: { id: string }) {
 
 /** The doctor joins a video consultation: returns a personal link into the video room. */
 export async function joinVideoAction(input: { appointmentId: string }) {
-  return staffAction("video:join", async (_ctx, actor) => {
+  return staffAction("video:join", async (ctx, actor) => {
     const v = parse(z.object({ appointmentId: uuid }), input);
+    if (!planAllows(ctx.tenant, "video")) throw new VideoVisitError("not_in_plan");
     return doctorJoin(actor, v.appointmentId, { provider: videoProvider() });
   });
 }
@@ -1740,5 +1748,113 @@ export async function setClinicLimitsAction(input: {
     });
     revalidatePath("/platform");
     return null;
+  });
+}
+
+// ── Platform owner: plans and billing (recorded by hand) ───────────────────
+
+const riyals = z.number().min(0).max(10_000_000); // riyals, 2 decimals → halalas
+const halalas = (riyals: number) => Math.round(riyals * 100);
+const ownerOf = (ctx: { user: { id: string }; roles: Role[] }) => ({
+  userId: ctx.user.id,
+  roles: ctx.roles,
+});
+
+export async function setClinicPlanAction(input: {
+  tenantId: string;
+  plan: string;
+  priceSar: number;
+  trialEndsOn: string | null;
+  graceDays: number;
+}) {
+  return staffAction("platform:billing", async (ctx) => {
+    const v = parse(
+      z.object({
+        tenantId: uuid,
+        plan: z.enum(PLAN_TIERS),
+        priceSar: riyals,
+        trialEndsOn: day.nullable(),
+        graceDays: z.number().int().min(0).max(90),
+      }),
+      input,
+    );
+    await setClinicPlan(ownerOf(ctx), v.tenantId, {
+      plan: v.plan,
+      priceHalalas: halalas(v.priceSar),
+      trialEndsOn: v.trialEndsOn,
+      graceDays: v.graceDays,
+    });
+    revalidatePath("/platform");
+    return null;
+  });
+}
+
+export async function issueStatementAction(input: {
+  tenantId: string;
+  periodDay?: string;
+  amountSar?: number | null;
+  dueOn?: string | null;
+  note?: string | null;
+}) {
+  return staffAction("platform:billing", async (ctx) => {
+    const v = parse(
+      z.object({
+        tenantId: uuid,
+        periodDay: day.optional(),
+        amountSar: riyals.nullish(),
+        dueOn: day.nullish(),
+        note: z.string().trim().max(300).nullish(),
+      }),
+      input,
+    );
+    const r = await issueStatement(ownerOf(ctx), v.tenantId, {
+      periodDay: v.periodDay,
+      amountHalalas: v.amountSar == null ? undefined : halalas(v.amountSar),
+      dueOn: v.dueOn ?? undefined,
+      note: v.note ?? null,
+    });
+    revalidatePath("/platform");
+    return { number: r.number };
+  });
+}
+
+export async function recordStatementPaymentAction(input: {
+  tenantId: string;
+  statementId: string;
+  amountSar: number;
+  method: string;
+  reference?: string | null;
+  receivedOn?: string | null;
+}) {
+  return staffAction("platform:billing", async (ctx) => {
+    const v = parse(
+      z.object({
+        tenantId: uuid,
+        statementId: uuid,
+        amountSar: riyals,
+        method: z.enum(["transfer", "card", "cash"]),
+        reference: z.string().trim().max(120).nullish(),
+        receivedOn: day.nullish(),
+      }),
+      input,
+    );
+    const r = await recordStatementPayment(ownerOf(ctx), v.tenantId, {
+      statementId: v.statementId,
+      amountHalalas: halalas(v.amountSar),
+      method: v.method,
+      reference: v.reference ?? null,
+      receivedOn: v.receivedOn ?? undefined,
+    });
+    revalidatePath("/platform");
+    return r;
+  });
+}
+
+export async function voidStatementAction(input: { tenantId: string; statementId: string }) {
+  return staffAction("platform:billing", async (ctx) => {
+    const v = parse(z.object({ tenantId: uuid, statementId: uuid }), input);
+    const r = await voidStatement(ownerOf(ctx), v.tenantId, v.statementId);
+    revalidatePath("/platform");
+    return r;
   });
 }
