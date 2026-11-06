@@ -95,7 +95,7 @@ export async function ClinicSite({
   };
   const chapterOrder = ["skin", "hair", "plastic", "dental"];
   const chapters: Chapter[] = chapterOrder
-    .map((k) => {
+    .map((k): Chapter | null => {
       const sp = (s.specialties ?? []).find((x) => x.key === k);
       const dep = departments.find((x) => x.key === k);
       const groups = treatmentSilos.filter((x) =>

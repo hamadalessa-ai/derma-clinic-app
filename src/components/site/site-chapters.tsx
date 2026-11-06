@@ -10,7 +10,7 @@ export interface Chapter {
   anchor: string;
   title: string;
   intro: string;
-  images: { slot: string; src?: string }[];
+  images: { slot: string; src?: string | undefined }[];
   groups: { name: string; items: { name: string; href: string | null }[] }[];
   cta: { label: string; href: string; external: boolean };
 }
