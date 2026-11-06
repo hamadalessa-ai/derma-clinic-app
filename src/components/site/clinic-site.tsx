@@ -1,14 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import {
-  CalendarCheck,
-  MapPin,
-  MessageCircle,
-  Phone,
-  ShieldCheck,
-  Video,
-} from "lucide-react";
+import { CalendarCheck, MapPin, MessageCircle, Phone, ShieldCheck, Video } from "lucide-react";
 import { pick } from "@/lib/brand";
 import { formatSAR } from "@/lib/format";
 import type { ClinicSiteData } from "@/lib/site/data";
@@ -305,7 +298,9 @@ export async function ClinicSite({
                     />
                   </div>
                   <div className="flex flex-col justify-center gap-5 p-8 lg:col-span-7 lg:p-14">
-                    <span className="text-site-champagne-ink text-sm font-semibold">{t("founder")}</span>
+                    <span className="text-site-champagne-ink text-sm font-semibold">
+                      {t("founder")}
+                    </span>
                     <h3 className="font-display text-site-ink text-3xl font-semibold lg:text-4xl">
                       {L(founder.nameAr, founder.nameEn)}
                     </h3>
