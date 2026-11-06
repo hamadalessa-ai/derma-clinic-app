@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
   CalendarCheck,
-  Crown,
   MapPin,
   MessageCircle,
   Phone,
@@ -94,7 +93,8 @@ export async function ClinicSite({
       title: L(d.titleAr, d.titleEn),
       dept: deptOf(d.dept),
       branch: d.branchAr || d.branchEn ? L(d.branchAr, d.branchEn) : null,
-      photo: d.photo,
+      photo: d.portrait ?? d.photo,
+      portrait: !!d.portrait,
       book: d.memberId
         ? { label: t("doctorBook"), href: `/book?doctor=${d.memberId}`, external: false }
         : onlineDept(d.dept)
@@ -286,28 +286,34 @@ export async function ClinicSite({
                 text={L(s.doctorsAr, s.doctorsEn) || undefined}
               />
               {founder && (
-                <article className="bg-card shadow-soft grid overflow-hidden rounded-2xl lg:grid-cols-2">
-                  <div className="bg-site-mist">
+                <article className="bg-card shadow-soft grid overflow-hidden rounded-2xl lg:grid-cols-12">
+                  <div className="from-site-primary to-site-night relative bg-linear-to-b lg:col-span-5">
+                    <div
+                      className="border-site-champagne/40 absolute inset-6 rounded-[1.25rem] border"
+                      aria-hidden
+                    />
                     {/* eslint-disable-next-line @next/next/no-img-element -- the clinic's own photo */}
                     <img
-                      src={founder.photo}
+                      src={founder.portrait ?? founder.photo}
                       alt={L(founder.nameAr, founder.nameEn)}
-                      className="h-full w-full object-contain"
+                      className={cn(
+                        "relative mx-auto block w-full",
+                        founder.portrait
+                          ? "aspect-[4/5] max-w-md object-contain object-bottom pt-8"
+                          : "h-full object-contain",
+                      )}
                     />
                   </div>
-                  <div className="flex flex-col justify-center gap-4 p-8 lg:p-12">
-                    <span className="bg-site-champagne-soft text-site-champagne-ink inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold">
-                      <Crown className="size-3.5" aria-hidden />
-                      {t("founder")}
-                    </span>
-                    <h3 className="font-display text-site-ink text-3xl font-semibold">
+                  <div className="flex flex-col justify-center gap-5 p-8 lg:col-span-7 lg:p-14">
+                    <span className="text-site-champagne-ink text-sm font-semibold">{t("founder")}</span>
+                    <h3 className="font-display text-site-ink text-3xl font-semibold lg:text-4xl">
                       {L(founder.nameAr, founder.nameEn)}
                     </h3>
-                    <p className="text-site-primary font-medium">
+                    <p className="text-site-primary text-lg font-medium">
                       {L(founder.titleAr, founder.titleEn)}
                     </p>
                     {L(founder.bioAr, founder.bioEn) && (
-                      <p className="text-[15px] leading-relaxed">
+                      <p className="border-site-champagne text-site-slate border-s-2 ps-5 text-[17px] leading-relaxed">
                         {L(founder.bioAr, founder.bioEn)}
                       </p>
                     )}

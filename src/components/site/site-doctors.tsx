@@ -12,6 +12,8 @@ export interface DoctorCard {
   dept: string;
   branch: string | null;
   photo: string;
+  /** A clean cut-out portrait (else the clinic's photo card, cropped). */
+  portrait: boolean;
   book: { href: string; external: boolean; label: string };
 }
 
@@ -115,14 +117,19 @@ export function SiteDoctors({
                 onClick={() => !focus && setCenter(i)}
                 data-testid={focus ? "site-doctor" : undefined}
               >
-                <div className="bg-card aspect-[4/5] overflow-hidden">
+                <div className="from-site-mist to-site-primary-soft aspect-[4/5] overflow-hidden bg-linear-to-b">
                   {/* eslint-disable-next-line @next/next/no-img-element -- the clinic's own photos */}
                   <img
                     src={d.photo}
                     alt={d.name}
                     loading={far <= 2 ? "eager" : "lazy"}
                     draggable={false}
-                    className="h-full w-full origin-top-right scale-[1.7] object-cover object-[100%_0%]"
+                    className={cn(
+                      "h-full w-full",
+                      d.portrait
+                        ? "object-contain object-bottom pt-4"
+                        : "origin-top-right scale-[1.7] object-cover object-[100%_0%]",
+                    )}
                   />
                 </div>
                 <div className="flex flex-col gap-2 p-5 text-center">

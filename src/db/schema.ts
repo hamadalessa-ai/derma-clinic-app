@@ -570,6 +570,8 @@ export interface SiteContent {
     branchAr?: string;
     branchEn?: string;
     photo: string;
+    /** Clean portrait (plain background); the published photo is used when missing. */
+    portrait?: string;
     founder?: boolean;
     bioAr?: string;
     bioEn?: string;
