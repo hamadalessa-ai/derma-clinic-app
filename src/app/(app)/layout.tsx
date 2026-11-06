@@ -73,14 +73,20 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           data-testid="support-banner"
         >
           {tSupport(ctx.support.allowChanges ? "bannerChanges" : "bannerView", {
-            time: format.dateTime(ctx.support.expiresAt, { timeStyle: "short", dateStyle: "short" }),
+            time: format.dateTime(ctx.support.expiresAt, {
+              timeStyle: "short",
+              dateStyle: "short",
+            }),
           })}
         </div>
       )}
       {clinicGrant && (
         <div className="bg-info text-info-foreground px-4 py-1.5 text-center text-xs font-medium">
           {tSupport("bannerClinic", {
-            time: format.dateTime(clinicGrant.expiresAt, { timeStyle: "short", dateStyle: "short" }),
+            time: format.dateTime(clinicGrant.expiresAt, {
+              timeStyle: "short",
+              dateStyle: "short",
+            }),
           })}
         </div>
       )}

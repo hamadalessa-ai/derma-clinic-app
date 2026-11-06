@@ -866,6 +866,20 @@ ALTER TABLE "platform_payments" ADD CONSTRAINT "platform_payments_tenant_id_tena
 ALTER TABLE "platform_payments" ADD CONSTRAINT "platform_payments_statement_fk" FOREIGN KEY ("tenant_id","statement_id") REFERENCES "public"."platform_statements"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "platform_statements" ADD CONSTRAINT "platform_statements_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 CREATE UNIQUE INDEX "platform_statements_one_per_period" ON "platform_statements" USING btree ("tenant_id","period_start") WHERE "platform_statements"."status" <> 'void';
+-- 0012_nasty_pestilence.sql
+CREATE TABLE "support_grants" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"granted_by" text NOT NULL,
+	"reason" text,
+	"allow_changes" boolean DEFAULT false NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"revoked_at" timestamp with time zone,
+	"revoked_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+ALTER TABLE "support_grants" ADD CONSTRAINT "support_grants_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "support_grants_tenant_expires_idx" ON "support_grants" USING btree ("tenant_id","expires_at");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -2041,6 +2055,12 @@ insert into public.platform_statements (id, tenant_id, number, period_start, per
 insert into public.platform_payments (tenant_id, statement_id, amount_halalas, method, reference, received_on, recorded_by) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'aeef94d6-31ad-5550-91bc-7e46db8212d4', 115000, 'transfer', 'DEMO-TRANSFER', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3), 'usr_platform-owner');
 
+insert into public.support_grants (tenant_id, granted_by, reason, allow_changes, expires_at, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-admin', 'Demo: help with setup', false, now() - interval '30 days', now() - interval '31 days');
+
+insert into public.support_grants (tenant_id, granted_by, reason, allow_changes, expires_at, created_at) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', 'Demo: help with setup', false, now() - interval '30 days', now() - interval '31 days');
+
 
 -- ─── STEP 4: RESTRICTED APP LOGIN (clinic_app) ──────────────────────────────
 do $$
@@ -2270,10 +2290,34 @@ $$;
 revoke all on function public.app_billing_enforce(uuid) from public;
 grant execute on function public.app_billing_enforce(uuid) to clinic_app;
 
+-- Is the signed-in user a platform owner?
+create or replace function public.app_is_platform_owner() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.users u
+                  where u.id = public.app_current_user() and u.is_platform_owner)
+$$;
+
+-- No backdoor to patient data: a platform owner who is not a member of this clinic sees its patient
+-- tables ONLY while the clinic's admin has granted support access (support_grants, not expired or
+-- ended). Everyone else (staff, patients, system work without a user) is not affected by this rule.
+create or replace function public.app_platform_gate() returns boolean
+language sql stable security definer set search_path = public as $$
+  select case
+    when not public.app_is_platform_owner() then true
+    when exists (select 1 from public.tenant_members m
+                  where m.user_id = public.app_current_user()
+                    and m.tenant_id = public.app_current_tenant()
+                    and m.deactivated_at is null) then true
+    else exists (select 1 from public.support_grants g
+                  where g.tenant_id = public.app_current_tenant()
+                    and g.revoked_at is null and g.expires_at > now())
+  end
+$$;
+
 grant execute on function public.app_current_tenant(), public.app_current_user(),
   public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
   public.demo_workday(date, integer), public.app_patient(), public.app_is_patient(),
-  public.app_patient_scope(uuid)
+  public.app_patient_scope(uuid), public.app_is_platform_owner(), public.app_platform_gate()
   to clinic_app;
 
 -- Clinic directory: read-only (needed to resolve the subdomain before login).
@@ -2325,6 +2369,9 @@ grant delete on public.verification_codes, public.patient_sessions to clinic_app
 -- Platform billing: the clinic reads its own; only platform work writes (policies below).
 grant select, insert on public.platform_statements, public.platform_payments to clinic_app;
 grant update (status, paid_at, voided_at) on public.platform_statements to clinic_app;
+-- Support access: granted and ended by the clinic admin (policies below); never deleted.
+grant select, insert on public.support_grants to clinic_app;
+grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -2351,7 +2398,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments'
+    'platform_statements', 'platform_payments', 'support_grants'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2433,6 +2480,38 @@ begin
   end loop;
 end $$;
 
+-- Support grants: only a clinic admin of this clinic (never a platform owner, even during a
+-- support session) may give or end access.
+create policy support_grants_admin_insert on public.support_grants as restrictive
+  for insert to clinic_app
+  with check (public.app_has_role('clinic_admin') and not public.app_is_platform_owner());
+create policy support_grants_admin_update on public.support_grants as restrictive
+  for update to clinic_app
+  using (public.app_has_role('clinic_admin') and not public.app_is_platform_owner());
+-- The gate functions (running as the table owner) read memberships and grants.
+create policy tenant_members_owner_read on public.tenant_members for select
+  using (current_user <> 'clinic_app');
+create policy support_grants_owner_read on public.support_grants for select
+  using (current_user <> 'clinic_app');
+
+-- The platform gate on every table holding patient data (see app_platform_gate()).
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'patients', 'patient_medical_flags', 'appointments', 'patient_packages', 'package_payments',
+    'package_session_events', 'files', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
+    'conversations', 'messages', 'concern_events', 'reschedule_requests'
+  ] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for all to clinic_app
+         using ((select public.app_platform_gate()))
+         with check ((select public.app_platform_gate()))',
+      t || '_platform_gate', t);
+  end loop;
+end $$;
+
 -- Staff login tables: global by design (one person can work at several clinics).
 -- What a user may see inside a clinic is decided by tenant_members, which IS isolated.
 do $$
@@ -2473,7 +2552,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments',
+    'platform_statements', 'platform_payments', 'support_grants',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case

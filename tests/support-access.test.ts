@@ -59,9 +59,8 @@ async function clinicWithPatient(tag: string) {
 
 /** What the platform owner's queries see in this clinic (as the app would run them). */
 const ownerSees = (tenantId: string) =>
-  withTenant(
-    { tenantId, userId: OWNER_ID, roles: ["platform_owner", "clinic_admin"] },
-    (tx) => tx.select({ id: patients.id }).from(patients),
+  withTenant({ tenantId, userId: OWNER_ID, roles: ["platform_owner", "clinic_admin"] }, (tx) =>
+    tx.select({ id: patients.id }).from(patients),
   );
 
 describe("support access", () => {
@@ -129,7 +128,11 @@ describe("support access", () => {
       memberId: null,
       restrictedBranchId: null,
     };
-    const ctx = { tenantId: c.tenantId, userId: OWNER_ID, roles: ["platform_owner", "clinic_admin"] };
+    const ctx = {
+      tenantId: c.tenantId,
+      userId: OWNER_ID,
+      roles: ["platform_owner", "clinic_admin"],
+    };
     await expect(
       withTenant(ctx, (tx) => grantSupport(tx, ownerActor, { hours: 72, allowChanges: true })),
     ).rejects.toBeInstanceOf(PermissionError);

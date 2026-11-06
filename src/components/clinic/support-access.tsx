@@ -48,7 +48,12 @@ export function SupportAccess({
             variant="outline"
             className="self-start"
             loading={pending}
-            onClick={() => run(() => endSupportAction(), () => setMsg(t("ended")))}
+            onClick={() =>
+              run(
+                () => endSupportAction(),
+                () => setMsg(t("ended")),
+              )
+            }
             data-testid="support-end"
           >
             {t("endNow")}
@@ -101,7 +106,12 @@ export function SupportAccess({
             {t("allowChanges")}
           </label>
           <p className="text-muted-foreground text-xs">{t("rules")}</p>
-          <Button type="submit" className="self-start" loading={pending} data-testid="support-grant">
+          <Button
+            type="submit"
+            className="self-start"
+            loading={pending}
+            data-testid="support-grant"
+          >
             <LifeBuoy />
             {t("grant")}
           </Button>

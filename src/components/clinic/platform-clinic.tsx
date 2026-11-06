@@ -724,7 +724,10 @@ function SupportPanel({ clinic }: { clinic: PlatformClinicRow }) {
         <>
           <p className="font-semibold">
             {t("supportUntil", {
-              time: format.dateTime(new Date(g.expiresAt), { dateStyle: "medium", timeStyle: "short" }),
+              time: format.dateTime(new Date(g.expiresAt), {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }),
             })}
           </p>
           <p>{g.allowChanges ? t("supportChanges") : t("supportView")}</p>
