@@ -75,7 +75,10 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
             </div>
           </div>
           <ChevronDown
-            className={cn("text-muted-foreground size-5 transition-transform", open && "rotate-180")}
+            className={cn(
+              "text-muted-foreground size-5 transition-transform",
+              open && "rotate-180",
+            )}
             aria-hidden
           />
         </button>
@@ -110,7 +113,9 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
 function StatusControl({ clinic }: { clinic: PlatformClinicRow }) {
   const t = useTranslations("platformClinic");
   const { run, pending, error } = useAction();
-  const choices = (["read_only", "suspended", "closed"] as const).filter((s) => s !== clinic.status);
+  const choices = (["read_only", "suspended", "closed"] as const).filter(
+    (s) => s !== clinic.status,
+  );
   const [status, setStatus] = useState<ClinicStatus>(choices[0]);
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);

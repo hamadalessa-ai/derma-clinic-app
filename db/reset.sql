@@ -52,7 +52,7 @@ drop table if exists
   public.verifications,
   public.webhook_events
   cascade;
-drop type if exists public.appointment_status, public.booking_source, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.request_status, public.session_event_kind;
+drop type if exists public.appointment_status, public.booking_source, public.clinic_status, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.request_status, public.session_event_kind;
 drop function if exists public.app_branch_allowed;
 drop function if exists public.app_create_clinic;
 drop function if exists public.app_current_tenant;
@@ -61,6 +61,7 @@ drop function if exists public.app_has_role;
 drop function if exists public.app_is_patient;
 drop function if exists public.app_patient;
 drop function if exists public.app_patient_scope;
+drop function if exists public.app_set_clinic_status;
 drop function if exists public.apply_package_session_event;
 drop function if exists public.demo_workday;
 drop function if exists public.guard_clinical_note;

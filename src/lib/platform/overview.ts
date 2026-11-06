@@ -61,7 +61,9 @@ export async function setupOf(tenant: Tenant): Promise<Record<SetupStep, boolean
     const [settings] = await tx.select({ site: tenantSettings.site }).from(tenantSettings).limit(1);
     return {
       admin: admins > 0,
-      services: (await one(tx.select({ n: count() }).from(services).where(eq(services.isActive, true)))) > 0,
+      services:
+        (await one(tx.select({ n: count() }).from(services).where(eq(services.isActive, true)))) >
+        0,
       hours: (await one(tx.select({ n: count() }).from(staffSchedules))) > 0,
       consents: (await one(tx.select({ n: count() }).from(consentTemplates))) > 0,
       website: Object.keys(settings?.site ?? {}).length > 0,

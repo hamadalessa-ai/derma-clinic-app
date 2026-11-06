@@ -44,10 +44,18 @@ const statusOf = async (id: string) =>
 
 describe("status rules", () => {
   it("say what each status allows", () => {
-    expect([clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "active" }))).toEqual([true, true, true]);
-    expect([clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "read_only" }))).toEqual([false, true, true]);
-    expect([clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "suspended" }))).toEqual([false, false, false]);
-    expect([clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "closed" }))).toEqual([false, true, false]);
+    expect(
+      [clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "active" })),
+    ).toEqual([true, true, true]);
+    expect(
+      [clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "read_only" })),
+    ).toEqual([false, true, true]);
+    expect(
+      [clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "suspended" })),
+    ).toEqual([false, false, false]);
+    expect(
+      [clinicIsActive, staffMaySignIn, publicPagesOpen].map((f) => f({ status: "closed" })),
+    ).toEqual([false, true, false]);
   });
 
   it("switch WhatsApp off for a paused clinic", () => {
@@ -71,7 +79,9 @@ describe("changing a clinic's status", () => {
     expect(await canSignInToClinic(c.tenantId, c.email)).toBe(false);
     expect(await getStaffAccess(c.tenantId, { id: c.adminUserId })).toBeNull();
     // The platform owner still gets in.
-    expect(await getStaffAccess(c.tenantId, { id: OWNER.userId, isPlatformOwner: true })).not.toBeNull();
+    expect(
+      await getStaffAccess(c.tenantId, { id: OWNER.userId, isPlatformOwner: true }),
+    ).not.toBeNull();
 
     await setClinicStatus(OWNER, c.tenantId, "read_only", "Card expired");
     expect(await canSignInToClinic(c.tenantId, c.email)).toBe(true);
@@ -91,7 +101,12 @@ describe("changing a clinic's status", () => {
   it("is refused for anyone but the platform owner, also by the database", async () => {
     const c = await newClinic("b");
     await expect(
-      setClinicStatus({ userId: "usr_derma-admin", roles: ["clinic_admin"] }, c.tenantId, "suspended", "x"),
+      setClinicStatus(
+        { userId: "usr_derma-admin", roles: ["clinic_admin"] },
+        c.tenantId,
+        "suspended",
+        "x",
+      ),
     ).rejects.toBeInstanceOf(PermissionError);
     const refused = await getDb()
       .transaction(async (tx) => {
@@ -119,20 +134,28 @@ describe("setup checklist", () => {
     const tenant = await statusOf(c.tenantId);
     const before = await setupOf(tenant);
     expect(before).toMatchObject({ admin: false, services: false, hours: false, booking: false });
-    await getDb().insert(accounts).values({
-      id: `acc_${stamp}`,
-      accountId: c.adminUserId,
-      providerId: "credential",
-      userId: c.adminUserId,
-      password: "x",
-    });
+    await getDb()
+      .insert(accounts)
+      .values({
+        id: `acc_${stamp}`,
+        accountId: c.adminUserId,
+        providerId: "credential",
+        userId: c.adminUserId,
+        password: "x",
+      });
     expect((await setupOf(tenant)).admin).toBe(true);
   });
 });
 
 describe("clinic data export", () => {
   it("writes Excel-safe CSV", () => {
-    const csv = toCsv(["a", "b"], [["x,y", '=HYPERLINK("evil")'], [null, 3]]);
+    const csv = toCsv(
+      ["a", "b"],
+      [
+        ["x,y", '=HYPERLINK("evil")'],
+        [null, 3],
+      ],
+    );
     expect(csv.startsWith("﻿")).toBe(true);
     expect(csv).toContain('"x,y"');
     expect(csv).toContain(`"'=HYPERLINK(""evil"")"`);
