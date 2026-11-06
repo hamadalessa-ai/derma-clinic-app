@@ -40,6 +40,8 @@ export const PERMISSIONS = {
   "account:manage": ALL_CLINIC_STAFF,
   /** Create the push (VAPID) keys for the platform. Never patient data. */
   "platform:keys": ["platform_owner"],
+  /** Add a new clinic (its first branch and first admin). Never patient data. */
+  "platform:clinics": ["platform_owner"],
 
   // ── Phase 2b: WhatsApp ──
   /** Inbox: read chats, reply, link new contacts, "doctor running late", record WhatsApp consent. */

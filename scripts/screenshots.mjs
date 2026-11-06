@@ -82,5 +82,35 @@ try {
 } catch (e) {
   console.error("team screenshots failed:", e);
 }
+// Platform → Add a clinic, signed in as the platform owner (desktop, Arabic).
+try {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "ar", url: BASE }]);
+  const page = await context.newPage();
+  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  await page.locator('input[type="email"]').fill("owner@platform.demo");
+  await page.locator('input[type="password"]').fill(process.env.DEMO_PASSWORD ?? "Demo-Local-2026");
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/platform`, { waitUntil: "networkidle" });
+  await page.getByTestId("clinic-add").click();
+  const fill = (id, v) => page.locator(`#nc-${id}`).fill(v);
+  await fill("nameAr", "عيادات النخبة");
+  await fill("nameEn", "Elite Clinics");
+  await fill("slug", "elite");
+  await fill("branchNameAr", "فرع العليا");
+  await fill("branchNameEn", "Olaya");
+  await fill("cityAr", "الرياض");
+  await fill("cityEn", "Riyadh");
+  await fill("adminNameAr", "مدير النخبة");
+  await fill("adminEmail", "admin@elite.demo");
+  await page.screenshot({ path: "screenshots/platform-ar-form.png", fullPage: true });
+  await page.getByTestId("clinic-add-save").click();
+  await page.getByTestId("clinic-created").waitFor({ timeout: 15000 });
+  await page.screenshot({ path: "screenshots/platform-ar-created.png", fullPage: true });
+  await context.close();
+} catch (e) {
+  console.error("platform screenshots failed:", e);
+}
 await browser.close();
 console.log("Screenshots saved in screenshots/");

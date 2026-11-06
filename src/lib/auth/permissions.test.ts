@@ -179,6 +179,12 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "platform:clinics": {
+    platform_owner: true,
+    clinic_admin: false,
+    practitioner: false,
+    receptionist: false,
+  },
 };
 
 describe("role permissions", () => {

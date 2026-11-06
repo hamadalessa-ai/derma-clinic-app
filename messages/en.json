@@ -93,7 +93,9 @@
     "title": "Clinics on the platform",
     "subdomain": "Subdomain",
     "noPatientAccess": "The platform owner cannot view patient data in any clinic.",
-    "pushKeys": "Push notification keys"
+    "pushKeys": "Push notification keys",
+    "demo": "Demo",
+    "live": "Live clinic"
   },
   "errors": {
     "forbiddenTitle": "Not allowed",
@@ -176,7 +178,9 @@
     "team_last_admin": "The clinic needs at least one active admin.",
     "team_self": "You can't deactivate yourself.",
     "team_invite_invalid": "This invitation link isn't valid or has expired.",
-    "team_password_already_set": "Your password is already set. Please sign in."
+    "team_password_already_set": "Your password is already set. Please sign in.",
+    "clinic_slug_taken": "That web address is already used by another clinic.",
+    "clinic_slug_invalid": "The web address may only use lower-case English letters, numbers and dashes (2–30 characters)."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -1260,5 +1264,38 @@
     "invalid": "This invitation link isn't valid or has expired. Ask the clinic admin for a new one.",
     "alreadySet": "Your password is already set.",
     "signIn": "Sign in"
+  },
+  "newClinic": {
+    "add": "Add a clinic",
+    "clinicSection": "The clinic",
+    "branchSection": "First branch",
+    "adminSection": "Clinic admin",
+    "nameAr": "Clinic name (Arabic)",
+    "nameEn": "Clinic name (English)",
+    "slug": "Web address",
+    "slugHint": "Lower-case English letters, numbers and dashes, e.g. derma → derma.your-domain",
+    "brandColor": "Brand colour",
+    "isDemo": "Demo clinic (fake patients only; codes may show on screen)",
+    "branchNameAr": "Branch name (Arabic)",
+    "branchNameEn": "Branch name (English)",
+    "cityAr": "City (Arabic)",
+    "cityEn": "City (English)",
+    "departmentAr": "First department (Arabic)",
+    "departmentEn": "First department (English)",
+    "adminNameAr": "Admin name (Arabic)",
+    "adminNameEn": "Admin name (English)",
+    "adminEmail": "Admin email",
+    "adminHint": "They get an invitation link to set their own password.",
+    "save": "Create clinic",
+    "cancel": "Cancel",
+    "close": "Done",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "createdTitle": "{name} is ready",
+    "createdAddress": "Its address:",
+    "noDomain": "The clinic is created. Its own address will work once the platform has its own domain connected (this demo runs on a single address).",
+    "inviteText": "Send this invitation to the clinic admin (valid 7 days). They set a password and sign in:",
+    "existingUser": "This email already has an account, so the admin signs in with their existing password.",
+    "nextSteps": "Next, the clinic admin adds services, working hours and the team from Settings. You will not see their patients."
   }
 }
