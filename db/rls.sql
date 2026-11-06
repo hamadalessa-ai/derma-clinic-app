@@ -421,9 +421,10 @@ begin
     'conversations', 'messages', 'concern_events', 'reschedule_requests'
   ] loop
     execute format(
+      -- Cheap first test: no signed-in user (patients, system work) → not a platform owner.
       'create policy %I on public.%I as restrictive for all to clinic_app
-         using ((select public.app_platform_gate()))
-         with check ((select public.app_platform_gate()))',
+         using (public.app_current_user() is null or (select public.app_platform_gate()))
+         with check (public.app_current_user() is null or (select public.app_platform_gate()))',
       t || '_platform_gate', t);
   end loop;
 end $$;
