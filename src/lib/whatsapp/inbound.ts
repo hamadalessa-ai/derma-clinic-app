@@ -14,6 +14,7 @@
  *  - delivery statuses (sent / delivered / read / failed) update the stored message.
  */
 import { clinicIsActive } from "@/lib/tenant/status";
+import { effectiveLimits } from "@/lib/platform/limits";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { conversations, messages, patients, webhookEvents } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
@@ -200,7 +201,11 @@ async function handleOne(
     // Free text, unknown buttons and new numbers need a human; handled taps don't.
     const needsReply = (ev.kind !== "button" || !button) && !isStop && !isStart;
     // Typed text the AI receptionist may answer (the chat as it was BEFORE this message decides).
-    aiTurn = ev.kind === "text" && !!text && needsReply && (await aiCanAnswer(tx, convo, ai, now));
+    aiTurn =
+      ev.kind === "text" &&
+      !!text &&
+      needsReply &&
+      (await aiCanAnswer(tx, convo, ai, now, effectiveLimits(tenant).aiMonthly));
     await recordMessage(tx, {
       conversationId: convo.id,
       patientId: convo.patientId,

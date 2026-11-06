@@ -77,6 +77,12 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () =>
 
 // ─── Clinics ────────────────────────────────────────────────────────────────
 
+/** Per-clinic monthly limits (platform owner). AI = receptionist replies + scribe drafts. */
+export interface ClinicLimits {
+  aiMonthly?: number | null;
+  whatsappMonthly?: number | null;
+}
+
 export const tenants = pgTable("tenants", {
   id: id(),
   slug: text("slug").notNull().unique(), // subdomain, e.g. "derma"
@@ -88,6 +94,8 @@ export const tenants = pgTable("tenants", {
   /** Why the status was last changed (shown to the owner and the clinic). */
   statusReason: text("status_reason"),
   statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
+  /** Monthly usage limits set by the platform owner (null / missing = no limit). */
+  limits: jsonb("limits").$type<ClinicLimits>().notNull().default({}),
   createdAt: createdAt(),
 });
 

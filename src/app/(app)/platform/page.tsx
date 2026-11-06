@@ -28,7 +28,7 @@ export default async function PlatformPage() {
       </Link>
       {can(ctx.roles, "platform:clinics") && <NewClinicForm />}
       <div className="flex flex-col gap-3">
-        {clinics.map(({ tenant, setup }) => (
+        {clinics.map(({ tenant, setup, usage }) => (
           <PlatformClinic
             key={tenant.id}
             clinic={{
@@ -41,6 +41,7 @@ export default async function PlatformPage() {
               statusReason: tenant.statusReason,
               statusChangedAt: tenant.statusChangedAt?.toISOString() ?? null,
               setup: SETUP_STEPS.map((step) => ({ step, done: setup[step] })),
+              usage: { ...usage, lastSignInAt: usage.lastSignInAt?.toISOString() ?? null },
             }}
           />
         ))}

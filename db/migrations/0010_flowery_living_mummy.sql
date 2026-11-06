@@ -1,0 +1,1 @@
+ALTER TABLE "tenants" ADD COLUMN "limits" jsonb DEFAULT '{}'::jsonb NOT NULL;

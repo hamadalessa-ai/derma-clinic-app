@@ -820,6 +820,8 @@ CREATE TYPE "public"."clinic_status" AS ENUM('active', 'read_only', 'suspended',
 ALTER TABLE "tenants" ADD COLUMN "status" "clinic_status" DEFAULT 'active' NOT NULL;
 ALTER TABLE "tenants" ADD COLUMN "status_reason" text;
 ALTER TABLE "tenants" ADD COLUMN "status_changed_at" timestamp with time zone;
+-- 0010_flowery_living_mummy.sql
+ALTER TABLE "tenants" ADD COLUMN "limits" jsonb DEFAULT '{}'::jsonb NOT NULL;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -2119,6 +2121,30 @@ end;
 $$;
 revoke all on function public.app_set_clinic_status(uuid, public.clinic_status, text) from public;
 grant execute on function public.app_set_clinic_status(uuid, public.clinic_status, text) to clinic_app;
+
+-- Monthly usage limits (platform owner only). NULL = no limit.
+create or replace function public.app_set_clinic_limits(
+  p_tenant uuid, p_ai integer, p_whatsapp integer
+) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.users u
+                 where u.id = public.app_current_user() and u.is_platform_owner) then
+    raise exception 'only the platform owner can change clinic limits' using errcode = '42501';
+  end if;
+  if coalesce(p_ai, 0) < 0 or coalesce(p_whatsapp, 0) < 0 then
+    raise exception 'limits cannot be negative' using errcode = '22023';
+  end if;
+  update public.tenants
+     set limits = jsonb_strip_nulls(jsonb_build_object('aiMonthly', p_ai, 'whatsappMonthly', p_whatsapp))
+   where id = p_tenant;
+  if not found then
+    raise exception 'clinic not found' using errcode = '22023';
+  end if;
+end;
+$$;
+revoke all on function public.app_set_clinic_limits(uuid, integer, integer) from public;
+grant execute on function public.app_set_clinic_limits(uuid, integer, integer) to clinic_app;
 
 grant execute on function public.app_current_tenant(), public.app_current_user(),
   public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),

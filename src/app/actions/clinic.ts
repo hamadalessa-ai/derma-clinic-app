@@ -73,7 +73,7 @@ import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subs
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { createClinic, clinicAddress, SLUG_RULE } from "@/lib/platform/clinics";
-import { setClinicStatus } from "@/lib/platform/status";
+import { setClinicLimits, setClinicStatus } from "@/lib/platform/status";
 import { CLINIC_STATUSES } from "@/lib/tenant/status";
 import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
 import { inviteToken } from "@/lib/team/invite";
@@ -1723,5 +1723,22 @@ export async function setClinicStatusAction(input: {
     );
     revalidatePath("/platform");
     return r;
+  });
+}
+
+export async function setClinicLimitsAction(input: {
+  tenantId: string;
+  aiMonthly: number | null;
+  whatsappMonthly: number | null;
+}) {
+  return staffAction("platform:clinics", async (ctx) => {
+    const limit = z.number().int().min(0).max(10_000_000).nullable();
+    const v = parse(z.object({ tenantId: uuid, aiMonthly: limit, whatsappMonthly: limit }), input);
+    await setClinicLimits({ userId: ctx.user.id, roles: ctx.roles }, v.tenantId, {
+      aiMonthly: v.aiMonthly,
+      whatsappMonthly: v.whatsappMonthly,
+    });
+    revalidatePath("/platform");
+    return null;
   });
 }

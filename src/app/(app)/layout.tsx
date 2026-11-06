@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { can, NAV_ITEMS } from "@/lib/auth/permissions";
 import { requireStaff } from "@/lib/auth/session";
 import { brandStyle, pick } from "@/lib/brand";
+import { limitWarnings } from "@/lib/platform/overview";
 import { whatsappMode } from "@/lib/whatsapp/config";
 import type { Locale } from "@/i18n/config";
 
@@ -19,6 +20,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const t = await getTranslations("nav");
   const tRoles = await getTranslations("roles");
   const tStatus = await getTranslations("clinicStatus");
+  // Clinic admins see when this month's AI / WhatsApp use reaches 80 % of the platform's limit.
+  const warnings = can(ctx.roles, "settings:manage") ? await limitWarnings(ctx.tenant) : [];
 
   const demo = whatsappMode(ctx.tenant) === "demo";
   const items = NAV_ITEMS.filter(
@@ -43,6 +46,18 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {ctx.tenant.statusReason ? ` · ${ctx.tenant.statusReason}` : ""}
         </div>
       )}
+      {warnings.map((w) => (
+        <div
+          key={w.kind}
+          className="bg-warning text-warning-foreground px-4 py-1.5 text-center text-xs font-medium"
+          data-testid="limit-warning"
+        >
+          {tStatus(w.used >= w.limit ? `limitReached.${w.kind}` : `limitNear.${w.kind}`, {
+            used: w.used,
+            limit: w.limit,
+          })}
+        </div>
+      ))}
       <header className="bg-card/95 sticky top-0 z-10 border-b backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 md:px-6">
           <div className="flex items-center gap-3">
