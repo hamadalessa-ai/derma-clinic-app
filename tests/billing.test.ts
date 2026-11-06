@@ -29,11 +29,17 @@ afterAll(closeDb);
 
 const OWNER = { userId: "usr_platform-owner", roles: ["platform_owner"] as const };
 const stamp = Date.now().toString(36);
-const row = async (id: string) => (await getDb().select().from(tenants).where(eq(tenants.id, id)))[0];
+const row = async (id: string) =>
+  (await getDb().select().from(tenants).where(eq(tenants.id, id)))[0];
 const code = async (p: Promise<unknown>) =>
   p.then(
     () => "ok",
-    (e) => (e instanceof BillingError ? e.code : e instanceof PermissionError ? "not_allowed" : Promise.reject(e)),
+    (e) =>
+      e instanceof BillingError
+        ? e.code
+        : e instanceof PermissionError
+          ? "not_allowed"
+          : Promise.reject(e),
   );
 
 async function newClinic(tag: string, isDemo = true) {
@@ -85,18 +91,31 @@ describe("statements and payments", () => {
     const st = await issueStatement(OWNER, c.tenantId, { periodDay: "2026-03-10" });
     expect(st).toMatchObject({ amountHalalas: 50000, vatHalalas: 7500, totalHalalas: 57500 });
     expect(st.number).toBe(`BILL-A-${stamp.toUpperCase()}-202603-1`);
-    expect(await code(issueStatement(OWNER, c.tenantId, { periodDay: "2026-03-20" }))).toBe("exists");
+    expect(await code(issueStatement(OWNER, c.tenantId, { periodDay: "2026-03-20" }))).toBe(
+      "exists",
+    );
     expect(
-      await code(issueStatement({ userId: "usr_derma-admin", roles: ["clinic_admin"] }, c.tenantId)),
+      await code(
+        issueStatement({ userId: "usr_derma-admin", roles: ["clinic_admin"] }, c.tenantId),
+      ),
     ).toBe("not_allowed");
   });
 
   it("partial then full payment; never more than what is due", async () => {
     const c = await newClinic("b");
-    await setClinicPlan(OWNER, c.tenantId, { plan: "pro", priceHalalas: 100000, trialEndsOn: null, graceDays: 7 });
+    await setClinicPlan(OWNER, c.tenantId, {
+      plan: "pro",
+      priceHalalas: 100000,
+      trialEndsOn: null,
+      graceDays: 7,
+    });
     const st = await issueStatement(OWNER, c.tenantId);
     const pay = (amountHalalas: number) =>
-      recordStatementPayment(OWNER, c.tenantId, { statementId: st.id, amountHalalas, method: "transfer" });
+      recordStatementPayment(OWNER, c.tenantId, {
+        statementId: st.id,
+        amountHalalas,
+        method: "transfer",
+      });
     expect(await code(pay(200000))).toBe("too_much");
     expect((await pay(15000)).settled).toBe(false);
     expect((await pay(100000)).settled).toBe(true);
@@ -124,7 +143,10 @@ describe("statements and payments", () => {
     ).rejects.toThrow();
     await expect(
       withActor(admin, (tx) =>
-        tx.update(platformStatements).set({ status: "paid" }).where(eq(platformStatements.tenantId, DERMA)),
+        tx
+          .update(platformStatements)
+          .set({ status: "paid" })
+          .where(eq(platformStatements.tenantId, DERMA)),
       ),
     ).rejects.toThrow();
   });
@@ -133,12 +155,20 @@ describe("statements and payments", () => {
 describe("the overdue rule", () => {
   it("makes a live clinic read-only after due date + grace, and lifts it once paid", async () => {
     const c = await newClinic("c", false);
-    await setClinicPlan(OWNER, c.tenantId, { plan: "pro", priceHalalas: 100000, trialEndsOn: null, graceDays: 0 });
+    await setClinicPlan(OWNER, c.tenantId, {
+      plan: "pro",
+      priceHalalas: 100000,
+      trialEndsOn: null,
+      graceDays: 0,
+    });
     // The daily job issues this month's statement (due in 7 days): nothing overdue yet.
     const first = await runBilling();
     expect(first[`bill-c-${stamp}`]).toBe("issued, active");
     // An older statement, due long ago.
-    const old = await issueStatement(OWNER, c.tenantId, { periodDay: "2026-01-15", dueOn: "2026-01-20" });
+    const old = await issueStatement(OWNER, c.tenantId, {
+      periodDay: "2026-01-15",
+      dueOn: "2026-01-20",
+    });
     await runBilling();
     expect(await row(c.tenantId)).toMatchObject({ status: "read_only", pausedForBilling: true });
     const r = await recordStatementPayment(OWNER, c.tenantId, {
@@ -153,7 +183,12 @@ describe("the overdue rule", () => {
 
   it("never overrides a status the owner set by hand, and skips demo clinics", async () => {
     const c = await newClinic("d", false);
-    await setClinicPlan(OWNER, c.tenantId, { plan: "pro", priceHalalas: 100000, trialEndsOn: null, graceDays: 0 });
+    await setClinicPlan(OWNER, c.tenantId, {
+      plan: "pro",
+      priceHalalas: 100000,
+      trialEndsOn: null,
+      graceDays: 0,
+    });
     await issueStatement(OWNER, c.tenantId, { periodDay: "2026-01-15", dueOn: "2026-01-20" });
     await setClinicStatus(OWNER, c.tenantId, "suspended", "Owner decision");
     await runBilling();

@@ -1635,7 +1635,10 @@ export const platformStatements = pgTable(
     uniqueIndex("platform_statements_one_per_period")
       .on(t.tenantId, t.periodStart)
       .where(sql`${t.status} <> 'void'`),
-    check("platform_statements_amounts", sql`${t.amountHalalas} >= 0 and ${t.vatHalalas} >= 0 and ${t.totalHalalas} = ${t.amountHalalas} + ${t.vatHalalas}`),
+    check(
+      "platform_statements_amounts",
+      sql`${t.amountHalalas} >= 0 and ${t.vatHalalas} >= 0 and ${t.totalHalalas} = ${t.amountHalalas} + ${t.vatHalalas}`,
+    ),
   ],
 );
 

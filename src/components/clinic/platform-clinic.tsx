@@ -161,7 +161,9 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
                   data-testid={`clinic-tab-${k}`}
                   className={cn(
                     "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    tab === k ? "bg-brand-soft text-brand-strong" : "text-muted-foreground hover:bg-muted",
+                    tab === k
+                      ? "bg-brand-soft text-brand-strong"
+                      : "text-muted-foreground hover:bg-muted",
                   )}
                 >
                   {t(`tabs.${k}`)}
@@ -522,7 +524,11 @@ function BillingPanel({ clinic }: { clinic: PlatformClinicRow }) {
           <ul className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
             {(Object.keys(features) as (keyof typeof features)[]).map((f) => (
               <li key={f} className="flex items-center gap-1">
-                {features[f] ? <Check className="size-3.5" aria-hidden /> : <span aria-hidden>–</span>}
+                {features[f] ? (
+                  <Check className="size-3.5" aria-hidden />
+                ) : (
+                  <span aria-hidden>–</span>
+                )}
                 {t(`feature.${f}`)}
               </li>
             ))}
@@ -562,7 +568,9 @@ function BillingPanel({ clinic }: { clinic: PlatformClinicRow }) {
         </div>
         <FormError message={issue.error} />
         {clinic.pausedForBilling && (
-          <p className="bg-danger text-danger-foreground rounded-lg p-2 text-xs">{t("pausedForBilling")}</p>
+          <p className="bg-danger text-danger-foreground rounded-lg p-2 text-xs">
+            {t("pausedForBilling")}
+          </p>
         )}
         {clinic.statements.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("noStatements")}</p>
@@ -626,7 +634,9 @@ function Statement({
               size="sm"
               variant="ghost"
               loading={pending}
-              onClick={() => run(() => voidStatementAction({ tenantId: clinicId, statementId: st.id }))}
+              onClick={() =>
+                run(() => voidStatementAction({ tenantId: clinicId, statementId: st.id }))
+              }
             >
               {t("void")}
             </Button>

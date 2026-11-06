@@ -112,10 +112,10 @@ export async function handleInbound(
   // The AI receptionist only works for an active clinic whose plan includes it.
   const ai =
     !clinicIsActive(tenant) || !planAllows(tenant, "aiReceptionist")
-    ? null
-    : options.ai === undefined
-      ? anthropicClient(env)
-      : options.ai;
+      ? null
+      : options.ai === undefined
+        ? anthropicClient(env)
+        : options.ai;
   const results: { eventId: string; outcome: string }[] = [];
   for (const ev of events) {
     try {

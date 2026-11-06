@@ -245,22 +245,19 @@ export async function statementsIn(tx: TenantTx, today = riyadhDay(new Date())) 
     .select({ statementId: platformPayments.statementId, amount: platformPayments.amountHalalas })
     .from(platformPayments)
     .orderBy(asc(platformPayments.createdAt));
-  return rows.map(
-    (r): StatementView => ({
-      id: r.id,
-      number: r.number,
-      periodStart: r.periodStart,
-      totalHalalas: r.totalHalalas,
-      paidHalalas: pays.filter((p) => p.statementId === r.id).reduce((n, p) => n + p.amount, 0),
-      dueOn: r.dueOn,
-      status: r.status,
-      overdue: r.status === "issued" && r.dueOn < today,
-    }),
-  );
+  return rows.map((r): StatementView => ({
+    id: r.id,
+    number: r.number,
+    periodStart: r.periodStart,
+    totalHalalas: r.totalHalalas,
+    paidHalalas: pays.filter((p) => p.statementId === r.id).reduce((n, p) => n + p.amount, 0),
+    dueOn: r.dueOn,
+    status: r.status,
+    overdue: r.status === "issued" && r.dueOn < today,
+  }));
 }
 
-export const statementsOf = (tenantId: string) =>
-  withTenant(tenantId, (tx) => statementsIn(tx));
+export const statementsOf = (tenantId: string) => withTenant(tenantId, (tx) => statementsIn(tx));
 
 /**
  * The daily job: for every LIVE (not demo) clinic with a price, past its trial and not closed or
