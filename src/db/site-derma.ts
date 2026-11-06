@@ -19,6 +19,7 @@ type Doc = {
   branchAr?: string;
   branchEn?: string;
   photo: string;
+  portrait?: string;
   founder?: boolean;
   bioAr?: string;
   bioEn?: string;
@@ -31,7 +32,30 @@ const doc = (
   titleEn: string,
   dept: Doc["dept"],
   extra: Partial<Doc> = {},
-): Doc => ({ nameAr, nameEn, titleAr, titleEn, dept, photo: DERMA_IMG(file, 900), ...extra });
+): Doc => ({
+  nameAr,
+  nameEn,
+  titleAr,
+  titleEn,
+  dept,
+  photo: DERMA_IMG(file, 900),
+  // Clean portrait (background removed) made from the published photo by the
+  // "Doctor portraits" workflow (scripts/cutouts/).
+  portrait: NO_PHOTO.has(nameEn) ? undefined : `/site/derma/doctors/${portraitSlug(nameEn)}.webp`,
+  ...extra,
+});
+
+/** Their published cards for these doctors have no photo (name only). */
+const NO_PHOTO = new Set(["Dr. Asmaa Al-Hudaity", "Dr. Dalal Almadha"]);
+
+/** Same slug as scripts/cutouts/doctors.json. */
+function portraitSlug(nameEn: string) {
+  return nameEn
+    .toLowerCase()
+    .replace(/^(prof\. )?dr\. (dr\. )?/, "")
+    .replace(/[^a-z]+/g, "-")
+    .replace(/-$/, "");
+}
 
 const DERM_LASER = I(
   "استشاري طب الجلد والعلاج بالليزر",

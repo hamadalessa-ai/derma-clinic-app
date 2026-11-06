@@ -12,6 +12,8 @@ export interface DoctorCard {
   dept: string;
   branch: string | null;
   photo: string;
+  /** A clean cut-out portrait exists ("photo" is empty when the clinic has none). */
+  portrait: boolean;
   book: { href: string; external: boolean; label: string };
 }
 
@@ -115,15 +117,23 @@ export function SiteDoctors({
                 onClick={() => !focus && setCenter(i)}
                 data-testid={focus ? "site-doctor" : undefined}
               >
-                <div className="bg-card aspect-[4/5] overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- the clinic's own photos */}
-                  <img
-                    src={d.photo}
-                    alt={d.name}
-                    loading={far <= 2 ? "eager" : "lazy"}
-                    draggable={false}
-                    className="h-full w-full origin-top-right scale-[1.7] object-cover object-[100%_0%]"
-                  />
+                <div className="from-site-mist to-site-primary-soft aspect-[4/5] overflow-hidden bg-linear-to-b">
+                  {d.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- the clinic's own photos
+                    <img
+                      src={d.photo}
+                      alt={d.name}
+                      loading={far <= 2 ? "eager" : "lazy"}
+                      draggable={false}
+                      className="h-full w-full object-contain object-bottom pt-4"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center" aria-hidden>
+                      <span className="font-display text-site-primary/40 text-7xl">
+                        {d.name.replace(/^(د\.|Dr\.?|Prof\.\s*Dr\.?)\s*/i, "").charAt(0)}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 p-5 text-center">
                   <h3 className="font-display text-site-ink text-lg leading-snug font-semibold">
