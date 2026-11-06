@@ -91,14 +91,18 @@ describe("add a clinic", () => {
       ),
     ).toBe("not_allowed");
     // Even if the app check were skipped, the database refuses a non-owner.
-    await expect(
-      getDb().transaction(async (tx) => {
+    const refused = await getDb()
+      .transaction(async (tx) => {
         await tx.execute(sql`select set_config('app.user_id', 'usr_derma-admin', true)`);
         await tx.execute(
           sql`select public.app_create_clinic(${`y-${stamp}`}, 'x', 'x', '#000000', true)`,
         );
-      }),
-    ).rejects.toThrow(/platform owner/);
+      })
+      .then(
+        () => "created",
+        (e: Error & { cause?: Error }) => String(e.cause?.message ?? e.message),
+      );
+    expect(refused).toMatch(/platform owner/);
     const [none] = await getDb()
       .select()
       .from(tenants)
