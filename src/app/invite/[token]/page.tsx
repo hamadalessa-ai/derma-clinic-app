@@ -28,7 +28,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   const clinic = pick(locale, tenant.nameAr, tenant.nameEn);
 
   return (
-    <div style={brandStyle(tenant.brandColor)} className="font-site bg-site-mist flex min-h-screen flex-col">
+    <div
+      style={brandStyle(tenant.brandColor)}
+      className="font-site bg-site-mist flex min-h-screen flex-col"
+    >
       <PublicHeader
         clinicName={clinic}
         demoMode={null}

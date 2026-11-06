@@ -142,8 +142,13 @@ export async function addMember(tx: TenantTx, actor: Actor, input: MemberInput) 
   if (input.roles.includes("practitioner")) {
     const branchId =
       input.branchId ??
-      (await tx.select({ id: branches.id }).from(branches).orderBy(asc(branches.sortOrder)).limit(1))[0]
-        ?.id;
+      (
+        await tx
+          .select({ id: branches.id })
+          .from(branches)
+          .orderBy(asc(branches.sortOrder))
+          .limit(1)
+      )[0]?.id;
     if (branchId) {
       await tx.insert(staffSchedules).values(
         [0, 1, 2, 3, 4].map((weekday) => ({
@@ -170,7 +175,11 @@ export async function addMember(tx: TenantTx, actor: Actor, input: MemberInput) 
     action: "staff.add",
     entityType: "tenant_member",
     entityId: member.id,
-    metadata: { roles: input.roles, branchId: input.branchId, websiteDoctor: input.websiteDoctor ?? null },
+    metadata: {
+      roles: input.roles,
+      branchId: input.branchId,
+      websiteDoctor: input.websiteDoctor ?? null,
+    },
   });
   return { memberId: member.id, userId: user.id, needsPassword: !cred };
 }

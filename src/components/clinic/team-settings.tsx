@@ -272,7 +272,12 @@ function MemberRow({
           }}
         >
           <RolePicker roles={roles} setRoles={setRoles} tr={tr} />
-          <BranchPicker id={`b-${m.id}`} value={branchId} onChange={setBranchId} branches={branches} />
+          <BranchPicker
+            id={`b-${m.id}`}
+            value={branchId}
+            onChange={setBranchId}
+            branches={branches}
+          />
           <Button type="submit" size="sm" className="self-start" loading={pending}>
             {t("save")}
           </Button>
@@ -329,7 +334,10 @@ function AddMember({
               titleEn: v.titleEn || null,
               websiteDoctor: web === "" ? null : Number(web),
             }),
-          (r) => onDone(r.inviteUrl ? { name: ar ? v.nameAr : v.nameEn || v.nameAr, url: r.inviteUrl } : null),
+          (r) =>
+            onDone(
+              r.inviteUrl ? { name: ar ? v.nameAr : v.nameEn || v.nameAr, url: r.inviteUrl } : null,
+            ),
         );
       }}
     >
@@ -364,10 +372,35 @@ function AddMember({
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field id="n-ar" label={t("nameAr")} value={v.nameAr} onChange={(x) => set("nameAr", x)} dir="rtl" required />
-        <Field id="n-en" label={t("nameEn")} value={v.nameEn} onChange={(x) => set("nameEn", x)} dir="ltr" />
-        <Field id="t-ar" label={t("titleAr")} value={v.titleAr} onChange={(x) => set("titleAr", x)} dir="rtl" />
-        <Field id="t-en" label={t("titleEn")} value={v.titleEn} onChange={(x) => set("titleEn", x)} dir="ltr" />
+        <Field
+          id="n-ar"
+          label={t("nameAr")}
+          value={v.nameAr}
+          onChange={(x) => set("nameAr", x)}
+          dir="rtl"
+          required
+        />
+        <Field
+          id="n-en"
+          label={t("nameEn")}
+          value={v.nameEn}
+          onChange={(x) => set("nameEn", x)}
+          dir="ltr"
+        />
+        <Field
+          id="t-ar"
+          label={t("titleAr")}
+          value={v.titleAr}
+          onChange={(x) => set("titleAr", x)}
+          dir="rtl"
+        />
+        <Field
+          id="t-en"
+          label={t("titleEn")}
+          value={v.titleEn}
+          onChange={(x) => set("titleEn", x)}
+          dir="ltr"
+        />
         <Field
           id="email"
           label={t("email")}
@@ -377,7 +410,12 @@ function AddMember({
           type="email"
           required
         />
-        <BranchPicker id="branch" value={v.branchId} onChange={(x) => set("branchId", x)} branches={branches} />
+        <BranchPicker
+          id="branch"
+          value={v.branchId}
+          onChange={(x) => set("branchId", x)}
+          branches={branches}
+        />
       </div>
       <RolePicker roles={roles} setRoles={setRoles} tr={tr} />
       <p className="text-muted-foreground text-xs">{t("addHint")}</p>

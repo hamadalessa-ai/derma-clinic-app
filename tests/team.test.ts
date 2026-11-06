@@ -78,16 +78,16 @@ describe("team", () => {
       tx.select().from(staffSchedules).where(eq(staffSchedules.memberId, r.memberId)),
     );
     expect(hours).toHaveLength(5);
-    expect((await withTenant(LAMSA, (tx) => branchPractitioners(tx, branch.id))).map((m) => m.id)).toContain(
-      r.memberId,
-    );
+    expect(
+      (await withTenant(LAMSA, (tx) => branchPractitioners(tx, branch.id))).map((m) => m.id),
+    ).toContain(r.memberId);
 
     // The invitation: they set their own password once.
     expect((await withTenant(LAMSA, (tx) => inviteInfo(tx, r.userId)))?.passwordSet).toBe(false);
     await withTenant(LAMSA, (tx) => setInvitedPassword(tx, r.userId, "a-long-password-1"));
-    expect(await code(withTenant(LAMSA, (tx) => setInvitedPassword(tx, r.userId, "x".repeat(12))))).toBe(
-      "password_already_set",
-    );
+    expect(
+      await code(withTenant(LAMSA, (tx) => setInvitedPassword(tx, r.userId, "x".repeat(12)))),
+    ).toBe("password_already_set");
     expect(await canSignInToClinic(LAMSA, `dr.test.${stamp}@lamsa.demo`)).toBe(true);
 
     // The same email can't be added twice.
@@ -117,7 +117,9 @@ describe("team", () => {
   });
 
   it("the clinic keeps an admin; nobody deactivates themselves", async () => {
-    expect(await code(withActor(admin, (tx) => setActive(tx, admin, admin.memberId!, false)))).toBe("self");
+    expect(await code(withActor(admin, (tx) => setActive(tx, admin, admin.memberId!, false)))).toBe(
+      "self",
+    );
   });
 
   it("links a doctor to one website profile; the website's Book then books them", async () => {
@@ -134,7 +136,9 @@ describe("team", () => {
     expect((await site()).doctors?.some((d) => d.memberId)).toBe(false);
     // Reception is not a doctor: no website link.
     expect(
-      await code(withActor(admin, (tx) => linkWebsiteDoctor(tx, admin, member("derma-rec-ruh1"), 2))),
+      await code(
+        withActor(admin, (tx) => linkWebsiteDoctor(tx, admin, member("derma-rec-ruh1"), 2)),
+      ),
     ).toBe("not_found");
   });
 });

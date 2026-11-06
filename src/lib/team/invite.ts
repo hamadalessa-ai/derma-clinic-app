@@ -20,7 +20,12 @@ const sign = (tenantId: string, userId: string, exp: number, env: Env) =>
     .digest("base64url")
     .slice(0, 27);
 
-export function inviteToken(tenantId: string, userId: string, now = new Date(), env: Env = process.env) {
+export function inviteToken(
+  tenantId: string,
+  userId: string,
+  now = new Date(),
+  env: Env = process.env,
+) {
   const exp = Math.floor(now.getTime() / 1000) + INVITE_DAYS * 24 * 3600;
   return `${userId}.${exp}.${sign(tenantId, userId, exp, env)}`;
 }

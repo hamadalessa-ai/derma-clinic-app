@@ -125,7 +125,10 @@ export default async function SettingsPage({
                 deactivatedAt: m.deactivatedAt ? m.deactivatedAt.toISOString() : null,
               }))}
               websiteDoctors={team.websiteDoctors}
-              branches={ctx.branches.map((b) => ({ id: b.id, name: pick(locale, b.nameAr, b.nameEn) }))}
+              branches={ctx.branches.map((b) => ({
+                id: b.id,
+                name: pick(locale, b.nameAr, b.nameEn),
+              }))}
               selfId={ctx.memberId}
             />
           </CardContent>

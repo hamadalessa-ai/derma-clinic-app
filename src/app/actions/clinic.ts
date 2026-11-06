@@ -72,13 +72,7 @@ import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
-import {
-  addMember,
-  inviteInfo,
-  linkWebsiteDoctor,
-  setActive,
-  updateMember,
-} from "@/lib/team/team";
+import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
 import { inviteToken } from "@/lib/team/invite";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
@@ -1559,7 +1553,9 @@ export async function addTeamMemberAction(input: z.input<typeof addMemberInput>)
   });
 }
 
-export async function updateTeamMemberAction(input: { memberId: string } & z.input<z.ZodObject<typeof memberFields>>) {
+export async function updateTeamMemberAction(
+  input: { memberId: string } & z.input<z.ZodObject<typeof memberFields>>,
+) {
   return staffAction("team:manage", async (_ctx, actor) => {
     const v = parse(z.object({ memberId: uuid, ...memberFields }), input);
     await withActor(actor, (tx) => updateMember(tx, actor, v.memberId, v));
@@ -1578,7 +1574,10 @@ export async function setTeamMemberActiveAction(input: { memberId: string; activ
   });
 }
 
-export async function linkWebsiteDoctorAction(input: { memberId: string; websiteDoctor: number | null }) {
+export async function linkWebsiteDoctorAction(input: {
+  memberId: string;
+  websiteDoctor: number | null;
+}) {
   return staffAction("team:manage", async (_ctx, actor) => {
     const v = parse(
       z.object({ memberId: uuid, websiteDoctor: z.number().int().min(0).max(200).nullable() }),
