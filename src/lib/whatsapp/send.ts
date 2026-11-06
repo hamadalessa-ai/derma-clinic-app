@@ -10,6 +10,7 @@
  *  2. deliver (after the transaction is saved): the transport sends it, the status is updated.
  * Storing first means a crash between the two can never cause a second send ("at most once").
  */
+import type { ClinicStatus } from "@/lib/tenant/status";
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { messageDispatches, messages, messageTemplates, patients } from "@/db/schema";
@@ -36,7 +37,7 @@ import {
 } from "./transport";
 
 type Env = Record<string, string | undefined>;
-export type Tenant = { id: string; slug: string; isDemo: boolean };
+export type Tenant = { id: string; slug: string; isDemo: boolean; status?: ClinicStatus | null };
 export type MessageKind = TemplateKind | ReplyKind;
 
 export interface ButtonSpec {

@@ -13,6 +13,7 @@ import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { loadBookingCatalog } from "@/lib/online/catalog";
 import { bookingIdentity } from "@/lib/verify/identity";
 import { getCurrentTenant } from "@/lib/tenant/current";
+import { clinicIsActive, publicPagesOpen } from "@/lib/tenant/status";
 import { todayRiyadh } from "@/components/clinic/time";
 import type { Locale } from "@/i18n/config";
 
@@ -27,6 +28,7 @@ export default async function BookPage({
   const sp = await searchParams;
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
+  if (!publicPagesOpen(tenant)) redirect("/unavailable");
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("book");
   const catalog = await withTenant(tenant.id, (tx) => loadBookingCatalog(tx));
@@ -60,7 +62,7 @@ export default async function BookPage({
           <h1 className="font-display text-site-ink text-3xl font-semibold">{t("title")}</h1>
           <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
-        {catalog.enabled && catalog.departments.length > 0 ? (
+        {catalog.enabled && clinicIsActive(tenant) && catalog.departments.length > 0 ? (
           <OnlineBookingFlow catalog={catalog} days={days} identity={identity} initial={initial} />
         ) : (
           <Notice tone="warning">{t("disabled")}</Notice>

@@ -15,6 +15,7 @@ import { brandStyle, pick } from "@/lib/brand";
 import { formatGregorian, formatTime } from "@/lib/format";
 import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { getCurrentTenant } from "@/lib/tenant/current";
+import { publicPagesOpen } from "@/lib/tenant/status";
 import { consentToken, parseVideoToken } from "@/lib/video/link";
 import { videoProvider } from "@/lib/video/provider";
 import { loadVisit, PATIENT_EARLY_MINUTES, videoState } from "@/lib/video/visit";
@@ -29,6 +30,7 @@ export const metadata: Metadata = { title: "Video consultation · استشارة
 export default async function VisitPage({ params }: { params: Promise<{ token: string }> }) {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
+  if (!publicPagesOpen(tenant)) redirect("/unavailable");
   const { token } = await params;
   const appointmentId = parseVideoToken(tenant.id, token);
   if (!appointmentId) notFound();

@@ -16,6 +16,7 @@ import { WhatsAppError } from "@/lib/whatsapp/staff";
 import { ConcernError } from "@/lib/whatsapp/concern-actions";
 import { TeamError } from "@/lib/team/team";
 import { ClinicError } from "@/lib/platform/clinics";
+import { clinicIsActive, publicPagesOpen } from "@/lib/tenant/status";
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -23,15 +24,27 @@ export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error:
  * Every screen action goes through here: signed in? allowed? Then run, and turn known
  * problems (slot taken, outside hours, …) into an error code the screen translates.
  */
+/** Options for actions that only LOOK (search, free times…) or touch one's own account. */
+export interface ActionOptions {
+  /** Still allowed while the clinic is read-only or closed (see src/lib/tenant/status.ts). */
+  whenPaused?: boolean;
+}
+export const PAUSED_OK: ActionOptions = { whenPaused: true };
+
 export async function staffAction<T>(
   permission: Permission | Permission[] | null,
   fn: (ctx: StaffContext, actor: Actor) => Promise<T>,
+  options: ActionOptions = {},
 ): Promise<ActionResult<T>> {
   const ctx = await getStaffContext();
   if (!ctx) return { ok: false, error: "not_signed_in" };
   const needed = permission === null ? [] : Array.isArray(permission) ? permission : [permission];
   if (needed.length && !needed.some((p) => can(ctx.roles, p)))
     return { ok: false, error: "not_allowed" };
+  // A paused clinic (read-only / closed) can't change anything; the platform's own work goes on.
+  const platformWork = needed.length > 0 && needed.every((p) => p.startsWith("platform:"));
+  if (!platformWork && !options.whenPaused && !clinicIsActive(ctx.tenant))
+    return { ok: false, error: "clinic_paused" };
   try {
     return { ok: true, data: await fn(ctx, actorOf(ctx)) };
   } catch (err) {
@@ -81,9 +94,12 @@ export function parse<T>(
  */
 export async function publicAction<T>(
   fn: (tenant: Tenant) => Promise<T>,
+  options: ActionOptions = {},
 ): Promise<ActionResult<T>> {
   const tenant = await getCurrentTenant();
   if (!tenant) return { ok: false, error: "not_found" };
+  if (!publicPagesOpen(tenant)) return { ok: false, error: "clinic_unavailable" };
+  if (!options.whenPaused && !clinicIsActive(tenant)) return { ok: false, error: "clinic_paused" };
   try {
     return { ok: true, data: await fn(tenant) };
   } catch (err) {

@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { Download } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { EXPORT_KINDS } from "@/lib/export/clinic-export";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -24,6 +27,7 @@ import { tenantMembers, users } from "@/db/schema";
 import { mainAppUrl } from "@/lib/app-url";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
+import { can } from "@/lib/auth/permissions";
 import { getSettings } from "@/lib/booking/engine";
 import { consentRulesByCode, currentTemplates } from "@/lib/consents/consents";
 import { pick } from "@/lib/brand";
@@ -111,6 +115,29 @@ export default async function SettingsPage({
               />
             </CardContent>
           </Card>
+          {can(ctx.roles, "data:export") && (
+            <Card data-testid="data-export">
+              <CardHeader>
+                <CardTitle>{t("exportTitle")}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-muted-foreground text-sm">{t("exportHint")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {EXPORT_KINDS.map((k) => (
+                    <a
+                      key={k}
+                      href={`/export/${k}`}
+                      download
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      <Download />
+                      {t(`export_${k}`)}
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
       {tab === "team" && team && (

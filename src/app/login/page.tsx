@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Notice } from "@/components/ui/notice";
 import { getLocale, getTranslations } from "next-intl/server";
 import { LanguageToggle } from "@/components/language-toggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ export default async function LoginPage() {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("login");
   const tRoles = await getTranslations("roles");
+  const tStatus = await getTranslations("clinicStatus");
   const accounts = tenant.isDemo ? (DEMO_ACCOUNTS[tenant.slug] ?? []) : [];
 
   return (
@@ -51,6 +53,11 @@ export default async function LoginPage() {
             <CardDescription>{t("title")}</CardDescription>
           </CardHeader>
           <CardContent>
+            {tenant.status !== "active" && (
+              <Notice tone="warning" className="mb-4" data-testid="clinic-status-notice">
+                {tStatus(`login.${tenant.status}`)}
+              </Notice>
+            )}
             <LoginForm />
             {accounts.length > 0 && (
               <div className="bg-muted mt-6 rounded-md p-3 text-xs">

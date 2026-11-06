@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("nav");
   const tRoles = await getTranslations("roles");
+  const tStatus = await getTranslations("clinicStatus");
 
   const demo = whatsappMode(ctx.tenant) === "demo";
   const items = NAV_ITEMS.filter(
@@ -33,6 +34,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div style={brandStyle(ctx.tenant.brandColor)} className="flex min-h-screen flex-col">
       <DemoBanner />
+      {ctx.tenant.status !== "active" && (
+        <div
+          className="bg-danger text-danger-foreground px-4 py-1.5 text-center text-xs font-medium"
+          data-testid="clinic-status-banner"
+        >
+          {tStatus(`banner.${ctx.tenant.status}`)}
+          {ctx.tenant.statusReason ? ` · ${ctx.tenant.statusReason}` : ""}
+        </div>
+      )}
       <header className="bg-card/95 sticky top-0 z-10 border-b backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 md:px-6">
           <div className="flex items-center gap-3">

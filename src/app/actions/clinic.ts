@@ -73,11 +73,13 @@ import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subs
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { createClinic, clinicAddress, SLUG_RULE } from "@/lib/platform/clinics";
+import { setClinicStatus } from "@/lib/platform/status";
+import { CLINIC_STATUSES } from "@/lib/tenant/status";
 import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
 import { inviteToken } from "@/lib/team/invite";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
-import { parse, staffAction, ValidationError } from "@/lib/actions";
+import { parse, staffAction, ValidationError, PAUSED_OK } from "@/lib/actions";
 
 const uuid = z.uuid();
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -92,17 +94,21 @@ function refreshScreens() {
 // ─── Patients ───────────────────────────────────────────────────────────────
 
 export async function searchPatientsAction(query: string) {
-  return staffAction(["calendar:view", "patients:read"], async (_ctx, actor) => {
-    const q = parse(text(100), query);
-    const rows = await withActor(actor, (tx) => searchPatients(tx, q, 12));
-    return rows.map((p) => ({
-      id: p.id,
-      fileNumber: p.fileNumber,
-      nameAr: p.fullNameAr,
-      nameEn: p.fullNameEn,
-      phone: p.phone,
-    }));
-  });
+  return staffAction(
+    ["calendar:view", "patients:read"],
+    async (_ctx, actor) => {
+      const q = parse(text(100), query);
+      const rows = await withActor(actor, (tx) => searchPatients(tx, q, 12));
+      return rows.map((p) => ({
+        id: p.id,
+        fileNumber: p.fileNumber,
+        nameAr: p.fullNameAr,
+        nameEn: p.fullNameEn,
+        phone: p.phone,
+      }));
+    },
+    PAUSED_OK,
+  );
 }
 
 const newPatient = z.object({
@@ -266,33 +272,37 @@ export async function freeSlotsAction(input: {
   time?: string;
   limit?: number;
 }) {
-  return staffAction(["appointments:manage", "appointments:own"], async (_ctx, actor) => {
-    const v = parse(
-      z.object({
-        branchId: uuid,
-        serviceId: uuid,
-        practitionerId: uuid.optional(),
-        day,
-        time: time.optional(),
-        limit: z.number().int().min(1).max(12).optional(),
-      }),
-      input,
-    );
-    const from = new Date(Math.max(atRiyadh(v.day, v.time ?? "00:00").getTime(), Date.now()));
-    const slots = await withActor(actor, (tx) =>
-      findFreeSlots(tx, {
-        branchId: v.branchId,
-        serviceId: v.serviceId,
-        practitionerId: v.practitionerId,
-        from,
-        limit: v.limit ?? 6,
-      }),
-    );
-    return slots.map((s) => ({
-      startsAt: s.startsAt.toISOString(),
-      practitionerId: s.practitionerId,
-    }));
-  });
+  return staffAction(
+    ["appointments:manage", "appointments:own"],
+    async (_ctx, actor) => {
+      const v = parse(
+        z.object({
+          branchId: uuid,
+          serviceId: uuid,
+          practitionerId: uuid.optional(),
+          day,
+          time: time.optional(),
+          limit: z.number().int().min(1).max(12).optional(),
+        }),
+        input,
+      );
+      const from = new Date(Math.max(atRiyadh(v.day, v.time ?? "00:00").getTime(), Date.now()));
+      const slots = await withActor(actor, (tx) =>
+        findFreeSlots(tx, {
+          branchId: v.branchId,
+          serviceId: v.serviceId,
+          practitionerId: v.practitionerId,
+          from,
+          limit: v.limit ?? 6,
+        }),
+      );
+      return slots.map((s) => ({
+        startsAt: s.startsAt.toISOString(),
+        practitionerId: s.practitionerId,
+      }));
+    },
+    PAUSED_OK,
+  );
 }
 
 export async function moveAction(input: {
@@ -1026,40 +1036,52 @@ const subscription = z.object({
 });
 
 export async function savePushSubscriptionAction(input: z.input<typeof subscription>) {
-  return staffAction("account:manage", async (_ctx, actor) => {
-    const sub = parse(subscription, input);
-    // System context: a shared device may still be registered to the previous user.
-    await withTenant(actor.tenantId, (tx) =>
-      saveSubscription(tx, { tenantId: actor.tenantId, userId: actor.userId, sub }),
-    );
-    return null;
-  });
+  return staffAction(
+    "account:manage",
+    async (_ctx, actor) => {
+      const sub = parse(subscription, input);
+      // System context: a shared device may still be registered to the previous user.
+      await withTenant(actor.tenantId, (tx) =>
+        saveSubscription(tx, { tenantId: actor.tenantId, userId: actor.userId, sub }),
+      );
+      return null;
+    },
+    PAUSED_OK,
+  );
 }
 
 export async function removePushSubscriptionAction(input: { endpoint: string }) {
-  return staffAction("account:manage", async (_ctx, actor) => {
-    const v = parse(z.object({ endpoint: z.string().max(1000) }), input);
-    await withActor(actor, (tx) => removeSubscription(tx, actor.userId, v.endpoint));
-    revalidatePath("/account");
-    return null;
-  });
+  return staffAction(
+    "account:manage",
+    async (_ctx, actor) => {
+      const v = parse(z.object({ endpoint: z.string().max(1000) }), input);
+      await withActor(actor, (tx) => removeSubscription(tx, actor.userId, v.endpoint));
+      revalidatePath("/account");
+      return null;
+    },
+    PAUSED_OK,
+  );
 }
 
 export async function saveNotificationPrefsAction(input: {
   enabled: boolean;
   mutedTypes: string[];
 }) {
-  return staffAction("account:manage", async (_ctx, actor) => {
-    const v = parse(
-      z.object({ enabled: z.boolean(), mutedTypes: z.array(z.string().max(40)).max(20) }),
-      input,
-    );
-    await withActor(actor, (tx) =>
-      savePrefs(tx, { tenantId: actor.tenantId, userId: actor.userId, ...v }),
-    );
-    revalidatePath("/account");
-    return null;
-  });
+  return staffAction(
+    "account:manage",
+    async (_ctx, actor) => {
+      const v = parse(
+        z.object({ enabled: z.boolean(), mutedTypes: z.array(z.string().max(40)).max(20) }),
+        input,
+      );
+      await withActor(actor, (tx) =>
+        savePrefs(tx, { tenantId: actor.tenantId, userId: actor.userId, ...v }),
+      );
+      revalidatePath("/account");
+      return null;
+    },
+    PAUSED_OK,
+  );
 }
 
 export async function testPushAction() {
@@ -1229,12 +1251,16 @@ export async function simulatorTypeAction(input: {
 
 /** Simulator (demo only): the patient opened the chat → messages show as read. */
 export async function simulatorReadAction(input: { conversationId: string }) {
-  return staffAction("whatsapp:simulator", async (ctx, actor) => {
-    const v = parse(conversationId, input);
-    if (whatsappMode(ctx.tenant) !== "demo") return null;
-    await withActor(actor, (tx) => markDemoThreadRead(tx, v.conversationId));
-    return null;
-  });
+  return staffAction(
+    "whatsapp:simulator",
+    async (ctx, actor) => {
+      const v = parse(conversationId, input);
+      if (whatsappMode(ctx.tenant) !== "demo") return null;
+      await withActor(actor, (tx) => markDemoThreadRead(tx, v.conversationId));
+      return null;
+    },
+    PAUSED_OK,
+  );
 }
 
 export async function runScheduledNowAction(input: {
@@ -1312,30 +1338,34 @@ export async function sendTestWhatsappAction(input: { phone: string }) {
 
 /** Move dialog: free times that day — same doctor first, then (for reception) other doctors. */
 export async function rescheduleOptionsAction(input: { appointmentId: string; day: string }) {
-  return staffAction(["appointments:manage", "appointments:own"], async (ctx, actor) => {
-    const v = parse(z.object({ appointmentId: uuid, day }), input);
-    return withActor(actor, async (tx) => {
-      const r = await rescheduleOptions(tx, v);
-      if (!r.ok) return { ok: false as const, reason: r.reason };
-      const canChangeDoctor = can(ctx.roles, "appointments:manage");
-      const others = canChangeDoctor ? r.otherDoctors : [];
-      const names = await doctorNames(tx, [
-        r.practitionerId,
-        ...others.map((o) => o.practitionerId),
-      ]);
-      const time = (slots: { startsAt: Date }[]) => slots.map((s) => riyadhTime(s.startsAt));
-      return {
-        ok: true as const,
-        doctor: names.get(r.practitionerId) ?? null,
-        sameDoctor: time(r.sameDoctor),
-        otherDoctors: others.map((o) => ({
-          practitionerId: o.practitionerId,
-          doctor: names.get(o.practitionerId) ?? null,
-          times: time(o.slots),
-        })),
-      };
-    });
-  });
+  return staffAction(
+    ["appointments:manage", "appointments:own"],
+    async (ctx, actor) => {
+      const v = parse(z.object({ appointmentId: uuid, day }), input);
+      return withActor(actor, async (tx) => {
+        const r = await rescheduleOptions(tx, v);
+        if (!r.ok) return { ok: false as const, reason: r.reason };
+        const canChangeDoctor = can(ctx.roles, "appointments:manage");
+        const others = canChangeDoctor ? r.otherDoctors : [];
+        const names = await doctorNames(tx, [
+          r.practitionerId,
+          ...others.map((o) => o.practitionerId),
+        ]);
+        const time = (slots: { startsAt: Date }[]) => slots.map((s) => riyadhTime(s.startsAt));
+        return {
+          ok: true as const,
+          doctor: names.get(r.practitionerId) ?? null,
+          sameDoctor: time(r.sameDoctor),
+          otherDoctors: others.map((o) => ({
+            practitionerId: o.practitionerId,
+            doctor: names.get(o.practitionerId) ?? null,
+            times: time(o.slots),
+          })),
+        };
+      });
+    },
+    PAUSED_OK,
+  );
 }
 
 // ─── Post-care concerns (doctor's Concern card; reception too) ──────────────
@@ -1392,25 +1422,29 @@ export async function concernFollowUpTimesAction(input: {
   serviceId: string;
   day: string;
 }) {
-  return staffAction("concerns:handle", async (_ctx, actor) => {
-    const v = parse(concernId.extend({ serviceId: uuid, day }), input);
-    return withActor(actor, async (tx) => {
-      const appt = await getAppointment(tx, v.appointmentId);
-      const from = new Date(Math.max(atRiyadh(v.day, "00:00").getTime(), Date.now()));
-      const until = atRiyadh(v.day, "23:59");
-      const slots = await findFreeSlots(tx, {
-        branchId: appt.branchId,
-        serviceId: v.serviceId,
-        practitionerId: appt.practitionerId,
-        from,
-        days: 1,
-        limit: 24,
+  return staffAction(
+    "concerns:handle",
+    async (_ctx, actor) => {
+      const v = parse(concernId.extend({ serviceId: uuid, day }), input);
+      return withActor(actor, async (tx) => {
+        const appt = await getAppointment(tx, v.appointmentId);
+        const from = new Date(Math.max(atRiyadh(v.day, "00:00").getTime(), Date.now()));
+        const until = atRiyadh(v.day, "23:59");
+        const slots = await findFreeSlots(tx, {
+          branchId: appt.branchId,
+          serviceId: v.serviceId,
+          practitionerId: appt.practitionerId,
+          from,
+          days: 1,
+          limit: 24,
+        });
+        return slots
+          .filter((s) => s.startsAt <= until)
+          .map((s) => ({ startsAt: s.startsAt.toISOString(), time: riyadhTime(s.startsAt) }));
       });
-      return slots
-        .filter((s) => s.startsAt <= until)
-        .map((s) => ({ startsAt: s.startsAt.toISOString(), time: riyadhTime(s.startsAt) }));
-    });
-  });
+    },
+    PAUSED_OK,
+  );
 }
 
 /**
@@ -1661,5 +1695,33 @@ export async function createClinicAction(input: z.input<typeof newClinicInput>) 
           : null,
       existingUser: !r.needsPassword,
     };
+  });
+}
+
+export async function setClinicStatusAction(input: {
+  tenantId: string;
+  status: string;
+  reason?: string | null;
+}) {
+  return staffAction("platform:clinics", async (ctx) => {
+    const v = parse(
+      z
+        .object({
+          tenantId: uuid,
+          status: z.enum(CLINIC_STATUSES),
+          reason: z.string().trim().max(300).nullish(),
+        })
+        // Pausing a clinic always says why (the clinic sees it); resuming needs no reason.
+        .refine((x) => x.status === "active" || !!x.reason),
+      input,
+    );
+    const r = await setClinicStatus(
+      { userId: ctx.user.id, roles: ctx.roles },
+      v.tenantId,
+      v.status,
+      v.reason ?? null,
+    );
+    revalidatePath("/platform");
+    return r;
   });
 }

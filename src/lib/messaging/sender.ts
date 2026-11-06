@@ -52,7 +52,9 @@ type CodeTenant = { id: string; isDemo: boolean; slug?: string };
 
 /** The sender for this clinic, or null when none may be used (→ fail safely). */
 export function getMessageSender(tenant: CodeTenant, env: Env = process.env): MessageSender | null {
-  const mode = whatsappMode(tenant, env);
+  // Sign-in codes still go out while a clinic is read-only (patients may still look at their page);
+  // the public actions that ask for codes are already closed for suspended / closed clinics.
+  const mode = whatsappMode({ isDemo: tenant.isDemo, slug: tenant.slug }, env);
   if (mode === "off" || (!tenant.slug && mode !== "demo")) return null;
   return {
     channel: mode === "demo" ? "demo" : "whatsapp",

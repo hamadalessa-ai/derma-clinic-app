@@ -57,12 +57,13 @@ begin;
 drop table if exists
   ${tables.join(",\n  ")}
   cascade;
-drop type if exists ${schemaEnums()
-    .map((e) => `public.${e}`)
-    .join(", ")};
 ${sqlFunctions()
   .map((f) => `drop function if exists public.${f};`)
   .join("\n")}
+-- Types last: functions may use them (e.g. app_set_clinic_status takes a clinic_status).
+drop type if exists ${schemaEnums()
+    .map((e) => `public.${e}`)
+    .join(", ")};
 do $$
 begin
   if exists (select from pg_roles where rolname = 'clinic_app') then

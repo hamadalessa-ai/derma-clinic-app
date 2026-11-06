@@ -89,6 +89,33 @@ $$;
 revoke all on function public.app_create_clinic(text, text, text, text, boolean) from public;
 grant execute on function public.app_create_clinic(text, text, text, text, boolean) to clinic_app;
 
+-- Clinic status (platform owner only): active, read_only, suspended, closed. Returns the old status.
+create or replace function public.app_set_clinic_status(
+  p_tenant uuid, p_status public.clinic_status, p_reason text
+) returns public.clinic_status
+language plpgsql security definer set search_path = public as $$
+declare
+  old_status public.clinic_status;
+begin
+  if not exists (select 1 from public.users u
+                 where u.id = public.app_current_user() and u.is_platform_owner) then
+    raise exception 'only the platform owner can change a clinic status' using errcode = '42501';
+  end if;
+  select status into old_status from public.tenants where id = p_tenant for update;
+  if not found then
+    raise exception 'clinic not found' using errcode = '22023';
+  end if;
+  update public.tenants
+     set status = p_status,
+         status_reason = nullif(left(trim(coalesce(p_reason, '')), 300), ''),
+         status_changed_at = now()
+   where id = p_tenant;
+  return old_status;
+end;
+$$;
+revoke all on function public.app_set_clinic_status(uuid, public.clinic_status, text) from public;
+grant execute on function public.app_set_clinic_status(uuid, public.clinic_status, text) to clinic_app;
+
 grant execute on function public.app_current_tenant(), public.app_current_user(),
   public.app_has_role(text), public.app_branch_allowed(uuid), public.normalize_search(text),
   public.demo_workday(date, integer), public.app_patient(), public.app_is_patient(),
@@ -223,6 +250,11 @@ create policy tenants_create on public.tenants for insert
   with check (current_user <> 'clinic_app');
 create policy tenant_settings_create on public.tenant_settings for insert
   with check (current_user <> 'clinic_app');
+-- The platform functions above (running as the table owner) may also read and update the directory.
+create policy tenants_owner_read on public.tenants for select
+  using (current_user <> 'clinic_app');
+create policy tenants_owner_update on public.tenants for update
+  using (current_user <> 'clinic_app') with check (current_user <> 'clinic_app');
 
 -- Staff login tables: global by design (one person can work at several clinics).
 -- What a user may see inside a clinic is decided by tenant_members, which IS isolated.

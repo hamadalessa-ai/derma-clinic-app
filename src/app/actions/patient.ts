@@ -23,7 +23,7 @@ import {
 import { doctorNames } from "@/lib/booking/doctor-names";
 import { signConsentByLink, signConsentByPatient } from "@/lib/consents/consents";
 import { isDay } from "@/lib/booking/time";
-import { parse, publicAction, PublicError } from "@/lib/actions";
+import { parse, publicAction, PublicError, PAUSED_OK } from "@/lib/actions";
 import { findOrCreateOnlinePatient } from "@/lib/patients/queries";
 import { normalizeSaudiMobile, westernDigits } from "@/lib/phone";
 import {
@@ -247,7 +247,7 @@ export async function requestPortalCodeAction(input: z.input<typeof portalCodeRe
     return withTenant(tenant.id, (tx) =>
       sendCode(tx, { tenant, phone: v.phone, purpose: "portal", ip }),
     );
-  });
+  }, PAUSED_OK);
 }
 
 const portalCodeCheck = z.object({ phone, code: z.string().trim().max(10) });
@@ -280,7 +280,7 @@ export async function verifyPortalCodeAction(input: z.input<typeof portalCodeChe
     if (result.error || !result.session) throw new PublicError(result.error ?? "unexpected");
     setPatientCookie(await cookies(), result.session.token);
     return null;
-  });
+  }, PAUSED_OK);
 }
 
 export async function portalSignOutAction() {
@@ -289,7 +289,7 @@ export async function portalSignOutAction() {
     await revokePatientSession(tenant.id, jar.get(PATIENT_COOKIE)?.value);
     jar.delete(PATIENT_COOKIE);
     return null;
-  });
+  }, PAUSED_OK);
 }
 
 export async function portalCancelAction(input: { appointmentId: string }) {

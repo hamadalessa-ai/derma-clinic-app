@@ -13,6 +13,7 @@
  *    switched it on and nobody on staff took the chat over; otherwise → inbox, "needs reply";
  *  - delivery statuses (sent / delivered / read / failed) update the stored message.
  */
+import { clinicIsActive } from "@/lib/tenant/status";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { conversations, messages, patients, webhookEvents } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
@@ -106,7 +107,12 @@ export async function handleInbound(
 ) {
   const env = options.env ?? process.env;
   const notify = options.notify ?? ((e: PushEvent[]) => sendPushEvents(tenant.id, e, env));
-  const ai = options.ai === undefined ? anthropicClient(env) : options.ai;
+  // The AI receptionist only works for an active clinic (whatsappMode is "off" otherwise anyway).
+  const ai = !clinicIsActive(tenant)
+    ? null
+    : options.ai === undefined
+      ? anthropicClient(env)
+      : options.ai;
   const results: { eventId: string; outcome: string }[] = [];
   for (const ev of events) {
     try {

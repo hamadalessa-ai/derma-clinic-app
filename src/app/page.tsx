@@ -6,6 +6,7 @@ import { brandStyle, pick } from "@/lib/brand";
 import { getStaffContext } from "@/lib/auth/session";
 import { loadClinicSite } from "@/lib/site/data";
 import { getCurrentTenant } from "@/lib/tenant/current";
+import { publicPagesOpen } from "@/lib/tenant/status";
 import type { Locale } from "@/i18n/config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -32,6 +33,7 @@ export default async function ClinicHome({
 }) {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
+  if (!publicPagesOpen(tenant)) redirect("/unavailable");
   const { preview } = await searchParams;
   if (preview === undefined && (await getStaffContext())) redirect("/home");
   const locale = (await getLocale()) as Locale;

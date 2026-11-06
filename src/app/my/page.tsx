@@ -11,6 +11,7 @@ import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { loadPortal } from "@/lib/portal/data";
 import { PATIENT_COOKIE, patientForToken } from "@/lib/portal/session";
 import { getCurrentTenant } from "@/lib/tenant/current";
+import { publicPagesOpen } from "@/lib/tenant/status";
 import type { Locale } from "@/i18n/config";
 
 export const metadata: Metadata = { title: "My page · صفحتي" };
@@ -19,6 +20,7 @@ export const metadata: Metadata = { title: "My page · صفحتي" };
 export default async function MyPage() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
+  if (!publicPagesOpen(tenant)) redirect("/unavailable");
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("book");
   const session = await patientForToken(tenant.id, (await cookies()).get(PATIENT_COOKIE)?.value);

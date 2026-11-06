@@ -14,6 +14,7 @@ import { missingConsent } from "@/lib/consents/consents";
 import { formatGregorian, formatTime } from "@/lib/format";
 import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { getCurrentTenant } from "@/lib/tenant/current";
+import { publicPagesOpen } from "@/lib/tenant/status";
 import { parseConsentToken, videoToken } from "@/lib/video/link";
 import type { Locale } from "@/i18n/config";
 
@@ -26,6 +27,7 @@ export const metadata: Metadata = { title: "Consent · الموافقة" };
 export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
+  if (!publicPagesOpen(tenant)) redirect("/unavailable");
   const { token } = await params;
   const appointmentId = parseConsentToken(tenant.id, token);
   if (!appointmentId) notFound();

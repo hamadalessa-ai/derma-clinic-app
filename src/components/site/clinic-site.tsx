@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { clinicIsActive, type ClinicStatus } from "@/lib/tenant/status";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { CalendarCheck, MapPin, MessageCircle, Phone, ShieldCheck, Video } from "lucide-react";
@@ -33,7 +34,7 @@ export async function ClinicSite({
   data,
   locale,
 }: {
-  clinic: { nameAr: string; nameEn: string; isDemo: boolean };
+  clinic: { nameAr: string; nameEn: string; isDemo: boolean; status?: ClinicStatus };
   data: ClinicSiteData;
   locale: Locale;
 }) {
@@ -44,7 +45,8 @@ export async function ClinicSite({
   const L = (a?: string, e?: string) => (ar ? a || e : e || a) ?? "";
   const tel = telHref(s.phone);
   const wa = waHref(s.whatsapp);
-  const canBook = data.catalog.enabled && data.catalog.departments.length > 0;
+  const canBook =
+    clinicIsActive(clinic) && data.catalog.enabled && data.catalog.departments.length > 0;
   const consultHref = data.firstService
     ? `/book?mode=clinic&service=${data.firstService.id}`
     : "/book";

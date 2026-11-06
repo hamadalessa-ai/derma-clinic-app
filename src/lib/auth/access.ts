@@ -1,7 +1,8 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { withTenant } from "@/db/tenant";
-import { branches, tenantMembers, users } from "@/db/schema";
+import { branches, tenantMembers, tenants, users } from "@/db/schema";
+import { staffMaySignIn } from "@/lib/tenant/status";
 import type { Role } from "./permissions";
 
 export type Branch = typeof branches.$inferSelect;
@@ -26,6 +27,7 @@ export async function getStaffAccess(
   tenantId: string,
   user: { id: string; isPlatformOwner?: boolean | null },
 ): Promise<StaffAccess | null> {
+  if (!user.isPlatformOwner && !(await clinicOpenToStaff(tenantId))) return null;
   return withTenant(tenantId, async (tx) => {
     const [member] = await tx
       .select()
@@ -63,6 +65,7 @@ export async function canSignInToClinic(tenantId: string, email: string): Promis
     .limit(1);
   if (!user) return false;
   if (user.isPlatformOwner) return true;
+  if (!(await clinicOpenToStaff(tenantId))) return false;
   const rows = await withTenant(tenantId, (tx) =>
     tx
       .select({ id: tenantMembers.id })
@@ -77,4 +80,14 @@ export async function canSignInToClinic(tenantId: string, email: string): Promis
       .limit(1),
   );
   return rows.length > 0;
+}
+
+/** A suspended clinic: nobody but the platform owner signs in (existing sessions stop working). */
+async function clinicOpenToStaff(tenantId: string) {
+  const [t] = await getDb()
+    .select({ status: tenants.status })
+    .from(tenants)
+    .where(eq(tenants.id, tenantId))
+    .limit(1);
+  return !!t && staffMaySignIn(t);
 }
