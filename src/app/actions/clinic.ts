@@ -72,6 +72,7 @@ import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
+import { createClinic, clinicAddress, SLUG_RULE } from "@/lib/platform/clinics";
 import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
 import { inviteToken } from "@/lib/team/invite";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
@@ -1597,5 +1598,63 @@ export async function inviteLinkAction(input: { userId: string }) {
     const info = await withActor(actor, (tx) => inviteInfo(tx, v.userId));
     if (!info || info.passwordSet) throw new ValidationError("no open invitation");
     return { inviteUrl: `${await clinicUrl()}/invite/${inviteToken(actor.tenantId, v.userId)}` };
+  });
+}
+
+// ── Platform owner: add a new clinic ───────────────────────────────────────
+
+const req = (max: number) => z.string().trim().min(1).max(max);
+const newClinicInput = z.object({
+  slug: z.string().trim().toLowerCase().regex(SLUG_RULE),
+  nameAr: req(120),
+  nameEn: req(120),
+  brandColor: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^#[0-9a-f]{6}$/),
+  isDemo: z.boolean(),
+  branchNameAr: req(120),
+  branchNameEn: req(120),
+  cityAr: req(60),
+  cityEn: req(60),
+  departmentAr: req(80),
+  departmentEn: req(80),
+  adminNameAr: req(120),
+  adminNameEn: z.string().trim().max(120).nullish(),
+  adminEmail: z.string().trim().toLowerCase().email().max(200),
+});
+
+export async function createClinicAction(input: z.input<typeof newClinicInput>) {
+  return staffAction("platform:clinics", async (ctx) => {
+    const v = parse(newClinicInput, input);
+    const r = await createClinic(
+      { userId: ctx.user.id, roles: ctx.roles },
+      {
+        slug: v.slug,
+        nameAr: v.nameAr,
+        nameEn: v.nameEn,
+        brandColor: v.brandColor,
+        isDemo: v.isDemo,
+        branch: { nameAr: v.branchNameAr, nameEn: v.branchNameEn, cityAr: v.cityAr, cityEn: v.cityEn },
+        department: { nameAr: v.departmentAr, nameEn: v.departmentEn },
+        admin: { nameAr: v.adminNameAr, nameEn: v.adminNameEn ?? null, email: v.adminEmail },
+      },
+    );
+    revalidatePath("/platform");
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+    const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+    const address = clinicAddress(r.slug, { host, proto });
+    return {
+      slug: r.slug,
+      address,
+      // The invitation only opens on the clinic's own address (it is checked against that clinic).
+      inviteUrl:
+        address && r.needsPassword
+          ? `${address}/invite/${inviteToken(r.tenantId, r.adminUserId)}`
+          : null,
+      existingUser: !r.needsPassword,
+    };
   });
 }
