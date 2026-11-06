@@ -114,6 +114,7 @@ try {
   await page.getByRole("button", { name: "تم" }).click();
   const card = page.locator('[data-testid="platform-clinic"][data-slug="elite"]');
   await card.locator("button").first().click();
+  await card.getByTestId("clinic-tab-status").click();
   await card.locator("select").selectOption("suspended");
   await card.locator('input[id^="why-"]').fill("تأخر السداد منذ 1 نوفمبر");
   await page.screenshot({ path: "screenshots/platform-ar-status.png", fullPage: true });
