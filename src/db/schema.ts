@@ -532,6 +532,7 @@ export const TENANT_TABLES = [
   "schedule_exceptions",
   "platform_statements",
   "platform_payments",
+  "support_grants",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1664,4 +1665,27 @@ export const platformPayments = pgTable(
       foreignColumns: [platformStatements.tenantId, platformStatements.id],
     }),
   ],
+);
+
+// ─── Support access (granted by the clinic, never taken by the platform) ───
+
+/**
+ * A clinic admin allows the platform's support to open the clinic for a limited time (view only,
+ * or view and change). While it lasts, the platform owner works as a clinic admin (never with
+ * clinical notes); every page they open is recorded in the clinic's audit log.
+ */
+export const supportGrants = pgTable(
+  "support_grants",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    grantedBy: text("granted_by").notNull(),
+    reason: text("reason"),
+    allowChanges: boolean("allow_changes").notNull().default(false),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedBy: text("revoked_by"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("support_grants_tenant_expires_idx").on(t.tenantId, t.expiresAt)],
 );

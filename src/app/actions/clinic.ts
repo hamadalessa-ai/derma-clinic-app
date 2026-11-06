@@ -75,6 +75,7 @@ import { checkIn } from "@/lib/visits/check-in";
 import { createClinic, clinicAddress, SLUG_RULE } from "@/lib/platform/clinics";
 import { setClinicLimits, setClinicStatus } from "@/lib/platform/status";
 import { planAllows, PLAN_TIERS } from "@/lib/platform/plans";
+import { endSupport, grantSupport, SUPPORT_HOURS } from "@/lib/support/grants";
 import {
   issueStatement,
   recordStatementPayment,
@@ -1856,5 +1857,38 @@ export async function voidStatementAction(input: { tenantId: string; statementId
     const r = await voidStatement(ownerOf(ctx), v.tenantId, v.statementId);
     revalidatePath("/platform");
     return r;
+  });
+}
+
+// ── Clinic admin: support access for the platform ──────────────────────────
+
+export async function grantSupportAction(input: {
+  hours: number;
+  allowChanges: boolean;
+  reason?: string | null;
+}) {
+  return staffAction("support:grant", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        hours: z
+          .number()
+          .int()
+          .refine((h) => (SUPPORT_HOURS as readonly number[]).includes(h)),
+        allowChanges: z.boolean(),
+        reason: z.string().trim().max(300).nullish(),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => grantSupport(tx, actor, { ...v, reason: v.reason ?? null }));
+    revalidatePath("/settings");
+    return null;
+  });
+}
+
+export async function endSupportAction() {
+  return staffAction("support:grant", async (_ctx, actor) => {
+    await withActor(actor, (tx) => endSupport(tx, actor));
+    revalidatePath("/settings");
+    return null;
   });
 }

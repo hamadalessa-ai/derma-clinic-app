@@ -15,8 +15,10 @@ import { TemplateError } from "@/lib/whatsapp/admin";
 import { WhatsAppError } from "@/lib/whatsapp/staff";
 import { ConcernError } from "@/lib/whatsapp/concern-actions";
 import { TeamError } from "@/lib/team/team";
+import { auditEvent } from "@/lib/audit";
 import { ClinicError } from "@/lib/platform/clinics";
 import { BillingError } from "@/lib/platform/billing";
+import { SupportError } from "@/lib/support/grants";
 import { clinicIsActive, publicPagesOpen } from "@/lib/tenant/status";
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
@@ -46,6 +48,17 @@ export async function staffAction<T>(
   const platformWork = needed.length > 0 && needed.every((p) => p.startsWith("platform:"));
   if (!platformWork && !options.whenPaused && !clinicIsActive(ctx.tenant))
     return { ok: false, error: "clinic_paused" };
+  // Support access: view only unless the clinic allowed changes; every change is recorded.
+  if (ctx.support && !platformWork && !options.whenPaused) {
+    if (!ctx.support.allowChanges) return { ok: false, error: "support_view_only" };
+    await auditEvent(ctx.tenant.id, {
+      actorUserId: ctx.user.id,
+      action: "support.change",
+      entityType: "action",
+      entityId: needed.join(",") || null,
+      metadata: { permissions: needed },
+    });
+  }
   try {
     return { ok: true, data: await fn(ctx, actorOf(ctx)) };
   } catch (err) {
@@ -70,6 +83,7 @@ export async function staffAction<T>(
     if (err instanceof TeamError) return { ok: false, error: `team_${err.code}` };
     if (err instanceof ClinicError) return { ok: false, error: `clinic_${err.code}` };
     if (err instanceof BillingError) return { ok: false, error: `billing_${err.code}` };
+    if (err instanceof SupportError) return { ok: false, error: `support_${err.code}` };
     if (err instanceof PermissionError) return { ok: false, error: "not_allowed" };
     if (err instanceof ValidationError) return { ok: false, error: "invalid" };
     console.error("action failed", err);

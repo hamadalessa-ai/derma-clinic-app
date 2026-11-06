@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { CLINIC_HEADER, clinicSlugFromEnv } from "@/lib/tenant/host";
+import { CLINIC_HEADER, clinicSlugFromEnv, PATH_HEADER } from "@/lib/tenant/host";
 
 /**
  * Resolves the clinic from the subdomain and passes it to the app as a request header.
@@ -10,6 +10,8 @@ export function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.delete(CLINIC_HEADER); // never trust a value sent by the browser
   if (slug) headers.set(CLINIC_HEADER, slug);
+  // The page being opened (for the support-access log); always set here, never from the browser.
+  headers.set(PATH_HEADER, request.nextUrl.pathname);
   return NextResponse.next({ request: { headers } });
 }
 

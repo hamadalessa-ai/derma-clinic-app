@@ -23,6 +23,7 @@ import {
 import { withTenant } from "@/db/tenant";
 import { whatsappMode } from "@/lib/whatsapp/config";
 import { statementsOf, type StatementView } from "./billing";
+import { activeGrant } from "@/lib/support/grants";
 import {
   aiUsedThisMonth,
   effectiveLimits,
@@ -62,6 +63,7 @@ export interface ClinicOverview {
   setup: Record<SetupStep, boolean>;
   usage: ClinicUsage;
   statements: StatementView[];
+  support: { expiresAt: Date; allowChanges: boolean; reason: string | null } | null;
 }
 
 async function one(q: Promise<{ n: number }[]>) {
@@ -160,6 +162,7 @@ export async function platformOverview(now: Date = new Date()): Promise<ClinicOv
       setup: await setupOf(tenant),
       usage: await usageOf(tenant, now),
       statements: await statementsOf(tenant.id),
+      support: await withTenant(tenant.id, (tx) => activeGrant(tx)),
     });
   }
   return out;

@@ -1,5 +1,7 @@
 /** Header the proxy sets with the clinic slug. Any value sent by the browser is overwritten. */
 export const CLINIC_HEADER = "x-clinic-slug";
+/** Header the proxy sets with the requested path (used to log support-access page views). */
+export const PATH_HEADER = "x-request-path";
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/;
 const RESERVED = new Set(["www", "app", "api", "admin"]);

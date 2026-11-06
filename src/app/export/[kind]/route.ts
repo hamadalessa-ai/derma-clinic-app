@@ -14,7 +14,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ kind: s
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
   const ctx = await getStaffContext();
-  if (!ctx || !can(ctx.roles, "data:export")) {
+  // Support access never includes downloading the clinic's data.
+  if (!ctx || !can(ctx.roles, "data:export") || ctx.support) {
     return NextResponse.json({ error: "not allowed" }, { status: 403 });
   }
   const actor = actorOf(ctx);

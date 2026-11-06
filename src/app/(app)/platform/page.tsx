@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { clinicAddress } from "@/lib/platform/clinics";
 import { getLocale, getTranslations } from "next-intl/server";
 import { NewClinicForm } from "@/components/clinic/new-clinic-form";
 import { PlatformClinic } from "@/components/clinic/platform-clinic";
@@ -15,6 +17,14 @@ export default async function PlatformPage() {
   const t = await getTranslations("platform");
   // Clinics with counts only; patient data stays locked by RLS.
   const clinics = await platformOverview();
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+  /** The clinic's own address, or this address when it IS the clinic on this address. */
+  const openUrl = (slug: string, id: string) => {
+    const address = clinicAddress(slug, { host, proto });
+    return address ? `${address}/home` : id === ctx.tenant.id ? "/home" : null;
+  };
   const open = clinics.flatMap((c) => c.statements.filter((x) => x.status === "issued"));
   const outstanding = open.reduce((n, x) => n + x.totalHalalas - x.paidHalalas, 0);
   const overdueClinics = clinics.filter((c) => c.statements.some((x) => x.overdue)).length;
@@ -44,7 +54,7 @@ export default async function PlatformPage() {
       </div>
       {can(ctx.roles, "platform:clinics") && <NewClinicForm />}
       <div className="flex flex-col gap-3">
-        {clinics.map(({ tenant, setup, usage, statements }) => (
+        {clinics.map(({ tenant, setup, usage, statements, support }) => (
           <PlatformClinic
             key={tenant.id}
             clinic={{
@@ -69,6 +79,14 @@ export default async function PlatformPage() {
               graceDays: tenant.billingGraceDays,
               pausedForBilling: tenant.pausedForBilling,
               statements,
+              support: support
+                ? {
+                    expiresAt: support.expiresAt.toISOString(),
+                    allowChanges: support.allowChanges,
+                    reason: support.reason,
+                  }
+                : null,
+              openUrl: openUrl(tenant.slug, tenant.id),
             }}
           />
         ))}

@@ -71,6 +71,11 @@ try {
   await page.screenshot({ path: "screenshots/settings-en-subscription.png", fullPage: true });
   await page.goto(`${BASE}/settings?tab=team`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/team-en-desktop.png", fullPage: true });
+  // Allow platform support for 4 hours (view only).
+  await page.getByTestId("support-grant").click();
+  await page.getByTestId("support-end").waitFor({ timeout: 15000 });
+  await page.getByTestId("support-access").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "screenshots/support-en-granted.png", fullPage: true });
   await page.getByTestId("team-add").click();
   await page.locator("#from-web").selectOption({ index: 2 });
   await page.locator("#email").fill("demo.doctor@derma.demo");
@@ -135,6 +140,13 @@ try {
   await derma.getByTestId("statement-pay-save").click();
   await page.waitForTimeout(2500);
   await page.screenshot({ path: "screenshots/platform-ar-paid.png", fullPage: true });
+  // Support access that Derma's admin granted above: open the clinic (view only, recorded).
+  await derma.getByTestId("clinic-tab-support").click();
+  await page.screenshot({ path: "screenshots/platform-ar-support.png", fullPage: true });
+  await derma.getByTestId("support-open").click();
+  await page.waitForURL((u) => u.pathname.startsWith("/home"), { timeout: 20000 });
+  await page.goto(`${BASE}/patients`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/support-ar-session.png", fullPage: true });
   await context.close();
 } catch (e) {
   console.error("platform screenshots failed:", e);

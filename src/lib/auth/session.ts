@@ -2,7 +2,9 @@ import "server-only";
 import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { auditEvent } from "@/lib/audit";
 import { getCurrentTenant, type Tenant } from "@/lib/tenant/current";
+import { PATH_HEADER } from "@/lib/tenant/host";
 import { getAuth } from "./auth";
 import { getStaffAccess, type Branch, type StaffAccess } from "./access";
 import { can, type Permission } from "./permissions";
@@ -65,8 +67,21 @@ export async function requireStaff(): Promise<StaffContext> {
   if (!tenant) redirect("/clinic-not-found");
   const ctx = await getStaffContext();
   if (!ctx) redirect("/login");
+  if (ctx.support) await logSupportView(ctx.tenant.id, ctx.user.id);
   return ctx;
 }
+
+/** During support access, every page the platform owner opens is recorded (once per request). */
+const logSupportView = cache(async (tenantId: string, userId: string) => {
+  const path = (await headers()).get(PATH_HEADER) ?? null;
+  await auditEvent(tenantId, {
+    actorUserId: userId,
+    action: "support.view",
+    entityType: "page",
+    entityId: path,
+    metadata: { path },
+  });
+});
 
 /** Use at the top of a page that needs a specific permission. */
 export async function requirePermission(permission: Permission): Promise<StaffContext> {
