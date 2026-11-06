@@ -3,6 +3,7 @@ import { LinkTabs } from "@/components/ui/tabs";
 
 export const SETTINGS_TABS = [
   "clinic",
+  "team",
   "booking",
   "website",
   "consents",
