@@ -179,6 +179,12 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: false,
     receptionist: false,
   },
+  "data:export": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: false,
+  },
   "platform:clinics": {
     platform_owner: true,
     clinic_admin: false,

@@ -180,7 +180,9 @@
     "team_invite_invalid": "This invitation link isn't valid or has expired.",
     "team_password_already_set": "Your password is already set. Please sign in.",
     "clinic_slug_taken": "That web address is already used by another clinic.",
-    "clinic_slug_invalid": "The web address may only use lower-case English letters, numbers and dashes (2–30 characters)."
+    "clinic_slug_invalid": "The web address may only use lower-case English letters, numbers and dashes (2–30 characters).",
+    "clinic_paused": "This clinic's account is paused, so changes can't be made right now.",
+    "clinic_unavailable": "This clinic's online services are temporarily unavailable."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -549,7 +551,12 @@
     "siteCredentialAdd": "Add a credential",
     "siteCredentialAr": "In Arabic",
     "siteCredentialEn": "In English",
-    "tabTeam": "Team"
+    "tabTeam": "Team",
+    "exportTitle": "Download clinic data",
+    "exportHint": "Your clinic's records as spreadsheet files (CSV, opens in Excel). Clinical notes are not included; doctors keep access to them in the app. Each download is recorded.",
+    "export_patients": "Patients",
+    "export_appointments": "Appointments",
+    "export_packages": "Packages"
   },
   "book": {
     "title": "Book your appointment",
@@ -1297,5 +1304,52 @@
     "inviteText": "Send this invitation to the clinic admin (valid 7 days). They set a password and sign in:",
     "existingUser": "This email already has an account, so the admin signs in with their existing password.",
     "nextSteps": "Next, the clinic admin adds services, working hours and the team from Settings. You will not see their patients."
+  },
+  "clinicStatus": {
+    "unavailable": "This clinic's online services are temporarily unavailable. Please contact the clinic by phone.",
+    "staffLogin": "Staff sign-in",
+    "login": {
+      "read_only": "This clinic's account is in read-only mode: you can view records but not make changes.",
+      "suspended": "This clinic's account is suspended. Staff sign-in is paused. Please contact the platform.",
+      "closed": "This clinic's account is closed. The clinic admin can still sign in to download the clinic's data."
+    },
+    "banner": {
+      "read_only": "Read-only mode: you can view, but changes, online booking, WhatsApp and the AI are paused",
+      "suspended": "This clinic's account is suspended",
+      "closed": "This clinic's account is closed: view and download only"
+    }
+  },
+  "platformClinic": {
+    "demo": "Demo",
+    "setupProgress": "Setup {done} of {total}",
+    "setupTitle": "Setup checklist",
+    "setup": {
+      "admin": "Clinic admin has signed in (password set)",
+      "services": "Services added",
+      "hours": "Working hours set",
+      "consents": "Consent forms ready",
+      "website": "Website details added",
+      "whatsapp": "WhatsApp connected",
+      "booking": "First booking made"
+    },
+    "status": {
+      "active": "Active",
+      "read_only": "Read-only",
+      "suspended": "Suspended",
+      "closed": "Closed"
+    },
+    "explain": {
+      "active": "Everything works.",
+      "read_only": "Staff can sign in and view records, but can't make changes. Online booking, WhatsApp messages and the AI are paused.",
+      "suspended": "Nobody at the clinic can sign in, and the website and booking pages show 'temporarily unavailable'. No data is deleted.",
+      "closed": "Website and booking pages are off. Staff can still sign in to view, and the admin can download the clinic's data."
+    },
+    "statusTitle": "Account status",
+    "changeTo": "Change status to",
+    "reason": "Reason (the clinic will see it)",
+    "reasonHint": "e.g. Payment overdue since 1 November",
+    "apply": "Change status",
+    "resume": "Resume: make active again",
+    "changed": "Status changed to {status}."
   }
 }

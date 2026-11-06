@@ -108,6 +108,16 @@ try {
   await page.getByTestId("clinic-add-save").click();
   await page.getByTestId("clinic-created").waitFor({ timeout: 15000 });
   await page.screenshot({ path: "screenshots/platform-ar-created.png", fullPage: true });
+  // Open the new clinic's card: setup checklist and status; then suspend it.
+  await page.getByRole("button", { name: "تم" }).click();
+  const card = page.locator('[data-testid="platform-clinic"][data-slug="elite"]');
+  await card.locator("button").first().click();
+  await card.locator("select").selectOption("suspended");
+  await card.locator('input[id^="why-"]').fill("تأخر السداد منذ 1 نوفمبر");
+  await page.screenshot({ path: "screenshots/platform-ar-status.png", fullPage: true });
+  await card.getByTestId("clinic-status-apply").click();
+  await card.getByTestId("clinic-resume").waitFor({ timeout: 15000 });
+  await page.screenshot({ path: "screenshots/platform-ar-suspended.png", fullPage: true });
   await context.close();
 } catch (e) {
   console.error("platform screenshots failed:", e);

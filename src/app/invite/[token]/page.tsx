@@ -11,6 +11,7 @@ import { brandStyle, pick } from "@/lib/brand";
 import { parseInviteToken } from "@/lib/team/invite";
 import { inviteInfo } from "@/lib/team/team";
 import { getCurrentTenant } from "@/lib/tenant/current";
+import { publicPagesOpen } from "@/lib/tenant/status";
 import type { Locale } from "@/i18n/config";
 
 export const metadata: Metadata = { title: "Invitation · دعوة", robots: { index: false } };
@@ -19,6 +20,7 @@ export const metadata: Metadata = { title: "Invitation · دعوة", robots: { i
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
+  if (!publicPagesOpen(tenant)) redirect("/unavailable");
   const { token } = await params;
   const userId = parseInviteToken(tenant.id, decodeURIComponent(token));
   const info = userId ? await withTenant(tenant.id, (tx) => inviteInfo(tx, userId)) : null;

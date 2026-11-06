@@ -73,11 +73,13 @@ import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subs
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { createClinic, clinicAddress, SLUG_RULE } from "@/lib/platform/clinics";
+import { setClinicStatus } from "@/lib/platform/status";
+import { CLINIC_STATUSES } from "@/lib/tenant/status";
 import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
 import { inviteToken } from "@/lib/team/invite";
 import { signAndComplete, startVisit } from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
-import { parse, staffAction, ValidationError } from "@/lib/actions";
+import { parse, staffAction, ValidationError, PAUSED_OK } from "@/lib/actions";
 
 const uuid = z.uuid();
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -102,7 +104,7 @@ export async function searchPatientsAction(query: string) {
       nameEn: p.fullNameEn,
       phone: p.phone,
     }));
-  });
+  }, PAUSED_OK);
 }
 
 const newPatient = z.object({
@@ -292,7 +294,7 @@ export async function freeSlotsAction(input: {
       startsAt: s.startsAt.toISOString(),
       practitionerId: s.practitionerId,
     }));
-  });
+  }, PAUSED_OK);
 }
 
 export async function moveAction(input: {
@@ -1033,7 +1035,7 @@ export async function savePushSubscriptionAction(input: z.input<typeof subscript
       saveSubscription(tx, { tenantId: actor.tenantId, userId: actor.userId, sub }),
     );
     return null;
-  });
+  }, PAUSED_OK);
 }
 
 export async function removePushSubscriptionAction(input: { endpoint: string }) {
@@ -1042,7 +1044,7 @@ export async function removePushSubscriptionAction(input: { endpoint: string }) 
     await withActor(actor, (tx) => removeSubscription(tx, actor.userId, v.endpoint));
     revalidatePath("/account");
     return null;
-  });
+  }, PAUSED_OK);
 }
 
 export async function saveNotificationPrefsAction(input: {
@@ -1059,7 +1061,7 @@ export async function saveNotificationPrefsAction(input: {
     );
     revalidatePath("/account");
     return null;
-  });
+  }, PAUSED_OK);
 }
 
 export async function testPushAction() {
@@ -1234,7 +1236,7 @@ export async function simulatorReadAction(input: { conversationId: string }) {
     if (whatsappMode(ctx.tenant) !== "demo") return null;
     await withActor(actor, (tx) => markDemoThreadRead(tx, v.conversationId));
     return null;
-  });
+  }, PAUSED_OK);
 }
 
 export async function runScheduledNowAction(input: {
@@ -1335,7 +1337,7 @@ export async function rescheduleOptionsAction(input: { appointmentId: string; da
         })),
       };
     });
-  });
+  }, PAUSED_OK);
 }
 
 // ─── Post-care concerns (doctor's Concern card; reception too) ──────────────
@@ -1410,7 +1412,7 @@ export async function concernFollowUpTimesAction(input: {
         .filter((s) => s.startsAt <= until)
         .map((s) => ({ startsAt: s.startsAt.toISOString(), time: riyadhTime(s.startsAt) }));
     });
-  });
+  }, PAUSED_OK);
 }
 
 /**
@@ -1661,5 +1663,33 @@ export async function createClinicAction(input: z.input<typeof newClinicInput>) 
           : null,
       existingUser: !r.needsPassword,
     };
+  });
+}
+
+export async function setClinicStatusAction(input: {
+  tenantId: string;
+  status: string;
+  reason?: string | null;
+}) {
+  return staffAction("platform:clinics", async (ctx) => {
+    const v = parse(
+      z
+        .object({
+          tenantId: uuid,
+          status: z.enum(CLINIC_STATUSES),
+          reason: z.string().trim().max(300).nullish(),
+        })
+        // Pausing a clinic always says why (the clinic sees it); resuming needs no reason.
+        .refine((x) => x.status === "active" || !!x.reason),
+      input,
+    );
+    const r = await setClinicStatus(
+      { userId: ctx.user.id, roles: ctx.roles },
+      v.tenantId,
+      v.status,
+      v.reason ?? null,
+    );
+    revalidatePath("/platform");
+    return r;
   });
 }

@@ -7,6 +7,8 @@
  *         WHATSAPP_CLINIC names this clinic → real WhatsApp.
  *   off   neither: messages are not sent (codes fail safely with "messaging_unavailable").
  */
+import { clinicIsActive, type ClinicStatus } from "@/lib/tenant/status";
+
 type Env = Record<string, string | undefined>;
 
 export type WhatsAppMode = "demo" | "live" | "off";
@@ -72,9 +74,11 @@ export function liveConfig(env: Env = process.env): {
 }
 
 export function whatsappMode(
-  tenant: { isDemo: boolean; slug?: string },
+  tenant: { isDemo: boolean; slug?: string; status?: ClinicStatus | null },
   env: Env = process.env,
 ): WhatsAppMode {
+  // A paused clinic (read-only, suspended, closed) sends nothing: no reminders, no replies.
+  if (!clinicIsActive(tenant)) return "off";
   if (demoMessagingAllowed(tenant, env)) return "demo";
   const { config } = liveConfig(env);
   if (config && tenant.slug && config.clinic === tenant.slug) return "live";

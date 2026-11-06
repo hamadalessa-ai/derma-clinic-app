@@ -39,6 +39,12 @@ const updatedAt = () =>
 
 export const memberRole = pgEnum("member_role", ["clinic_admin", "practitioner", "receptionist"]);
 export const gender = pgEnum("gender", ["male", "female"]);
+/**
+ * Clinic account status (set by the platform owner): active; read_only (staff can look, not change;
+ * no online booking, WhatsApp or AI); suspended (no staff sign-in, public pages closed); closed
+ * (like read_only for staff so they can take their records out, public pages closed).
+ */
+export const clinicStatus = pgEnum("clinic_status", ["active", "read_only", "suspended", "closed"]);
 export const idType = pgEnum("id_type", ["national_id", "iqama", "passport"]);
 export const appointmentStatus = pgEnum("appointment_status", [
   "pending", // online booking waiting for reception approval (still holds the slot)
@@ -78,6 +84,10 @@ export const tenants = pgTable("tenants", {
   nameEn: text("name_en").notNull(),
   brandColor: text("brand_color").notNull().default("#28817a"),
   isDemo: boolean("is_demo").notNull().default(true),
+  status: clinicStatus("status").notNull().default("active"),
+  /** Why the status was last changed (shown to the owner and the clinic). */
+  statusReason: text("status_reason"),
+  statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
   createdAt: createdAt(),
 });
 
