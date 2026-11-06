@@ -14,6 +14,7 @@ import { VerifyError } from "@/lib/verify/codes";
 import { TemplateError } from "@/lib/whatsapp/admin";
 import { WhatsAppError } from "@/lib/whatsapp/staff";
 import { ConcernError } from "@/lib/whatsapp/concern-actions";
+import { TeamError } from "@/lib/team/team";
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -51,6 +52,7 @@ export async function staffAction<T>(
     if (err instanceof ScribeError) return { ok: false, error: `scribe_${err.code}` };
     if (err instanceof VideoVisitError) return { ok: false, error: `video_${err.code}` };
     if (err instanceof HoursError) return { ok: false, error: `hours_${err.code}` };
+    if (err instanceof TeamError) return { ok: false, error: `team_${err.code}` };
     if (err instanceof PermissionError) return { ok: false, error: "not_allowed" };
     if (err instanceof ValidationError) return { ok: false, error: "invalid" };
     console.error("action failed", err);
@@ -87,6 +89,7 @@ export async function publicAction<T>(
       return { ok: false, error: err.code };
     }
     if (err instanceof PublicError) return { ok: false, error: err.code };
+    if (err instanceof TeamError) return { ok: false, error: `team_${err.code}` };
     if (err instanceof VideoVisitError) return { ok: false, error: `video_${err.code}` };
     if (err instanceof ValidationError) return { ok: false, error: "invalid" };
     console.error("public action failed", err);

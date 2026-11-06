@@ -196,6 +196,8 @@ export const tenantMembers = pgTable(
     titleEn: text("title_en"),
     /** Doctors: public profile for the clinic website (specialty, credentials, languages). */
     profile: jsonb("profile").$type<MemberProfile>(),
+    /** Set when the person left the clinic: no sign-in, not bookable; history is kept. */
+    deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

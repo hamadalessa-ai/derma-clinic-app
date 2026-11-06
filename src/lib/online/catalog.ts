@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import {
   branchHolidays,
   branches,
@@ -61,6 +61,7 @@ export async function loadBookingCatalog(tx: TenantTx) {
     })
     .from(tenantMembers)
     .innerJoin(users, eq(users.id, tenantMembers.userId))
+    .where(isNull(tenantMembers.deactivatedAt))
     .orderBy(asc(tenantMembers.createdAt));
 
   // Which weekdays each branch has a doctor working, and holidays — closed days are greyed out.

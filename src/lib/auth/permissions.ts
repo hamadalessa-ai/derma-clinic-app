@@ -31,6 +31,8 @@ export const PERMISSIONS = {
   "consents:templates": ["clinic_admin"],
   "notes:write": ["practitioner"],
   "settings:manage": ["clinic_admin"],
+  /** Settings → Team: add staff, roles, branch, deactivate, link to the website profile. */
+  "team:manage": ["clinic_admin"],
   "demo:refresh": ["clinic_admin"],
 
   // ── Phase 2a ──

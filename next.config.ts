@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
       },
       { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
     ];
-    // Signed patient links (/visit, /sign): never cached, never leaked in a Referer, never indexed.
+    // Signed links (/visit, /sign, staff /invite): never cached, never leaked in a Referer, never indexed.
     const tokenPages = [
       { key: "Cache-Control", value: "private, no-store" },
       { key: "Referrer-Policy", value: "no-referrer" },
@@ -37,6 +37,7 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: common },
       { source: "/visit/:token", headers: tokenPages },
       { source: "/sign/:token", headers: tokenPages },
+      { source: "/invite/:token", headers: tokenPages },
     ];
   },
   turbopack: {

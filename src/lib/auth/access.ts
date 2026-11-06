@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { withTenant } from "@/db/tenant";
 import { branches, tenantMembers, users } from "@/db/schema";
@@ -33,6 +33,8 @@ export async function getStaffAccess(
       .where(eq(tenantMembers.userId, user.id))
       .limit(1);
 
+    // A deactivated member (left the clinic) has no access, like a non-member.
+    if (member?.deactivatedAt && !user.isPlatformOwner) return null;
     if (!member && !user.isPlatformOwner) return null;
 
     const all = await tx
@@ -42,9 +44,9 @@ export async function getStaffAccess(
     const visible = member?.branchId ? all.filter((b) => b.id === member.branchId) : all;
 
     return {
-      roles: member ? member.roles : ["platform_owner"],
-      memberId: member?.id ?? null,
-      restrictedBranchId: member?.branchId ?? null,
+      roles: member && !member.deactivatedAt ? member.roles : ["platform_owner"],
+      memberId: member && !member.deactivatedAt ? member.id : null,
+      restrictedBranchId: member && !member.deactivatedAt ? member.branchId : null,
       branches: visible,
       titleAr: member?.titleAr ?? null,
       titleEn: member?.titleEn ?? null,
@@ -65,7 +67,13 @@ export async function canSignInToClinic(tenantId: string, email: string): Promis
     tx
       .select({ id: tenantMembers.id })
       .from(tenantMembers)
-      .where(and(eq(tenantMembers.userId, user.id), eq(tenantMembers.tenantId, tenantId)))
+      .where(
+        and(
+          eq(tenantMembers.userId, user.id),
+          eq(tenantMembers.tenantId, tenantId),
+          isNull(tenantMembers.deactivatedAt),
+        ),
+      )
       .limit(1),
   );
   return rows.length > 0;

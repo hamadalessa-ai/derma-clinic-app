@@ -11,6 +11,8 @@ import {
   ScribeSettingForm,
 } from "@/components/clinic/settings-forms";
 import { SiteSettingsForm } from "@/components/clinic/site-settings";
+import { TeamSettings } from "@/components/clinic/team-settings";
+import { listTeam } from "@/lib/team/team";
 import {
   BookingLink,
   OnlineSettingsForm,
@@ -60,6 +62,7 @@ export default async function SettingsPage({
   const qrPng = await QRCode.toDataURL(bookingUrl, { width: 480, margin: 2 });
   const allowed: SettingsTab[] = [
     "clinic",
+    "team",
     "booking",
     "website",
     "consents",
@@ -68,6 +71,7 @@ export default async function SettingsPage({
   const tab: SettingsTab = (allowed as string[]).includes(sp.tab ?? "")
     ? (sp.tab as SettingsTab)
     : "clinic";
+  const team = tab === "team" ? await withActor(actorOf(ctx), (tx) => listTeam(tx)) : null;
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -108,6 +112,24 @@ export default async function SettingsPage({
             </CardContent>
           </Card>
         </>
+      )}
+      {tab === "team" && team && (
+        <Card data-testid="team-settings">
+          <CardHeader>
+            <CardTitle>{t("tabTeam")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TeamSettings
+              members={team.members.map((m) => ({
+                ...m,
+                deactivatedAt: m.deactivatedAt ? m.deactivatedAt.toISOString() : null,
+              }))}
+              websiteDoctors={team.websiteDoctors}
+              branches={ctx.branches.map((b) => ({ id: b.id, name: pick(locale, b.nameAr, b.nameEn) }))}
+              selfId={ctx.memberId}
+            />
+          </CardContent>
+        </Card>
       )}
       {tab === "website" && (
         <Card data-testid="site-settings">
