@@ -2077,9 +2077,10 @@ begin
   if p_brand !~ '^#[0-9a-f]{6}$' then
     raise exception 'invalid colour' using errcode = '22023';
   end if;
-  insert into public.tenants (slug, name_ar, name_en, brand_color, is_demo)
-    values (p_slug, p_name_ar, p_name_en, p_brand, p_is_demo)
-    returning id into tid;
+  -- No RETURNING: the function's owner may add the row but (on purpose) has no read policy.
+  tid := gen_random_uuid();
+  insert into public.tenants (id, slug, name_ar, name_en, brand_color, is_demo)
+    values (tid, p_slug, p_name_ar, p_name_en, p_brand, p_is_demo);
   insert into public.tenant_settings (tenant_id) values (tid);
   return tid;
 end;
