@@ -2,7 +2,7 @@
 Doctor portraits for the clinic website: takes each doctor's published photo card, removes
 the background (and the card's logo/text), and saves a clean, transparent 4:5 portrait so every
 doctor sits on the same calm background on the website.
-Runs on GitHub (workflow "Doctor portraits"); output: public/site/derma/doctors/<slug>.webp
+Runs on GitHub (workflow "Doctor portraits", .github/workflows/doctor-portraits.yml); output: public/site/derma/doctors/<slug>.webp
 """
 import io
 import json
