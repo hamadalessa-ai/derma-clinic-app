@@ -1,0 +1,28 @@
+# Makes clean doctor portraits (background removed) from the photos the clinic publishes,
+# and commits them to the branch it runs on (public/site/derma/doctors/). Run from Actions.
+name: Doctor portraits
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  cutouts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "rembg[cpu]" pillow numpy scipy
+      - run: python scripts/cutouts/cutouts.py
+      - name: Commit the portraits
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/site/derma/doctors
+          git diff --cached --quiet || git commit -m "Doctor portraits (background removed)"
+          git push
