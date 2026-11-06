@@ -99,7 +99,9 @@ export async function ClinicSite({
       const sp = (s.specialties ?? []).find((x) => x.key === k);
       const dep = departments.find((x) => x.key === k);
       const groups = treatmentSilos.filter((x) =>
-        k === "skin" || k === "hair" ? silos.find((y) => y.key === x.key)?.dept === k : x.dept === k,
+        k === "skin" || k === "hair"
+          ? silos.find((y) => y.key === x.key)?.dept === k
+          : x.dept === k,
       );
       if (!sp && !groups.length) return null;
       return {

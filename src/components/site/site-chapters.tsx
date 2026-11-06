@@ -45,7 +45,12 @@ export function SiteChapters({
             {/* Photographs */}
             <div className={cn("relative lg:sticky lg:top-32 lg:col-span-6", flip && "lg:order-2")}>
               <div className="aspect-[4/5] overflow-hidden rounded-2xl">
-                <SiteImage slot={c.images[0].slot} src={c.images[0].src} locale={locale} priority={i === 0} />
+                <SiteImage
+                  slot={c.images[0].slot}
+                  src={c.images[0].src}
+                  locale={locale}
+                  priority={i === 0}
+                />
               </div>
               {c.images[1] && (
                 <div
@@ -93,7 +98,9 @@ export function SiteChapters({
                               />
                             </Link>
                           ) : (
-                            <span className="text-site-slate block py-3 text-[15px]">{it.name}</span>
+                            <span className="text-site-slate block py-3 text-[15px]">
+                              {it.name}
+                            </span>
                           )}
                         </li>
                       ))}
