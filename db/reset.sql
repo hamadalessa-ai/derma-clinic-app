@@ -52,7 +52,6 @@ drop table if exists
   public.verifications,
   public.webhook_events
   cascade;
-drop type if exists public.appointment_status, public.booking_source, public.clinic_status, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.request_status, public.session_event_kind;
 drop function if exists public.app_branch_allowed;
 drop function if exists public.app_create_clinic;
 drop function if exists public.app_current_tenant;
@@ -70,6 +69,8 @@ drop function if exists public.guard_package_balance;
 drop function if exists public.normalize_search;
 drop function if exists public.sync_appointment_reservations;
 drop function if exists public.sync_time_block_reservations;
+-- Types last: functions may use them (e.g. app_set_clinic_status takes a clinic_status).
+drop type if exists public.appointment_status, public.booking_source, public.clinic_status, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.request_status, public.session_event_kind;
 do $$
 begin
   if exists (select from pg_roles where rolname = 'clinic_app') then
