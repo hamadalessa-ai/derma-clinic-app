@@ -346,7 +346,7 @@ await scene("doctor", async () => {
       // The note with the AI draft, on screen.
       const noteBox = page.locator("textarea").last();
       await noteBox.evaluate((e) => e.scrollIntoView({ block: "start" }));
-      await page.evaluate(() => window.scrollBy(0, -260));
+      await page.evaluate(() => window.scrollBy(0, -150));
       await shot(page, "dr-5-note", { wait: 600 });
     } else note("scribe not visible");
   } else note("no visit to open");
@@ -361,16 +361,13 @@ await scene("owner", async () => {
   await shot(page, "own-1-home", { wait: 1000 });
   await page.goto(BASE + "/calendar", { waitUntil: "networkidle" });
   await shot(page, "own-2-calendar", { wait: 1500 });
-  // A patient with a package (session balance).
+  // A patient with a package (Sara, D-0002: laser hair removal, 3 of 6 sessions used).
   await page.goto(BASE + "/patients", { waitUntil: "networkidle" });
-  const hrefs = await page
-    .locator('a[href^="/patients/"]')
-    .evaluateAll((as) => [...new Set(as.map((a) => a.getAttribute("href")))].filter((h) => /\/patients\/[0-9a-f-]{36}$/.test(h)));
-  for (const h of hrefs.slice(0, 15)) {
-    await page.goto(BASE + h, { waitUntil: "networkidle" });
-    const text = await page.locator("main").innerText();
-    if (/باقة|الجلسات المتبقية|جلسات/.test(text)) break;
-  }
+  const row = page.locator("tr, a", { hasText: "D-0002" }).first();
+  const href =
+    (await row.getAttribute("href").catch(() => null)) ??
+    (await row.locator('a[href^="/patients/"]').first().getAttribute("href"));
+  await page.goto(BASE + href + "?tab=packages", { waitUntil: "networkidle" });
   note(`patient page: ${page.url()}`);
   await shot(page, "own-3-patient", { full: true, wait: 1000 });
   await page.goto(BASE + "/settings?tab=team", { waitUntil: "networkidle" });

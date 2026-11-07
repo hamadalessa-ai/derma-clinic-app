@@ -261,7 +261,7 @@
   scene(14, (g) => {
     const cap = caption(g, {
       kicker: "٤ · الاستقبال الذكي",
-      title: "الساعة ٣:٤٥ فجرًا…<br/><em>والرد فوري</em>",
+      title: "حتى قبل الفجر…<br/><em>الرد فوري</em>",
       sub: "يفهم اللهجة، يقترح المواعيد، ولا يحجز إلا بعد «نعم» من المريضة",
     });
     const ph = device(
@@ -318,7 +318,7 @@
       "laptop",
       [
         { img: "own-2-calendar", from: 0, zoom: [1, 1.7], focus: [0.5, 0.35], focus2: [0.42, 0.45], zoomTo: 5 },
-        { img: "own-3-patient", from: 5.2, zoom: [1.25, 1.5], focus: [0.45, 0.2], focus2: [0.45, 0.55], zoomTo: 10 },
+        { img: "own-3-patient", from: 5.2, zoom: [1.2, 1.45], focus: [0.5, 0.25], focus2: [0.45, 0.4], zoomTo: 10 },
       ],
       { top: 760, scale: 1 },
     );
