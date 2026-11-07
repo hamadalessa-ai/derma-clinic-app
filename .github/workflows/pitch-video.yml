@@ -1,0 +1,59 @@
+# Pitch video: films the LIVE demo (scripts/pitch/capture.mjs) and, when the composer exists,
+# renders the video (scripts/pitch/render.mjs). Results are published on the "pitch-video" branch.
+# Runs on pushes that change scripts/pitch/** on claude/** branches, or by hand.
+name: Pitch video
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["claude/**"]
+    paths: ["scripts/pitch/**", ".github/workflows/pitch-video.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pitch-video
+  cancel-in-progress: true
+
+jobs:
+  film:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PITCH_BASE_URL: https://derma-clinic-app.vercel.app
+      DEMO_STAFF_PASSWORD: ${{ secrets.DEMO_STAFF_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Film the live demo
+        if: ${{ !contains(github.event.head_commit.message, '[render-only]') }}
+        run: node scripts/pitch/capture.mjs
+      - name: Reuse the last filming
+        if: ${{ contains(github.event.head_commit.message, '[render-only]') }}
+        run: |
+          git fetch -q origin pitch-video
+          mkdir -p pitch && git archive origin/pitch-video shots | tar -x -C pitch
+      - name: Render the video
+        run: |
+          if [ -f scripts/pitch/render.mjs ]; then
+            sudo apt-get install -y -qq ffmpeg fonts-noto-color-emoji > /dev/null
+            node scripts/pitch/render.mjs
+          fi
+      - name: Publish on the pitch-video branch
+        if: always()
+        run: |
+          mkdir -p /tmp/pub && cp -r pitch/* /tmp/pub/ 2>/dev/null || true
+          cd /tmp/pub
+          git init -q -b pitch-video
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Pitch video from ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" pitch-video
