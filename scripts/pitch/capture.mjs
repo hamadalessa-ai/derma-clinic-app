@@ -14,7 +14,8 @@ const note = (s) => {
   log.push(s);
 };
 
-const PHONE = { ...devices["iPhone 13"], deviceScaleFactor: 3 };
+// The full iPhone screen (no browser bars), so pictures fill the phone frame in the video.
+const PHONE = { ...devices["iPhone 13"], viewport: { width: 390, height: 844 }, deviceScaleFactor: 3 };
 const DESKTOP = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 };
 const stamp = Date.now().toString().slice(-6);
 const PATIENT_PHONE = `0559${stamp}`;
@@ -102,6 +103,15 @@ await scene("website", async () => {
   const d = await desk.newPage();
   await d.goto(BASE + "/", { waitUntil: "networkidle" });
   await shot(d, "site-desktop", { wait: 1500 });
+  // The clinic's logo on a transparent background, large, for the opening and closing cards.
+  const logoUrl = await d.locator('[data-slot="logo"]').first().getAttribute("src");
+  const lp = await desk.newPage();
+  await lp.setContent(
+    `<html><body style="margin:0;background:transparent"><img id="l" src="${logoUrl}" style="height:300px"></body></html>`,
+  );
+  await lp.waitForFunction(() => document.getElementById("l").complete);
+  await lp.locator("#l").screenshot({ path: `${OUT}/logo.png`, omitBackground: true });
+  note("shot logo");
 });
 
 // ── 2. Booking from the phone + 3. WhatsApp + 4. consent ─────────────────────
@@ -248,30 +258,41 @@ await scene("ai", async () => {
   const url = BASE + (await page.getByTestId("patient-view-link").getAttribute("href"));
   const phone = await browser.newContext({ ...PHONE, locale: "ar-SA", timezoneId: "Asia/Riyadh", storageState: await ctx.storageState() });
   const p = await phone.newPage();
-  const replies = ["أنثى، واسمي نوف القحطاني", "أول وقت متاح بعد الساعة ٤ العصر يناسبني", "نعم، أكد الحجز"];
-  const count = async () => p.getByTestId("chat-message").count();
-  await p.goto(url, { waitUntil: "networkidle" });
-  let seen = await count();
-  for (let turn = 0; turn <= replies.length; turn++) {
-    // Wait for the AI's answer.
-    for (let i = 0; i < 30; i++) {
-      await p.waitForTimeout(2000);
+  const replies = [
+    "أنثى، واسمي نوف القحطاني",
+    "فرع الرياض، أي طبيبة متاحة، وأول موعد بعد الساعة ٤ العصر",
+    "أول موعد تقترحه مناسب لي",
+    "نعم",
+  ];
+  const msgs = p.getByTestId("chat-message");
+  /** Waits until the clinic (the AI) has answered: the last message is from the clinic. */
+  const waitForAnswer = async (before) => {
+    for (let i = 0; i < 60; i++) {
+      await p.waitForTimeout(2500);
       await p.reload({ waitUntil: "networkidle" });
-      if ((await count()) > seen) break;
+      const n = await msgs.count();
+      const lastDir = await msgs.last().getAttribute("data-direction").catch(() => null);
+      if (n > before && lastDir === "out") break;
     }
-    await p.waitForTimeout(1500);
+    await p.waitForTimeout(3000); // a confirmation may follow the reply
     await p.reload({ waitUntil: "networkidle" });
-    seen = await count();
+  };
+  await p.goto(url, { waitUntil: "networkidle" });
+  await waitForAnswer(1);
+  for (let turn = 0; ; turn++) {
     await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await shot(p, `ai-${turn + 1}`, { wait: 600 });
-    const last = await p.getByTestId("chat-message").last().innerText().catch(() => "");
-    note(`ai turn ${turn + 1}: ${last.replace(/\s+/g, " ").slice(0, 160)}`);
-    if (turn === replies.length) break;
-    if (/تم (تأكيد|حجز)|موعدك.*مؤكد/.test(last) && turn > 0) break;
+    const last = (await msgs.last().innerText().catch(() => "")).replace(/\s+/g, " ");
+    note(`ai turn ${turn + 1}: ${last.slice(0, 200)}`);
+    if (turn >= replies.length) break;
+    // Stop once the booking is confirmed.
+    const kinds = await msgs.evaluateAll((ms) => ms.map((m) => m.getAttribute("data-kind")));
+    if (turn >= 2 && kinds.some((k) => k && /confirm/.test(k))) break;
+    const before = await msgs.count();
     await p.getByTestId("simulator-input").fill(replies[turn]);
     await p.getByTestId("simulator-input").press("Enter");
     await p.waitForTimeout(1500);
-    seen = await count();
+    await waitForAnswer(before + 1);
   }
   await shot(p, "ai-full", { full: true });
 });
@@ -303,6 +324,11 @@ await scene("doctor", async () => {
       await page.getByTestId("scribe-write").click();
       await page.waitForTimeout(15000);
       await shot(page, "dr-4-draft", { full: true });
+      // The note with the AI draft, on screen.
+      const noteBox = page.locator("textarea").last();
+      await noteBox.evaluate((e) => e.scrollIntoView({ block: "start" }));
+      await page.evaluate(() => window.scrollBy(0, -260));
+      await shot(page, "dr-5-note", { wait: 600 });
     } else note("scribe not visible");
   } else note("no visit to open");
 });

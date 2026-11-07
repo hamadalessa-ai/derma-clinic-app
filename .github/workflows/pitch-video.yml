@@ -45,6 +45,7 @@ jobs:
           if [ -f scripts/pitch/render.mjs ]; then
             sudo apt-get install -y -qq ffmpeg fonts-noto-color-emoji > /dev/null
             node scripts/pitch/render.mjs
+            rm -rf pitch/out/scenes
           fi
       - name: Publish on the pitch-video branch
         if: always()
