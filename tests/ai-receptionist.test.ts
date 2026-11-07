@@ -23,7 +23,13 @@ import {
   type ClaudeRequest,
   type ContentBlock,
 } from "@/lib/ai/claude";
-import { FALLBACK_REPLY, historyTurns, systemPrompt, TOOLS } from "@/lib/ai/receptionist";
+import {
+  FALLBACK_REPLY,
+  historyTurns,
+  systemPrompt,
+  toWhatsAppText,
+  TOOLS,
+} from "@/lib/ai/receptionist";
 import type { PushEvent } from "@/lib/push/notify";
 import { handleInbound } from "@/lib/whatsapp/inbound";
 import { setAiPaused } from "@/lib/whatsapp/staff";
@@ -665,5 +671,13 @@ describe("confirming after a re-check", () => {
     // 997 only for emergencies, not routine worries.
     expect(text).toContain("Emergency advice ONLY when");
     expect(text).toContain("do NOT mention 997");
+  });
+});
+
+describe("WhatsApp formatting", () => {
+  it("turns Markdown into WhatsApp marks", () => {
+    expect(toWhatsAppText("## المواعيد\n**فرع الرياض** (د. ريم):\n- الاثنين")).toBe(
+      "المواعيد\n*فرع الرياض* (د. ريم):\n- الاثنين",
+    );
   });
 });
