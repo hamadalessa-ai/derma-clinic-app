@@ -76,6 +76,18 @@ async function scrollTo(page, selector, offset = 0) {
   await page.waitForTimeout(900);
 }
 
+/** Admin → Settings → Demo tools → "Refresh demo week": a clean week around today, test bookings cancelled. */
+async function refreshDemoWeek(tag) {
+  const ctx = await context("desktop");
+  const page = await ctx.newPage();
+  await login(page, "admin@derma.demo");
+  await page.goto(BASE + "/settings?tab=demo", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "تحديث الأسبوع التجريبي" }).click();
+  await page.getByText(/تم نقل/).waitFor({ timeout: 30000 });
+  note(`${tag}: ${(await page.getByText(/تم نقل/).innerText()).trim()}`);
+}
+await scene("prepare", () => refreshDemoWeek("refresh before filming"));
+
 // ── 1. The clinic's website ──────────────────────────────────────────────────
 await scene("website", async () => {
   const ctx = await context("phone");
@@ -364,6 +376,9 @@ await scene("owner", async () => {
   await page.goto(BASE + "/settings?tab=team", { waitUntil: "networkidle" });
   await shot(page, "own-4-team", { wait: 800 });
 });
+
+// Leave the live demo clean again.
+await scene("cleanup", () => refreshDemoWeek("refresh after filming"));
 
 writeFileSync(`${OUT}/log.txt`, log.join("\n") + "\n");
 await browser.close();
