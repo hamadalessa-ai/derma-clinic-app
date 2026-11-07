@@ -1,0 +1,56 @@
+refresh before filming: تم نقل 221 موعدًا وإلغاء 0 حجز اختبار
+OK prepare (8s)
+shot site-hero
+shot site-full
+shot site-chapters
+shot site-doctors
+shot site-offers
+shot site-desktop
+shot logo
+OK website (19s)
+shot book-1-start
+shot book-2-mobile
+shot book-3-code
+shot book-4-mode
+shot book-5-service
+shot book-6-doctor
+shot book-7-times
+shot book-8-details
+shot book-9-done
+OK booking (15s)
+shot wa-desktop
+shot wa-1-confirmation
+shot wa-2-reminder
+consent link: found
+shot consent-1-open
+shot consent-2-pad
+shot consent-3-signed
+shot consent-4-done
+OK whatsapp (23s)
+shot ai-1
+ai turn 1: أهلاً وسهلاً فيك. عندنا ليزر إزالة الشعر (60 دقيقة، 800 ريال). عشان أبحث لك عن موعد مسائي الأسبوع الجاي، أبي أعرف: ١. أي فرع تفضّلين؟ الرياض ولا جدة؟ ٢. عندك تفضيل لطبيبة أو طبيب؟ (اختياري) 04:30
+shot ai-2
+ai turn 2: أهلاً نوف، تم التسجيل بياناتك: أنثى. عندنا فرعين: الرياض وجدة. أي فرع يناسبك؟ وإذا تبين طبيبة معيّنة، عندنا د. سارة العتيبي و د. ريم الشهري في الرياض، و د. لينا باناجة في جدة. 04:30
+shot ai-3
+ai turn 3: أبشري نوف، عندنا مواعيد مسائية في فرع الرياض مع د. ريم الشهري: ١. الاثنين 9/11 الساعة 18:45 ٢. الثلاثاء 10/11 الساعة 18:00 ٣. الأربعاء 11/11 الساعة 18:45 أي موعد يناسبك؟ 04:31
+shot ai-4
+ai turn 4: أبشري نوف، جهزت لك الحجز: ليزر إزالة الشعر (60 دقيقة، 800 ريال) فرع الرياض، الاثنين 9/11 الساعة 18:45 مع د. ريم الشهري للتأكيد، رُدّي بـ "نعم". 04:31
+shot ai-5
+ai turn 5: مرحبًا نوف، تم حجز موعد ليزر إزالة الشعر يوم الاثنين، 9 نوفمبر 2026 الساعة 6:45 م مع د. ريم الشهري في فرع الرياض. الموقع: https://maps.google.com/?q=Derma%20Clinics%20Riyadh مواعيدك والموافقات: https:
+shot ai-full
+OK ai (74s)
+shot dr-1-myday
+shot dr-1-myday-full
+shot dr-2-visit
+shot dr-3-dictation
+shot dr-4-draft
+shot dr-5-note
+OK doctor (26s)
+shot own-1-home
+shot own-2-calendar
+patient page: https://derma-clinic-app.vercel.app/patients/bda3525c-2cfc-5da5-b720-d4c64f553d48?tab=packages
+shot own-3-patient
+shot own-4-team
+OK owner (24s)
+refresh after filming: تم نقل 221 موعدًا وإلغاء 2 حجز اختبار
+OK cleanup (7s)
