@@ -153,9 +153,16 @@ await scene("booking", async () => {
     await page.getByTestId("doctor-any").click();
   }
   await page.waitForTimeout(800);
-  // The first day with free times.
+  // Tomorrow if it has free times (so the WhatsApp reminder, with its consent link, goes out now),
+  // else the first day with free times.
+  const tomorrow = new Date(Date.now() + (3 + 24) * 3600_000).toISOString().slice(0, 10);
+  const preferred = page.locator(`[data-day="${tomorrow}"]:not([disabled])`);
+  if (await preferred.isVisible().catch(() => false)) {
+    await preferred.click();
+    await page.waitForTimeout(2500);
+  }
   const days = page.locator("[data-day]:not([disabled])");
-  const n = await days.count();
+  const n = (await page.locator("[data-time]").first().isVisible().catch(() => false)) ? 0 : await days.count();
   for (let i = 0; i < n; i++) {
     await days.nth(i).click();
     await page.waitForFunction(
@@ -344,8 +351,15 @@ await scene("owner", async () => {
   await shot(page, "own-2-calendar", { wait: 1500 });
   // A patient with a package (session balance).
   await page.goto(BASE + "/patients", { waitUntil: "networkidle" });
-  await page.locator('a[href^="/patients/"]').first().click();
-  await page.waitForLoadState("networkidle");
+  const hrefs = await page
+    .locator('a[href^="/patients/"]')
+    .evaluateAll((as) => [...new Set(as.map((a) => a.getAttribute("href")))].filter((h) => /\/patients\/[0-9a-f-]{36}$/.test(h)));
+  for (const h of hrefs.slice(0, 15)) {
+    await page.goto(BASE + h, { waitUntil: "networkidle" });
+    const text = await page.locator("main").innerText();
+    if (/باقة|الجلسات المتبقية|جلسات/.test(text)) break;
+  }
+  note(`patient page: ${page.url()}`);
   await shot(page, "own-3-patient", { full: true, wait: 1000 });
   await page.goto(BASE + "/settings?tab=team", { waitUntil: "networkidle" });
   await shot(page, "own-4-team", { wait: 800 });

@@ -96,6 +96,21 @@
           const k = W / iw;
           const h = ih * k;
           let y = 0;
+          if (s.zoom) {
+            // Zoom into a point of a wide screen (focus = fractions of the picture), slowly moving.
+            const q = inOut(prog(t, s.from + 0.4, s.zoomTo ?? s.from + 4));
+            const z = s.zoom[0] + (s.zoom[1] - s.zoom[0]) * q;
+            const fx = s.focus[0] + ((s.focus2 ?? s.focus)[0] - s.focus[0]) * q;
+            const fy = s.focus[1] + ((s.focus2 ?? s.focus)[1] - s.focus[1]) * q;
+            const w = W * z;
+            const hh = ih * (w / iw);
+            const left = clamp(W / 2 - fx * w, W - w, 0);
+            const top = clamp(H / 2 - fy * hh, Math.min(0, H - hh), 0);
+            s.i.style.width = w + "px";
+            s.i.style.left = left + "px";
+            s.i.style.transform = `translateY(${top}px)`;
+            continue;
+          }
           if (s.pan && h > H) {
             const [a, b] = s.pan; // fractions of the scrollable height
             const q = inOut(prog(t, s.panAt ?? s.from + 0.6, s.panTo ?? s.from + (s.panDur ?? 2.5)));
@@ -302,8 +317,8 @@
       g,
       "laptop",
       [
-        { img: "own-2-calendar", from: 0 },
-        { img: "own-3-patient", from: 5.2, pan: [0, 0.6], panAt: 6, panTo: 9.8 },
+        { img: "own-2-calendar", from: 0, zoom: [1, 1.7], focus: [0.5, 0.35], focus2: [0.42, 0.45], zoomTo: 5 },
+        { img: "own-3-patient", from: 5.2, zoom: [1.25, 1.5], focus: [0.45, 0.2], focus2: [0.45, 0.55], zoomTo: 10 },
       ],
       { top: 760, scale: 1 },
     );
