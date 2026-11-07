@@ -33,6 +33,19 @@ function withLinks(text: string): ReactNode[] {
         {part}
       </a>
     ) : (
+      <Fragment key={i}>{withBold(part)}</Fragment>
+    ),
+  );
+}
+
+/** WhatsApp shows *text* in bold; the simulator does the same. */
+function withBold(text: string): ReactNode[] {
+  return text.split(/(\*[^*\n]+\*)/g).map((part, i) =>
+    /^\*[^*\n]+\*$/.test(part) ? (
+      <strong key={i} className="font-semibold">
+        {part.slice(1, -1)}
+      </strong>
+    ) : (
       <Fragment key={i}>{part}</Fragment>
     ),
   );

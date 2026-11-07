@@ -1056,7 +1056,7 @@ export async function runReceptionist(
           kind: "ai_reply",
           phone: state.phone,
           patientId: state.patientId,
-          text: reply.slice(0, MAX_REPLY_CHARS),
+          text: toWhatsAppText(reply).slice(0, MAX_REPLY_CHARS),
         },
         env,
       );
@@ -1083,6 +1083,19 @@ export async function runReceptionist(
     if (state.push.length) await opts.notify(state.push).catch(() => {});
     return { outcome: "failed", reply: null, actions: state.actions };
   }
+}
+
+/**
+ * The model sometimes writes Markdown; WhatsApp has its own marks: *bold*, _italic_. Convert so the
+ * patient never sees stray ** or # characters.
+ */
+export function toWhatsAppText(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "*$1*")
+    .replace(/__(.+?)__/g, "_$1_")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*{2,}/g, "*")
+    .trim();
 }
 
 /** When the AI can't answer: a short, fixed "the team will reply" so the patient isn't left waiting. */
