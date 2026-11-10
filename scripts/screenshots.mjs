@@ -67,6 +67,18 @@ try {
   await page.locator('input[type="password"]').fill(process.env.DEMO_PASSWORD ?? "Demo-Local-2026");
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/reports`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/reports-en.png", fullPage: true });
+  await page.goto(`${BASE}/patients/import`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/import-en.png", fullPage: true });
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "ar", url: BASE }]);
+  await page.goto(`${BASE}/reports`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/reports-ar.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/reports-ar-phone.png", fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE }]);
   await page.goto(`${BASE}/setup?tab=services`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/setup-en-services.png", fullPage: true });
   await page.getByTestId("setup-edit").first().click();
