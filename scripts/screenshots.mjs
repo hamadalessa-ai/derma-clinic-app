@@ -67,6 +67,14 @@ try {
   await page.locator('input[type="password"]').fill(process.env.DEMO_PASSWORD ?? "Demo-Local-2026");
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/setup?tab=services`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/setup-en-services.png", fullPage: true });
+  await page.getByTestId("setup-edit").first().click();
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: "screenshots/setup-en-service-dialog.png" });
+  await page.keyboard.press("Escape");
+  await page.goto(`${BASE}/setup?tab=rooms`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/setup-en-rooms.png", fullPage: true });
   await page.goto(`${BASE}/settings?tab=subscription`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/settings-en-subscription.png", fullPage: true });
   await page.goto(`${BASE}/settings?tab=team`, { waitUntil: "networkidle" });

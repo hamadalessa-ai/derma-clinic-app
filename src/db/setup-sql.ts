@@ -212,6 +212,23 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
+  // Which doctors do a service (none listed = every doctor). Demo: one less-used service lists
+  // all of the clinic's doctors, so nothing changes for booking.
+  const doctors = t.staff.filter((s) => s.roles.includes("practitioner"));
+  const firstService =
+    t.services.find((s) => s.code === "exosomes") ?? t.services.find((s) => s.code === "fillers");
+  if (firstService && doctors.length) {
+    out.push(
+      insert(
+        "service_practitioners",
+        doctors.map((d) => ({
+          tenant_id: tid,
+          service_id: ref("service", firstService.code),
+          member_id: ref("member", d.key),
+        })),
+      ),
+    );
+  }
   out.push(
     insert(
       "patients",

@@ -77,6 +77,15 @@ import { setClinicLimits, setClinicStatus } from "@/lib/platform/status";
 import { planAllows, PLAN_TIERS } from "@/lib/platform/plans";
 import { endSupport, grantSupport, SUPPORT_HOURS } from "@/lib/support/grants";
 import {
+  createConsentForm,
+  saveBranch,
+  saveDepartment,
+  saveDevice,
+  savePackage,
+  saveRoom,
+  saveService,
+} from "@/lib/setup/admin";
+import {
   issueStatement,
   recordStatementPayment,
   setClinicPlan,
@@ -1890,5 +1899,171 @@ export async function endSupportAction() {
     await withActor(actor, (tx) => endSupport(tx, actor));
     revalidatePath("/settings");
     return null;
+  });
+}
+
+// ── Clinic set-up (clinic admin) ───────────────────────────────────────────
+
+const label = (max = 120) => z.string().trim().min(1).max(max);
+const optText = (max: number) => z.string().trim().max(max).nullish();
+const optId = uuid.nullish();
+const sarToHalalas = (sar: number) => Math.round(sar * 100);
+
+function setupDone(path = "/setup") {
+  revalidatePath(path);
+  revalidatePath("/services");
+  revalidatePath("/", "layout");
+}
+
+export async function saveBranchAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        nameAr: label(),
+        nameEn: label(),
+        cityAr: label(60),
+        cityEn: label(60),
+        mapUrl: z.string().trim().url().max(500).nullish().or(z.literal("")),
+        sortOrder: z.number().int().min(0).max(999).optional(),
+      }),
+      input,
+    );
+    const row = await withActor(actor, (tx) => saveBranch(tx, actor, { ...v, mapUrl: v.mapUrl || null }));
+    setupDone();
+    return { id: row.id };
+  });
+}
+
+export async function saveDepartmentAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        nameAr: label(),
+        nameEn: label(),
+        isActive: z.boolean(),
+        sortOrder: z.number().int().min(0).max(999).optional(),
+      }),
+      input,
+    );
+    const row = await withActor(actor, (tx) => saveDepartment(tx, actor, v));
+    setupDone();
+    return { id: row.id };
+  });
+}
+
+export async function saveServiceAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        departmentId: uuid,
+        nameAr: label(),
+        nameEn: label(),
+        durationMinutes: z.number().int().min(5).max(480),
+        bufferMinutes: z.number().int().min(0).max(120),
+        priceSar: z.number().min(0).max(1_000_000),
+        requiredDeviceType: optText(60),
+        consentCode: optText(40),
+        onlineBookable: z.boolean(),
+        isVirtual: z.boolean(),
+        isActive: z.boolean(),
+        preVisitAr: optText(2000),
+        preVisitEn: optText(2000),
+        postCareAr: optText(2000),
+        postCareEn: optText(2000),
+        recallAfterDays: z.number().int().min(1).max(730).nullish(),
+        doctorIds: z.array(uuid).max(200),
+      }),
+      input,
+    );
+    const { priceSar, ...rest } = v;
+    const row = await withActor(actor, (tx) =>
+      saveService(tx, actor, { ...rest, priceHalalas: sarToHalalas(priceSar) }),
+    );
+    setupDone();
+    return { id: row.id };
+  });
+}
+
+export async function saveRoomAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        branchId: uuid,
+        nameAr: label(),
+        nameEn: label(),
+        isVirtual: z.boolean().optional(),
+        isActive: z.boolean(),
+      }),
+      input,
+    );
+    const row = await withActor(actor, (tx) => saveRoom(tx, actor, v));
+    setupDone();
+    return { id: row.id };
+  });
+}
+
+export async function saveDeviceAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        branchId: uuid,
+        roomId: optId,
+        deviceType: label(60),
+        nameAr: label(),
+        nameEn: label(),
+        isActive: z.boolean(),
+      }),
+      input,
+    );
+    const row = await withActor(actor, (tx) => saveDevice(tx, actor, v));
+    setupDone();
+    return { id: row.id };
+  });
+}
+
+export async function savePackageAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        serviceId: uuid,
+        nameAr: label(),
+        nameEn: label(),
+        sessionsCount: z.number().int().min(1).max(100),
+        priceSar: z.number().min(0).max(1_000_000),
+        validityDays: z.number().int().min(1).max(3650),
+        isActive: z.boolean(),
+      }),
+      input,
+    );
+    const { priceSar, ...rest } = v;
+    const row = await withActor(actor, (tx) =>
+      savePackage(tx, actor, { ...rest, priceHalalas: sarToHalalas(priceSar) }),
+    );
+    setupDone();
+    return { id: row.id };
+  });
+}
+
+export async function createConsentFormAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        titleAr: label(200),
+        titleEn: label(200),
+        bodyAr: z.string().trim().min(1).max(20000),
+        bodyEn: z.string().trim().min(1).max(20000),
+      }),
+      input,
+    );
+    const row = await withActor(actor, (tx) => createConsentForm(tx, actor, v));
+    setupDone();
+    revalidatePath("/settings", "layout");
+    return { code: row.code };
   });
 }
