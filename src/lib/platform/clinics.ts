@@ -10,7 +10,20 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { branches, departments, rooms, tenantMembers, tenants, users } from "@/db/schema";
+import {
+  branches,
+  consentRules,
+  consentTemplates,
+  departments,
+  packageTemplates,
+  rooms,
+  services,
+  tenantMembers,
+  tenants,
+  users,
+} from "@/db/schema";
+import type { TenantTx } from "@/db/tenant";
+import { clinicTemplate, type Specialty } from "./templates";
 import { audit } from "@/lib/audit";
 import { assertCan, type Role } from "@/lib/auth/permissions";
 
@@ -27,6 +40,8 @@ export interface NewClinic {
   brandColor: string;
   isDemo: boolean;
   branch: { nameAr: string; nameEn: string; cityAr: string; cityEn: string };
+  /** Ready start: dermatology, dental, both, or blank (only the department below). */
+  specialty?: Specialty;
   department: { nameAr: string; nameEn: string };
   admin: { nameAr: string; nameEn?: string | null; email: string };
 }
@@ -83,19 +98,7 @@ export async function createClinic(
         cityEn: c.branch.cityEn.trim(),
       })
       .returning({ id: branches.id });
-    await tx.insert(departments).values({
-      tenantId,
-      code: "main",
-      nameAr: c.department.nameAr.trim(),
-      nameEn: c.department.nameEn.trim(),
-      isActive: true,
-    });
-    await tx.insert(rooms).values({
-      tenantId,
-      branchId: branch.id,
-      nameAr: "غرفة الكشف 1",
-      nameEn: "Consultation Room 1",
-    });
+    await applyTemplate(tx, tenantId, branch.id, c.specialty ?? "blank", c.department);
     const [member] = await tx
       .insert(tenantMembers)
       .values({ tenantId, userId: user.id, roles: ["clinic_admin"], branchId: null })
@@ -105,7 +108,12 @@ export async function createClinic(
       action: "clinic.create",
       entityType: "tenant",
       entityId: tenantId,
-      metadata: { slug, adminMemberId: member.id, isDemo: c.isDemo },
+      metadata: {
+        slug,
+        adminMemberId: member.id,
+        isDemo: c.isDemo,
+        specialty: c.specialty ?? "blank",
+      },
     });
     return { tenantId, slug, adminUserId: user.id, needsPassword: isNew };
   });
@@ -125,4 +133,114 @@ export function clinicAddress(
   const [hostname, port] = current.host.toLowerCase().split(":");
   if (!root || (hostname !== root && !hostname.endsWith(`.${root}`))) return null;
   return `${current.proto}://${slug}.${root}${port ? `:${port}` : ""}`;
+}
+
+/**
+ * The clinic's ready start (Clinic set-up edits all of it later): departments and services with
+ * sample prices, consent forms with sample wording and their rules, packages, the first branch's
+ * rooms and, when a video service exists, its video room.
+ */
+async function applyTemplate(
+  tx: TenantTx,
+  tenantId: string,
+  branchId: string,
+  specialty: Specialty,
+  blankDepartment: { nameAr: string; nameEn: string },
+) {
+  const t = clinicTemplate(specialty);
+  if (specialty === "blank") {
+    await tx.insert(departments).values({
+      tenantId,
+      code: "main",
+      nameAr: blankDepartment.nameAr.trim(),
+      nameEn: blankDepartment.nameEn.trim(),
+      isActive: true,
+    });
+  }
+  for (const c of t.consents) {
+    await tx.insert(consentTemplates).values({
+      tenantId,
+      code: c.code,
+      version: 1,
+      isCurrent: true,
+      titleAr: c.titleAr,
+      titleEn: c.titleEn,
+      bodyAr: c.bodyAr,
+      bodyEn: c.bodyEn,
+    });
+    await tx
+      .insert(consentRules)
+      .values({ tenantId, code: c.code, rule: c.rule, months: c.months ?? null });
+  }
+  const serviceIds = new Map<string, string>();
+  let order = 0;
+  for (const [i, d] of t.departments.entries()) {
+    const [dept] = await tx
+      .insert(departments)
+      .values({
+        tenantId,
+        code: d.code,
+        nameAr: d.nameAr,
+        nameEn: d.nameEn,
+        isActive: true,
+        sortOrder: i,
+      })
+      .returning({ id: departments.id });
+    for (const s of d.services) {
+      const [row] = await tx
+        .insert(services)
+        .values({
+          tenantId,
+          departmentId: dept.id,
+          code: s.code,
+          nameAr: s.nameAr,
+          nameEn: s.nameEn,
+          durationMinutes: s.minutes,
+          bufferMinutes: s.buffer,
+          priceHalalas: Math.round(s.priceSar * 100),
+          requiredDeviceType: s.device ?? null,
+          consentCode: s.consent ?? null,
+          onlineBookable: s.online ?? false,
+          isVirtual: s.virtual ?? false,
+          preVisitAr: s.preVisitAr ?? null,
+          preVisitEn: s.preVisitEn ?? null,
+          postCareAr: s.postCareAr ?? null,
+          postCareEn: s.postCareEn ?? null,
+          recallAfterDays: s.recallDays ?? null,
+          // Sample prices until the clinic sets its own in Clinic set-up.
+          isDemoValue: true,
+          sortOrder: s.virtual ? 0 : ++order,
+        })
+        .returning({ id: services.id });
+      serviceIds.set(s.code, row.id);
+    }
+  }
+  for (const p of t.packages) {
+    const serviceId = serviceIds.get(p.service);
+    if (!serviceId) continue;
+    await tx.insert(packageTemplates).values({
+      tenantId,
+      serviceId,
+      nameAr: p.nameAr,
+      nameEn: p.nameEn,
+      sessionsCount: p.sessions,
+      priceHalalas: Math.round(p.priceSar * 100),
+      validityDays: p.validityDays,
+    });
+  }
+  const hasVideo = t.departments.some((d) => d.services.some((s) => s.virtual));
+  await tx.insert(rooms).values([
+    ...t.rooms.map((r) => ({ tenantId, branchId, nameAr: r.nameAr, nameEn: r.nameEn })),
+    ...(hasVideo
+      ? [
+          {
+            tenantId,
+            branchId,
+            nameAr: "غرفة الاستشارات المرئية",
+            nameEn: "Video Room",
+            isVirtual: true,
+          },
+        ]
+      : []),
+  ]);
 }

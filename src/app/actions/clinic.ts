@@ -73,6 +73,7 @@ import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subs
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
 import { createClinic, clinicAddress, SLUG_RULE } from "@/lib/platform/clinics";
+import { SPECIALTIES } from "@/lib/platform/templates";
 import { setClinicLimits, setClinicStatus } from "@/lib/platform/status";
 import { planAllows, PLAN_TIERS } from "@/lib/platform/plans";
 import { endSupport, grantSupport, SUPPORT_HOURS } from "@/lib/support/grants";
@@ -1670,8 +1671,9 @@ const newClinicInput = z.object({
   branchNameEn: req(120),
   cityAr: req(60),
   cityEn: req(60),
-  departmentAr: req(80),
-  departmentEn: req(80),
+  specialty: z.enum(SPECIALTIES).default("blank"),
+  departmentAr: z.string().trim().max(80).default(""),
+  departmentEn: z.string().trim().max(80).default(""),
   adminNameAr: req(120),
   adminNameEn: z.string().trim().max(120).nullish(),
   adminEmail: z.string().trim().toLowerCase().email().max(200),
@@ -1694,7 +1696,11 @@ export async function createClinicAction(input: z.input<typeof newClinicInput>) 
           cityAr: v.cityAr,
           cityEn: v.cityEn,
         },
-        department: { nameAr: v.departmentAr, nameEn: v.departmentEn },
+        specialty: v.specialty,
+        department: {
+          nameAr: v.departmentAr || "العيادة",
+          nameEn: v.departmentEn || "Clinic",
+        },
         admin: { nameAr: v.adminNameAr, nameEn: v.adminNameEn ?? null, email: v.adminEmail },
       },
     );

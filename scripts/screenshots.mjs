@@ -119,6 +119,7 @@ try {
   await fill("cityEn", "Riyadh");
   await fill("adminNameAr", "مدير النخبة");
   await fill("adminEmail", "admin@elite.demo");
+  await page.locator("#nc-specialty").selectOption("both");
   await page.screenshot({ path: "screenshots/platform-ar-form.png", fullPage: true });
   await page.getByTestId("clinic-add-save").click();
   await page.getByTestId("clinic-created").waitFor({ timeout: 15000 });
