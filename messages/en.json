@@ -1333,7 +1333,15 @@
     "noDomain": "The clinic is created. Its own address will work once the platform has its own domain connected (this demo runs on a single address).",
     "inviteText": "Send this invitation to the clinic admin (valid 7 days). They set a password and sign in:",
     "existingUser": "This email already has an account, so the admin signs in with their existing password.",
-    "nextSteps": "Next, the clinic admin adds services, working hours and the team from Settings. You will not see their patients."
+    "nextSteps": "Next, the clinic admin adds services, working hours and the team from Settings. You will not see their patients.",
+    "specialty": "Ready start",
+    "specialtyHint": "Departments, common services with sample prices, consent forms with sample wording, packages and rooms. The clinic admin edits everything in Clinic set-up.",
+    "specialties": {
+      "dermatology": "Dermatology & laser clinic",
+      "dental": "Dental clinic",
+      "both": "Dermatology and dental",
+      "blank": "Empty (one department only)"
+    }
   },
   "clinicStatus": {
     "unavailable": "This clinic's online services are temporarily unavailable. Please contact the clinic by phone.",

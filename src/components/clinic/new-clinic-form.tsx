@@ -8,6 +8,8 @@ import { THEME } from "@/app/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import type { Specialty } from "@/lib/platform/templates";
 import { FormError } from "./form-message";
 import { useAction } from "./use-action";
 
@@ -22,8 +24,9 @@ const EMPTY = {
   branchNameEn: "",
   cityAr: "",
   cityEn: "",
-  departmentAr: "الجلدية",
-  departmentEn: "Dermatology",
+  specialty: "dermatology" as Specialty,
+  departmentAr: "",
+  departmentEn: "",
   adminNameAr: "",
   adminNameEn: "",
   adminEmail: "",
@@ -139,8 +142,27 @@ export function NewClinicForm() {
         {field("branchNameEn", "ltr")}
         {field("cityAr", "rtl")}
         {field("cityEn", "ltr")}
-        {field("departmentAr", "rtl")}
-        {field("departmentEn", "ltr")}
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <Label htmlFor="nc-specialty">{t("specialty")}</Label>
+          <Select
+            id="nc-specialty"
+            value={v.specialty}
+            onChange={(e) => setV({ ...v, specialty: e.target.value as Specialty })}
+          >
+            {(["dermatology", "dental", "both", "blank"] as const).map((k) => (
+              <option key={k} value={k}>
+                {t(`specialties.${k}`)}
+              </option>
+            ))}
+          </Select>
+          <p className="text-muted-foreground text-xs">{t("specialtyHint")}</p>
+        </div>
+        {v.specialty === "blank" && (
+          <>
+            {field("departmentAr", "rtl")}
+            {field("departmentEn", "ltr")}
+          </>
+        )}
       </Section>
 
       <Section title={t("adminSection")}>
