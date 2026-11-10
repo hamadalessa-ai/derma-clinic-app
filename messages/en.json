@@ -35,7 +35,8 @@
     "account": "My account",
     "whatsapp": "Inbox",
     "simulator": "WhatsApp simulator",
-    "setup": "Clinic set-up"
+    "setup": "Clinic set-up",
+    "reports": "Reports"
   },
   "roles": {
     "platform_owner": "Platform owner",
@@ -1644,5 +1645,47 @@
       "duplicate_in_file": "same patient appears twice in the file",
       "already_exists": "already a patient here (skipped)"
     }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "How the clinic did this month. Money is estimated from your list prices; your till stays the official record.",
+    "prev": "Previous month",
+    "next": "Next month",
+    "branch": "Branch",
+    "allBranches": "All branches",
+    "show": "Show",
+    "bookings": "Bookings",
+    "completed": "Completed",
+    "noShowRate": "No-show rate",
+    "noShows": "{n} no-shows",
+    "noShowShort": "No-shows",
+    "onlineShare": "Booked online",
+    "onlineCount": "{n} via website or WhatsApp",
+    "visitValue": "Visit value (est.)",
+    "visitValueHint": "Completed visits not paid by a package, at list price",
+    "packagesSold": "Packages sold",
+    "packagePayments": "Package payments",
+    "packageVisits": "{n} visits used a package session",
+    "newPatients": "New patients",
+    "clinicWideNote": "Packages and new patients belong to the whole clinic, so they show under \"All branches\".",
+    "empty": "No bookings in this month.",
+    "perDay": "Bookings per day",
+    "source": {
+      "reception": "Reception",
+      "online": "Website",
+      "whatsapp": "WhatsApp"
+    },
+    "cancelled": "{n} cancelled (not counted above).",
+    "byDoctor": "Doctors",
+    "byService": "Top services",
+    "byBranch": "Branches",
+    "doctor": "Doctor",
+    "service": "Service",
+    "value": "Value (est.)",
+    "dailyTitle": "Daily file for your invoicing system",
+    "dailyHint": "One CSV per day with completed visits (list price, or 0 when a package paid), packages sold and package payments — ready to import into your accounting or e-invoicing (ZATCA) system.",
+    "day": "Day",
+    "dailyDownload": "Download the day's file",
+    "vsLastMonth": "vs last month"
   }
 }
