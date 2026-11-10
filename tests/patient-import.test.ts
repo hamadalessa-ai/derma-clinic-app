@@ -99,7 +99,7 @@ describe("importing into a clinic", () => {
     expect(r.total).toBe(7);
     expect(r.ok.map((x) => x.nameAr)).toEqual(["سارة علي", "خالد محمد"]);
     expect(r.ok[0]).toMatchObject({
-      phone: "+966551110001",
+      phone: "0551110001",
       gender: "female",
       dateOfBirth: "1990-05-14",
     });
