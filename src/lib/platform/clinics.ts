@@ -229,20 +229,18 @@ async function applyTemplate(
     });
   }
   const hasVideo = t.departments.some((d) => d.services.some((s) => s.virtual));
-  await tx
-    .insert(rooms)
-    .values([
-      ...t.rooms.map((r) => ({ tenantId, branchId, nameAr: r.nameAr, nameEn: r.nameEn })),
-      ...(hasVideo
-        ? [
-            {
-              tenantId,
-              branchId,
-              nameAr: "غرفة الاستشارات المرئية",
-              nameEn: "Video Room",
-              isVirtual: true,
-            },
-          ]
-        : []),
-    ]);
+  await tx.insert(rooms).values([
+    ...t.rooms.map((r) => ({ tenantId, branchId, nameAr: r.nameAr, nameEn: r.nameEn })),
+    ...(hasVideo
+      ? [
+          {
+            tenantId,
+            branchId,
+            nameAr: "غرفة الاستشارات المرئية",
+            nameEn: "Video Room",
+            isVirtual: true,
+          },
+        ]
+      : []),
+  ]);
 }
