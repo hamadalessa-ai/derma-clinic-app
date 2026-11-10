@@ -61,7 +61,8 @@ export interface ClinicTemplate {
 }
 
 const SAMPLE_AR = "نص نموذجي: يُرجى مراجعته مع المستشار القانوني للعيادة قبل استخدامه.";
-const SAMPLE_EN = "Sample wording: please have it reviewed by the clinic's legal adviser before use.";
+const SAMPLE_EN =
+  "Sample wording: please have it reviewed by the clinic's legal adviser before use.";
 
 /** The demo's dermatology forms, with the demo notice replaced by a "sample wording" note. */
 const fromSeed = (code: string): TemplateConsent => {
@@ -96,13 +97,74 @@ const DERMATOLOGY: TemplateDepartment = {
   nameAr: "الجلدية والتجميل",
   nameEn: "Dermatology & Aesthetics",
   services: [
-    { code: "consultation", nameAr: "استشارة جلدية", nameEn: "Dermatology Consultation", minutes: 20, buffer: 10, priceSar: 300, online: true },
-    { code: "follow_up", nameAr: "مراجعة", nameEn: "Follow-up Visit", minutes: 15, buffer: 5, priceSar: 150, online: true },
-    { code: "botox", nameAr: "بوتوكس", nameEn: "Botox", minutes: 30, buffer: 10, priceSar: 1200, consent: "injectables", online: true, recallDays: 120 },
-    { code: "fillers", nameAr: "فيلر", nameEn: "Fillers", minutes: 45, buffer: 15, priceSar: 1800, consent: "injectables", recallDays: 270 },
-    { code: "chemical_peeling", nameAr: "التقشير الكيميائي", nameEn: "Chemical Peeling", minutes: 45, buffer: 15, priceSar: 600, consent: "chemical_peel", recallDays: 30 },
-    { code: "facial_treatment", nameAr: "جلسة تنظيف البشرة", nameEn: "Facial Treatment", minutes: 60, buffer: 15, priceSar: 450, online: true, recallDays: 30 },
-    { code: "prp", nameAr: "البلازما (PRP)", nameEn: "PRP", minutes: 45, buffer: 15, priceSar: 900, recallDays: 30 },
+    {
+      code: "consultation",
+      nameAr: "استشارة جلدية",
+      nameEn: "Dermatology Consultation",
+      minutes: 20,
+      buffer: 10,
+      priceSar: 300,
+      online: true,
+    },
+    {
+      code: "follow_up",
+      nameAr: "مراجعة",
+      nameEn: "Follow-up Visit",
+      minutes: 15,
+      buffer: 5,
+      priceSar: 150,
+      online: true,
+    },
+    {
+      code: "botox",
+      nameAr: "بوتوكس",
+      nameEn: "Botox",
+      minutes: 30,
+      buffer: 10,
+      priceSar: 1200,
+      consent: "injectables",
+      online: true,
+      recallDays: 120,
+    },
+    {
+      code: "fillers",
+      nameAr: "فيلر",
+      nameEn: "Fillers",
+      minutes: 45,
+      buffer: 15,
+      priceSar: 1800,
+      consent: "injectables",
+      recallDays: 270,
+    },
+    {
+      code: "chemical_peeling",
+      nameAr: "التقشير الكيميائي",
+      nameEn: "Chemical Peeling",
+      minutes: 45,
+      buffer: 15,
+      priceSar: 600,
+      consent: "chemical_peel",
+      recallDays: 30,
+    },
+    {
+      code: "facial_treatment",
+      nameAr: "جلسة تنظيف البشرة",
+      nameEn: "Facial Treatment",
+      minutes: 60,
+      buffer: 15,
+      priceSar: 450,
+      online: true,
+      recallDays: 30,
+    },
+    {
+      code: "prp",
+      nameAr: "البلازما (PRP)",
+      nameEn: "PRP",
+      minutes: 45,
+      buffer: 15,
+      priceSar: 900,
+      recallDays: 30,
+    },
     VIDEO,
   ],
 };
@@ -123,12 +185,29 @@ const LASER: TemplateDepartment = {
       online: true,
       recallDays: 42,
       preVisitAr: "قبل الجلسة: احلقي المنطقة قبل يوم، وتجنّبي الشمس والتقشير لمدة أسبوع.",
-      preVisitEn: "Before the session: shave the area the day before; avoid sun and peeling for a week.",
+      preVisitEn:
+        "Before the session: shave the area the day before; avoid sun and peeling for a week.",
       postCareAr: "بعد الجلسة: واقي شمس، وتجنّب الحرارة والرياضة الشديدة ليومين.",
       postCareEn: "After the session: sunscreen; avoid heat and intense exercise for two days.",
     },
-    { code: "fractional_laser", nameAr: "الليزر التجزيئي", nameEn: "Fractional Laser", minutes: 60, buffer: 15, priceSar: 1500, recallDays: 30 },
-    { code: "laser_pigmentation", nameAr: "ليزر التصبغات", nameEn: "Laser Pigmentation Removal", minutes: 45, buffer: 15, priceSar: 1000, recallDays: 30 },
+    {
+      code: "fractional_laser",
+      nameAr: "الليزر التجزيئي",
+      nameEn: "Fractional Laser",
+      minutes: 60,
+      buffer: 15,
+      priceSar: 1500,
+      recallDays: 30,
+    },
+    {
+      code: "laser_pigmentation",
+      nameAr: "ليزر التصبغات",
+      nameEn: "Laser Pigmentation Removal",
+      minutes: 45,
+      buffer: 15,
+      priceSar: 1000,
+      recallDays: 30,
+    },
   ],
 };
 
@@ -137,13 +216,73 @@ const DENTAL: TemplateDepartment = {
   nameAr: "طب الأسنان",
   nameEn: "Dental",
   services: [
-    { code: "dental_consultation", nameAr: "كشف أسنان", nameEn: "Dental Check-up", minutes: 20, buffer: 10, priceSar: 150, online: true, recallDays: 180 },
-    { code: "scaling_polishing", nameAr: "تنظيف وتلميع الأسنان", nameEn: "Scaling & Polishing", minutes: 45, buffer: 15, priceSar: 350, consent: "dental_treatment", online: true, recallDays: 180 },
-    { code: "dental_filling", nameAr: "حشوة تجميلية", nameEn: "Composite Filling", minutes: 45, buffer: 15, priceSar: 450, consent: "dental_treatment" },
-    { code: "root_canal", nameAr: "علاج عصب", nameEn: "Root Canal Treatment", minutes: 90, buffer: 15, priceSar: 1500, consent: "dental_treatment" },
-    { code: "extraction", nameAr: "خلع سن", nameEn: "Tooth Extraction", minutes: 30, buffer: 15, priceSar: 400, consent: "dental_treatment" },
-    { code: "teeth_whitening", nameAr: "تبييض الأسنان", nameEn: "Teeth Whitening", minutes: 60, buffer: 15, priceSar: 1500, consent: "teeth_whitening", online: true },
-    { code: "ortho_consultation", nameAr: "استشارة تقويم", nameEn: "Orthodontic Consultation", minutes: 30, buffer: 10, priceSar: 200, online: true },
+    {
+      code: "dental_consultation",
+      nameAr: "كشف أسنان",
+      nameEn: "Dental Check-up",
+      minutes: 20,
+      buffer: 10,
+      priceSar: 150,
+      online: true,
+      recallDays: 180,
+    },
+    {
+      code: "scaling_polishing",
+      nameAr: "تنظيف وتلميع الأسنان",
+      nameEn: "Scaling & Polishing",
+      minutes: 45,
+      buffer: 15,
+      priceSar: 350,
+      consent: "dental_treatment",
+      online: true,
+      recallDays: 180,
+    },
+    {
+      code: "dental_filling",
+      nameAr: "حشوة تجميلية",
+      nameEn: "Composite Filling",
+      minutes: 45,
+      buffer: 15,
+      priceSar: 450,
+      consent: "dental_treatment",
+    },
+    {
+      code: "root_canal",
+      nameAr: "علاج عصب",
+      nameEn: "Root Canal Treatment",
+      minutes: 90,
+      buffer: 15,
+      priceSar: 1500,
+      consent: "dental_treatment",
+    },
+    {
+      code: "extraction",
+      nameAr: "خلع سن",
+      nameEn: "Tooth Extraction",
+      minutes: 30,
+      buffer: 15,
+      priceSar: 400,
+      consent: "dental_treatment",
+    },
+    {
+      code: "teeth_whitening",
+      nameAr: "تبييض الأسنان",
+      nameEn: "Teeth Whitening",
+      minutes: 60,
+      buffer: 15,
+      priceSar: 1500,
+      consent: "teeth_whitening",
+      online: true,
+    },
+    {
+      code: "ortho_consultation",
+      nameAr: "استشارة تقويم",
+      nameEn: "Orthodontic Consultation",
+      minutes: 30,
+      buffer: 10,
+      priceSar: 200,
+      online: true,
+    },
   ],
 };
 
@@ -192,11 +331,32 @@ const DERM_CONSENTS = ["laser_hair_removal", "injectables", "chemical_peel"].map
 const TELEHEALTH = fromSeed("telehealth");
 
 const DERM_PACKAGES: TemplatePackage[] = [
-  { service: "laser_hair_removal", nameAr: "باقة ليزر إزالة الشعر — 6 جلسات", nameEn: "Laser Hair Removal — 6 sessions", sessions: 6, priceSar: 3600, validityDays: 365 },
-  { service: "chemical_peeling", nameAr: "باقة التقشير الكيميائي — 4 جلسات", nameEn: "Chemical Peeling — 4 sessions", sessions: 4, priceSar: 2000, validityDays: 180 },
+  {
+    service: "laser_hair_removal",
+    nameAr: "باقة ليزر إزالة الشعر — 6 جلسات",
+    nameEn: "Laser Hair Removal — 6 sessions",
+    sessions: 6,
+    priceSar: 3600,
+    validityDays: 365,
+  },
+  {
+    service: "chemical_peeling",
+    nameAr: "باقة التقشير الكيميائي — 4 جلسات",
+    nameEn: "Chemical Peeling — 4 sessions",
+    sessions: 4,
+    priceSar: 2000,
+    validityDays: 180,
+  },
 ];
 const DENTAL_PACKAGES: TemplatePackage[] = [
-  { service: "scaling_polishing", nameAr: "باقة تنظيف الأسنان — جلستان في السنة", nameEn: "Scaling & Polishing — 2 visits a year", sessions: 2, priceSar: 600, validityDays: 365 },
+  {
+    service: "scaling_polishing",
+    nameAr: "باقة تنظيف الأسنان — جلستان في السنة",
+    nameEn: "Scaling & Polishing — 2 visits a year",
+    sessions: 2,
+    priceSar: 600,
+    validityDays: 365,
+  },
 ];
 
 export function clinicTemplate(s: Specialty): ClinicTemplate {
@@ -231,5 +391,10 @@ export function clinicTemplate(s: Specialty): ClinicTemplate {
         { nameAr: "كرسي الأسنان 1", nameEn: "Dental Chair 1" },
       ],
     };
-  return { departments: [], consents: [], packages: [], rooms: [{ nameAr: "غرفة الكشف 1", nameEn: "Consultation Room 1" }] };
+  return {
+    departments: [],
+    consents: [],
+    packages: [],
+    rooms: [{ nameAr: "غرفة الكشف 1", nameEn: "Consultation Room 1" }],
+  };
 }

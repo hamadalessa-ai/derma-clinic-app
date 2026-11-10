@@ -108,7 +108,12 @@ export async function createClinic(
       action: "clinic.create",
       entityType: "tenant",
       entityId: tenantId,
-      metadata: { slug, adminMemberId: member.id, isDemo: c.isDemo, specialty: c.specialty ?? "blank" },
+      metadata: {
+        slug,
+        adminMemberId: member.id,
+        isDemo: c.isDemo,
+        specialty: c.specialty ?? "blank",
+      },
     });
     return { tenantId, slug, adminUserId: user.id, needsPassword: isNew };
   });
@@ -172,7 +177,14 @@ async function applyTemplate(
   for (const [i, d] of t.departments.entries()) {
     const [dept] = await tx
       .insert(departments)
-      .values({ tenantId, code: d.code, nameAr: d.nameAr, nameEn: d.nameEn, isActive: true, sortOrder: i })
+      .values({
+        tenantId,
+        code: d.code,
+        nameAr: d.nameAr,
+        nameEn: d.nameEn,
+        isActive: true,
+        sortOrder: i,
+      })
       .returning({ id: departments.id });
     for (const s of d.services) {
       const [row] = await tx
@@ -217,10 +229,20 @@ async function applyTemplate(
     });
   }
   const hasVideo = t.departments.some((d) => d.services.some((s) => s.virtual));
-  await tx.insert(rooms).values([
-    ...t.rooms.map((r) => ({ tenantId, branchId, nameAr: r.nameAr, nameEn: r.nameEn })),
-    ...(hasVideo
-      ? [{ tenantId, branchId, nameAr: "غرفة الاستشارات المرئية", nameEn: "Video Room", isVirtual: true }]
-      : []),
-  ]);
+  await tx
+    .insert(rooms)
+    .values([
+      ...t.rooms.map((r) => ({ tenantId, branchId, nameAr: r.nameAr, nameEn: r.nameEn })),
+      ...(hasVideo
+        ? [
+            {
+              tenantId,
+              branchId,
+              nameAr: "غرفة الاستشارات المرئية",
+              nameEn: "Video Room",
+              isVirtual: true,
+            },
+          ]
+        : []),
+    ]);
 }

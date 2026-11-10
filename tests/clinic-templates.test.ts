@@ -18,7 +18,9 @@ import { clinicTemplate, SPECIALTIES } from "@/lib/platform/templates";
 
 afterAll(closeDb);
 
-const stamp = Date.now().toString(36).replace(/[^a-z]/g, "");
+const stamp = Date.now()
+  .toString(36)
+  .replace(/[^a-z]/g, "");
 
 describe("templates", () => {
   it.each(SPECIALTIES)("%s is complete and consistent", (s) => {
@@ -63,7 +65,9 @@ describe("a new clinic from a template", () => {
       packages: await tx.select().from(packageTemplates),
       rooms: await tx.select().from(rooms),
     }));
-    expect(got.departments.map((d) => d.code).sort()).toEqual(t.departments.map((d) => d.code).sort());
+    expect(got.departments.map((d) => d.code).sort()).toEqual(
+      t.departments.map((d) => d.code).sort(),
+    );
     expect(got.services).toHaveLength(t.departments.flatMap((d) => d.services).length);
     expect(got.services.every((s) => s.isDemoValue)).toBe(true);
     expect(got.consents).toHaveLength(t.consents.length);
