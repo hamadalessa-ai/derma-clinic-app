@@ -414,7 +414,8 @@
     "age": "{age} yrs",
     "fakeData": "Fake data",
     "guardianFile": "Guardian's file number (optional)",
-    "relationAr": "Relationship"
+    "relationAr": "Relationship",
+    "import": "Import"
   },
   "packages": {
     "title": "Packages",
@@ -1599,5 +1600,49 @@
     "bodyAr": "Text (Arabic)",
     "bodyEn": "Text (English)",
     "consentNewHint": "Have the wording checked by your legal adviser. Later changes create a new version; signed forms keep the text that was signed."
+  },
+  "patientImport": {
+    "title": "Import patients",
+    "subtitle": "Bring your patient list (and their remaining package sessions) from your previous system.",
+    "demoOnlyFake": "This is a demo clinic: import made-up patients only. Never upload real patient data here.",
+    "step1": "Download the template, or export your patient list from your old system.",
+    "step2": "In Excel: File → Save As → \"CSV UTF-8\". Arabic or English column titles both work.",
+    "step3": "Choose the file below. We check every row first — nothing is saved until you press Import.",
+    "columns": "Needed: name, mobile, gender. Optional: file number, English name, date of birth, ID number, email, package name, sessions used, package date.",
+    "template": "Download template",
+    "choose": "Choose a CSV file…",
+    "checking": "Checking the file…",
+    "missingColumns": "The file is missing these columns: {columns}",
+    "summary": "{ready} of {total} rows are ready to import ({packages} with a package).",
+    "problemsTitle": "{n, plural, one {# row can't be imported:} other {# rows can't be imported:}}",
+    "problemsHint": "Fix these rows in Excel and import the file again — patients already imported will be skipped.",
+    "line": "Row {line}",
+    "import": "{n, plural, one {Import # patient} other {Import # patients}}",
+    "done": "Done: {imported} patients imported, {packages} packages added, {skipped} rows skipped.",
+    "toPatients": "Open patients",
+    "col": {
+      "fileNumber": "file number",
+      "nameAr": "Arabic name",
+      "nameEn": "English name",
+      "phone": "mobile",
+      "gender": "gender",
+      "dateOfBirth": "date of birth",
+      "idNumber": "ID number",
+      "email": "email",
+      "package": "package",
+      "sessionsUsed": "sessions used",
+      "packageBoughtOn": "package date"
+    },
+    "problem": {
+      "missing_name": "no name",
+      "bad_phone": "mobile is not a Saudi mobile",
+      "bad_gender": "gender should be male or female",
+      "bad_date": "date not understood (use 2026-01-31 or 31/01/2026)",
+      "bad_email": "email not valid",
+      "unknown_package": "package name doesn't match any of your packages",
+      "bad_sessions": "sessions used is not a number or more than the package has",
+      "duplicate_in_file": "same patient appears twice in the file",
+      "already_exists": "already a patient here (skipped)"
+    }
   }
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Search, UserPlus } from "lucide-react";
+import { FileUp, Search, UserPlus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,12 +52,20 @@ export default async function PatientsPage({
         title={t("title")}
         subtitle={t("count", { count: rows.length })}
         actions={
-          can(ctx.roles, "patients:edit") && (
-            <Link href="/patients/new" className={buttonVariants({ size: "sm" })}>
-              <UserPlus />
-              {tx2("new")}
-            </Link>
-          )
+          <div className="flex gap-2">
+            {can(ctx.roles, "patients:import") && (
+              <Link href="/patients/import" className={buttonVariants({ size: "sm", variant: "outline" })}>
+                <FileUp />
+                {tx2("import")}
+              </Link>
+            )}
+            {can(ctx.roles, "patients:edit") && (
+              <Link href="/patients/new" className={buttonVariants({ size: "sm" })}>
+                <UserPlus />
+                {tx2("new")}
+              </Link>
+            )}
+          </div>
         }
       />
       <form className="relative max-w-xl" role="search">
