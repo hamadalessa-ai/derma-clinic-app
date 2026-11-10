@@ -268,7 +268,10 @@ async function pickRoomAndDevice(
  * The doctors the clinic admin set for a service (Clinic set-up → Services), or null when none
  * are set: then every doctor at the branch may do it.
  */
-export async function serviceDoctorIds(tx: TenantTx, serviceId: string): Promise<Set<string> | null> {
+export async function serviceDoctorIds(
+  tx: TenantTx,
+  serviceId: string,
+): Promise<Set<string> | null> {
   const rows = await tx
     .select({ memberId: servicePractitioners.memberId })
     .from(servicePractitioners)
@@ -470,7 +473,8 @@ async function applyMove(tx: TenantTx, by: ChangedBy, appt: Appointment, input: 
   const service = await getService(tx, appt.serviceId);
   const practitionerId = input.practitionerId ?? appt.practitionerId;
   await getPractitioner(tx, practitionerId, appt.branchId);
-  if (practitionerId !== appt.practitionerId) await assertDoctorForService(tx, service.id, practitionerId);
+  if (practitionerId !== appt.practitionerId)
+    await assertDoctorForService(tx, service.id, practitionerId);
 
   const start = input.startsAt;
   if (start.getTime() < Date.now() - 5 * 60_000) throw new BookingError("in_past");

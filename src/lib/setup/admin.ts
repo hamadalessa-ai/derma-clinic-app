@@ -55,7 +55,9 @@ export function codeFrom(name: string, taken: Iterable<string>) {
   for (const c of "abcdefghijklmnopqrstuvwxyz") {
     if (!used.has(`${base}_${c}`)) return `${base}_${c}`;
   }
-  return `${base}_${Date.now().toString(36).replace(/[^a-z]/g, "")}`;
+  return `${base}_${Date.now()
+    .toString(36)
+    .replace(/[^a-z]/g, "")}`;
 }
 
 async function logChange(
@@ -79,12 +81,18 @@ async function logChange(
 
 export async function loadSetup(tx: TenantTx) {
   // One after another: a transaction runs one query at a time.
-  const b = await tx.select().from(branches).orderBy(asc(branches.sortOrder), asc(branches.createdAt));
+  const b = await tx
+    .select()
+    .from(branches)
+    .orderBy(asc(branches.sortOrder), asc(branches.createdAt));
   const d = await tx
     .select()
     .from(departments)
     .orderBy(asc(departments.sortOrder), asc(departments.createdAt));
-  const s = await tx.select().from(services).orderBy(asc(services.sortOrder), asc(services.createdAt));
+  const s = await tx
+    .select()
+    .from(services)
+    .orderBy(asc(services.sortOrder), asc(services.createdAt));
   const sp = await tx.select().from(servicePractitioners);
   const r = await tx.select().from(rooms).orderBy(asc(rooms.createdAt));
   const dv = await tx.select().from(devices).orderBy(asc(devices.createdAt));
@@ -114,7 +122,12 @@ export async function loadSetup(tx: TenantTx) {
     rooms: r,
     devices: dv,
     packages: p,
-    consents: c.map((x) => ({ code: x.code, titleAr: x.titleAr, titleEn: x.titleEn, version: x.version })),
+    consents: c.map((x) => ({
+      code: x.code,
+      titleAr: x.titleAr,
+      titleEn: x.titleEn,
+      version: x.version,
+    })),
     doctors: docs
       .filter((m) => m.roles.includes("practitioner") && !m.deactivatedAt)
       .map((m) => ({ id: m.id, name: m.name, nameEn: m.nameEn })),
@@ -186,7 +199,11 @@ export async function saveDepartment(tx: TenantTx, actor: Actor, v: DepartmentIn
   };
   if (!values.nameAr || !values.nameEn) throw new SetupError("empty_text");
   if (v.id) {
-    const [row] = await tx.update(departments).set(values).where(eq(departments.id, v.id)).returning();
+    const [row] = await tx
+      .update(departments)
+      .set(values)
+      .where(eq(departments.id, v.id))
+      .returning();
     if (!row) throw new SetupError("not_found");
     await logChange(tx, actor, "department", row.id, false, values);
     return row;
@@ -284,9 +301,11 @@ export async function saveService(tx: TenantTx, actor: Actor, v: ServiceInput) {
   // Which doctors do it: replace the list.
   await tx.delete(servicePractitioners).where(eq(servicePractitioners.serviceId, row.id));
   if (doctorIds.length) {
-    await tx.insert(servicePractitioners).values(
-      doctorIds.map((memberId) => ({ tenantId: actor.tenantId, serviceId: row.id, memberId })),
-    );
+    await tx
+      .insert(servicePractitioners)
+      .values(
+        doctorIds.map((memberId) => ({ tenantId: actor.tenantId, serviceId: row.id, memberId })),
+      );
   }
   await logChange(tx, actor, "service", row.id, !v.id, { ...values, doctorIds });
   return row;
@@ -325,7 +344,10 @@ export async function saveRoom(tx: TenantTx, actor: Actor, v: RoomInput) {
     await logChange(tx, actor, "room", row.id, false, values);
     return row;
   }
-  const [row] = await tx.insert(rooms).values({ tenantId: actor.tenantId, ...values }).returning();
+  const [row] = await tx
+    .insert(rooms)
+    .values({ tenantId: actor.tenantId, ...values })
+    .returning();
   await logChange(tx, actor, "room", row.id, true, values);
   return row;
 }
@@ -369,7 +391,10 @@ export async function saveDevice(tx: TenantTx, actor: Actor, v: DeviceInput) {
     await logChange(tx, actor, "device", row.id, false, values);
     return row;
   }
-  const [row] = await tx.insert(devices).values({ tenantId: actor.tenantId, ...values }).returning();
+  const [row] = await tx
+    .insert(devices)
+    .values({ tenantId: actor.tenantId, ...values })
+    .returning();
   await logChange(tx, actor, "device", row.id, true, values);
   return row;
 }
@@ -389,7 +414,10 @@ export interface PackageInput {
 
 export async function savePackage(tx: TenantTx, actor: Actor, v: PackageInput) {
   assertCan(actor.roles, "setup:manage");
-  const [svc] = await tx.select({ id: services.id }).from(services).where(eq(services.id, v.serviceId));
+  const [svc] = await tx
+    .select({ id: services.id })
+    .from(services)
+    .where(eq(services.id, v.serviceId));
   if (!svc) throw new SetupError("bad_service");
   const values = {
     serviceId: v.serviceId,

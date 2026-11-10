@@ -25,7 +25,9 @@ import { admin, drReem, drSara, patient, reception, RIYADH, riyadhAt } from "./f
 
 afterAll(closeDb);
 
-const stamp = Date.now().toString(36).replace(/[^a-z]/g, "");
+const stamp = Date.now()
+  .toString(36)
+  .replace(/[^a-z]/g, "");
 
 describe("codes", () => {
   it("come from the English name, letters only, never twice", () => {
@@ -46,7 +48,11 @@ describe("clinic set-up", () => {
 
   it("adds a department and a service only some doctors do; booking follows it", async () => {
     const dept = await withActor(admin, (tx) =>
-      saveDepartment(tx, admin, { nameAr: "طب الأسنان", nameEn: `Dental ${stamp}`, isActive: true }),
+      saveDepartment(tx, admin, {
+        nameAr: "طب الأسنان",
+        nameEn: `Dental ${stamp}`,
+        isActive: true,
+      }),
     );
     const svc = await withActor(admin, (tx) =>
       saveService(tx, admin, {
@@ -130,7 +136,9 @@ describe("clinic set-up", () => {
       isActive: true,
     };
     await expect(
-      withActor(admin, (tx) => saveService(tx, admin, { ...base, doctorIds: [reception.memberId!] })),
+      withActor(admin, (tx) =>
+        saveService(tx, admin, { ...base, doctorIds: [reception.memberId!] }),
+      ),
     ).rejects.toMatchObject({ code: "bad_doctor" });
     await expect(
       withActor(admin, (tx) =>

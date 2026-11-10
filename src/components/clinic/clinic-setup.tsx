@@ -27,8 +27,22 @@ import { useAction } from "./use-action";
 // ─── Data the page passes in (plain values) ─────────────────────────────────
 
 export interface SetupData {
-  branches: { id: string; nameAr: string; nameEn: string; cityAr: string; cityEn: string; mapUrl: string | null; sortOrder: number }[];
-  departments: { id: string; nameAr: string; nameEn: string; isActive: boolean; sortOrder: number }[];
+  branches: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    cityAr: string;
+    cityEn: string;
+    mapUrl: string | null;
+    sortOrder: number;
+  }[];
+  departments: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    isActive: boolean;
+    sortOrder: number;
+  }[];
   services: {
     id: string;
     departmentId: string;
@@ -49,9 +63,33 @@ export interface SetupData {
     recallAfterDays: number | null;
     doctorIds: string[];
   }[];
-  rooms: { id: string; branchId: string; nameAr: string; nameEn: string; isVirtual: boolean; isActive: boolean }[];
-  devices: { id: string; branchId: string; roomId: string | null; deviceType: string; nameAr: string; nameEn: string; isActive: boolean }[];
-  packages: { id: string; serviceId: string; nameAr: string; nameEn: string; sessionsCount: number; priceHalalas: number; validityDays: number; isActive: boolean }[];
+  rooms: {
+    id: string;
+    branchId: string;
+    nameAr: string;
+    nameEn: string;
+    isVirtual: boolean;
+    isActive: boolean;
+  }[];
+  devices: {
+    id: string;
+    branchId: string;
+    roomId: string | null;
+    deviceType: string;
+    nameAr: string;
+    nameEn: string;
+    isActive: boolean;
+  }[];
+  packages: {
+    id: string;
+    serviceId: string;
+    nameAr: string;
+    nameEn: string;
+    sessionsCount: number;
+    priceHalalas: number;
+    validityDays: number;
+    isActive: boolean;
+  }[];
   consents: { code: string; titleAr: string; titleEn: string; version: number }[];
   doctors: { id: string; name: string; nameEn: string | null }[];
 }
@@ -60,7 +98,8 @@ export type SetupTab = "branches" | "departments" | "services" | "rooms" | "pack
 
 function useL() {
   const ar = useLocale() === "ar";
-  return (a: string | null | undefined, e: string | null | undefined) => (ar ? a || e : e || a) ?? "";
+  return (a: string | null | undefined, e: string | null | undefined) =>
+    (ar ? a || e : e || a) ?? "";
 }
 const sar = (h: number) => (h / 100).toFixed(2).replace(/\.00$/, "");
 
@@ -110,7 +149,17 @@ function EditDialog({
   );
 }
 
-function Field({ id, label, children, hint }: { id: string; label: string; children: React.ReactNode; hint?: string }) {
+function Field({
+  id,
+  label,
+  children,
+  hint,
+}: {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+  hint?: string;
+}) {
   return (
     <div className="flex flex-col gap-1">
       <Label htmlFor={id}>{label}</Label>
@@ -120,7 +169,17 @@ function Field({ id, label, children, hint }: { id: string; label: string; child
   );
 }
 
-function Check({ label, checked, onChange, testId }: { label: string; checked: boolean; onChange: (v: boolean) => void; testId?: string }) {
+function Check({
+  label,
+  checked,
+  onChange,
+  testId,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  testId?: string;
+}) {
   return (
     <label className="flex items-center gap-2 text-sm">
       <input
@@ -135,7 +194,17 @@ function Check({ label, checked, onChange, testId }: { label: string; checked: b
   );
 }
 
-function Toolbar({ title, hint, onAdd, addLabel }: { title: string; hint?: string; onAdd: () => void; addLabel: string }) {
+function Toolbar({
+  title,
+  hint,
+  onAdd,
+  addLabel,
+}: {
+  title: string;
+  hint?: string;
+  onAdd: () => void;
+  addLabel: string;
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
@@ -150,12 +219,28 @@ function Toolbar({ title, hint, onAdd, addLabel }: { title: string; hint?: strin
   );
 }
 
-function Row({ children, onEdit, muted }: { children: React.ReactNode; onEdit: () => void; muted?: boolean }) {
+function Row({
+  children,
+  onEdit,
+  muted,
+}: {
+  children: React.ReactNode;
+  onEdit: () => void;
+  muted?: boolean;
+}) {
   const t = useTranslations("setup");
   return (
-    <li className={`flex items-center gap-3 border-b px-4 py-3 last:border-b-0 ${muted ? "opacity-60" : ""}`}>
+    <li
+      className={`flex items-center gap-3 border-b px-4 py-3 last:border-b-0 ${muted ? "opacity-60" : ""}`}
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">{children}</div>
-      <Button size="sm" variant="ghost" onClick={onEdit} aria-label={t("edit")} data-testid="setup-edit">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={onEdit}
+        aria-label={t("edit")}
+        data-testid="setup-edit"
+      >
         <Pencil />
         <span className="hidden sm:inline">{t("edit")}</span>
       </Button>
@@ -201,18 +286,32 @@ function Branches({ data }: { data: SetupData }) {
   const L = useL();
   const { run, pending, error } = useAction();
   const { msg, saved } = useSaved();
-  const empty = { id: null as string | null, nameAr: "", nameEn: "", cityAr: "", cityEn: "", mapUrl: "", sortOrder: 0 };
+  const empty = {
+    id: null as string | null,
+    nameAr: "",
+    nameEn: "",
+    cityAr: "",
+    cityEn: "",
+    mapUrl: "",
+    sortOrder: 0,
+  };
   const [v, setV] = useState<typeof empty | null>(null);
   return (
     <div className="flex flex-col gap-4">
-      <Toolbar title={t("branches")} hint={t("branchesHint")} addLabel={t("addBranch")} onAdd={() => setV(empty)} />
+      <Toolbar
+        title={t("branches")}
+        hint={t("branchesHint")}
+        addLabel={t("addBranch")}
+        onAdd={() => setV(empty)}
+      />
       <FormSuccess message={msg} />
       <ListCard empty={t("none")}>
         {data.branches.map((b) => (
           <Row key={b.id} onEdit={() => setV({ ...b, mapUrl: b.mapUrl ?? "" })}>
             <span className="font-medium">{L(b.nameAr, b.nameEn)}</span>
             <span className="text-muted-foreground text-xs">
-              {L(b.cityAr, b.cityEn)} · {t("roomsCount", { n: data.rooms.filter((r) => r.branchId === b.id).length })}
+              {L(b.cityAr, b.cityEn)} ·{" "}
+              {t("roomsCount", { n: data.rooms.filter((r) => r.branchId === b.id).length })}
             </span>
           </Row>
         ))}
@@ -224,27 +323,62 @@ function Branches({ data }: { data: SetupData }) {
           onClose={() => setV(null)}
           pending={pending}
           error={error}
-          onSave={() => run(() => saveBranchAction({ ...v, mapUrl: v.mapUrl || null }), () => {
+          onSave={() =>
+            run(
+              () => saveBranchAction({ ...v, mapUrl: v.mapUrl || null }),
+              () => {
                 setV(null);
                 saved();
-              })}
+              },
+            )
+          }
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="b-ar" label={t("nameAr")}>
-              <Input id="b-ar" dir="rtl" required value={v.nameAr} onChange={(e) => setV({ ...v, nameAr: e.target.value })} />
+              <Input
+                id="b-ar"
+                dir="rtl"
+                required
+                value={v.nameAr}
+                onChange={(e) => setV({ ...v, nameAr: e.target.value })}
+              />
             </Field>
             <Field id="b-en" label={t("nameEn")}>
-              <Input id="b-en" dir="ltr" required value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} />
+              <Input
+                id="b-en"
+                dir="ltr"
+                required
+                value={v.nameEn}
+                onChange={(e) => setV({ ...v, nameEn: e.target.value })}
+              />
             </Field>
             <Field id="b-car" label={t("cityAr")}>
-              <Input id="b-car" dir="rtl" required value={v.cityAr} onChange={(e) => setV({ ...v, cityAr: e.target.value })} />
+              <Input
+                id="b-car"
+                dir="rtl"
+                required
+                value={v.cityAr}
+                onChange={(e) => setV({ ...v, cityAr: e.target.value })}
+              />
             </Field>
             <Field id="b-cen" label={t("cityEn")}>
-              <Input id="b-cen" dir="ltr" required value={v.cityEn} onChange={(e) => setV({ ...v, cityEn: e.target.value })} />
+              <Input
+                id="b-cen"
+                dir="ltr"
+                required
+                value={v.cityEn}
+                onChange={(e) => setV({ ...v, cityEn: e.target.value })}
+              />
             </Field>
           </div>
           <Field id="b-map" label={t("mapUrl")} hint={t("mapHint")}>
-            <Input id="b-map" dir="ltr" type="url" value={v.mapUrl} onChange={(e) => setV({ ...v, mapUrl: e.target.value })} />
+            <Input
+              id="b-map"
+              dir="ltr"
+              type="url"
+              value={v.mapUrl}
+              onChange={(e) => setV({ ...v, mapUrl: e.target.value })}
+            />
           </Field>
           {!v.id && <p className="text-muted-foreground text-xs">{t("newBranchRoom")}</p>}
         </EditDialog>
@@ -264,7 +398,12 @@ function Departments({ data }: { data: SetupData }) {
   const [v, setV] = useState<typeof empty | null>(null);
   return (
     <div className="flex flex-col gap-4">
-      <Toolbar title={t("departments")} hint={t("departmentsHint")} addLabel={t("addDepartment")} onAdd={() => setV(empty)} />
+      <Toolbar
+        title={t("departments")}
+        hint={t("departmentsHint")}
+        addLabel={t("addDepartment")}
+        onAdd={() => setV(empty)}
+      />
       <FormSuccess message={msg} />
       <ListCard empty={t("none")}>
         {data.departments.map((d) => (
@@ -274,7 +413,9 @@ function Departments({ data }: { data: SetupData }) {
               {!d.isActive && <Badge variant="secondary">{t("off")}</Badge>}
             </span>
             <span className="text-muted-foreground text-xs">
-              {t("servicesCount", { n: data.services.filter((s) => s.departmentId === d.id && s.isActive).length })}
+              {t("servicesCount", {
+                n: data.services.filter((s) => s.departmentId === d.id && s.isActive).length,
+              })}
             </span>
           </Row>
         ))}
@@ -286,20 +427,41 @@ function Departments({ data }: { data: SetupData }) {
           onClose={() => setV(null)}
           pending={pending}
           error={error}
-          onSave={() => run(() => saveDepartmentAction(v), () => {
+          onSave={() =>
+            run(
+              () => saveDepartmentAction(v),
+              () => {
                 setV(null);
                 saved();
-              })}
+              },
+            )
+          }
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="d-ar" label={t("nameAr")}>
-              <Input id="d-ar" dir="rtl" required value={v.nameAr} onChange={(e) => setV({ ...v, nameAr: e.target.value })} />
+              <Input
+                id="d-ar"
+                dir="rtl"
+                required
+                value={v.nameAr}
+                onChange={(e) => setV({ ...v, nameAr: e.target.value })}
+              />
             </Field>
             <Field id="d-en" label={t("nameEn")}>
-              <Input id="d-en" dir="ltr" required value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} />
+              <Input
+                id="d-en"
+                dir="ltr"
+                required
+                value={v.nameEn}
+                onChange={(e) => setV({ ...v, nameEn: e.target.value })}
+              />
             </Field>
           </div>
-          <Check label={t("activeDepartment")} checked={v.isActive} onChange={(x) => setV({ ...v, isActive: x })} />
+          <Check
+            label={t("activeDepartment")}
+            checked={v.isActive}
+            onChange={(x) => setV({ ...v, isActive: x })}
+          />
         </EditDialog>
       )}
     </div>
@@ -354,7 +516,12 @@ function Services({ data }: { data: SetupData }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Toolbar title={t("services")} hint={t("servicesHint")} addLabel={t("addService")} onAdd={() => setV(blank)} />
+      <Toolbar
+        title={t("services")}
+        hint={t("servicesHint")}
+        addLabel={t("addService")}
+        onAdd={() => setV(blank)}
+      />
       <FormSuccess message={msg} />
       {data.departments.map((d) => {
         const list = data.services.filter((s) => s.departmentId === d.id);
@@ -410,13 +577,29 @@ function Services({ data }: { data: SetupData }) {
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="s-ar" label={t("nameAr")}>
-              <Input id="s-ar" dir="rtl" required value={v.nameAr} onChange={(e) => setV({ ...v, nameAr: e.target.value })} />
+              <Input
+                id="s-ar"
+                dir="rtl"
+                required
+                value={v.nameAr}
+                onChange={(e) => setV({ ...v, nameAr: e.target.value })}
+              />
             </Field>
             <Field id="s-en" label={t("nameEn")}>
-              <Input id="s-en" dir="ltr" required value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} />
+              <Input
+                id="s-en"
+                dir="ltr"
+                required
+                value={v.nameEn}
+                onChange={(e) => setV({ ...v, nameEn: e.target.value })}
+              />
             </Field>
             <Field id="s-dept" label={t("department")}>
-              <Select id="s-dept" value={v.departmentId} onChange={(e) => setV({ ...v, departmentId: e.target.value })}>
+              <Select
+                id="s-dept"
+                value={v.departmentId}
+                onChange={(e) => setV({ ...v, departmentId: e.target.value })}
+              >
                 {data.departments.map((d) => (
                   <option key={d.id} value={d.id}>
                     {L(d.nameAr, d.nameEn)}
@@ -425,16 +608,46 @@ function Services({ data }: { data: SetupData }) {
               </Select>
             </Field>
             <Field id="s-price" label={t("priceSar")}>
-              <Input id="s-price" type="number" min={0} step="0.01" dir="ltr" value={v.price} onChange={(e) => setV({ ...v, price: e.target.value })} />
+              <Input
+                id="s-price"
+                type="number"
+                min={0}
+                step="0.01"
+                dir="ltr"
+                value={v.price}
+                onChange={(e) => setV({ ...v, price: e.target.value })}
+              />
             </Field>
             <Field id="s-dur" label={t("duration")}>
-              <Input id="s-dur" type="number" min={5} max={480} step={5} dir="ltr" value={v.durationMinutes} onChange={(e) => setV({ ...v, durationMinutes: Number(e.target.value) })} />
+              <Input
+                id="s-dur"
+                type="number"
+                min={5}
+                max={480}
+                step={5}
+                dir="ltr"
+                value={v.durationMinutes}
+                onChange={(e) => setV({ ...v, durationMinutes: Number(e.target.value) })}
+              />
             </Field>
             <Field id="s-buf" label={t("buffer")} hint={t("bufferHint")}>
-              <Input id="s-buf" type="number" min={0} max={120} step={5} dir="ltr" value={v.bufferMinutes} onChange={(e) => setV({ ...v, bufferMinutes: Number(e.target.value) })} />
+              <Input
+                id="s-buf"
+                type="number"
+                min={0}
+                max={120}
+                step={5}
+                dir="ltr"
+                value={v.bufferMinutes}
+                onChange={(e) => setV({ ...v, bufferMinutes: Number(e.target.value) })}
+              />
             </Field>
             <Field id="s-dev" label={t("device")} hint={t("deviceHint")}>
-              <Select id="s-dev" value={v.requiredDeviceType} onChange={(e) => setV({ ...v, requiredDeviceType: e.target.value })}>
+              <Select
+                id="s-dev"
+                value={v.requiredDeviceType}
+                onChange={(e) => setV({ ...v, requiredDeviceType: e.target.value })}
+              >
                 <option value="">{t("noDevice")}</option>
                 {deviceTypes.map((d) => (
                   <option key={d} value={d}>
@@ -444,7 +657,11 @@ function Services({ data }: { data: SetupData }) {
               </Select>
             </Field>
             <Field id="s-consent" label={t("consent")}>
-              <Select id="s-consent" value={v.consentCode} onChange={(e) => setV({ ...v, consentCode: e.target.value })}>
+              <Select
+                id="s-consent"
+                value={v.consentCode}
+                onChange={(e) => setV({ ...v, consentCode: e.target.value })}
+              >
                 <option value="">{t("noConsent")}</option>
                 {data.consents.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -464,32 +681,79 @@ function Services({ data }: { data: SetupData }) {
                   label={L(d.name, d.nameEn)}
                   checked={v.doctorIds.includes(d.id)}
                   onChange={(x) =>
-                    setV({ ...v, doctorIds: x ? [...v.doctorIds, d.id] : v.doctorIds.filter((y) => y !== d.id) })
+                    setV({
+                      ...v,
+                      doctorIds: x ? [...v.doctorIds, d.id] : v.doctorIds.filter((y) => y !== d.id),
+                    })
                   }
                 />
               ))}
             </div>
           </fieldset>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <Check label={t("onlineBookable")} checked={v.onlineBookable} onChange={(x) => setV({ ...v, onlineBookable: x })} />
-            <Check label={t("isVirtual")} checked={v.isVirtual} onChange={(x) => setV({ ...v, isVirtual: x })} />
-            <Check label={t("activeService")} checked={v.isActive} onChange={(x) => setV({ ...v, isActive: x })} />
+            <Check
+              label={t("onlineBookable")}
+              checked={v.onlineBookable}
+              onChange={(x) => setV({ ...v, onlineBookable: x })}
+            />
+            <Check
+              label={t("isVirtual")}
+              checked={v.isVirtual}
+              onChange={(x) => setV({ ...v, isVirtual: x })}
+            />
+            <Check
+              label={t("activeService")}
+              checked={v.isActive}
+              onChange={(x) => setV({ ...v, isActive: x })}
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="s-pre-ar" label={t("preVisitAr")}>
-              <Textarea id="s-pre-ar" dir="rtl" rows={3} value={v.preVisitAr} onChange={(e) => setV({ ...v, preVisitAr: e.target.value })} />
+              <Textarea
+                id="s-pre-ar"
+                dir="rtl"
+                rows={3}
+                value={v.preVisitAr}
+                onChange={(e) => setV({ ...v, preVisitAr: e.target.value })}
+              />
             </Field>
             <Field id="s-pre-en" label={t("preVisitEn")}>
-              <Textarea id="s-pre-en" dir="ltr" rows={3} value={v.preVisitEn} onChange={(e) => setV({ ...v, preVisitEn: e.target.value })} />
+              <Textarea
+                id="s-pre-en"
+                dir="ltr"
+                rows={3}
+                value={v.preVisitEn}
+                onChange={(e) => setV({ ...v, preVisitEn: e.target.value })}
+              />
             </Field>
             <Field id="s-post-ar" label={t("postCareAr")}>
-              <Textarea id="s-post-ar" dir="rtl" rows={3} value={v.postCareAr} onChange={(e) => setV({ ...v, postCareAr: e.target.value })} />
+              <Textarea
+                id="s-post-ar"
+                dir="rtl"
+                rows={3}
+                value={v.postCareAr}
+                onChange={(e) => setV({ ...v, postCareAr: e.target.value })}
+              />
             </Field>
             <Field id="s-post-en" label={t("postCareEn")}>
-              <Textarea id="s-post-en" dir="ltr" rows={3} value={v.postCareEn} onChange={(e) => setV({ ...v, postCareEn: e.target.value })} />
+              <Textarea
+                id="s-post-en"
+                dir="ltr"
+                rows={3}
+                value={v.postCareEn}
+                onChange={(e) => setV({ ...v, postCareEn: e.target.value })}
+              />
             </Field>
             <Field id="s-recall" label={t("recallDays")} hint={t("recallHint")}>
-              <Input id="s-recall" type="number" min={1} max={730} dir="ltr" value={v.recallAfterDays} onChange={(e) => setV({ ...v, recallAfterDays: e.target.value })} />
+              <Input
+                id="s-recall"
+                type="number"
+                min={1}
+                max={730}
+                dir="ltr"
+                value={v.recallAfterDays}
+                onChange={(e) => setV({ ...v, recallAfterDays: e.target.value })}
+              />
             </Field>
           </div>
         </EditDialog>
@@ -507,8 +771,23 @@ function Rooms({ data }: { data: SetupData }) {
   const device = useAction();
   const { msg, saved } = useSaved();
   const firstBranch = data.branches[0]?.id ?? "";
-  const [r, setR] = useState<{ id: string | null; branchId: string; nameAr: string; nameEn: string; isVirtual: boolean; isActive: boolean } | null>(null);
-  const [d, setD] = useState<{ id: string | null; branchId: string; roomId: string; deviceType: string; nameAr: string; nameEn: string; isActive: boolean } | null>(null);
+  const [r, setR] = useState<{
+    id: string | null;
+    branchId: string;
+    nameAr: string;
+    nameEn: string;
+    isVirtual: boolean;
+    isActive: boolean;
+  } | null>(null);
+  const [d, setD] = useState<{
+    id: string | null;
+    branchId: string;
+    roomId: string;
+    deviceType: string;
+    nameAr: string;
+    nameEn: string;
+    isActive: boolean;
+  } | null>(null);
 
   return (
     <div className="flex flex-col gap-4">
@@ -518,11 +797,37 @@ function Rooms({ data }: { data: SetupData }) {
           <p className="text-muted-foreground text-sm">{t("roomsHint")}</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setR({ id: null, branchId: firstBranch, nameAr: "", nameEn: "", isVirtual: false, isActive: true })} data-testid="setup-add">
+          <Button
+            onClick={() =>
+              setR({
+                id: null,
+                branchId: firstBranch,
+                nameAr: "",
+                nameEn: "",
+                isVirtual: false,
+                isActive: true,
+              })
+            }
+            data-testid="setup-add"
+          >
             <Plus />
             {t("addRoom")}
           </Button>
-          <Button variant="outline" onClick={() => setD({ id: null, branchId: firstBranch, roomId: "", deviceType: "", nameAr: "", nameEn: "", isActive: true })} data-testid="setup-add-device">
+          <Button
+            variant="outline"
+            onClick={() =>
+              setD({
+                id: null,
+                branchId: firstBranch,
+                roomId: "",
+                deviceType: "",
+                nameAr: "",
+                nameEn: "",
+                isActive: true,
+              })
+            }
+            data-testid="setup-add-device"
+          >
             <Plus />
             {t("addDevice")}
           </Button>
@@ -549,7 +854,11 @@ function Rooms({ data }: { data: SetupData }) {
               ...data.devices
                 .filter((x) => x.branchId === b.id)
                 .map((x) => (
-                  <Row key={x.id} muted={!x.isActive} onEdit={() => setD({ ...x, roomId: x.roomId ?? "" })}>
+                  <Row
+                    key={x.id}
+                    muted={!x.isActive}
+                    onEdit={() => setD({ ...x, roomId: x.roomId ?? "" })}
+                  >
                     <span className="flex items-center gap-2 font-medium">
                       {L(x.nameAr, x.nameEn)}
                       {!x.isActive && <Badge variant="secondary">{t("off")}</Badge>}
@@ -570,13 +879,22 @@ function Rooms({ data }: { data: SetupData }) {
           onClose={() => setR(null)}
           pending={room.pending}
           error={room.error}
-          onSave={() => room.run(() => saveRoomAction(r), () => {
+          onSave={() =>
+            room.run(
+              () => saveRoomAction(r),
+              () => {
                 setR(null);
                 saved();
-              })}
+              },
+            )
+          }
         >
           <Field id="r-branch" label={t("branch")}>
-            <Select id="r-branch" value={r.branchId} onChange={(e) => setR({ ...r, branchId: e.target.value })}>
+            <Select
+              id="r-branch"
+              value={r.branchId}
+              onChange={(e) => setR({ ...r, branchId: e.target.value })}
+            >
               {data.branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {L(b.nameAr, b.nameEn)}
@@ -586,14 +904,34 @@ function Rooms({ data }: { data: SetupData }) {
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="r-ar" label={t("nameAr")}>
-              <Input id="r-ar" dir="rtl" required value={r.nameAr} onChange={(e) => setR({ ...r, nameAr: e.target.value })} />
+              <Input
+                id="r-ar"
+                dir="rtl"
+                required
+                value={r.nameAr}
+                onChange={(e) => setR({ ...r, nameAr: e.target.value })}
+              />
             </Field>
             <Field id="r-en" label={t("nameEn")}>
-              <Input id="r-en" dir="ltr" required value={r.nameEn} onChange={(e) => setR({ ...r, nameEn: e.target.value })} />
+              <Input
+                id="r-en"
+                dir="ltr"
+                required
+                value={r.nameEn}
+                onChange={(e) => setR({ ...r, nameEn: e.target.value })}
+              />
             </Field>
           </div>
-          <Check label={t("videoRoom")} checked={r.isVirtual} onChange={(x) => setR({ ...r, isVirtual: x })} />
-          <Check label={t("activeRoom")} checked={r.isActive} onChange={(x) => setR({ ...r, isActive: x })} />
+          <Check
+            label={t("videoRoom")}
+            checked={r.isVirtual}
+            onChange={(x) => setR({ ...r, isVirtual: x })}
+          />
+          <Check
+            label={t("activeRoom")}
+            checked={r.isActive}
+            onChange={(x) => setR({ ...r, isActive: x })}
+          />
         </EditDialog>
       )}
       {d && (
@@ -603,14 +941,23 @@ function Rooms({ data }: { data: SetupData }) {
           onClose={() => setD(null)}
           pending={device.pending}
           error={device.error}
-          onSave={() => device.run(() => saveDeviceAction({ ...d, roomId: d.roomId || null }), () => {
+          onSave={() =>
+            device.run(
+              () => saveDeviceAction({ ...d, roomId: d.roomId || null }),
+              () => {
                 setD(null);
                 saved();
-              })}
+              },
+            )
+          }
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="dv-branch" label={t("branch")}>
-              <Select id="dv-branch" value={d.branchId} onChange={(e) => setD({ ...d, branchId: e.target.value, roomId: "" })}>
+              <Select
+                id="dv-branch"
+                value={d.branchId}
+                onChange={(e) => setD({ ...d, branchId: e.target.value, roomId: "" })}
+              >
                 {data.branches.map((b) => (
                   <option key={b.id} value={b.id}>
                     {L(b.nameAr, b.nameEn)}
@@ -619,7 +966,11 @@ function Rooms({ data }: { data: SetupData }) {
               </Select>
             </Field>
             <Field id="dv-room" label={t("deviceRoom")}>
-              <Select id="dv-room" value={d.roomId} onChange={(e) => setD({ ...d, roomId: e.target.value })}>
+              <Select
+                id="dv-room"
+                value={d.roomId}
+                onChange={(e) => setD({ ...d, roomId: e.target.value })}
+              >
                 <option value="">{t("anyRoom")}</option>
                 {data.rooms
                   .filter((x) => x.branchId === d.branchId && !x.isVirtual)
@@ -631,21 +982,44 @@ function Rooms({ data }: { data: SetupData }) {
               </Select>
             </Field>
             <Field id="dv-ar" label={t("nameAr")}>
-              <Input id="dv-ar" dir="rtl" required value={d.nameAr} onChange={(e) => setD({ ...d, nameAr: e.target.value })} />
+              <Input
+                id="dv-ar"
+                dir="rtl"
+                required
+                value={d.nameAr}
+                onChange={(e) => setD({ ...d, nameAr: e.target.value })}
+              />
             </Field>
             <Field id="dv-en" label={t("nameEn")}>
-              <Input id="dv-en" dir="ltr" required value={d.nameEn} onChange={(e) => setD({ ...d, nameEn: e.target.value })} />
+              <Input
+                id="dv-en"
+                dir="ltr"
+                required
+                value={d.nameEn}
+                onChange={(e) => setD({ ...d, nameEn: e.target.value })}
+              />
             </Field>
           </div>
           <Field id="dv-type" label={t("deviceType")} hint={t("deviceTypeHint")}>
-            <Input id="dv-type" dir="ltr" required value={d.deviceType} list="device-types" onChange={(e) => setD({ ...d, deviceType: e.target.value })} />
+            <Input
+              id="dv-type"
+              dir="ltr"
+              required
+              value={d.deviceType}
+              list="device-types"
+              onChange={(e) => setD({ ...d, deviceType: e.target.value })}
+            />
             <datalist id="device-types">
               {[...new Set(data.devices.map((x) => x.deviceType))].map((x) => (
                 <option key={x} value={x} />
               ))}
             </datalist>
           </Field>
-          <Check label={t("activeDevice")} checked={d.isActive} onChange={(x) => setD({ ...d, isActive: x })} />
+          <Check
+            label={t("activeDevice")}
+            checked={d.isActive}
+            onChange={(x) => setD({ ...d, isActive: x })}
+          />
         </EditDialog>
       )}
     </div>
@@ -673,11 +1047,20 @@ function Packages({ data }: { data: SetupData }) {
   const svc = (id: string) => data.services.find((s) => s.id === id);
   return (
     <div className="flex flex-col gap-4">
-      <Toolbar title={t("packages")} hint={t("packagesHint")} addLabel={t("addPackage")} onAdd={() => setV(blank)} />
+      <Toolbar
+        title={t("packages")}
+        hint={t("packagesHint")}
+        addLabel={t("addPackage")}
+        onAdd={() => setV(blank)}
+      />
       <FormSuccess message={msg} />
       <ListCard empty={t("none")}>
         {data.packages.map((p) => (
-          <Row key={p.id} muted={!p.isActive} onEdit={() => setV({ ...p, price: sar(p.priceHalalas) })}>
+          <Row
+            key={p.id}
+            muted={!p.isActive}
+            onEdit={() => setV({ ...p, price: sar(p.priceHalalas) })}
+          >
             <span className="flex items-center gap-2 font-medium">
               {L(p.nameAr, p.nameEn)}
               {!p.isActive && <Badge variant="secondary">{t("off")}</Badge>}
@@ -717,7 +1100,11 @@ function Packages({ data }: { data: SetupData }) {
           }
         >
           <Field id="p-svc" label={t("packageService")}>
-            <Select id="p-svc" value={v.serviceId} onChange={(e) => setV({ ...v, serviceId: e.target.value })}>
+            <Select
+              id="p-svc"
+              value={v.serviceId}
+              onChange={(e) => setV({ ...v, serviceId: e.target.value })}
+            >
               {data.services
                 .filter((s) => s.isActive || s.id === v.serviceId)
                 .map((s) => (
@@ -729,22 +1116,62 @@ function Packages({ data }: { data: SetupData }) {
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="p-ar" label={t("nameAr")}>
-              <Input id="p-ar" dir="rtl" required value={v.nameAr} onChange={(e) => setV({ ...v, nameAr: e.target.value })} />
+              <Input
+                id="p-ar"
+                dir="rtl"
+                required
+                value={v.nameAr}
+                onChange={(e) => setV({ ...v, nameAr: e.target.value })}
+              />
             </Field>
             <Field id="p-en" label={t("nameEn")}>
-              <Input id="p-en" dir="ltr" required value={v.nameEn} onChange={(e) => setV({ ...v, nameEn: e.target.value })} />
+              <Input
+                id="p-en"
+                dir="ltr"
+                required
+                value={v.nameEn}
+                onChange={(e) => setV({ ...v, nameEn: e.target.value })}
+              />
             </Field>
             <Field id="p-n" label={t("sessions")}>
-              <Input id="p-n" type="number" min={1} max={100} dir="ltr" value={v.sessionsCount} onChange={(e) => setV({ ...v, sessionsCount: Number(e.target.value) })} />
+              <Input
+                id="p-n"
+                type="number"
+                min={1}
+                max={100}
+                dir="ltr"
+                value={v.sessionsCount}
+                onChange={(e) => setV({ ...v, sessionsCount: Number(e.target.value) })}
+              />
             </Field>
             <Field id="p-price" label={t("priceSar")}>
-              <Input id="p-price" type="number" min={0} step="0.01" dir="ltr" value={v.price} onChange={(e) => setV({ ...v, price: e.target.value })} />
+              <Input
+                id="p-price"
+                type="number"
+                min={0}
+                step="0.01"
+                dir="ltr"
+                value={v.price}
+                onChange={(e) => setV({ ...v, price: e.target.value })}
+              />
             </Field>
             <Field id="p-days" label={t("validityDays")}>
-              <Input id="p-days" type="number" min={1} max={3650} dir="ltr" value={v.validityDays} onChange={(e) => setV({ ...v, validityDays: Number(e.target.value) })} />
+              <Input
+                id="p-days"
+                type="number"
+                min={1}
+                max={3650}
+                dir="ltr"
+                value={v.validityDays}
+                onChange={(e) => setV({ ...v, validityDays: Number(e.target.value) })}
+              />
             </Field>
           </div>
-          <Check label={t("activePackage")} checked={v.isActive} onChange={(x) => setV({ ...v, isActive: x })} />
+          <Check
+            label={t("activePackage")}
+            checked={v.isActive}
+            onChange={(x) => setV({ ...v, isActive: x })}
+          />
         </EditDialog>
       )}
     </div>
@@ -762,7 +1189,12 @@ function Consents({ data }: { data: SetupData }) {
   const [v, setV] = useState<typeof blank | null>(null);
   return (
     <div className="flex flex-col gap-4">
-      <Toolbar title={t("consents")} hint={t("consentsHint")} addLabel={t("addConsent")} onAdd={() => setV(blank)} />
+      <Toolbar
+        title={t("consents")}
+        hint={t("consentsHint")}
+        addLabel={t("addConsent")}
+        onAdd={() => setV(blank)}
+      />
       <FormSuccess message={msg} />
       <ListCard empty={t("none")}>
         {data.consents.map((c) => (
@@ -776,7 +1208,10 @@ function Consents({ data }: { data: SetupData }) {
                 })}
               </span>
             </div>
-            <Link href="/settings?tab=consents" className="text-brand-strong text-sm font-medium underline">
+            <Link
+              href="/settings?tab=consents"
+              className="text-brand-strong text-sm font-medium underline"
+            >
               {t("editTexts")}
             </Link>
           </li>
@@ -790,24 +1225,55 @@ function Consents({ data }: { data: SetupData }) {
           onClose={() => setV(null)}
           pending={pending}
           error={error}
-          onSave={() => run(() => createConsentFormAction(v), () => {
+          onSave={() =>
+            run(
+              () => createConsentFormAction(v),
+              () => {
                 setV(null);
                 saved();
-              })}
+              },
+            )
+          }
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="c-tar" label={t("titleAr")}>
-              <Input id="c-tar" dir="rtl" required value={v.titleAr} onChange={(e) => setV({ ...v, titleAr: e.target.value })} />
+              <Input
+                id="c-tar"
+                dir="rtl"
+                required
+                value={v.titleAr}
+                onChange={(e) => setV({ ...v, titleAr: e.target.value })}
+              />
             </Field>
             <Field id="c-ten" label={t("titleEn")}>
-              <Input id="c-ten" dir="ltr" required value={v.titleEn} onChange={(e) => setV({ ...v, titleEn: e.target.value })} />
+              <Input
+                id="c-ten"
+                dir="ltr"
+                required
+                value={v.titleEn}
+                onChange={(e) => setV({ ...v, titleEn: e.target.value })}
+              />
             </Field>
           </div>
           <Field id="c-bar" label={t("bodyAr")}>
-            <Textarea id="c-bar" dir="rtl" rows={6} required value={v.bodyAr} onChange={(e) => setV({ ...v, bodyAr: e.target.value })} />
+            <Textarea
+              id="c-bar"
+              dir="rtl"
+              rows={6}
+              required
+              value={v.bodyAr}
+              onChange={(e) => setV({ ...v, bodyAr: e.target.value })}
+            />
           </Field>
           <Field id="c-ben" label={t("bodyEn")}>
-            <Textarea id="c-ben" dir="ltr" rows={6} required value={v.bodyEn} onChange={(e) => setV({ ...v, bodyEn: e.target.value })} />
+            <Textarea
+              id="c-ben"
+              dir="ltr"
+              rows={6}
+              required
+              value={v.bodyEn}
+              onChange={(e) => setV({ ...v, bodyEn: e.target.value })}
+            />
           </Field>
           <p className="text-muted-foreground text-xs">{t("consentNewHint")}</p>
         </EditDialog>

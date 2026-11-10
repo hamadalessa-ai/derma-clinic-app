@@ -1929,7 +1929,9 @@ export async function saveBranchAction(input: unknown) {
       }),
       input,
     );
-    const row = await withActor(actor, (tx) => saveBranch(tx, actor, { ...v, mapUrl: v.mapUrl || null }));
+    const row = await withActor(actor, (tx) =>
+      saveBranch(tx, actor, { ...v, mapUrl: v.mapUrl || null }),
+    );
     setupDone();
     return { id: row.id };
   });
