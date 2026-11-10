@@ -22,7 +22,8 @@ export async function GET(req: Request) {
   const actor = actorOf(ctx);
   const wanted = url.searchParams.get("branch");
   const out = await withActor(actor, async (tx) => {
-    const branchId = wanted && (await reportBranches(tx)).some((b) => b.id === wanted) ? wanted : null;
+    const branchId =
+      wanted && (await reportBranches(tx)).some((b) => b.id === wanted) ? wanted : null;
     const r = await dailyInvoicingCsv(tx, actor, day, branchId);
     await audit(tx, {
       actorUserId: actor.userId,

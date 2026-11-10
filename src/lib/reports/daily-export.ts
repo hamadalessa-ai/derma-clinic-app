@@ -47,7 +47,12 @@ export const DAILY_COLUMNS = [
 
 const sar = (h: number) => (h / 100).toFixed(2);
 
-export async function dailyInvoicingCsv(tx: TenantTx, actor: Actor, day: string, branchId: string | null) {
+export async function dailyInvoicingCsv(
+  tx: TenantTx,
+  actor: Actor,
+  day: string,
+  branchId: string | null,
+) {
   assertCan(actor.roles, "invoicing:export");
   const [from, to] = dayRange(day);
 

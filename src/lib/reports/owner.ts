@@ -67,7 +67,14 @@ export interface OwnerReport {
   branchId: string | null;
   totals: Totals;
   previous: Totals;
-  byDoctor: { id: string; name: string; bookings: number; completed: number; noShow: number; value: number }[];
+  byDoctor: {
+    id: string;
+    name: string;
+    bookings: number;
+    completed: number;
+    noShow: number;
+    value: number;
+  }[];
   byService: { id: string; nameAr: string; nameEn: string; completed: number; value: number }[];
   byBranch: { id: string; nameAr: string; nameEn: string; bookings: number; completed: number }[];
   byDay: { day: string; bookings: number }[];
@@ -141,7 +148,10 @@ async function totals(tx: TenantTx, month: string, branchId: string | null) {
   let newPatients = 0;
   if (!branchId) {
     const [p] = await tx
-      .select({ n: sql<number>`count(*)::int`, v: sql<number>`coalesce(sum(${patientPackages.priceHalalas}), 0)::bigint` })
+      .select({
+        n: sql<number>`count(*)::int`,
+        v: sql<number>`coalesce(sum(${patientPackages.priceHalalas}), 0)::bigint`,
+      })
       .from(patientPackages)
       .where(and(gte(patientPackages.purchasedAt, from), lt(patientPackages.purchasedAt, to)));
     const [pay] = await tx
@@ -240,13 +250,25 @@ export async function ownerReport(
     .filter((b) => b.bookings > 0);
 
   const perDay = new Map<string, number>();
-  for (const r of rows) if (counted(r)) perDay.set(riyadhDay(r.startsAt), (perDay.get(riyadhDay(r.startsAt)) ?? 0) + 1);
+  for (const r of rows)
+    if (counted(r)) perDay.set(riyadhDay(r.startsAt), (perDay.get(riyadhDay(r.startsAt)) ?? 0) + 1);
   const byDay = monthDays(month).days.map((day) => ({ day, bookings: perDay.get(day) ?? 0 }));
 
-  return { month, branchId, totals: now.t, previous: before.t, byDoctor, byService, byBranch, byDay };
+  return {
+    month,
+    branchId,
+    totals: now.t,
+    previous: before.t,
+    byDoctor,
+    byService,
+    byBranch,
+    byDay,
+  };
 }
 
 /** Branches the filter offers. */
 export async function reportBranches(tx: TenantTx) {
-  return tx.select({ id: branches.id, nameAr: branches.nameAr, nameEn: branches.nameEn }).from(branches);
+  return tx
+    .select({ id: branches.id, nameAr: branches.nameAr, nameEn: branches.nameEn })
+    .from(branches);
 }

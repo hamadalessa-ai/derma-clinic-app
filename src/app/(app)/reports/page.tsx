@@ -7,14 +7,28 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Select } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Locale } from "@/i18n/config";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { isDay, riyadhDay } from "@/lib/booking/time";
 import { formatSAR } from "@/lib/format";
-import { isMonth, ownerReport, reportBranches, shiftMonth, thisMonth, type Totals } from "@/lib/reports/owner";
+import {
+  isMonth,
+  ownerReport,
+  reportBranches,
+  shiftMonth,
+  thisMonth,
+  type Totals,
+} from "@/lib/reports/owner";
 
 /** Reports for the clinic owner: one month, all branches or one. */
 export default async function ReportsPage({
@@ -35,12 +49,16 @@ export default async function ReportsPage({
   });
   const name = (x: { nameAr: string; nameEn: string }) => (locale === "ar" ? x.nameAr : x.nameEn);
   const sar = (h: number) => formatSAR(h, locale);
-  const monthLabel = new Intl.DateTimeFormat(locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${month}-15T00:00:00Z`));
-  const href = (m: string) => `/reports?month=${m}${report.branchId ? `&branch=${report.branchId}` : ""}`;
+  const monthLabel = new Intl.DateTimeFormat(
+    locale === "ar" ? "ar-SA-u-ca-gregory-nu-latn" : "en-SA",
+    {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    },
+  ).format(new Date(`${month}-15T00:00:00Z`));
+  const href = (m: string) =>
+    `/reports?month=${m}${report.branchId ? `&branch=${report.branchId}` : ""}`;
   const { totals: now, previous: before } = report;
   const allBranches = !report.branchId;
   const online = now.bySource.online + now.bySource.whatsapp;
@@ -55,19 +73,32 @@ export default async function ReportsPage({
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Link href={href(shiftMonth(month, -1))} className={buttonVariants({ variant: "outline", size: "sm" })} aria-label={t("prev")}>
+        <Link
+          href={href(shiftMonth(month, -1))}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+          aria-label={t("prev")}
+        >
           <Prev />
         </Link>
         <span className="min-w-36 text-center font-semibold" data-testid="report-month">
           {monthLabel}
         </span>
-        <Link href={href(shiftMonth(month, 1))} className={buttonVariants({ variant: "outline", size: "sm" })} aria-label={t("next")}>
+        <Link
+          href={href(shiftMonth(month, 1))}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+          aria-label={t("next")}
+        >
           <Next />
         </Link>
         {branches.length > 1 && (
           <form className="ms-auto flex items-center gap-2" action="/reports">
             <input type="hidden" name="month" value={month} />
-            <Select name="branch" defaultValue={report.branchId ?? ""} aria-label={t("branch")} className="w-48">
+            <Select
+              name="branch"
+              defaultValue={report.branchId ?? ""}
+              aria-label={t("branch")}
+              className="w-48"
+            >
               <option value="">{t("allBranches")}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -84,22 +115,29 @@ export default async function ReportsPage({
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="report-tiles">
         <Tile label={t("bookings")} value={now.bookings} change={change(now, before, "bookings")} />
-        <Tile label={t("completed")} value={now.completed} change={change(now, before, "completed")} />
+        <Tile
+          label={t("completed")}
+          value={now.completed}
+          change={change(now, before, "completed")}
+        />
         <Tile
           label={t("noShowRate")}
           value={`${now.noShowRate}%`}
           hint={t("noShows", { n: now.noShow })}
           change={now.noShowRate - before.noShowRate}
           lowerIsBetter
-         
         />
         <Tile
           label={t("onlineShare")}
           value={`${now.bookings ? Math.round((online / now.bookings) * 100) : 0}%`}
           hint={t("onlineCount", { n: online })}
-         
         />
-        <Tile label={t("visitValue")} value={sar(now.visitValue)} hint={t("visitValueHint")} change={change(now, before, "visitValue")} />
+        <Tile
+          label={t("visitValue")}
+          value={sar(now.visitValue)}
+          hint={t("visitValueHint")}
+          change={change(now, before, "visitValue")}
+        />
         {allBranches && (
           <>
             <Tile
@@ -107,11 +145,20 @@ export default async function ReportsPage({
               value={now.packagesSold}
               hint={sar(now.packagesValue)}
               change={change(now, before, "packagesSold")}
-             
+
               gold
             />
-            <Tile label={t("packagePayments")} value={sar(now.packagePayments)} hint={t("packageVisits", { n: now.packageVisits })} gold />
-            <Tile label={t("newPatients")} value={now.newPatients} change={change(now, before, "newPatients")} />
+            <Tile
+              label={t("packagePayments")}
+              value={sar(now.packagePayments)}
+              hint={t("packageVisits", { n: now.packageVisits })}
+              gold
+            />
+            <Tile
+              label={t("newPatients")}
+              value={now.newPatients}
+              change={change(now, before, "newPatients")}
+            />
           </>
         )}
       </div>
@@ -131,7 +178,11 @@ export default async function ReportsPage({
                   <div
                     key={d.day}
                     title={`${d.day}: ${d.bookings}`}
-                    className={d.day === today ? "bg-brand-strong flex-1 rounded-t-sm" : "bg-brand/60 flex-1 rounded-t-sm"}
+                    className={
+                      d.day === today
+                        ? "bg-brand-strong flex-1 rounded-t-sm"
+                        : "bg-brand/60 flex-1 rounded-t-sm"
+                    }
                     style={{ height: `${Math.max(2, (d.bookings / maxDay) * 100)}%` }}
                   />
                 ))}
@@ -148,7 +199,9 @@ export default async function ReportsPage({
                   </div>
                 ))}
               </div>
-              <p className="text-muted-foreground mt-2 text-xs">{t("cancelled", { n: now.cancelled })}</p>
+              <p className="text-muted-foreground mt-2 text-xs">
+                {t("cancelled", { n: now.cancelled })}
+              </p>
             </CardContent>
           </Card>
 
@@ -247,7 +300,14 @@ export default async function ReportsPage({
           <CardContent className="flex flex-col gap-3 text-sm">
             <p className="text-muted-foreground">{t("dailyHint")}</p>
             <form action="/export/daily" className="flex flex-wrap items-center gap-2">
-              <Input type="date" name="day" defaultValue={day} max={today} className="w-44" aria-label={t("day")} />
+              <Input
+                type="date"
+                name="day"
+                defaultValue={day}
+                max={today}
+                className="w-44"
+                aria-label={t("day")}
+              />
               {report.branchId && <input type="hidden" name="branch" value={report.branchId} />}
               <Button type="submit" variant="outline" size="sm">
                 <Download />
@@ -266,7 +326,11 @@ async function ChangeLabel() {
   return <>{t("vsLastMonth")}</>;
 }
 
-function change(now: Totals, before: Totals, k: "bookings" | "completed" | "visitValue" | "packagesSold" | "newPatients") {
+function change(
+  now: Totals,
+  before: Totals,
+  k: "bookings" | "completed" | "visitValue" | "packagesSold" | "newPatients",
+) {
   if (!before[k]) return undefined;
   return Math.round(((now[k] - before[k]) / before[k]) * 100);
 }
@@ -292,10 +356,20 @@ function Tile({
     <Card className={gold ? "bg-gold" : undefined}>
       <CardContent className="flex flex-col gap-1 pt-4 pb-4">
         <span className="text-muted-foreground text-xs">{label}</span>
-        <span className={gold ? "text-gold-foreground text-xl font-bold" : "text-xl font-bold"}>{value}</span>
+        <span className={gold ? "text-gold-foreground text-xl font-bold" : "text-xl font-bold"}>
+          {value}
+        </span>
         {hint && <span className="text-muted-foreground text-xs">{hint}</span>}
         {change !== undefined && change !== 0 && (
-          <span className={good ? "text-success-foreground text-xs" : bad ? "text-danger-foreground text-xs" : "text-xs"}>
+          <span
+            className={
+              good
+                ? "text-success-foreground text-xs"
+                : bad
+                  ? "text-danger-foreground text-xs"
+                  : "text-xs"
+            }
+          >
             {change > 0 ? `+${change}` : change}
             % <ChangeLabel />
           </span>
