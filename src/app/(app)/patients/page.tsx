@@ -54,7 +54,10 @@ export default async function PatientsPage({
         actions={
           <div className="flex gap-2">
             {can(ctx.roles, "patients:import") && (
-              <Link href="/patients/import" className={buttonVariants({ size: "sm", variant: "outline" })}>
+              <Link
+                href="/patients/import"
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
                 <FileUp />
                 {tx2("import")}
               </Link>

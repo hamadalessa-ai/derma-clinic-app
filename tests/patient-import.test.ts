@@ -5,7 +5,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { closeDb } from "@/db/client";
-import { auditLogs, packageSessionEvents, patientPackages, patients, tenantMembers } from "@/db/schema";
+import {
+  auditLogs,
+  packageSessionEvents,
+  patientPackages,
+  patients,
+  tenantMembers,
+} from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import type { Actor } from "@/lib/auth/db";
 import { withActor } from "@/lib/auth/db";
@@ -39,7 +45,11 @@ describe("reading the file", () => {
       phone: 1,
       gender: 2,
     });
-    expect(mapHeader(parseCsv(TEMPLATE_CSV)[0]!)).toMatchObject({ nameAr: 1, phone: 3, package: 8 });
+    expect(mapHeader(parseCsv(TEMPLATE_CSV)[0]!)).toMatchObject({
+      nameAr: 1,
+      phone: 3,
+      package: 8,
+    });
   });
 });
 
@@ -61,8 +71,16 @@ describe("importing into a clinic", () => {
         admin: { nameAr: "مدير", email: `admin-imp-${stamp}@t.demo` },
       },
     );
-    const [m] = await withTenant(c.tenantId, (tx) => tx.select({ id: tenantMembers.id }).from(tenantMembers));
-    owner = { tenantId: c.tenantId, userId: c.adminUserId, roles: ["clinic_admin"], memberId: m!.id, restrictedBranchId: null };
+    const [m] = await withTenant(c.tenantId, (tx) =>
+      tx.select({ id: tenantMembers.id }).from(tenantMembers),
+    );
+    owner = {
+      tenantId: c.tenantId,
+      userId: c.adminUserId,
+      roles: ["clinic_admin"],
+      memberId: m!.id,
+      restrictedBranchId: null,
+    };
   });
 
   const csv = [
@@ -80,7 +98,11 @@ describe("importing into a clinic", () => {
     const r = await withActor(owner, (tx) => checkImport(tx, csv));
     expect(r.total).toBe(7);
     expect(r.ok.map((x) => x.nameAr)).toEqual(["سارة علي", "خالد محمد"]);
-    expect(r.ok[0]).toMatchObject({ phone: "+966551110001", gender: "female", dateOfBirth: "1990-05-14" });
+    expect(r.ok[0]).toMatchObject({
+      phone: "+966551110001",
+      gender: "female",
+      dateOfBirth: "1990-05-14",
+    });
     expect(r.ok[0]!.package).toMatchObject({ used: 2 });
     const byLine = Object.fromEntries(r.problems.map((p) => [p.line, p.problems]));
     expect(byLine).toEqual({
@@ -126,7 +148,9 @@ describe("importing into a clinic", () => {
 
   it("is for clinic admins only", async () => {
     await expect(
-      withActor(reception, (tx) => runImport(tx, reception, csv, { filePrefix: "D", isDemo: true })),
+      withActor(reception, (tx) =>
+        runImport(tx, reception, csv, { filePrefix: "D", isDemo: true }),
+      ),
     ).rejects.toThrow(PermissionError);
   });
 });

@@ -29,7 +29,9 @@ export function PatientImport() {
   const [csv, setCsv] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
   const [result, setResult] = useState<Check | null>(null);
-  const [done, setDone] = useState<{ imported: number; packages: number; skipped: number } | null>(null);
+  const [done, setDone] = useState<{ imported: number; packages: number; skipped: number } | null>(
+    null,
+  );
 
   const downloadTemplate = () => {
     const url = URL.createObjectURL(new Blob([TEMPLATE_CSV], { type: "text/csv;charset=utf-8" }));
@@ -75,7 +77,10 @@ export function PatientImport() {
                   setResult(null);
                   f.text().then((text) => {
                     setCsv(text);
-                    check.run(() => checkImportAction({ csv: text }), (r) => setResult(r));
+                    check.run(
+                      () => checkImportAction({ csv: text }),
+                      (r) => setResult(r),
+                    );
                   });
                 }}
               />
@@ -91,12 +96,18 @@ export function PatientImport() {
           <CardContent className="flex flex-col gap-3 pt-5 text-sm" data-testid="import-check">
             {result.missingColumns.length > 0 ? (
               <Notice tone="danger">
-                {t("missingColumns", { columns: result.missingColumns.map((c) => t(`col.${c}`)).join("، ") })}
+                {t("missingColumns", {
+                  columns: result.missingColumns.map((c) => t(`col.${c}`)).join("، "),
+                })}
               </Notice>
             ) : (
               <>
                 <p className="font-semibold">
-                  {t("summary", { ready: result.ready, total: result.total, packages: result.withPackage })}
+                  {t("summary", {
+                    ready: result.ready,
+                    total: result.total,
+                    packages: result.withPackage,
+                  })}
                 </p>
                 {result.problemCount > 0 && (
                   <div className="flex flex-col gap-1">
@@ -116,7 +127,13 @@ export function PatientImport() {
                   className="self-start"
                   disabled={result.ready === 0}
                   loading={run.pending}
-                  onClick={() => csv && run.run(() => runImportAction({ csv }), (r) => setDone(r))}
+                  onClick={() =>
+                    csv &&
+                    run.run(
+                      () => runImportAction({ csv }),
+                      (r) => setDone(r),
+                    )
+                  }
                   data-testid="import-run"
                 >
                   <Upload />

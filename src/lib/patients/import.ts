@@ -6,12 +6,7 @@
  * Arabic or English column names; commas or semicolons.
  */
 import { eq, sql } from "drizzle-orm";
-import {
-  packageSessionEvents,
-  packageTemplates,
-  patientPackages,
-  patients,
-} from "@/db/schema";
+import { packageSessionEvents, packageTemplates, patientPackages, patients } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
@@ -45,7 +40,8 @@ export type Column = keyof typeof COLUMNS;
 export function parseCsv(text: string): string[][] {
   const src = text.replace(/^﻿/, "");
   const firstLine = src.split(/\r?\n/, 1)[0] ?? "";
-  const sep = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ";" : ",";
+  const sep =
+    (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ";" : ",";
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -152,7 +148,9 @@ export async function checkImport(tx: TenantTx, csv: string): Promise<ImportChec
   const rows = parseCsv(csv);
   const [header = [], ...body] = rows;
   const cols = mapHeader(header);
-  const missingColumns = (["nameAr", "phone", "gender"] as Column[]).filter((c) => cols[c] === undefined);
+  const missingColumns = (["nameAr", "phone", "gender"] as Column[]).filter(
+    (c) => cols[c] === undefined,
+  );
   if (missingColumns.length) return { ok: [], problems: [], missingColumns, total: body.length };
 
   const existing = await tx
@@ -194,11 +192,14 @@ export async function checkImport(tx: TenantTx, csv: string): Promise<ImportChec
     let pkg: ImportRow["package"] = null;
     const pkgName = get(r, "package");
     if (pkgName) {
-      const tpl = templates.find((t) => norm(t.nameAr) === norm(pkgName) || norm(t.nameEn) === norm(pkgName));
+      const tpl = templates.find(
+        (t) => norm(t.nameAr) === norm(pkgName) || norm(t.nameEn) === norm(pkgName),
+      );
       if (!tpl) p.push("unknown_package");
       const usedRaw = westernDigits(get(r, "sessionsUsed")) || "0";
       const used = Number(usedRaw);
-      if (!Number.isInteger(used) || used < 0 || (tpl && used > tpl.sessions)) p.push("bad_sessions");
+      if (!Number.isInteger(used) || used < 0 || (tpl && used > tpl.sessions))
+        p.push("bad_sessions");
       const boughtRaw = get(r, "packageBoughtOn");
       const boughtOn = boughtRaw ? isoDate(boughtRaw) : null;
       if (boughtRaw && !boughtOn) p.push("bad_date");
@@ -207,8 +208,10 @@ export async function checkImport(tx: TenantTx, csv: string): Promise<ImportChec
 
     const key = `${phone}|${norm(nameAr)}`;
     if (phone && nameAr) {
-      if (existingKey.has(key) || (fileNumber && existingFiles.has(fileNumber))) p.push("already_exists");
-      else if (seen.has(key) || (fileNumber && seen.has(`file:${fileNumber}`))) p.push("duplicate_in_file");
+      if (existingKey.has(key) || (fileNumber && existingFiles.has(fileNumber)))
+        p.push("already_exists");
+      else if (seen.has(key) || (fileNumber && seen.has(`file:${fileNumber}`)))
+        p.push("duplicate_in_file");
     }
     if (p.length) {
       problems.push({ line, problems: [...new Set(p)], name: nameAr });
@@ -224,7 +227,13 @@ export async function checkImport(tx: TenantTx, csv: string): Promise<ImportChec
       phone: phone!,
       gender: g!,
       dateOfBirth: dob,
-      idType: idNumber ? (idNumber.startsWith("1") ? "national_id" : idNumber.startsWith("2") ? "iqama" : "passport") : null,
+      idType: idNumber
+        ? idNumber.startsWith("1")
+          ? "national_id"
+          : idNumber.startsWith("2")
+            ? "iqama"
+            : "passport"
+        : null,
       idNumber,
       email,
       package: pkg,
@@ -243,7 +252,8 @@ export async function runImport(
 ) {
   assertCan(actor.roles, "patients:import");
   const check = await checkImport(tx, csv);
-  if (check.missingColumns.length) return { imported: 0, packages: 0, skipped: check.problems.length, check };
+  if (check.missingColumns.length)
+    return { imported: 0, packages: 0, skipped: check.problems.length, check };
   let packages = 0;
   for (const r of check.ok) {
     const [p] = await tx
@@ -269,7 +279,9 @@ export async function runImport(
         .select()
         .from(packageTemplates)
         .where(eq(packageTemplates.id, r.package.templateId));
-      const bought = r.package.boughtOn ? new Date(`${r.package.boughtOn}T12:00:00+03:00`) : new Date();
+      const bought = r.package.boughtOn
+        ? new Date(`${r.package.boughtOn}T12:00:00+03:00`)
+        : new Date();
       const [pkg] = await tx
         .insert(patientPackages)
         .values({
