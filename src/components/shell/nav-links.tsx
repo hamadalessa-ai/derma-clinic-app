@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  ChartColumn,
   FileLock2,
   Inbox,
   LayoutDashboard,
@@ -30,6 +31,7 @@ export const NAV_ICONS = {
   requests: Inbox,
   settings: Settings,
   setup: SlidersHorizontal,
+  reports: ChartColumn,
   whatsapp: MessageCircle,
   simulator: Smartphone,
   account: BellRing,

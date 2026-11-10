@@ -43,6 +43,10 @@ export const PERMISSIONS = {
   "setup:manage": ["clinic_admin"],
   /** Patients → Import from a spreadsheet (with package balances). */
   "patients:import": ["clinic_admin"],
+  /** Reports: bookings, no-shows, online vs reception, packages, doctors and services by month. */
+  "reports:view": ["clinic_admin"],
+  /** Reports → daily file (visits, package sales and payments) for the clinic's invoicing system. */
+  "invoicing:export": ["clinic_admin"],
   "demo:refresh": ["clinic_admin"],
 
   // ── Phase 2a ──
@@ -114,6 +118,7 @@ export const NAV_ITEMS = [
   { href: "/patients", key: "patients", permission: "patients:read" },
   { href: "/clinical-notes", key: "clinicalNotes", permission: "clinical_notes:read" },
   { href: "/services", key: "services", permission: "services:read" },
+  { href: "/reports", key: "reports", permission: "reports:view" },
   { href: "/setup", key: "setup", permission: "setup:manage" },
   { href: "/settings", key: "settings", permission: "settings:manage" },
   { href: "/whatsapp", key: "whatsapp", permission: "whatsapp:inbox" },
