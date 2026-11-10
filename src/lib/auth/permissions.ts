@@ -41,6 +41,8 @@ export const PERMISSIONS = {
   "support:grant": ["clinic_admin"],
   /** Clinic set-up: branches, departments, services, rooms and devices, packages, consent forms. */
   "setup:manage": ["clinic_admin"],
+  /** Patients → Import from a spreadsheet (with package balances). */
+  "patients:import": ["clinic_admin"],
   "demo:refresh": ["clinic_admin"],
 
   // ── Phase 2a ──

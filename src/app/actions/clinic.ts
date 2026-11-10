@@ -77,6 +77,7 @@ import { SPECIALTIES } from "@/lib/platform/templates";
 import { setClinicLimits, setClinicStatus } from "@/lib/platform/status";
 import { planAllows, PLAN_TIERS } from "@/lib/platform/plans";
 import { endSupport, grantSupport, SUPPORT_HOURS } from "@/lib/support/grants";
+import { checkImport, MAX_IMPORT_BYTES, runImport } from "@/lib/patients/import";
 import {
   createConsentForm,
   saveBranch,
@@ -2073,5 +2074,42 @@ export async function createConsentFormAction(input: unknown) {
     setupDone();
     revalidatePath("/settings", "layout");
     return { code: row.code };
+  });
+}
+
+// ── Patient import (clinic admin) ──────────────────────────────────────────
+
+const csvInput = z.object({ csv: z.string().min(1).max(MAX_IMPORT_BYTES) });
+
+export async function checkImportAction(input: { csv: string }) {
+  return staffAction(
+    "patients:import",
+    async (_ctx, actor) => {
+      const v = parse(csvInput, input);
+      const r = await withActor(actor, (tx) => checkImport(tx, v.csv));
+      return {
+        ready: r.ok.length,
+        withPackage: r.ok.filter((x) => x.package).length,
+        problems: r.problems.slice(0, 300),
+        problemCount: r.problems.length,
+        missingColumns: r.missingColumns,
+        total: r.total,
+      };
+    },
+    PAUSED_OK,
+  );
+}
+
+export async function runImportAction(input: { csv: string }) {
+  return staffAction("patients:import", async (ctx, actor) => {
+    const v = parse(csvInput, input);
+    const r = await withActor(actor, (tx) =>
+      runImport(tx, actor, v.csv, {
+        filePrefix: ctx.tenant.slug.charAt(0).toUpperCase(),
+        isDemo: ctx.tenant.isDemo,
+      }),
+    );
+    revalidatePath("/patients");
+    return { imported: r.imported, packages: r.packages, skipped: r.skipped };
   });
 }
