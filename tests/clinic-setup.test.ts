@@ -5,7 +5,10 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { closeDb } from "@/db/client";
-import { auditLogs, rooms } from "@/db/schema";
+import { auditLogs, rooms, tenantMembers } from "@/db/schema";
+import { withTenant } from "@/db/tenant";
+import type { Actor } from "@/lib/auth/db";
+import { createClinic } from "@/lib/platform/clinics";
 import { withActor } from "@/lib/auth/db";
 import { PermissionError } from "@/lib/auth/permissions";
 import { BookingError, bookAppointment, findFreeSlots } from "@/lib/booking/engine";
@@ -62,7 +65,7 @@ describe("clinic set-up", () => {
         durationMinutes: 30,
         bufferMinutes: 10,
         priceHalalas: 25000,
-        onlineBookable: true,
+        onlineBookable: false,
         isVirtual: false,
         isActive: true,
         doctorIds: [drSara.memberId!],
@@ -106,7 +109,7 @@ describe("clinic set-up", () => {
         durationMinutes: 30,
         bufferMinutes: 10,
         priceHalalas: 25000,
-        onlineBookable: true,
+        onlineBookable: false,
         isVirtual: false,
         isActive: true,
         doctorIds: [],
@@ -147,21 +150,45 @@ describe("clinic set-up", () => {
     ).rejects.toBeInstanceOf(SetupError);
   });
 
-  it("a switched-off room is no longer booked", async () => {
-    const branch = await withActor(admin, (tx) =>
-      saveBranch(tx, admin, {
+  it("a new branch gets a first room; rooms and devices can be switched off", async () => {
+    // In a clinic of its own, so Derma's branch count stays the same for other tests.
+    const c = await createClinic(
+      { userId: "usr_platform-owner", roles: ["platform_owner"] },
+      {
+        slug: `setup-${stamp}`.slice(0, 30),
+        nameAr: "عيادة الإعداد",
+        nameEn: "Setup Clinic",
+        brandColor: "#28817a",
+        isDemo: true,
+        branch: { nameAr: "الفرع", nameEn: "Main", cityAr: "الرياض", cityEn: "Riyadh" },
+        department: { nameAr: "الجلدية", nameEn: "Dermatology" },
+        admin: { nameAr: "مدير", email: `admin-setup-${stamp}@t.demo` },
+      },
+    );
+    const [m] = await withTenant(c.tenantId, (tx) =>
+      tx.select({ id: tenantMembers.id }).from(tenantMembers),
+    );
+    const owner: Actor = {
+      tenantId: c.tenantId,
+      userId: c.adminUserId,
+      roles: ["clinic_admin"],
+      memberId: m!.id,
+      restrictedBranchId: null,
+    };
+    const branch = await withActor(owner, (tx) =>
+      saveBranch(tx, owner, {
         nameAr: "فرع الاختبار",
         nameEn: `Test ${stamp}`,
         cityAr: "الرياض",
         cityEn: "Riyadh",
       }),
     );
-    const [first] = await withActor(admin, (tx) =>
+    const [first] = await withActor(owner, (tx) =>
       tx.select().from(rooms).where(eq(rooms.branchId, branch.id)),
     );
     expect(first).toBeDefined();
-    const off = await withActor(admin, (tx) =>
-      saveRoom(tx, admin, {
+    const off = await withActor(owner, (tx) =>
+      saveRoom(tx, owner, {
         id: first!.id,
         branchId: branch.id,
         nameAr: first!.nameAr,
@@ -170,8 +197,8 @@ describe("clinic set-up", () => {
       }),
     );
     expect(off.isActive).toBe(false);
-    const dev = await withActor(admin, (tx) =>
-      saveDevice(tx, admin, {
+    const dev = await withActor(owner, (tx) =>
+      saveDevice(tx, owner, {
         branchId: branch.id,
         deviceType: "Pico Laser",
         nameAr: "بيكو",
