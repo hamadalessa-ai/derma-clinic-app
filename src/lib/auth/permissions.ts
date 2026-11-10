@@ -39,6 +39,8 @@ export const PERMISSIONS = {
   "billing:view": ["clinic_admin"],
   /** Settings → Team: allow the platform's support to open the clinic for a few hours. */
   "support:grant": ["clinic_admin"],
+  /** Clinic set-up: branches, departments, services, rooms and devices, packages, consent forms. */
+  "setup:manage": ["clinic_admin"],
   "demo:refresh": ["clinic_admin"],
 
   // ── Phase 2a ──
@@ -110,6 +112,7 @@ export const NAV_ITEMS = [
   { href: "/patients", key: "patients", permission: "patients:read" },
   { href: "/clinical-notes", key: "clinicalNotes", permission: "clinical_notes:read" },
   { href: "/services", key: "services", permission: "services:read" },
+  { href: "/setup", key: "setup", permission: "setup:manage" },
   { href: "/settings", key: "settings", permission: "settings:manage" },
   { href: "/whatsapp", key: "whatsapp", permission: "whatsapp:inbox" },
   {

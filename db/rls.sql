@@ -288,6 +288,8 @@ grant update (status, paid_at, voided_at) on public.platform_statements to clini
 -- Support access: granted and ended by the clinic admin (policies below); never deleted.
 grant select, insert on public.support_grants to clinic_app;
 grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
+-- Which doctors do which service (clinic admin): rows added and removed, never edited.
+grant select, insert, delete on public.service_practitioners to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -314,7 +316,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments', 'support_grants'
+    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -469,7 +471,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments', 'support_grants',
+    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case

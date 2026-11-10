@@ -259,6 +259,8 @@ export const rooms = pgTable(
      * (any number of video visits at once; only the doctor's time is booked).
      */
     isVirtual: boolean("is_virtual").notNull().default(false),
+    /** Switched off by the clinic admin: no new bookings; past ones keep it. */
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),
   },
   (t) => [
@@ -282,6 +284,7 @@ export const devices = pgTable(
     deviceType: text("device_type").notNull(), // e.g. "morpheus8"
     nameAr: text("name_ar").notNull(),
     nameEn: text("name_en").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),
   },
   (t) => [
@@ -339,6 +342,36 @@ export const services = pgTable(
       columns: [t.tenantId, t.departmentId],
       foreignColumns: [departments.tenantId, departments.id],
     }),
+  ],
+);
+
+/**
+ * Which doctors perform a service. No rows for a service = every doctor at the branch may do it;
+ * rows = only these doctors (e.g. dental services only for dentists). Set by the clinic admin.
+ */
+export const servicePractitioners = pgTable(
+  "service_practitioners",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id").notNull(),
+    memberId: uuid("member_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("service_practitioners_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("service_practitioners_pair_key").on(t.tenantId, t.serviceId, t.memberId),
+    index("service_practitioners_member_idx").on(t.tenantId, t.memberId),
+    foreignKey({
+      name: "service_practitioners_service_fk",
+      columns: [t.tenantId, t.serviceId],
+      foreignColumns: [services.tenantId, services.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "service_practitioners_member_fk",
+      columns: [t.tenantId, t.memberId],
+      foreignColumns: [tenantMembers.tenantId, tenantMembers.id],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -533,6 +566,7 @@ export const TENANT_TABLES = [
   "platform_statements",
   "platform_payments",
   "support_grants",
+  "service_practitioners",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════

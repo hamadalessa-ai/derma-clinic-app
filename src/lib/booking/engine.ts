@@ -15,6 +15,7 @@ import {
   patients,
   reservations,
   rooms,
+  servicePractitioners,
   services,
   tenantMembers,
   tenantSettings,
@@ -37,6 +38,7 @@ export type BookingErrorCode =
   | "no_room"
   | "no_device"
   | "not_practitioner"
+  | "not_for_service" // the clinic set which doctors do this service, and this one isn't among them
   | "wrong_branch"
   | "in_past"
   | "bad_status"
@@ -230,6 +232,7 @@ async function pickRoomAndDevice(
         and(
           eq(devices.branchId, opts.branchId),
           eq(devices.deviceType, opts.service.requiredDeviceType),
+          eq(devices.isActive, true),
           opts.deviceId ? eq(devices.id, opts.deviceId) : undefined,
         ),
       )
@@ -249,6 +252,7 @@ async function pickRoomAndDevice(
         eq(rooms.branchId, opts.branchId),
         // Video consultations use the branch's video room; everything else a real room.
         eq(rooms.isVirtual, opts.service.isVirtual),
+        eq(rooms.isActive, true),
         wantedRoom ? eq(rooms.id, wantedRoom) : undefined,
       ),
     )
@@ -259,6 +263,26 @@ async function pickRoomAndDevice(
 }
 
 // ─── Who may do what ────────────────────────────────────────────────────────
+
+/**
+ * The doctors the clinic admin set for a service (Clinic set-up → Services), or null when none
+ * are set: then every doctor at the branch may do it.
+ */
+export async function serviceDoctorIds(
+  tx: TenantTx,
+  serviceId: string,
+): Promise<Set<string> | null> {
+  const rows = await tx
+    .select({ memberId: servicePractitioners.memberId })
+    .from(servicePractitioners)
+    .where(eq(servicePractitioners.serviceId, serviceId));
+  return rows.length ? new Set(rows.map((r) => r.memberId)) : null;
+}
+
+async function assertDoctorForService(tx: TenantTx, serviceId: string, memberId: string) {
+  const allowed = await serviceDoctorIds(tx, serviceId);
+  if (allowed && !allowed.has(memberId)) throw new BookingError("not_for_service");
+}
 
 const DOCTOR_STATUS_STEPS: readonly AppointmentStatus[] = ["confirmed", "in_session", "completed"];
 
@@ -356,6 +380,7 @@ async function insertAppointment(
 ) {
   const service = await getService(tx, input.serviceId);
   await getPractitioner(tx, input.practitionerId, input.branchId);
+  await assertDoctorForService(tx, service.id, input.practitionerId);
   const [patient] = await tx
     .select({ id: patients.id })
     .from(patients)
@@ -448,6 +473,8 @@ async function applyMove(tx: TenantTx, by: ChangedBy, appt: Appointment, input: 
   const service = await getService(tx, appt.serviceId);
   const practitionerId = input.practitionerId ?? appt.practitionerId;
   await getPractitioner(tx, practitionerId, appt.branchId);
+  if (practitionerId !== appt.practitionerId)
+    await assertDoctorForService(tx, service.id, practitionerId);
 
   const start = input.startsAt;
   if (start.getTime() < Date.now() - 5 * 60_000) throw new BookingError("in_past");
@@ -665,15 +692,24 @@ export async function findFreeSlots(
   const service = await getService(tx, opts.serviceId);
   const settings = await getSettings(tx);
   const step = settings.slotMinutes;
-  const doctors = opts.practitionerId
-    ? [await getPractitioner(tx, opts.practitionerId, opts.branchId)]
-    : (await branchPractitioners(tx, opts.branchId)).filter(
-        (d) => !opts.practitionerIds || opts.practitionerIds.includes(d.id),
-      );
+  const allowed = await serviceDoctorIds(tx, service.id);
+  const doctors = (
+    opts.practitionerId
+      ? [await getPractitioner(tx, opts.practitionerId, opts.branchId)]
+      : (await branchPractitioners(tx, opts.branchId)).filter(
+          (d) => !opts.practitionerIds || opts.practitionerIds.includes(d.id),
+        )
+  ).filter((d) => !allowed || allowed.has(d.id));
   const roomRows = await tx
     .select()
     .from(rooms)
-    .where(and(eq(rooms.branchId, opts.branchId), eq(rooms.isVirtual, service.isVirtual)));
+    .where(
+      and(
+        eq(rooms.branchId, opts.branchId),
+        eq(rooms.isVirtual, service.isVirtual),
+        eq(rooms.isActive, true),
+      ),
+    );
   const deviceRows = service.requiredDeviceType
     ? await tx
         .select()
@@ -682,6 +718,7 @@ export async function findFreeSlots(
           and(
             eq(devices.branchId, opts.branchId),
             eq(devices.deviceType, service.requiredDeviceType),
+            eq(devices.isActive, true),
           ),
         )
     : [];
@@ -793,12 +830,19 @@ export async function onlineDoctors(
 /** Doctors allowed for this request: the chosen one (checked against the gender), or all matching. */
 async function onlineCandidates(
   tx: TenantTx,
-  input: { branchId: string; practitionerId?: string | null; gender?: DoctorGender | null },
+  input: {
+    branchId: string;
+    serviceId?: string;
+    practitionerId?: string | null;
+    gender?: DoctorGender | null;
+  },
 ) {
   const doctors = await onlineDoctors(tx, input.branchId, input.gender);
-  const picked = input.practitionerId
+  let picked = input.practitionerId
     ? doctors.filter((d) => d.id === input.practitionerId)
     : doctors;
+  const allowed = input.serviceId ? await serviceDoctorIds(tx, input.serviceId) : null;
+  if (allowed) picked = picked.filter((d) => allowed.has(d.id));
   if (!picked.length) throw new BookingError("no_doctor");
   return picked;
 }

@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
@@ -44,6 +45,13 @@ export default async function ServicesPage() {
         subtitle={`${t("count", { count: rows.length })}${canEdit ? ` · ${t("onlineHint")}` : ""}`}
       />
       <Notice tone="warning">{t("demoPrices")}</Notice>
+      {can(ctx.roles, "setup:manage") && (
+        <Notice tone="info">
+          <Link href="/setup?tab=services" className="underline" data-testid="setup-link">
+            {t("editInSetup")}
+          </Link>
+        </Notice>
+      )}
       <Card>
         <CardContent className="p-0">
           <Table>

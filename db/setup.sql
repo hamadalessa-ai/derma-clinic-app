@@ -880,6 +880,22 @@ CREATE TABLE "support_grants" (
 );
 ALTER TABLE "support_grants" ADD CONSTRAINT "support_grants_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "support_grants_tenant_expires_idx" ON "support_grants" USING btree ("tenant_id","expires_at");
+-- 0013_superb_betty_brant.sql
+CREATE TABLE "service_practitioners" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"service_id" uuid NOT NULL,
+	"member_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "service_practitioners_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "service_practitioners_pair_key" UNIQUE("tenant_id","service_id","member_id")
+);
+ALTER TABLE "devices" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;
+ALTER TABLE "rooms" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;
+ALTER TABLE "service_practitioners" ADD CONSTRAINT "service_practitioners_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "service_practitioners" ADD CONSTRAINT "service_practitioners_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "service_practitioners" ADD CONSTRAINT "service_practitioners_member_fk" FOREIGN KEY ("tenant_id","member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "service_practitioners_member_idx" ON "service_practitioners" USING btree ("tenant_id","member_id");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1236,6 +1252,13 @@ insert into public.services (id, tenant_id, department_id, code, name_ar, name_e
   ('e343681c-88f6-5e66-8abb-eebed8d218c0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'patch_test', 'اختبار الحساسية', 'Patch Test', 15, 5, 10000, null, null, true, false, false, null, null, null, null, null, 22),
   ('278b82c7-f6bd-5b1b-aaf3-1b9f576e42ff', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '62531e32-6cf4-5dd1-9fba-5f64761380b7', 'video_consultation', 'استشارة مرئية (فيديو)', 'Video Consultation', 20, 10, 25000, null, 'telehealth', true, true, true, 'قبل المكالمة: اختر مكانًا هادئًا وجيد الإضاءة. يمكنك إرسال صور واضحة للمنطقة في هذه المحادثة قبل الموعد ليطّلع عليها الطبيب.', 'find a quiet, well-lit place. You can send clear photos of the area in this chat before the call, so the doctor can see them.', null, null, null, 0);
 
+insert into public.service_practitioners (tenant_id, service_id, member_id) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '56811db4-8b1a-522c-9015-7dce6ade7d82'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '356e5967-34b6-564e-a086-32c2e4a387d1'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', 'e20f9e2f-edec-5542-a7ee-b67d174a130b'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '5c4057f8-d074-56b7-8d43-0c8d82b720b5'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'ed0aba11-46ad-5a88-bdf7-59a008b35cd5', '92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e');
+
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake, whatsapp_opt_in_at, whatsapp_opt_in_source, whatsapp_opted_out_at) values
   ('1ee5d12e-dc29-5d1b-ba54-9699374dc2bb', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0001', 'نورة عبدالرحمن القحطاني', 'Noura Abdulrahman Al-Qahtani', '0500010001', 'female', '1970-01-01', 'national_id', '1000000101', null, null, null, true, now() - interval '60 days', 'demo', null),
   ('bda3525c-2cfc-5da5-b720-d4c64f553d48', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'D-0002', 'سارة أحمد الحربي', 'Sarah Ahmed Al-Harbi', '0500010002', 'female', '1983-06-12', 'national_id', '1000000102', null, null, null, true, now() - interval '60 days', 'demo', null),
@@ -1447,6 +1470,9 @@ insert into public.services (id, tenant_id, department_id, code, name_ar, name_e
   ('9fee0604-a5ac-5511-abcd-2b3a0575dad3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'botox', 'بوتوكس', 'Botox', 30, 10, 120000, null, 'injectables', true, false, false, 'قبل الجلسة: تجنّب الأسبرين والكحول ومميّعات الدم قبل 48 ساعة إن أمكن.', 'Before the session: avoid aspirin, alcohol and blood thinners for 48 hours if possible.', 'كيف تشعر بعد جلسة البوتوكس؟ تذكّر ألا تستلقي 4 ساعات بعد الحقن.', 'How do you feel after your Botox session? Remember not to lie down for 4 hours after the injection.', 120, 2),
   ('228d1067-f701-50a0-9a4b-4f4cff65b5e2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'fillers', 'فيلر', 'Fillers', 45, 15, 180000, null, 'injectables', true, false, false, 'قبل الجلسة: تجنّب مميّعات الدم قبل 48 ساعة، وأخبرنا إن كان لديك أي التهاب.', 'Before the session: avoid blood thinners for 48 hours, and tell us about any infection.', 'كيف تشعر بعد حقن الفيلر؟ التورّم الخفيف طبيعي في الأيام الأولى.', 'How do you feel after the filler? Mild swelling is normal in the first days.', 270, 3),
   ('dcb65889-a26a-5ec3-91a0-24f7df649c95', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'facial_treatment', 'جلسة تنظيف البشرة', 'Facial Treatment', 60, 15, 45000, null, null, true, true, false, 'قبل الجلسة: تعال بوجه نظيف بدون مكياج إن أمكن.', 'Before the session: come with a clean face, no make-up if possible.', 'كيف حال بشرتك بعد جلسة التنظيف؟', 'How is your skin after the facial?', 30, 4);
+
+insert into public.service_practitioners (tenant_id, service_id, member_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '228d1067-f701-50a0-9a4b-4f4cff65b5e2', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1');
 
 insert into public.patients (id, tenant_id, file_number, full_name_ar, full_name_en, phone, gender, date_of_birth, id_type, id_number, guardian_id, guardian_relation_ar, guardian_relation_en, is_fake, whatsapp_opt_in_at, whatsapp_opt_in_source, whatsapp_opted_out_at) values
   ('47976cc3-ac45-5a95-a2c5-056e158e9ee2', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'L-0001', 'عبدالله أحمد الجهني', 'Abdullah Ahmed Al-Juhani', '0500020001', 'male', '1975-02-20', 'national_id', '1000000201', null, null, null, true, now() - interval '60 days', 'demo', null),
@@ -2372,6 +2398,8 @@ grant update (status, paid_at, voided_at) on public.platform_statements to clini
 -- Support access: granted and ended by the clinic admin (policies below); never deleted.
 grant select, insert on public.support_grants to clinic_app;
 grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
+-- Which doctors do which service (clinic admin): rows added and removed, never edited.
+grant select, insert, delete on public.service_practitioners to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -2398,7 +2426,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments', 'support_grants'
+    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2553,7 +2581,7 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments', 'support_grants',
+    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'users', 'sessions', 'accounts', 'verifications'
   ] loop
     rule := case
