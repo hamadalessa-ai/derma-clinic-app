@@ -46,6 +46,46 @@ describe("reset then setup again", () => {
   }, 120_000);
 });
 
+describe("reset refuses real patient data", () => {
+  it("rolls back and keeps everything when a real (non-fake) patient exists", async () => {
+    const superUrl =
+      process.env.DATABASE_URL_ADMIN ?? "postgresql://postgres:localdev@127.0.0.1:5432/postgres";
+    const { adminUrl } = await createLocalDatabase({
+      adminUrl: superUrl,
+      dbName: "derma_reset_guard_test",
+      demoPassword: "Reset-Test-123",
+    });
+    const db = postgres(adminUrl, { max: 1, onnotice: () => {} });
+    try {
+      await db
+        .unsafe(
+          `
+        alter table public.patients no force row level security;
+        update public.patients set is_fake = false
+          where id = (select id from public.patients order by id limit 1);
+        alter table public.patients force row level security;`,
+        )
+        .simple();
+      const before = await db`select count(*)::int as n from pg_tables where schemaname = 'public'`;
+      await expect(
+        db.unsafe(readFileSync(path.resolve(__dirname, "../db/reset.sql"), "utf8")).simple(),
+      ).rejects.toThrow(/REFUSED: this database holds 1 real patient/);
+      await db.unsafe("rollback").simple();
+      const after = await db`select count(*)::int as n from pg_tables where schemaname = 'public'`;
+      expect(after[0]!.n).toBe(before[0]!.n);
+      // FORCE RLS is back too: the refusal rolled the guard's own change back.
+      const [{ forced }] = await db`
+        select relforcerowsecurity as forced from pg_class where oid = 'public.patients'::regclass`;
+      expect(forced).toBe(true);
+    } finally {
+      await db.end();
+      const su = postgres(superUrl, { max: 1, onnotice: () => {} });
+      await su.unsafe("drop database if exists derma_reset_guard_test with (force)");
+      await su.end();
+    }
+  }, 120_000);
+});
+
 /**
  * The live demo database may have been built by ANY earlier phase's setup.sql (tests/released-setup).
  * Today's reset.sql must remove everything each of them created — including tables the schema no
