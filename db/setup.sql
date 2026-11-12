@@ -917,12 +917,12 @@ CREATE INDEX "global_rate_hits_bucket_idx" ON "global_rate_hits" USING btree ("b
 CREATE INDEX "two_factors_user_id_idx" ON "two_factors" USING btree ("user_id");
 CREATE INDEX "two_factors_secret_idx" ON "two_factors" USING btree ("secret");
 -- 0015_easy_praxagora.sql
-ALTER TABLE "tenants" ADD CONSTRAINT "tenants_whatsapp_phone_number_id_unique" UNIQUE("whatsapp_phone_number_id");
 ALTER TABLE "tenants" ADD COLUMN "whatsapp_phone_number_id" text;
 ALTER TABLE "tenants" ADD COLUMN "whatsapp_business_account_id" text;
 ALTER TABLE "tenants" ADD COLUMN "whatsapp_display_phone" text;
 ALTER TABLE "tenants" ADD COLUMN "whatsapp_token_enc" text;
 ALTER TABLE "tenants" ADD COLUMN "whatsapp_live" boolean DEFAULT false NOT NULL;
+ALTER TABLE "tenants" ADD CONSTRAINT "tenants_whatsapp_phone_number_id_unique" UNIQUE("whatsapp_phone_number_id");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
