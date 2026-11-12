@@ -43,7 +43,8 @@ export async function staffAction<T>(
   const ctx = await getStaffContext();
   if (!ctx) return { ok: false, error: "not_signed_in" };
   // Admins and doctors of real clinics must set up two-step verification before doing anything.
-  if (ctx.twoFactorRequired && !ctx.twoFactorEnabled) return { ok: false, error: "two_factor_required" };
+  if (ctx.twoFactorRequired && !ctx.twoFactorEnabled)
+    return { ok: false, error: "two_factor_required" };
   const needed = permission === null ? [] : Array.isArray(permission) ? permission : [permission];
   if (needed.length && !needed.some((p) => can(ctx.roles, p)))
     return { ok: false, error: "not_allowed" };

@@ -39,7 +39,10 @@ export function TwoFactorSettings({ enabled, required }: { enabled: boolean; req
             className="flex flex-wrap items-end gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              act.run(() => disableTwoFactorAction({ password }), () => setPassword(""));
+              act.run(
+                () => disableTwoFactorAction({ password }),
+                () => setPassword(""),
+              );
             }}
           >
             <div className="flex flex-col gap-1">
@@ -116,7 +119,11 @@ export function TwoFactorSettings({ enabled, required }: { enabled: boolean; req
             />
             <div className="flex flex-col gap-1">
               <span className="text-muted-foreground text-xs">{t("manualKey")}</span>
-              <code dir="ltr" className="bg-muted rounded-lg p-2 font-mono text-xs break-all" data-testid="two-factor-key">
+              <code
+                dir="ltr"
+                className="bg-muted rounded-lg p-2 font-mono text-xs break-all"
+                data-testid="two-factor-key"
+              >
                 {setup.key}
               </code>
             </div>
@@ -124,7 +131,10 @@ export function TwoFactorSettings({ enabled, required }: { enabled: boolean; req
           <div className="flex flex-col gap-1">
             <span className="font-semibold">{t("backupTitle")}</span>
             <span className="text-muted-foreground text-xs">{t("backupHint")}</span>
-            <code dir="ltr" className="bg-muted grid grid-cols-2 gap-1 rounded-lg p-3 font-mono text-xs">
+            <code
+              dir="ltr"
+              className="bg-muted grid grid-cols-2 gap-1 rounded-lg p-3 font-mono text-xs"
+            >
               {setup.backupCodes.map((c) => (
                 <span key={c}>{c}</span>
               ))}

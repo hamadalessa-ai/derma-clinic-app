@@ -60,12 +60,10 @@ async function breached(password: string, timeoutMs = 3000): Promise<boolean> {
     });
     if (!res.ok) return false;
     const suffix = hash.slice(5);
-    return (await res.text())
-      .split("\n")
-      .some((line) => {
-        const [s, n] = line.trim().split(":");
-        return s === suffix && Number(n) > 0;
-      });
+    return (await res.text()).split("\n").some((line) => {
+      const [s, n] = line.trim().split(":");
+      return s === suffix && Number(n) > 0;
+    });
   } catch {
     return false;
   }

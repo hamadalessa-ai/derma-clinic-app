@@ -38,9 +38,16 @@ export async function startTwoFactorSetupAction(
   }
 }
 
-const codeInput = z.object({ code: z.string().trim().regex(/^\d{6}$/) });
+const codeInput = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/),
+});
 
-export async function confirmTwoFactorAction(input: z.input<typeof codeInput>): Promise<Result<null>> {
+export async function confirmTwoFactorAction(
+  input: z.input<typeof codeInput>,
+): Promise<Result<null>> {
   const ctx = await getStaffContext();
   const parsed = codeInput.safeParse(input);
   if (!ctx) return { ok: false, error: "not_signed_in" };
@@ -59,7 +66,9 @@ export async function confirmTwoFactorAction(input: z.input<typeof codeInput>): 
   return { ok: true, data: null };
 }
 
-export async function disableTwoFactorAction(input: z.input<typeof passwordInput>): Promise<Result<null>> {
+export async function disableTwoFactorAction(
+  input: z.input<typeof passwordInput>,
+): Promise<Result<null>> {
   const ctx = await getStaffContext();
   const parsed = passwordInput.safeParse(input);
   if (!ctx || !parsed.success) return { ok: false, error: "not_signed_in" };

@@ -896,6 +896,26 @@ ALTER TABLE "service_practitioners" ADD CONSTRAINT "service_practitioners_tenant
 ALTER TABLE "service_practitioners" ADD CONSTRAINT "service_practitioners_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "service_practitioners" ADD CONSTRAINT "service_practitioners_member_fk" FOREIGN KEY ("tenant_id","member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "service_practitioners_member_idx" ON "service_practitioners" USING btree ("tenant_id","member_id");
+-- 0014_safe_next_avengers.sql
+CREATE TABLE "global_rate_hits" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"bucket" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "two_factors" (
+	"id" text PRIMARY KEY NOT NULL,
+	"secret" text NOT NULL,
+	"backup_codes" text NOT NULL,
+	"user_id" text NOT NULL,
+	"verified" boolean DEFAULT true,
+	"failed_verification_count" integer DEFAULT 0,
+	"locked_until" timestamp with time zone
+);
+ALTER TABLE "users" ADD COLUMN "two_factor_enabled" boolean DEFAULT false NOT NULL;
+ALTER TABLE "two_factors" ADD CONSTRAINT "two_factors_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "global_rate_hits_bucket_idx" ON "global_rate_hits" USING btree ("bucket","created_at");
+CREATE INDEX "two_factors_user_id_idx" ON "two_factors" USING btree ("user_id");
+CREATE INDEX "two_factors_secret_idx" ON "two_factors" USING btree ("secret");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -2351,7 +2371,9 @@ grant select on public.tenants to clinic_app;
 
 -- Staff login tables (no patient data).
 grant select, insert, update, delete on public.users, public.sessions, public.accounts,
-  public.verifications to clinic_app;
+  public.verifications, public.two_factors to clinic_app;
+-- Global rate-limit counters (hashed buckets, no clinic data): add and count; old rows purged daily.
+grant select, insert, delete on public.global_rate_hits to clinic_app;
 
 -- Clinic data.
 grant select, insert, update, delete on public.branches, public.departments,
@@ -2547,7 +2569,8 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['users', 'sessions', 'accounts', 'verifications'] loop
+  foreach t in array array['users', 'sessions', 'accounts', 'verifications', 'two_factors',
+                           'global_rate_hits'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
     execute format(
@@ -2582,7 +2605,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'users', 'sessions', 'accounts', 'verifications'
+    'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

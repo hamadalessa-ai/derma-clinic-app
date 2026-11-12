@@ -48,7 +48,8 @@ export function LoginForm() {
           setError(null);
           startTransition(async () => {
             const res = await verifySignInCode({ code, remember });
-            if (res && "error" in res) setError(t(res.error === "locked" ? "locked" : "codeInvalid"));
+            if (res && "error" in res)
+              setError(t(res.error === "locked" ? "locked" : "codeInvalid"));
           });
         }}
       >
@@ -69,7 +70,11 @@ export function LoginForm() {
           <p className="text-muted-foreground text-xs">{t("backupHint")}</p>
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
           {t("remember")}
         </label>
         {error && (

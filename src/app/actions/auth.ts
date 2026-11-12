@@ -15,8 +15,7 @@ const credentials = z.object({
 });
 
 export type SignInResult =
-  | { ok: false; error: "invalid" | "locked" | "code_invalid" }
-  | { ok: false; step: "code" };
+  { ok: false; error: "invalid" | "locked" | "code_invalid" } | { ok: false; step: "code" };
 
 /**
  * Sign-in limits, counted across ALL clinics and server instances (in the database):
@@ -45,7 +44,13 @@ export async function signIn(input: z.input<typeof credentials>): Promise<SignIn
       windowMinutes: LOGIN_LIMITS.windowMinutes,
     },
     ...(ip
-      ? [{ key: `login:ip:${ip}`, limit: LOGIN_LIMITS.perIp, windowMinutes: LOGIN_LIMITS.windowMinutes }]
+      ? [
+          {
+            key: `login:ip:${ip}`,
+            limit: LOGIN_LIMITS.perIp,
+            windowMinutes: LOGIN_LIMITS.windowMinutes,
+          },
+        ]
       : []),
   ]);
   if (!allowed) {
@@ -123,7 +128,11 @@ export async function verifySignInCode(input: z.input<typeof secondStep>): Promi
   if (
     ip &&
     !(await takeGlobalLimit([
-      { key: `login:ip:${ip}`, limit: LOGIN_LIMITS.perIp, windowMinutes: LOGIN_LIMITS.windowMinutes },
+      {
+        key: `login:ip:${ip}`,
+        limit: LOGIN_LIMITS.perIp,
+        windowMinutes: LOGIN_LIMITS.windowMinutes,
+      },
     ]))
   ) {
     return { ok: false, error: "locked" };

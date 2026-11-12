@@ -23,7 +23,9 @@ describe("limits across all clinics", () => {
     expect(await takeGlobalLimit(lim)).toBe(true);
     expect(await takeGlobalLimit(lim)).toBe(false);
     expect(await globalHits(key, 15)).toBe(3);
-    expect(await takeGlobalLimit([{ key: `${key}-other`, limit: 3, windowMinutes: 15 }])).toBe(true);
+    expect(await takeGlobalLimit([{ key: `${key}-other`, limit: 3, windowMinutes: 15 }])).toBe(
+      true,
+    );
   });
 
   it("refuses when ANY of the limits is full (email OR network address)", async () => {

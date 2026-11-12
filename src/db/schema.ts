@@ -228,7 +228,10 @@ export const twoFactors = pgTable(
     failedVerificationCount: integer("failed_verification_count").default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
   },
-  (t) => [index("two_factors_user_id_idx").on(t.userId), index("two_factors_secret_idx").on(t.secret)],
+  (t) => [
+    index("two_factors_user_id_idx").on(t.userId),
+    index("two_factors_secret_idx").on(t.secret),
+  ],
 );
 
 /**
