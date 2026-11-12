@@ -758,7 +758,7 @@ describe("a clear yes is decided in code", () => {
         .from(appointments)
         .where(eq(appointments.startsAt, new Date(memo.unclear))),
     );
-    expect(booked.filter((b) => b.createdVia === "whatsapp")).toHaveLength(0);
+    expect(booked.filter((b) => b.source === "whatsapp")).toHaveLength(0);
   });
 });
 
