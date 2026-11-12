@@ -176,6 +176,8 @@ async function handleOne(
   // A photo is fetched BEFORE the database transaction (network).
   const photo = ev.kind === "image" ? await fetchPhoto(ev, env) : null;
   let aiTurn = false;
+  // Was the chat already waiting for staff BEFORE this message? (The AI keeps that flag.)
+  let waitingBefore = false;
   const work = await withTenant(tenant.id, async (tx) => {
     if (!(await firstTime(tx, tenant.id, `message:${ev.eventId}`))) return null;
     const convo = await ensureConversation(tx, { phone: ev.from, profileName: ev.profileName });
@@ -202,6 +204,7 @@ async function handleOne(
           : text || "[empty]";
     // Free text, unknown buttons and new numbers need a human; handled taps don't.
     const needsReply = (ev.kind !== "button" || !button) && !isStop && !isStart;
+    waitingBefore = convo.needsReply;
     // Typed text the AI receptionist may answer (the chat as it was BEFORE this message decides).
     aiTurn =
       ev.kind === "text" &&
@@ -225,7 +228,9 @@ async function handleOne(
       channel: ev.eventId.startsWith("sim-") ? "demo" : "meta",
       status: "received",
       providerMessageId: ev.eventId.startsWith("sim-") ? null : ev.eventId,
-      needsReply: (needsReply && !aiTurn) || undefined,
+      // Flagged at once, even when the AI will answer: if the AI run is cut off (timeout, crash),
+      // the chat still shows as "needs reply". The AI clears it only after its answer is sent.
+      needsReply: needsReply || undefined,
     });
 
     if (isStop || isStart) {
@@ -262,7 +267,13 @@ async function handleOne(
   }
   if (work.push.length) await notify(work.push);
   if (aiTurn && ai) {
-    const r = await runReceptionist(tenant, work.convo.id, { client: ai, env, now, notify });
+    const r = await runReceptionist(tenant, work.convo.id, {
+      client: ai,
+      env,
+      now,
+      notify,
+      waitingBefore,
+    });
     return `ai_${r.outcome}`;
   }
   return work.replies[0]?.kind ?? "stored";

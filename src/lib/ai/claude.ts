@@ -65,35 +65,69 @@ export function anthropicClient(env: Env = process.env): ClaudeClient | null {
   const model = env.ANTHROPIC_MODEL?.trim() || DEFAULT_MODEL;
   return {
     async create(req) {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: req.maxTokens ?? 700,
-          system: req.system,
-          messages: req.messages,
-          ...(req.tools.length ? { tools: req.tools } : {}),
-        }),
-        signal: AbortSignal.timeout(req.timeoutMs ?? 25_000),
+      // The instructions and the tool list are the same on every call: mark them for prompt
+      // caching (cheaper and faster on repeat calls; ignored when too short to cache).
+      const tools = req.tools.map((t, i) =>
+        i === req.tools.length - 1 ? { ...t, cache_control: { type: "ephemeral" } } : t,
+      );
+      const payload = JSON.stringify({
+        model,
+        max_tokens: req.maxTokens ?? 700,
+        system: [{ type: "text", text: req.system, cache_control: { type: "ephemeral" } }],
+        messages: req.messages,
+        ...(tools.length ? { tools } : {}),
       });
-      const body = (await res.json().catch(() => null)) as {
-        content?: ContentBlock[];
-        stop_reason?: string;
-        error?: { type?: string; message?: string };
-      } | null;
-      if (!res.ok || !body?.content) {
+      const deadline = Date.now() + (req.timeoutMs ?? 25_000);
+      // One retry when the service is briefly busy (429 / 5xx / 529 / network), if time allows.
+      for (let attempt = 0; ; attempt++) {
+        let res: Response;
+        try {
+          res = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+            },
+            body: payload,
+            signal: AbortSignal.timeout(Math.max(1_000, deadline - Date.now())),
+          });
+        } catch (err) {
+          if (attempt === 0 && deadline - Date.now() > RETRY_MIN_LEFT_MS) {
+            await pause(RETRY_PAUSE_MS);
+            continue;
+          }
+          throw new ClaudeError(
+            `Claude API unreachable: ${err instanceof Error ? err.name : "error"}`,
+          );
+        }
+        const body = (await res.json().catch(() => null)) as {
+          content?: ContentBlock[];
+          stop_reason?: string;
+          error?: { type?: string; message?: string };
+        } | null;
+        if (res.ok && body?.content) {
+          return { content: body.content, stopReason: body.stop_reason ?? "end_turn" };
+        }
+        if (
+          attempt === 0 &&
+          RETRYABLE.has(res.status) &&
+          deadline - Date.now() > RETRY_MIN_LEFT_MS
+        ) {
+          await pause(RETRY_PAUSE_MS);
+          continue;
+        }
         // Never include the key; the API's own message says what went wrong (e.g. no credit).
         throw new ClaudeError(
           `Claude API ${res.status}: ${body?.error?.type ?? "error"} ${body?.error?.message ?? ""}`.trim(),
           res.status,
         );
       }
-      return { content: body.content, stopReason: body.stop_reason ?? "end_turn" };
     },
   };
 }
+
+const RETRYABLE = new Set([408, 429, 500, 502, 503, 504, 529]);
+const RETRY_PAUSE_MS = 1_500;
+const RETRY_MIN_LEFT_MS = 6_000;
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));

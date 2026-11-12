@@ -92,6 +92,10 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   clinic switched it off, no key, staff took over or replied (`conversations.ai_paused_at`), or the daily
   limit is reached. After a hand-off the chat stays "needs reply" but the AI still helps with other things
   (never the handed-off topic). Any failure → "needs reply" + a fixed reply. Tests use a scripted fake client.
+  Safety net: every typed message is flagged "needs reply" when saved; the AI clears it only after its answer
+  is sent (and only if the chat wasn't already waiting). One turn has a 40 s budget (`TURN_BUDGET_MS`), the client
+  retries once when the API is busy, and `confirm_action` acts only when code (`isClearYes`) sees a clear "yes".
+  Opening hours given to the AI come from `hours.ts` by date (holidays and day-offs included).
 - AI scribe (`src/lib/ai/scribe.ts`, UI `src/components/clinic/ai-scribe.tsx`): browser dictation (Web Speech
   API; audio never reaches us) → Claude → English draft appended to the AUTHOR's own UNSIGNED note, marked
   `clinical_notes.ai_drafted_at`. Never signs, never adds diagnoses/codes/doses of its own; the spoken text is
