@@ -753,7 +753,10 @@ describe("a clear yes is decided in code", () => {
     await write(phone, "ممكن الساعة 5؟", turn2.client);
     expect(answer.error).toBe("not_a_clear_yes");
     const booked = await system((tx) =>
-      tx.select().from(appointments).where(eq(appointments.startsAt, new Date(memo.unclear))),
+      tx
+        .select()
+        .from(appointments)
+        .where(eq(appointments.startsAt, new Date(memo.unclear))),
     );
     expect(booked.filter((b) => b.createdVia === "whatsapp")).toHaveLength(0);
   });

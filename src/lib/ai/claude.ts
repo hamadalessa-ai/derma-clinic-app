@@ -97,7 +97,9 @@ export function anthropicClient(env: Env = process.env): ClaudeClient | null {
             await pause(RETRY_PAUSE_MS);
             continue;
           }
-          throw new ClaudeError(`Claude API unreachable: ${err instanceof Error ? err.name : "error"}`);
+          throw new ClaudeError(
+            `Claude API unreachable: ${err instanceof Error ? err.name : "error"}`,
+          );
         }
         const body = (await res.json().catch(() => null)) as {
           content?: ContentBlock[];
@@ -107,7 +109,11 @@ export function anthropicClient(env: Env = process.env): ClaudeClient | null {
         if (res.ok && body?.content) {
           return { content: body.content, stopReason: body.stop_reason ?? "end_turn" };
         }
-        if (attempt === 0 && RETRYABLE.has(res.status) && deadline - Date.now() > RETRY_MIN_LEFT_MS) {
+        if (
+          attempt === 0 &&
+          RETRYABLE.has(res.status) &&
+          deadline - Date.now() > RETRY_MIN_LEFT_MS
+        ) {
           await pause(RETRY_PAUSE_MS);
           continue;
         }
