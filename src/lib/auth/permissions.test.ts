@@ -126,7 +126,7 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     receptionist: false,
   },
   "account:manage": {
-    platform_owner: false,
+    platform_owner: true,
     clinic_admin: true,
     practitioner: true,
     receptionist: true,
@@ -294,7 +294,7 @@ describe("phone navigation", () => {
     [["practitioner"], ["myDay", "calendar", "patients", "clinicalNotes"]],
     [["receptionist"], ["calendar", "patients", "whatsapp", "services"]],
     [["clinic_admin"], ["calendar", "patients", "whatsapp", "settings"]],
-    [["platform_owner"], ["platform"]],
+    [["platform_owner"], ["platform", "account"]],
   ] as [Role[], string[]][])("%s: the bottom bar shows the most-used pages", (roles, expected) => {
     expect(splitForMobile(itemsFor(roles)).bar.map((i) => i.key)).toEqual(expected);
   });

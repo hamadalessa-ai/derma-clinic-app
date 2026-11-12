@@ -51,7 +51,8 @@ export const PERMISSIONS = {
 
   // ── Phase 2a ──
   /** Own account: phone notifications on/off and which types. */
-  "account:manage": ALL_CLINIC_STAFF,
+  /** My account: phone notifications and two-step verification (the platform owner too). */
+  "account:manage": ["platform_owner", ...ALL_CLINIC_STAFF],
   /** Create the push (VAPID) keys for the platform. Never patient data. */
   "platform:keys": ["platform_owner"],
   /** Add a new clinic (its first branch and first admin). Never patient data. */

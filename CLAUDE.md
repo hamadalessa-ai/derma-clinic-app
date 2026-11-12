@@ -30,7 +30,8 @@ draft-only AI scribe. Multi-tenant: many clinics, strictly separated.
 
 ## Tenant isolation (never weaken)
 
-- Every table except `tenants` and the auth tables (`users`, `sessions`, `accounts`, `verifications`)
+- Every table except `tenants`, the auth tables (`users`, `sessions`, `accounts`, `verifications`,
+  `two_factors`) and `global_rate_hits` (hashed cross-clinic rate-limit counters, no clinic data)
   has `tenant_id`, plus composite foreign keys `(tenant_id, x_id)` so rows can't point at another clinic.
 - Every tenant table has RLS **ENABLED + FORCED**; policy `tenant_id = app_current_tenant()`, which reads
   `current_setting('app.tenant_id')` and is NULL (→ zero rows) when unset. Fail closed.

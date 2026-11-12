@@ -241,7 +241,9 @@ grant select on public.tenants to clinic_app;
 
 -- Staff login tables (no patient data).
 grant select, insert, update, delete on public.users, public.sessions, public.accounts,
-  public.verifications to clinic_app;
+  public.verifications, public.two_factors to clinic_app;
+-- Global rate-limit counters (hashed buckets, no clinic data): add and count; old rows purged daily.
+grant select, insert, delete on public.global_rate_hits to clinic_app;
 
 -- Clinic data.
 grant select, insert, update, delete on public.branches, public.departments,
@@ -437,7 +439,8 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['users', 'sessions', 'accounts', 'verifications'] loop
+  foreach t in array array['users', 'sessions', 'accounts', 'verifications', 'two_factors',
+                           'global_rate_hits'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
     execute format(
@@ -472,7 +475,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'users', 'sessions', 'accounts', 'verifications'
+    'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

@@ -14,7 +14,14 @@
     "invalid": "Wrong email or password, or you don't have access to this clinic.",
     "emailInvalid": "Enter a valid email",
     "passwordRequired": "Enter your password",
-    "demoAccounts": "Demo accounts"
+    "demoAccounts": "Demo accounts",
+    "locked": "Too many sign-in attempts. Please wait 15 minutes and try again.",
+    "code": "Code",
+    "codeHint": "Two-step verification is on. Enter the 6-digit code from your authenticator app.",
+    "backupHint": "Lost your phone? Enter one of your backup codes instead.",
+    "remember": "Remember this device for 30 days",
+    "verify": "Verify",
+    "codeInvalid": "That code didn't work. Check the time on your phone and try again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -209,7 +216,14 @@
     "setup_bad_doctor": "Only doctors of this clinic can be chosen.",
     "setup_bad_consent": "That consent form doesn't exist.",
     "setup_empty_text": "Please fill in all names in Arabic and English.",
-    "not_for_service": "This doctor doesn't do this service (see Clinic set-up → Services)."
+    "not_for_service": "This doctor doesn't do this service (see Clinic set-up → Services).",
+    "two_factor_required": "Set up two-step verification in My account first.",
+    "wrong_password": "That password is not correct.",
+    "code_invalid": "That code didn't work. Try the newest code from the app.",
+    "two_factor_already_on": "Two-step verification is already on.",
+    "team_password_too_common": "That password is too easy to guess. Please choose another.",
+    "team_password_contains_name": "Please don't use your name or email in your password.",
+    "team_password_breached": "That password has appeared in a data leak on another website. Please choose a different one."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -743,7 +757,8 @@
       "concern_photo": "A patient with a concern sent a photo",
       "concern_note": "Internal note on a patient concern",
       "follow_up_request": "Doctor asks to book a follow-up"
-    }
+    },
+    "twoFactorTitle": "Two-step verification"
   },
   "pushKeys": {
     "title": "Push notification keys (VAPID)",
@@ -1687,5 +1702,23 @@
     "day": "Day",
     "dailyDownload": "Download the day's file",
     "vsLastMonth": "vs last month"
+  },
+  "twoFactor": {
+    "on": "Two-step verification is on.",
+    "turnOff": "Turn off",
+    "password": "Your password",
+    "requiredNotice": "For your role, two-step verification is required before you can use the clinic system. It takes two minutes.",
+    "explain": "Signing in will need your password plus a 6-digit code from an authenticator app on your phone (Google Authenticator, Microsoft Authenticator or similar). This protects patient records if your password leaks.",
+    "start": "Set up",
+    "step1": "Open your authenticator app and add an account.",
+    "step2": "Scan this QR code (or type the key below).",
+    "step3": "Enter the 6-digit code the app shows.",
+    "qrAlt": "QR code for your authenticator app",
+    "manualKey": "Can't scan? Type this key:",
+    "backupTitle": "Backup codes",
+    "backupHint": "Save these somewhere safe (not on this phone). Each one works once if you lose your phone.",
+    "code": "6-digit code",
+    "confirm": "Turn on",
+    "turnedOn": "Two-step verification is on. You'll need a code at your next sign-in."
   }
 }

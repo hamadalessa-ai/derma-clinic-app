@@ -47,7 +47,14 @@ async function asPatient<T>(
   }) as Promise<T>;
 }
 
-const AUTH_TABLES = ["users", "sessions", "accounts", "verifications"];
+const AUTH_TABLES = [
+  "users",
+  "sessions",
+  "accounts",
+  "verifications",
+  "two_factors",
+  "global_rate_hits",
+];
 const HIDDEN = [
   ...TENANT_TABLES.filter((t) => !(PATIENT_READABLE_TABLES as readonly string[]).includes(t)),
   ...AUTH_TABLES,
