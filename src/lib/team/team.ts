@@ -21,6 +21,7 @@ import type { TenantTx } from "@/db/tenant";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan, type Role } from "@/lib/auth/permissions";
+import { passwordProblem } from "@/lib/security/password";
 
 export class TeamError extends Error {
   constructor(
@@ -30,7 +31,10 @@ export class TeamError extends Error {
       | "last_admin"
       | "self"
       | "invite_invalid"
-      | "password_already_set",
+      | "password_already_set"
+      | "password_too_common"
+      | "password_contains_name"
+      | "password_breached",
   ) {
     super(code);
   }
@@ -273,6 +277,13 @@ export async function setInvitedPassword(tx: TenantTx, userId: string, password:
     .where(and(eq(accounts.userId, userId), eq(accounts.providerId, "credential")))
     .limit(1);
   if (cred) throw new TeamError("password_already_set");
+  const [who] = await tx
+    .select({ email: users.email, name: users.name, nameEn: users.nameEn })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const problem = await passwordProblem(password, [who?.email, who?.name, who?.nameEn]);
+  if (problem) throw new TeamError(`password_${problem}`);
   await tx.insert(accounts).values({
     id: `acc_${randomUUID().replace(/-/g, "")}`,
     accountId: userId,

@@ -2,9 +2,10 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { twoFactor } from "better-auth/plugins";
 import bcrypt from "bcryptjs";
 import { getDb } from "@/db/client";
-import { accounts, sessions, users, verifications } from "@/db/schema";
+import { accounts, sessions, twoFactors, users, verifications } from "@/db/schema";
 
 /** Hosts the app may be reached on (local subdomains, the configured root domain, Vercel URLs). */
 export function allowedHosts(env: NodeJS.ProcessEnv = process.env): string[] {
@@ -28,7 +29,13 @@ function createAuth() {
     trustedOrigins: allowedHosts().flatMap((h) => [`https://${h}`, `http://${h}`]),
     database: drizzleAdapter(getDb(), {
       provider: "pg",
-      schema: { user: users, session: sessions, account: accounts, verification: verifications },
+      schema: {
+        user: users,
+        session: sessions,
+        account: accounts,
+        verification: verifications,
+        twoFactor: twoFactors,
+      },
     }),
     emailAndPassword: {
       enabled: true,
@@ -50,8 +57,15 @@ function createAuth() {
       expiresIn: 60 * 60 * 12, // 12 hours: one working day
       updateAge: 60 * 60,
     },
-    rateLimit: { enabled: true, window: 60, max: 30 },
-    plugins: [nextCookies()],
+    // Sign-in is only reachable through our server action (no /api/auth HTTP route), which applies
+    // cross-clinic limits in the database (src/lib/security/global-limit.ts).
+    rateLimit: { enabled: false },
+    plugins: [
+      // Two-step verification with an authenticator app (+ 10 backup codes), both stored encrypted.
+      // Wrong codes: 5 tries per sign-in, then the account's second step locks for 15 minutes.
+      twoFactor({ issuer: "Clinic Platform" }),
+      nextCookies(), // must stay last
+    ],
   });
 }
 

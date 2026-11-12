@@ -157,6 +157,8 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   isPlatformOwner: boolean("is_platform_owner").notNull().default(false),
+  /** Two-step verification (authenticator app) is on — Better Auth's twoFactor plugin. */
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -208,6 +210,40 @@ export const verifications = pgTable("verifications", {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
+
+/**
+ * Two-step verification secrets (Better Auth twoFactor plugin). The authenticator secret and the
+ * backup codes are stored ENCRYPTED with BETTER_AUTH_SECRET. Staff login data, no patient data.
+ */
+export const twoFactors = pgTable(
+  "two_factors",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true),
+    failedVerificationCount: integer("failed_verification_count").default(0),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  },
+  (t) => [index("two_factors_user_id_idx").on(t.userId), index("two_factors_secret_idx").on(t.secret)],
+);
+
+/**
+ * Rate limits that hold across ALL clinics (staff sign-in, code requests): one row per attempt.
+ * Not clinic data: the bucket is a SHA-256 hash (never an email, mobile or IP in clear).
+ */
+export const globalRateHits = pgTable(
+  "global_rate_hits",
+  {
+    id: id(),
+    bucket: text("bucket").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("global_rate_hits_bucket_idx").on(t.bucket, t.createdAt)],
+);
 
 // ─── Clinic membership ──────────────────────────────────────────────────────
 

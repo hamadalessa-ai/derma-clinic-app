@@ -126,7 +126,7 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     receptionist: false,
   },
   "account:manage": {
-    platform_owner: false,
+    platform_owner: true,
     clinic_admin: true,
     practitioner: true,
     receptionist: true,
