@@ -916,6 +916,13 @@ ALTER TABLE "two_factors" ADD CONSTRAINT "two_factors_user_id_users_id_fk" FOREI
 CREATE INDEX "global_rate_hits_bucket_idx" ON "global_rate_hits" USING btree ("bucket","created_at");
 CREATE INDEX "two_factors_user_id_idx" ON "two_factors" USING btree ("user_id");
 CREATE INDEX "two_factors_secret_idx" ON "two_factors" USING btree ("secret");
+-- 0015_easy_praxagora.sql
+ALTER TABLE "tenants" ADD CONSTRAINT "tenants_whatsapp_phone_number_id_unique" UNIQUE("whatsapp_phone_number_id");
+ALTER TABLE "tenants" ADD COLUMN "whatsapp_phone_number_id" text;
+ALTER TABLE "tenants" ADD COLUMN "whatsapp_business_account_id" text;
+ALTER TABLE "tenants" ADD COLUMN "whatsapp_display_phone" text;
+ALTER TABLE "tenants" ADD COLUMN "whatsapp_token_enc" text;
+ALTER TABLE "tenants" ADD COLUMN "whatsapp_live" boolean DEFAULT false NOT NULL;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -2270,6 +2277,37 @@ end;
 $$;
 revoke all on function public.app_set_clinic_limits(uuid, integer, integer) from public;
 grant execute on function public.app_set_clinic_limits(uuid, integer, integer) to clinic_app;
+
+-- WhatsApp connection of a clinic (its number at Meta + optional encrypted token + live switch).
+-- Platform owner only. p_token_enc: null = keep the stored token, '' = remove it (use the platform's).
+create or replace function public.app_set_clinic_whatsapp(
+  p_tenant uuid, p_phone_number_id text, p_business_account_id text, p_display_phone text,
+  p_token_enc text, p_live boolean
+) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.users u
+                 where u.id = public.app_current_user() and u.is_platform_owner) then
+    raise exception 'only the platform owner can connect WhatsApp' using errcode = '42501';
+  end if;
+  if p_live and coalesce(p_phone_number_id, '') = '' then
+    raise exception 'a live WhatsApp connection needs a phone number id' using errcode = '22023';
+  end if;
+  update public.tenants
+     set whatsapp_phone_number_id = nullif(trim(p_phone_number_id), ''),
+         whatsapp_business_account_id = nullif(trim(p_business_account_id), ''),
+         whatsapp_display_phone = nullif(trim(p_display_phone), ''),
+         whatsapp_token_enc = case when p_token_enc is null then whatsapp_token_enc
+                                   else nullif(p_token_enc, '') end,
+         whatsapp_live = p_live
+   where id = p_tenant;
+  if not found then
+    raise exception 'clinic not found' using errcode = '22023';
+  end if;
+end;
+$$;
+revoke all on function public.app_set_clinic_whatsapp(uuid, text, text, text, text, boolean) from public;
+grant execute on function public.app_set_clinic_whatsapp(uuid, text, text, text, text, boolean) to clinic_app;
 
 -- Subscription: plan, monthly price (halalas, before VAT), trial end, grace days. Platform owner only.
 create or replace function public.app_set_clinic_plan(

@@ -23,7 +23,11 @@ export function sealSecret(plain: string, purpose: string, env: Env = process.en
 }
 
 /** The secret, or null when it can't be read (wrong key, damaged, or not ours). */
-export function openSecret(sealed: string | null | undefined, purpose: string, env: Env = process.env) {
+export function openSecret(
+  sealed: string | null | undefined,
+  purpose: string,
+  env: Env = process.env,
+) {
   if (!sealed?.startsWith("v1:")) return null;
   try {
     const raw = Buffer.from(sealed.slice(3), "base64");

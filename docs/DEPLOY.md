@@ -413,6 +413,7 @@ Ask for it when you've chosen one.
 ### F2 — Connecting each clinic's own number (no work for the clinic)
 
 The platform has ONE Meta app; every clinic's number is added to it.
+
 1. Vercel → Environment Variables (once): `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` (Secret), and
    — if the numbers sit in your own Meta business account — `WHATSAPP_ACCESS_TOKEN` (a permanent
    "system user" token, Secret). In Meta, the webhook address is `https://<your domain>/api/whatsapp/webhook`.
@@ -420,8 +421,8 @@ The platform has ONE Meta app; every clinic's number is added to it.
    **Platform → the clinic → WhatsApp tab**: number shown to patients, Phone number ID, WhatsApp business
    account ID (and the clinic's own token only if its number is in a different Meta account).
 3. **Send test** to your own mobile → you receive Meta's "hello world". Then **Switch WhatsApp live**.
-Demo clinics never send real WhatsApp (their made-up patients' numbers may belong to real people): to try
-it on your phone, add a non-demo test clinic that holds only your own number.
+   Demo clinics never send real WhatsApp (their made-up patients' numbers may belong to real people): to try
+   it on your phone, add a non-demo test clinic that holds only your own number.
 
 ## Part G — Automatic database updates (no more SQL Editor)
 

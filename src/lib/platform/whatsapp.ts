@@ -19,7 +19,8 @@ type Env = Record<string, string | undefined>;
 
 export class WhatsAppConnectError extends Error {
   constructor(
-    public code: "not_found" | "no_number" | "bad_phone" | "number_taken" | "not_ready" | "demo_clinic",
+    public code:
+      "not_found" | "no_number" | "bad_phone" | "number_taken" | "not_ready" | "demo_clinic",
   ) {
     super(code);
     this.name = "WhatsAppConnectError";
@@ -73,7 +74,11 @@ export async function setClinicWhatsApp(
     if (other && other.id !== tenantId) throw new WhatsAppConnectError("number_taken");
   }
   const token = input.accessToken?.trim();
-  const tokenEnc = input.clearToken ? "" : token ? sealSecret(token, WHATSAPP_TOKEN_PURPOSE, env) : null;
+  const tokenEnc = input.clearToken
+    ? ""
+    : token
+      ? sealSecret(token, WHATSAPP_TOKEN_PURPOSE, env)
+      : null;
   return asOwner(owner, tenantId, async (tx) => {
     await tx.execute(
       sql`select public.app_set_clinic_whatsapp(${tenantId}::uuid, ${phoneNumberId}, ${input.businessAccountId.trim()}, ${input.displayPhone.trim()}, ${tokenEnc}, ${input.live})`,
@@ -133,10 +138,7 @@ export async function testClinicWhatsApp(
 }
 
 /** What the platform page shows about a clinic's connection (never the token). */
-export function clinicWhatsAppView(
-  tenant: typeof tenants.$inferSelect,
-  env: Env = process.env,
-) {
+export function clinicWhatsAppView(tenant: typeof tenants.$inferSelect, env: Env = process.env) {
   const check = clinicLiveConfig({ ...tenant, whatsappLive: true }, env);
   return {
     phoneNumberId: tenant.whatsappPhoneNumberId ?? "",

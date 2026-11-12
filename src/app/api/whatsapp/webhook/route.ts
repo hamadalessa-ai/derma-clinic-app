@@ -78,11 +78,18 @@ export async function POST(request: NextRequest) {
   for (const [numberId, events] of parseMetaWebhookByNumber(body)) {
     if (!events.length) continue;
     const [owner] = numberId
-      ? await getDb().select().from(tenants).where(eq(tenants.whatsappPhoneNumberId, numberId)).limit(1)
+      ? await getDb()
+          .select()
+          .from(tenants)
+          .where(eq(tenants.whatsappPhoneNumberId, numberId))
+          .limit(1)
       : [];
     const tenant = owner ?? (legacyClinic ? await getTenantBySlug(legacyClinic) : null);
     if (!tenant) {
-      await opsAlert("whatsapp_unknown_number", { number: numberId || "none", events: events.length });
+      await opsAlert("whatsapp_unknown_number", {
+        number: numberId || "none",
+        events: events.length,
+      });
       continue;
     }
     work.push({ tenant, events });

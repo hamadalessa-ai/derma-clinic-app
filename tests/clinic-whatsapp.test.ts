@@ -10,7 +10,11 @@ import { auditLogs, tenants } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { PermissionError } from "@/lib/auth/permissions";
 import { createClinic } from "@/lib/platform/clinics";
-import { setClinicWhatsApp, testClinicWhatsApp, WhatsAppConnectError } from "@/lib/platform/whatsapp";
+import {
+  setClinicWhatsApp,
+  testClinicWhatsApp,
+  WhatsAppConnectError,
+} from "@/lib/platform/whatsapp";
 import { openSecret, sealSecret } from "@/lib/security/secret-box";
 import { clinicLiveConfig, whatsappMode, WHATSAPP_TOKEN_PURPOSE } from "@/lib/whatsapp/config";
 import { parseMetaWebhookByNumber } from "@/lib/whatsapp/webhook";
@@ -39,7 +43,8 @@ async function newClinic(tag: string, isDemo: boolean) {
     admin: { nameAr: "مدير", email: `admin-${slug}@t.demo` },
   });
 }
-const row = async (id: string) => (await getDb().select().from(tenants).where(eq(tenants.id, id)))[0]!;
+const row = async (id: string) =>
+  (await getDb().select().from(tenants).where(eq(tenants.id, id)))[0]!;
 
 describe("secret box", () => {
   it("round-trips, and refuses another purpose or a changed value", () => {
@@ -53,20 +58,29 @@ describe("secret box", () => {
 });
 
 describe("which number a clinic sends from", () => {
-  const base = { isDemo: false, slug: "x", status: "active" as const, whatsappPhoneNumberId: "111" };
+  const base = {
+    isDemo: false,
+    slug: "x",
+    status: "active" as const,
+    whatsappPhoneNumberId: "111",
+  };
 
   it("uses the clinic's own number and token once switched live", () => {
     const enc = sealSecret("clinic-token", WHATSAPP_TOKEN_PURPOSE, ENV);
     const r = clinicLiveConfig({ ...base, whatsappLive: true, whatsappTokenEnc: enc }, ENV);
-    expect(r.config).toMatchObject({ phoneNumberId: "111", accessToken: "clinic-token", provider: "meta" });
+    expect(r.config).toMatchObject({
+      phoneNumberId: "111",
+      accessToken: "clinic-token",
+      provider: "meta",
+    });
     expect(whatsappMode({ ...base, whatsappLive: true, whatsappTokenEnc: enc }, ENV)).toBe("live");
   });
 
   it("falls back to the platform token; says what is missing", () => {
     const withPlatform = { ...ENV, WHATSAPP_ACCESS_TOKEN: "platform-token" };
-    expect(clinicLiveConfig({ ...base, whatsappLive: true }, withPlatform).config?.accessToken).toBe(
-      "platform-token",
-    );
+    expect(
+      clinicLiveConfig({ ...base, whatsappLive: true }, withPlatform).config?.accessToken,
+    ).toBe("platform-token");
     const notLive = clinicLiveConfig({ ...base, whatsappLive: false }, withPlatform);
     expect(notLive.config).toBeNull();
     expect(notLive.missing).toContain("switched live");
@@ -135,7 +149,12 @@ describe("connecting a clinic (platform owner)", () => {
     await setClinicWhatsApp(
       OWNER,
       c.tenantId,
-      { phoneNumberId: numberId, businessAccountId: "555", displayPhone: "+966 50 111 2222", live: true },
+      {
+        phoneNumberId: numberId,
+        businessAccountId: "555",
+        displayPhone: "+966 50 111 2222",
+        live: true,
+      },
       ENV,
     );
     expect((await row(c.tenantId)).whatsappTokenEnc).toBe(t.whatsappTokenEnc);
@@ -158,7 +177,13 @@ describe("connecting a clinic (platform owner)", () => {
     await setClinicWhatsApp(
       OWNER,
       c.tenantId,
-      { phoneNumberId: numberId, businessAccountId: "", displayPhone: "", accessToken: "tok-123", live: false },
+      {
+        phoneNumberId: numberId,
+        businessAccountId: "",
+        displayPhone: "",
+        accessToken: "tok-123",
+        live: false,
+      },
       ENV,
     );
     const realFetch = globalThis.fetch;

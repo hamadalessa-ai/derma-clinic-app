@@ -146,7 +146,11 @@ export function clinicLiveConfig(
   if (legacy.config && tenant.slug && legacy.config.clinic === tenant.slug) {
     return { config: legacy.config, missing: [], source: "env" };
   }
-  return { config: null, missing: legacy.config ? ["not connected"] : legacy.missing, source: null };
+  return {
+    config: null,
+    missing: legacy.config ? ["not connected"] : legacy.missing,
+    source: null,
+  };
 }
 
 export function whatsappMode(tenant: WaTenant, env: Env = process.env): WhatsAppMode {

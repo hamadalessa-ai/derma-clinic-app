@@ -884,7 +884,9 @@ function WhatsAppPanel({ clinic }: { clinic: PlatformClinicRow }) {
                 () => testClinicWhatsAppAction({ tenantId: clinic.id, phone: testPhone }),
                 (r) =>
                   setTestMsg(
-                    r.ok ? t("wa.testOk") : t("wa.testFailed", { error: `${r.errorCode} ${r.errorText ?? ""}`.trim() }),
+                    r.ok
+                      ? t("wa.testOk")
+                      : t("wa.testFailed", { error: `${r.errorCode} ${r.errorText ?? ""}`.trim() }),
                   ),
               )
             }
@@ -904,7 +906,13 @@ function WhatsAppPanel({ clinic }: { clinic: PlatformClinicRow }) {
 
       <div className="flex flex-col gap-2 border-t pt-3">
         {w.live ? (
-          <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => submit(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start"
+            onClick={() => submit(false)}
+          >
             {t("wa.goOff")}
           </Button>
         ) : (
@@ -920,7 +928,9 @@ function WhatsAppPanel({ clinic }: { clinic: PlatformClinicRow }) {
             {t("wa.goLive")}
           </Button>
         )}
-        <p className="text-muted-foreground text-xs">{clinic.isDemo ? t("wa.demoNote") : t("wa.liveNote")}</p>
+        <p className="text-muted-foreground text-xs">
+          {clinic.isDemo ? t("wa.demoNote") : t("wa.liveNote")}
+        </p>
       </div>
       <FormError message={save.error} />
       <FormSuccess message={msg} />
