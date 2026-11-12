@@ -20,7 +20,6 @@ export interface GlobalLimit {
 
 export const bucketOf = (key: string) => createHash("sha256").update(key).digest("hex");
 
-
 /**
  * True (and the attempt is recorded) when every limit still has room; false when any is full.
  * Pass `tx` when already inside a transaction (e.g. a clinic's withTenant): the check then runs on
@@ -31,26 +30,26 @@ export async function takeGlobalLimit(limits: GlobalLimit[], outer?: Tx): Promis
 }
 
 async function take(tx: Tx, limits: GlobalLimit[]): Promise<boolean> {
-    const hashed = limits.map((l) => ({ ...l, bucket: bucketOf(l.key) }));
-    for (const b of [...new Set(hashed.map((l) => l.bucket))].sort()) {
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${"g:" + b}, 0))`);
-    }
-    for (const l of hashed) {
-      const [row] = await tx
-        .select({ n: count() })
-        .from(globalRateHits)
-        .where(
-          and(
-            eq(globalRateHits.bucket, l.bucket),
-            gt(globalRateHits.createdAt, sql`now() - make_interval(mins => ${l.windowMinutes})`),
-          ),
-        );
-      if ((row?.n ?? 0) >= l.limit) return false;
-    }
-    await tx
-      .insert(globalRateHits)
-      .values([...new Set(hashed.map((l) => l.bucket))].map((bucket) => ({ bucket })));
-    return true;
+  const hashed = limits.map((l) => ({ ...l, bucket: bucketOf(l.key) }));
+  for (const b of [...new Set(hashed.map((l) => l.bucket))].sort()) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${"g:" + b}, 0))`);
+  }
+  for (const l of hashed) {
+    const [row] = await tx
+      .select({ n: count() })
+      .from(globalRateHits)
+      .where(
+        and(
+          eq(globalRateHits.bucket, l.bucket),
+          gt(globalRateHits.createdAt, sql`now() - make_interval(mins => ${l.windowMinutes})`),
+        ),
+      );
+    if ((row?.n ?? 0) >= l.limit) return false;
+  }
+  await tx
+    .insert(globalRateHits)
+    .values([...new Set(hashed.map((l) => l.bucket))].map((bucket) => ({ bucket })));
+  return true;
 }
 
 /** How many attempts a key made in the window (without recording one). */
