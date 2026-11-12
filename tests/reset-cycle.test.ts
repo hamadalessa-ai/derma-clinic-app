@@ -57,11 +57,15 @@ describe("reset refuses real patient data", () => {
     });
     const db = postgres(adminUrl, { max: 1, onnotice: () => {} });
     try {
-      await db.unsafe(`
+      await db
+        .unsafe(
+          `
         alter table public.patients no force row level security;
         update public.patients set is_fake = false
           where id = (select id from public.patients order by id limit 1);
-        alter table public.patients force row level security;`).simple();
+        alter table public.patients force row level security;`,
+        )
+        .simple();
       const before = await db`select count(*)::int as n from pg_tables where schemaname = 'public'`;
       await expect(
         db.unsafe(readFileSync(path.resolve(__dirname, "../db/reset.sql"), "utf8")).simple(),
