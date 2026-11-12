@@ -15,6 +15,7 @@ import { maskPhone, normalizeSaudiMobile } from "@/lib/phone";
 import { checkCode, CODE_RULES, sendCode, VerifyError } from "@/lib/verify/codes";
 
 const DERMA = demoId("tenant:derma");
+const LAMSA = demoId("tenant:lamsa");
 const DEMO_ON = { ...process.env, MESSAGE_DEMO_MODE: "on" };
 const DEMO_OFF = { ...process.env, MESSAGE_DEMO_MODE: undefined };
 const demoClinic = { id: DERMA, isDemo: true };
