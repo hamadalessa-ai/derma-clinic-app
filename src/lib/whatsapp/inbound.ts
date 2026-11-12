@@ -38,7 +38,7 @@ import { getFileStore } from "@/lib/files/store";
 import { sendPushEvents, type PushEvent } from "@/lib/push/notify";
 import { parseButtonPayload, type ParsedButton } from "./buttons";
 import { START_WORDS, STOP_WORDS, type ReplyKind } from "./catalog";
-import { appBaseUrl, liveConfig } from "./config";
+import { appBaseUrl, clinicLiveConfig } from "./config";
 import { CONCERN_OPEN_DAYS } from "./concerns";
 import { downloadMetaMedia } from "./meta";
 import { appointmentVars, loadAppointmentContext } from "./compose";
@@ -174,7 +174,7 @@ async function handleOne(
 
   // ── An incoming message ──
   // A photo is fetched BEFORE the database transaction (network).
-  const photo = ev.kind === "image" ? await fetchPhoto(ev, env) : null;
+  const photo = ev.kind === "image" ? await fetchPhoto(tenant, ev, env) : null;
   let aiTurn = false;
   // Was the chat already waiting for staff BEFORE this message? (The AI keeps that flag.)
   let waitingBefore = false;
@@ -280,14 +280,18 @@ async function handleOne(
 }
 
 /** The photo's bytes: from the simulator (demo events only) or downloaded from Meta. */
-async function fetchPhoto(ev: Extract<InboundEvent, { type: "message" }>, env: Env) {
+async function fetchPhoto(
+  tenant: Tenant,
+  ev: Extract<InboundEvent, { type: "message" }>,
+  env: Env,
+) {
   const mimeType = ev.media?.mimeType || "image/jpeg";
   if (ev.eventId.startsWith("sim-")) {
     return ev.media?.dataBase64
       ? { data: Buffer.from(ev.media.dataBase64, "base64"), mimeType }
       : null;
   }
-  const live = liveConfig(env).config;
+  const live = clinicLiveConfig(tenant, env).config;
   if (!live || live.provider !== "meta" || !ev.media?.id) return null;
   return downloadMetaMedia(live, ev.media.id);
 }

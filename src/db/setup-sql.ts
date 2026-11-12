@@ -369,7 +369,8 @@ function tenantSql(t: SeedTenant): string {
 /**
  * drizzle-kit sometimes emits a composite FOREIGN KEY before the UNIQUE constraint it
  * points at. Within each migration file, run statements in a safe order:
- * types/tables → unique constraints → everything else (keeping their relative order).
+ * types/tables/new columns → unique constraints → everything else (keeping their relative order).
+ * (It can also emit a UNIQUE constraint before the ADD COLUMN it is on.)
  */
 export function orderMigrationStatements(fileSql: string): string {
   const statements = fileSql
@@ -377,7 +378,11 @@ export function orderMigrationStatements(fileSql: string): string {
     .map((st) => st.trim())
     .filter(Boolean);
   const rank = (st: string) =>
-    /^CREATE (TYPE|TABLE)\b/i.test(st) ? 0 : /ADD CONSTRAINT "[^"]+" UNIQUE\(/i.test(st) ? 1 : 2;
+    /^CREATE (TYPE|TABLE)\b/i.test(st) || /^ALTER TABLE "[^"]+" ADD COLUMN\b/i.test(st)
+      ? 0
+      : /ADD CONSTRAINT "[^"]+" UNIQUE\(/i.test(st)
+        ? 1
+        : 2;
   return statements
     .map((st, i) => ({ st, i, r: rank(st) }))
     .sort((a, b) => a.r - b.r || a.i - b.i)

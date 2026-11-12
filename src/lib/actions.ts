@@ -20,6 +20,7 @@ import { ClinicError } from "@/lib/platform/clinics";
 import { BillingError } from "@/lib/platform/billing";
 import { SupportError } from "@/lib/support/grants";
 import { SetupError } from "@/lib/setup/admin";
+import { WhatsAppConnectError } from "@/lib/platform/whatsapp";
 import { clinicIsActive, publicPagesOpen } from "@/lib/tenant/status";
 
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; error: string };
@@ -89,6 +90,7 @@ export async function staffAction<T>(
     if (err instanceof BillingError) return { ok: false, error: `billing_${err.code}` };
     if (err instanceof SupportError) return { ok: false, error: `support_${err.code}` };
     if (err instanceof SetupError) return { ok: false, error: `setup_${err.code}` };
+    if (err instanceof WhatsAppConnectError) return { ok: false, error: `wa_connect_${err.code}` };
     if (err instanceof PermissionError) return { ok: false, error: "not_allowed" };
     if (err instanceof ValidationError) return { ok: false, error: "invalid" };
     console.error("action failed", err);

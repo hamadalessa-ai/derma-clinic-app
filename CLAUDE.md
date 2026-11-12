@@ -84,6 +84,10 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   at most once; consent rules; demo simulator / live provider chosen by settings in `config.ts`).
   Everything patients send goes through `handleInbound()` (`inbound.ts`) — simulator and webhook alike.
   Wording lives in `catalog.ts`; after changing it run `pnpm docs:whatsapp` (a test checks the doc).
+  Each clinic has its OWN number (`tenants.whatsapp_*`, token encrypted by `src/lib/security/secret-box.ts`),
+  connected by the platform owner (Platform → clinic → WhatsApp tab; `src/lib/platform/whatsapp.ts`); one Meta app
+  for all clinics (`WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, optional `WHATSAPP_ACCESS_TOKEN`); the webhook
+  routes by `phone_number_id`. A demo clinic never sends real WhatsApp. The old single-clinic env setting still works.
 - Business logic also checks permissions (`assertCan`), not only the screens.
 - AI receptionist (`src/lib/ai/receptionist.ts`, client `src/lib/ai/claude.ts`, key `ANTHROPIC_API_KEY`):
   answers typed WhatsApp text from `handleInbound()` ONLY through its tools; it never takes a patient id

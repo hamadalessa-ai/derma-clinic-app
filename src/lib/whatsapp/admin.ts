@@ -10,7 +10,7 @@ import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
 import { TEMPLATES, unknownPlaceholders, type TemplateKind } from "./catalog";
-import { liveConfig, whatsappMode } from "./config";
+import { clinicLiveConfig, whatsappMode } from "./config";
 import { runScheduledMessages } from "./scheduler";
 import type { Tenant } from "./send";
 import { ensureConversation, recordMessage } from "./store";
@@ -131,7 +131,7 @@ export async function runScheduledNow(
  */
 export async function sendTestMessage(tenant: Tenant, actor: Actor, phone: string) {
   assertCan(actor.roles, "whatsapp:manage");
-  const { config } = liveConfig();
+  const { config } = clinicLiveConfig(tenant);
   if (!config || whatsappMode(tenant) !== "live")
     return { ok: false as const, errorCode: "not_live" };
   const result = await liveTransport(config).send({

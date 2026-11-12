@@ -10,7 +10,7 @@ import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { getSettings } from "@/lib/booking/engine";
 import { formatDualDate, formatTime } from "@/lib/format";
-import { liveConfig, whatsappMode } from "@/lib/whatsapp/config";
+import { clinicLiveConfig, whatsappMode } from "@/lib/whatsapp/config";
 import { explainError } from "@/lib/whatsapp/errors";
 import { linkContext, rolesOf } from "@/lib/push/notify";
 import { pushLink } from "@/lib/push/links";
@@ -25,7 +25,7 @@ export default async function WhatsAppStatusPage() {
   const ta = await getTranslations("account");
   const locale = (await getLocale()) as Locale;
   const mode = whatsappMode(ctx.tenant);
-  const live = liveConfig();
+  const live = clinicLiveConfig(ctx.tenant);
   const data = await withActor(actorOf(ctx), async (tx) => {
     const base = tx
       .select({ m: messages, phone: conversations.phone })
@@ -104,11 +104,15 @@ export default async function WhatsAppStatusPage() {
             </dd>
             <dt className="text-muted-foreground">{t("provider")}</dt>
             <dd dir="ltr" className="text-start">
-              {mode === "demo" ? "demo" : (live.provider ?? "—")}
+              {mode === "demo" ? "demo" : (live.config?.provider ?? (live.source ? "meta" : "—"))}
+            </dd>
+            <dt className="text-muted-foreground">{t("clinicNumber")}</dt>
+            <dd dir="ltr" className="text-start" data-testid="whatsapp-number">
+              {ctx.tenant.whatsappDisplayPhone ?? "—"}
             </dd>
             <dt className="text-muted-foreground">{t("phoneNumberId")}</dt>
             <dd dir="ltr" className="text-start">
-              {live.config?.phoneNumberId ?? "—"}
+              {live.config?.phoneNumberId ?? ctx.tenant.whatsappPhoneNumberId ?? "—"}
             </dd>
             <dt className="text-muted-foreground">{t("webhook")}</dt>
             <dd>
@@ -117,7 +121,12 @@ export default async function WhatsAppStatusPage() {
                 : t("webhookNot")}
             </dd>
           </dl>
-          {mode !== "demo" && live.missing.length > 0 && (
+          {mode === "off" && !live.source && (
+            <Notice tone="info" className="mt-3">
+              {t("connectedByPlatform")}
+            </Notice>
+          )}
+          {mode !== "demo" && live.source && live.missing.length > 0 && (
             <Notice tone="warning" className="mt-3">
               {t("missing", { names: live.missing.join(", ") })}
             </Notice>

@@ -21,10 +21,21 @@ const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
 
 export function parseMetaWebhook(body: unknown): InboundEvent[] {
-  const events: InboundEvent[] = [];
+  return [...parseMetaWebhookByNumber(body).values()].flat();
+}
+
+/**
+ * The same events, grouped by the clinic number they were sent to (Meta's phone_number_id in
+ * each change's metadata): one Meta app receives the messages of every clinic.
+ */
+export function parseMetaWebhookByNumber(body: unknown): Map<string, InboundEvent[]> {
+  const byNumber = new Map<string, InboundEvent[]>();
   for (const entry of arr(obj(body).entry)) {
     for (const change of arr(obj(entry).changes)) {
       const value = obj(obj(change).value);
+      const numberId = str(obj(value.metadata).phone_number_id) ?? "";
+      const events = byNumber.get(numberId) ?? [];
+      byNumber.set(numberId, events);
       const names = new Map<string, string>();
       for (const c of arr(value.contacts)) {
         const waId = str(obj(c).wa_id);
@@ -91,5 +102,5 @@ export function parseMetaWebhook(body: unknown): InboundEvent[] {
       }
     }
   }
-  return events;
+  return byNumber;
 }
