@@ -104,7 +104,7 @@ export async function sendCode(
       windowMinutes: 60,
     });
   }
-  if (!(await takeGlobalLimit(global))) throw new VerifyError("rate_limited");
+  if (!(await takeGlobalLimit(global, tx))) throw new VerifyError("rate_limited");
 
   const limits: Limit[] = [
     { bucket: "otp:clinic", limit: CODE_RULES.perClinicDay, windowMinutes: 24 * 60 },
