@@ -162,6 +162,13 @@ try {
   await derma.getByTestId("statement-pay-save").click();
   await page.waitForTimeout(2500);
   await page.screenshot({ path: "screenshots/platform-ar-paid.png", fullPage: true });
+  // WhatsApp connection tab (Derma is a demo clinic: details can be saved, never switched live).
+  await derma.getByTestId("clinic-tab-whatsapp").click();
+  await derma.getByTestId("wa-displayPhone").fill("+966 55 000 0000");
+  await derma.getByTestId("wa-phoneNumberId").fill("123456789012345");
+  await derma.getByTestId("whatsapp-panel").locator('button[type="submit"]').click();
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: "screenshots/platform-ar-whatsapp.png", fullPage: true });
   // Support access that Derma's admin granted above: open the clinic (view only, recorded).
   await derma.getByTestId("clinic-tab-support").click();
   await page.screenshot({ path: "screenshots/platform-ar-support.png", fullPage: true });
