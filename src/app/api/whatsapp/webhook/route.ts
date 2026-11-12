@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { tenantSettings } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { getTenantBySlug } from "@/lib/tenant/current";
+import { errorName, opsAlert } from "@/lib/ops/alert";
 import { liveConfig } from "@/lib/whatsapp/config";
 import { handleInbound } from "@/lib/whatsapp/inbound";
 import { parseMetaWebhook, validSignature } from "@/lib/whatsapp/webhook";
@@ -58,7 +59,10 @@ export async function POST(request: NextRequest) {
   if (!tenant) return NextResponse.json({ ok: true });
   const events = parseMetaWebhook(body);
   after(() =>
-    handleInbound(tenant, events).catch((err) => console.warn("whatsapp webhook failed", err)),
+    handleInbound(tenant, events).catch(async (err) => {
+      console.warn("whatsapp webhook failed", err);
+      await opsAlert("whatsapp_webhook_failed", { clinic: tenant.slug, error: errorName(err) });
+    }),
   );
   return NextResponse.json({ ok: true, received: events.length });
 }

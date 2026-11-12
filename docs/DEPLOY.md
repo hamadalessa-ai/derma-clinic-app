@@ -551,6 +551,27 @@ connected yet".
 > check the consent wording. Daily's servers are outside Saudi Arabia; for real patients we can switch
 > to a video server hosted in Saudi Arabia (the app's video part is built to be swapped).
 
+## Part K — Alerts when something needs a person (optional, recommended)
+
+The platform now raises an **alert** when:
+
+- a WhatsApp message got **stuck** while sending (it is marked "failed — may or may not have
+  arrived", never resent, and the chat shows in the inbox for staff to check);
+- the hourly scheduled messages **failed** for a clinic (the other clinics still run);
+- the WhatsApp webhook or the AI receptionist **failed**;
+- any page or action had an unexpected **server error**.
+
+Alerts always appear in Vercel → your project → **Logs** (search `ops_alert`). To get them on your
+phone too:
+
+1. In Slack, Microsoft Teams, Google Chat or Discord, create an **incoming webhook** for a channel
+   only you (and your team) can see, and copy its address.
+2. Vercel → Settings → Environment Variables → add `OPS_ALERT_WEBHOOK_URL` = that address
+   (choose **Secret**), then redeploy.
+
+Alerts never contain patient names, phone numbers or message text: only what happened, which clinic,
+which page type, and counts. The same alert is sent at most once every 10 minutes.
+
 ## Demo accounts (Derma Clinics)
 
 All use your demo staff password.

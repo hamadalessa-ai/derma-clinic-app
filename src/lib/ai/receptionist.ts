@@ -33,6 +33,7 @@ import {
 } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
 import { audit } from "@/lib/audit";
+import { errorName, opsAlert } from "@/lib/ops/alert";
 import {
   BookingError,
   bookOnline,
@@ -1378,6 +1379,7 @@ export async function runReceptionist(
   } catch (err) {
     // Any failure (no credit, network, timeout): a person answers instead. Never silence.
     console.warn("ai receptionist failed", err instanceof Error ? err.message : err);
+    await opsAlert("ai_receptionist_failed", { clinic: tenant.slug, error: errorName(err) });
     await needsStaff().catch(() => {});
     if (state.phone) await sendFallback(tenant, state, env).catch(() => {});
     if (state.push.length) await opts.notify(state.push).catch(() => {});
