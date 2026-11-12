@@ -2,7 +2,9 @@
  * One-time verification codes sent to a patient's mobile (online booking, patient page sign-in).
  *  - 6 digits, valid 10 minutes, at most 5 tries; only an HMAC of the code is stored.
  *  - Asking for a new code cancels the previous one.
- *  - Rate limits: 3 codes per phone per 15 minutes, 8 per day; 20 per IP per hour.
+ *  - Rate limits per clinic: 3 codes per phone per 15 minutes, 8 per day; 20 per IP per hour;
+ *    600 per clinic per day (a bot rotating numbers and addresses can't run up message costs).
+ *    Across ALL clinics (src/lib/security/global-limit.ts): 12 per phone per day, 30 per IP per hour.
  *  - DEMO safety (see messaging/sender.ts): the code is returned for showing on screen only by the
  *    demo sender, which exists only for demo clinics with MESSAGE_DEMO_MODE=on. Otherwise, with no
  *    real sender configured, sending fails with "messaging_unavailable" and no code is created.
@@ -12,6 +14,7 @@ import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { verificationCodes } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
 import { getMessageSender, MessagingUnavailableError } from "@/lib/messaging/sender";
+import { takeGlobalLimit, type GlobalLimit } from "@/lib/security/global-limit";
 import { takeRateLimit, type Limit } from "./rate-limit";
 
 export const CODE_RULES = {
@@ -21,6 +24,10 @@ export const CODE_RULES = {
   perPhone15Min: 3,
   perPhoneDay: 8,
   perIpHour: 20,
+  perClinicDay: 600,
+  /** Across all clinics (one person or bot trying clinic after clinic). */
+  globalPerPhoneDay: 12,
+  globalPerIpHour: 30,
 } as const;
 
 export type CodePurpose = "booking" | "portal";
@@ -83,7 +90,24 @@ export async function sendCode(
   const sender = getMessageSender(input.tenant, env);
   if (!sender) throw new VerifyError("messaging_unavailable");
 
+  const global: GlobalLimit[] = [
+    {
+      key: `otp:phone:${input.phone}`,
+      limit: CODE_RULES.globalPerPhoneDay,
+      windowMinutes: 24 * 60,
+    },
+  ];
+  if (input.ip) {
+    global.push({
+      key: `otp:ip:${input.ip}`,
+      limit: CODE_RULES.globalPerIpHour,
+      windowMinutes: 60,
+    });
+  }
+  if (!(await takeGlobalLimit(global, tx))) throw new VerifyError("rate_limited");
+
   const limits: Limit[] = [
+    { bucket: "otp:clinic", limit: CODE_RULES.perClinicDay, windowMinutes: 24 * 60 },
     { bucket: `otp:phone:${input.phone}`, limit: CODE_RULES.perPhone15Min, windowMinutes: 15 },
     { bucket: `otp:phone:${input.phone}`, limit: CODE_RULES.perPhoneDay, windowMinutes: 24 * 60 },
   ];

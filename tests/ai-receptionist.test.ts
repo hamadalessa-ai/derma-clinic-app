@@ -24,6 +24,7 @@ import {
   type ContentBlock,
 } from "@/lib/ai/claude";
 import {
+  AI_PER_CHAT_DAY,
   FALLBACK_REPLY,
   fitReply,
   historyTurns,
@@ -848,5 +849,38 @@ describe("the real client", () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+});
+
+describe("one chat can't use up the clinic's AI", () => {
+  it(`after ${AI_PER_CHAT_DAY} AI replies in 24 hours, that chat goes to the team`, async () => {
+    const phone = "0590007754";
+    await clearChat(phone);
+    await write(phone, "hi", scripted([() => say("Hello!")]).client);
+    const c = await convoOf(phone);
+    await system((tx) =>
+      tx.insert(messages).values(
+        Array.from({ length: AI_PER_CHAT_DAY }, () => ({
+          tenantId: DERMA,
+          conversationId: c.id,
+          direction: "out",
+          kind: "ai_reply",
+          body: "…",
+          channel: "demo",
+          status: "delivered",
+          createdAt: new Date(NOW.getTime() - 3600_000),
+        })),
+      ),
+    );
+    const capped = scripted([]);
+    await write(phone, "hi again", capped.client);
+    expect(capped.calls).toHaveLength(0);
+    expect((await convoOf(phone)).needsReply).toBe(true);
+    // Another chat is still answered.
+    const other = "0590007755";
+    await clearChat(other);
+    const fine = scripted([() => say("Hello!")]);
+    await write(other, "hi", fine.client);
+    expect(fine.calls).toHaveLength(1);
   });
 });

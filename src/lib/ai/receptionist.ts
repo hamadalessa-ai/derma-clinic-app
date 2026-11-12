@@ -84,7 +84,7 @@ export const ACTIVE_STATUSES = ["pending", "booked", "confirmed"] as const;
  */
 export async function aiCanAnswer(
   tx: TenantTx,
-  convo: { aiPausedAt: Date | null; needsReply: boolean },
+  convo: { id: string; aiPausedAt: Date | null; needsReply: boolean },
   client: ClaudeClient | null,
   now: Date = new Date(),
   /** The clinic's monthly AI limit (platform owner); null = none. */
@@ -97,7 +97,32 @@ export async function aiCanAnswer(
   const settings = await getSettings(tx);
   if (!settings.aiReceptionistEnabled) return false;
   if (aiMonthly !== null && (await aiUsedThisMonth(tx, now)) >= aiMonthly) return false;
+  // One chat can't use up the clinic's whole day (a spammer, or a loop): after this many AI
+  // replies in 24 hours, that chat goes to the team.
+  if ((await aiRepliesInChat(tx, convo.id, now)) >= AI_PER_CHAT_DAY) return false;
   return (await aiRepliesToday(tx, now)) < settings.aiDailyLimit;
+}
+
+/** AI replies one chat may get in 24 hours; more than a real booking conversation needs. */
+export const AI_PER_CHAT_DAY = 30;
+
+/** AI replies sent in one chat in the last 24 hours. */
+export async function aiRepliesInChat(
+  tx: TenantTx,
+  conversationId: string,
+  now: Date = new Date(),
+) {
+  const [{ n }] = await tx
+    .select({ n: count() })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        eq(messages.kind, "ai_reply"),
+        gte(messages.createdAt, new Date(now.getTime() - 24 * 3600_000)),
+      ),
+    );
+  return Number(n);
 }
 
 /** AI replies sent today (Riyadh day) in this clinic. */
