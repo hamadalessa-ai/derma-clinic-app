@@ -23,12 +23,12 @@ import { aiUsedThisMonth } from "@/lib/platform/limits";
 import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import {
   appointments,
+  branchHolidays,
   branches,
   conversations,
   messages,
   patients,
   services,
-  staffSchedules,
   tenants,
 } from "@/db/schema";
 import { withTenant, type TenantTx } from "@/db/tenant";
@@ -46,6 +46,7 @@ import {
   type DoctorGender,
 } from "@/lib/booking/engine";
 import { doctorNames } from "@/lib/booking/doctor-names";
+import { clockShiftsOn, loadHourRows } from "@/lib/booking/hours";
 import { addDays, atRiyadh, riyadhDay } from "@/lib/booking/time";
 import { findOrCreateOnlinePatient } from "@/lib/patients/queries";
 import type { PushEvent } from "@/lib/push/notify";
@@ -63,6 +64,14 @@ const PROPOSAL_MINUTES = 60;
 /** How much of the chat the AI sees. */
 const HISTORY_MESSAGES = 24;
 const MAX_REPLY_CHARS = 1500;
+/**
+ * One AI turn (all model calls and tools) must end well inside the webhook's 60-second limit, so
+ * there is always time left to send the reply or the fallback. A model call is never started with
+ * less than MIN_CALL_MS left.
+ */
+export const TURN_BUDGET_MS = 40_000;
+const MIN_CALL_MS = 4_000;
+const CALL_TIMEOUT_MS = 20_000;
 
 export const ACTIVE_STATUSES = ["pending", "booked", "confirmed"] as const;
 
@@ -200,7 +209,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: "clinic_info",
     description:
-      "The clinic's branches (with map links and weekly opening hours), the services that can be booked (duration, price if the clinic shows prices, how to prepare), the doctors at each branch (with gender), and booking rules. Call this before answering questions or booking.",
+      "The clinic's branches (with map links and opening hours for the next 14 dates, holidays and day-offs included), the services that can be booked (duration, price if the clinic shows prices, how to prepare), the doctors at each branch (with gender), and booking rules. Call this before answering questions or booking.",
     input_schema: { type: "object", properties: {} },
   },
   {
@@ -275,6 +284,13 @@ export interface ReceptionistOptions {
   now?: Date;
   /** Push notifications (default: the caller sends them). */
   notify: (events: PushEvent[]) => Promise<unknown>;
+  /**
+   * Was the chat already waiting for staff before this message? (The new message itself is flagged
+   * "needs reply" when it is saved, so the flag can't tell.) Default: read from the chat.
+   */
+  waitingBefore?: boolean;
+  /** The whole turn must finish within this (default TURN_BUDGET_MS); then the team takes over. */
+  budgetMs?: number;
 }
 
 export interface ReceptionistResult {
@@ -325,7 +341,7 @@ async function runTool(name: string, input: Record<string, unknown>, s: RunState
   try {
     switch (name) {
       case "clinic_info":
-        return await withTenant(s.tenant.id, (tx) => clinicInfo(tx));
+        return await withTenant(s.tenant.id, (tx) => clinicInfo(tx, s.now));
       case "find_times":
         return await withTenant(s.tenant.id, (tx) => findTimes(tx, input, s));
       case "my_appointments":
@@ -361,7 +377,10 @@ async function markNeedsStaff(s: RunState) {
   );
 }
 
-async function clinicInfo(tx: TenantTx): Promise<ToolResult> {
+/** How many days of opening hours the AI is given (by date, so holidays and changes show). */
+const HOURS_DAYS = 14;
+
+async function clinicInfo(tx: TenantTx, now: Date = new Date()): Promise<ToolResult> {
   const settings = await getSettings(tx);
   const branchRows = await tx.select().from(branches).orderBy(asc(branches.sortOrder));
   const serviceRows = await tx
@@ -369,7 +388,12 @@ async function clinicInfo(tx: TenantTx): Promise<ToolResult> {
     .from(services)
     .where(and(eq(services.isActive, true), eq(services.onlineBookable, true)))
     .orderBy(asc(services.sortOrder));
-  const schedules = await tx.select().from(staffSchedules);
+  const today = riyadhDay(now);
+  const days = Array.from({ length: HOURS_DAYS }, (_, i) => addDays(today, i));
+  const holidays = await tx
+    .select({ day: branchHolidays.day, branchId: branchHolidays.branchId })
+    .from(branchHolidays)
+    .where(and(gte(branchHolidays.day, days[0]), sql`${branchHolidays.day} <= ${days.at(-1)}`));
   const out = [];
   for (const b of branchRows) {
     const doctors = await onlineDoctors(tx, b.id);
@@ -377,15 +401,30 @@ async function clinicInfo(tx: TenantTx): Promise<ToolResult> {
       tx,
       doctors.map((d) => d.id),
     );
-    const hours = WEEKDAYS.map((weekday, i) => {
-      const day = schedules.filter((x) => x.branchId === b.id && x.weekday === i);
-      if (!day.length) return { weekday, open: false };
-      const from = day.map((x) => x.startTime).sort()[0];
-      const to = day
-        .map((x) => x.endTime)
+    // ONE place decides when a doctor works on a date (hours.ts): weekly pattern unless a
+    // one-off change (day off / special hours) exists. The branch is open when any doctor works.
+    const rows = await loadHourRows(
+      tx,
+      doctors.map((d) => d.id),
+      days,
+    );
+    const hours = days.map((date) => {
+      const weekday = WEEKDAYS[new Date(`${date}T12:00:00Z`).getUTCDay()];
+      const closed = holidays.some(
+        (h) => String(h.day) === date && (!h.branchId || h.branchId === b.id),
+      );
+      const shifts = closed
+        ? []
+        : doctors
+            .flatMap((d) => clockShiftsOn(d.id, date, rows.weekly, rows.exceptions))
+            .filter((x) => x.branchId === b.id);
+      if (!shifts.length) return { date, weekday, open: false, ...(closed ? { holiday: true } : {}) };
+      const from = shifts.map((x) => x.start).sort()[0];
+      const to = shifts
+        .map((x) => x.end)
         .sort()
         .at(-1);
-      return { weekday, open: true, from: from.slice(0, 5), to: to?.slice(0, 5) };
+      return { date, weekday, open: true, from, to };
     });
     out.push({
       branch_id: b.id,
@@ -394,7 +433,7 @@ async function clinicInfo(tx: TenantTx): Promise<ToolResult> {
       city_ar: b.cityAr,
       city_en: b.cityEn,
       map_link: b.mapUrl,
-      opening_hours: hours,
+      opening_hours_by_date: hours,
       doctors: doctors.map((d) => ({
         doctor_id: d.id,
         name_ar: names.get(d.id)?.nameAr ?? null,
@@ -527,7 +566,12 @@ async function myAppointments(tx: TenantTx, s: RunState): Promise<ToolResult> {
 /** The newest message from the patient in this chat (its time is the proposal's "after" mark). */
 async function latestInbound(tx: TenantTx, conversationId: string) {
   const [m] = await tx
-    .select({ id: messages.id, createdAt: messages.createdAt })
+    .select({
+      id: messages.id,
+      createdAt: messages.createdAt,
+      body: messages.body,
+      kind: messages.kind,
+    })
     .from(messages)
     .where(and(eq(messages.conversationId, conversationId), eq(messages.direction, "in")))
     .orderBy(desc(messages.createdAt), desc(messages.id))
@@ -738,6 +782,61 @@ export function pendingLine(raw: unknown): string | null {
   return `You already proposed ${what} and are waiting for the person's answer. If their latest message agrees (yes / نعم / تمام / أكد / ok), call confirm_action right away — do NOT call propose_action again first. If they want something different, propose the new choice.`;
 }
 
+// ─── "Yes" is decided in code ───────────────────────────────────────────────
+
+const YES_WORDS = [
+  // English
+  "yes", "yeah", "yep", "yup", "ok", "okay", "k", "sure", "confirm", "confirmed", "correct",
+  "right", "go", "ahead", "please", "do", "it", "book", "cancel", "move", "fine", "great",
+  "perfect", "thanks", "thank", "you", "that", "works", "sounds", "good", "alright", "y",
+  // Arabic (Gulf and standard)
+  "نعم", "ايه", "اي", "ايوه", "ايوا", "اكيد", "تاكيد", "والله", "ريت", "تمام", "اوكي", "اوك", "موافق", "موافقه", "اكد",
+  "اكدي", "اكده", "اكديه", "احجز", "احجزي", "احجزه", "احجزيه", "الغ", "الغي", "الغيه", "الغه",
+  "انقل", "انقلي", "انقليه", "انقله", "تم", "طيب", "ابشر", "زين", "صح", "صحيح", "يب", "يس",
+  "اوكيه", "خلاص", "ممتاز", "شكرا", "لو", "سمحت", "سمحتي", "الله", "يعطيك", "العافيه",
+  "يا", "ليت", "مناسب", "ماشي", "حلو", "اهلا", "و", "بالله", "ياليت", "هلا", "عليه", "عليها",
+  "الحجز", "حجز", "الموعد", "موعد", "the", "my", "booking", "appointment", "visit", "for", "me",
+];
+const YES_ANCHORS = new Set([
+  "yes", "yeah", "yep", "yup", "ok", "okay", "k", "y", "sure", "confirm", "confirmed", "correct",
+  "alright", "fine", "perfect",
+  "نعم", "ايه", "اي", "ايوه", "ايوا", "اكيد", "تاكيد", "تمام", "اوكي", "اوك", "اوكيه", "موافق", "موافقه",
+  "اكد", "اكدي", "اكده", "اكديه", "تم", "طيب", "ابشر", "زين", "يب", "يس", "ماشي", "مناسب",
+  "احجز", "احجزي", "احجزه", "احجزيه", "الغ", "الغي", "الغيه", "الغه", "انقل", "انقلي", "انقليه", "انقله",
+]);
+const YES_EMOJI = /^[\s👍👌✅✔️🙏😊🌹❤️]+$/u;
+
+/** Arabic letters folded (أ إ آ → ا, ة → ه, ى → ي), diacritics and tatweel removed, lowercase. */
+function fold(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي");
+}
+
+/**
+ * Is this patient message a clear agreement to the action just proposed? Short, contains a yes
+ * word, and nothing else that changes the request: no question, no number (another time or day),
+ * no "no / not / but". Anything else → the AI must ask again. Tapping a "confirm" button counts.
+ */
+export function isClearYes(body: string | null | undefined): boolean {
+  const raw = (body ?? "").trim();
+  if (!raw) return false;
+  if (YES_EMOJI.test(raw)) return true;
+  if (/[?؟]/.test(raw) || /[0-9٠-٩]/.test(raw)) return false;
+  const words = fold(raw)
+    .replace(/[^\p{L}\s]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length || words.length > 8) return false;
+  const NEGATIVE = ["no", "not", "dont", "don't", "but", "instead", "later", "wait", "لا", "لاء", "مو", "ما", "مب", "بس", "لكن", "بدل", "غير", "بعدين", "انتظر", "استني"];
+  if (words.some((w) => NEGATIVE.includes(w))) return false;
+  if (!words.some((w) => YES_ANCHORS.has(w))) return false;
+  return words.every((w) => YES_WORDS.includes(w) || YES_ANCHORS.has(w));
+}
+
 async function confirmAction(s: RunState): Promise<ToolResult> {
   const check = await withTenant(s.tenant.id, async (tx) => {
     const [c] = await tx.select().from(conversations).where(eq(conversations.id, s.conversationId));
@@ -747,6 +846,10 @@ async function confirmAction(s: RunState): Promise<ToolResult> {
     // The patient must have written AFTER the proposal (never the same turn).
     if (!last || last.id === pending.afterInboundId) {
       return { error: "ask_the_person_first" } as const;
+    }
+    // The code — not the model — decides whether that message is a clear "yes".
+    if (!isClearYes(last.body)) {
+      return { error: "not_a_clear_yes" } as const;
     }
     if (
       last.createdAt.getTime() - new Date(pending.afterInboundAt).getTime() >
@@ -760,7 +863,15 @@ async function confirmAction(s: RunState): Promise<ToolResult> {
     }
     return { pending } as const;
   });
-  if ("error" in check) return { error: check.error };
+  if ("error" in check) {
+    return check.error === "not_a_clear_yes"
+      ? {
+          error: check.error,
+          next_step:
+            "Their message is not a clear yes. Do not act. Ask them to reply yes (نعم) to confirm, or to say what they would like instead.",
+        }
+      : { error: check.error };
+  }
   const pending = check.pending;
 
   let result: ToolResult;
@@ -999,7 +1110,8 @@ export async function runReceptionist(
         .where(eq(messages.conversationId, conversationId))
         .orderBy(desc(messages.createdAt), desc(messages.id))
         .limit(HISTORY_MESSAGES);
-      return { c, p: p ?? null, t, recent: recent.reverse() };
+      const answering = await latestInbound(tx, conversationId);
+      return { c, p: p ?? null, t, recent: recent.reverse(), answering };
     });
     if (!ctx) return { outcome: "failed", reply: null, actions: [] };
     state.phone = ctx.c.phone;
@@ -1017,13 +1129,24 @@ export async function runReceptionist(
       patientFirstName: ctx.p ? firstName(ctx.p.fullNameAr) : null,
       preferredLanguage: ctx.p?.preferredLanguage === "en" ? "en" : "ar",
       pending: pendingLine(ctx.c.aiPendingAction),
-      waitingForStaff: ctx.c.needsReply,
+      waitingForStaff: opts.waitingBefore ?? ctx.c.needsReply,
     });
 
     const convo: ClaudeMessage[] = [...turns];
     let reply = "";
+    const deadline = Date.now() + (opts.budgetMs ?? TURN_BUDGET_MS);
     for (let round = 0; round < MAX_ROUNDS; round++) {
-      const res = await opts.client.create({ system, messages: convo, tools: TOOLS });
+      const left = deadline - Date.now();
+      if (left < MIN_CALL_MS) {
+        console.warn("ai receptionist: out of time, handing over to the team");
+        break;
+      }
+      const res = await opts.client.create({
+        system,
+        messages: convo,
+        tools: TOOLS,
+        timeoutMs: Math.min(CALL_TIMEOUT_MS, left),
+      });
       convo.push({ role: "assistant", content: res.content });
       const uses = res.content.filter(
         (b): b is Extract<ContentBlock, { type: "tool_use" }> => b.type === "tool_use",
@@ -1056,10 +1179,24 @@ export async function runReceptionist(
           kind: "ai_reply",
           phone: state.phone,
           patientId: state.patientId,
-          text: toWhatsAppText(reply).slice(0, MAX_REPLY_CHARS),
+          text: fitReply(toWhatsAppText(reply)),
         },
         env,
       );
+      // Answered: the chat no longer needs a person — unless it already did before this message,
+      // the AI handed it over, or the patient has written again since (that message is handled
+      // by its own turn).
+      if (!state.handedOff && !(opts.waitingBefore ?? false)) {
+        await withTenant(tenant.id, async (tx) => {
+          const latest = await latestInbound(tx, conversationId);
+          if (latest && ctx.answering && latest.id === ctx.answering.id) {
+            await tx
+              .update(conversations)
+              .set({ needsReply: false })
+              .where(eq(conversations.id, conversationId));
+          }
+        });
+      }
     } else {
       await sendFallback(tenant, state, env);
       if (!state.handedOff) await needsStaff();
@@ -1096,6 +1233,20 @@ export function toWhatsAppText(text: string): string {
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/\*{2,}/g, "*")
     .trim();
+}
+
+/**
+ * Keeps a reply within WhatsApp-friendly length without cutting mid-sentence: when too long, it
+ * ends at the last full sentence or line that fits.
+ */
+export function fitReply(text: string, max = MAX_REPLY_CHARS): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const end = Math.max(
+    cut.lastIndexOf("\n"),
+    ...[".", "!", "?", "؟", "。"].map((p) => cut.lastIndexOf(p)),
+  );
+  return (end > max * 0.5 ? cut.slice(0, end + 1) : cut).trimEnd();
 }
 
 /** When the AI can't answer: a short, fixed "the team will reply" so the patient isn't left waiting. */

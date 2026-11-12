@@ -25,7 +25,10 @@ import {
 } from "@/lib/ai/claude";
 import {
   FALLBACK_REPLY,
+  fitReply,
   historyTurns,
+  isClearYes,
+  runReceptionist,
   systemPrompt,
   toWhatsAppText,
   TOOLS,
@@ -679,5 +682,168 @@ describe("WhatsApp formatting", () => {
     expect(toWhatsAppText("## المواعيد\n**فرع الرياض** (د. ريم):\n- الاثنين")).toBe(
       "المواعيد\n*فرع الرياض* (د. ريم):\n- الاثنين",
     );
+  });
+});
+
+// ─── Safety net (audit fixes) ───────────────────────────────────────────────
+
+describe("a clear yes is decided in code", () => {
+  it.each([
+    "نعم",
+    "yes",
+    "Yes please",
+    "تمام 👍",
+    "👍",
+    "أكدي الحجز",
+    "إي والله",
+    "ok thanks",
+    "موافق",
+    "تم",
+    "ايوه احجزي",
+  ])("%s → yes", (text) => expect(isClearYes(text)).toBe(true));
+
+  it.each([
+    "what about 5pm?",
+    "نعم بس الساعة 5",
+    "لا",
+    "no",
+    "yes but at 4",
+    "الوقت اللي بعده أحسن",
+    "بكرة أفضل",
+    "can you make it Monday",
+    "",
+    "طيب وش الأسعار؟",
+  ])("%s → not a clear yes", (text) => expect(isClearYes(text)).toBe(false));
+
+  it("refuses to act when the answer to a proposal is not a clear yes", async () => {
+    const phone = "0590007751";
+    await clearChat(phone);
+    const turn1 = scripted([
+      () => [
+        use("find_times", {
+          branch_id: RIYADH,
+          service_id: service("consultation"),
+          date: "2035-03-08",
+        }),
+      ],
+      (_req, [r]) => {
+        memo.unclear = (r.times as { starts_at: string }[])[0].starts_at;
+        return [
+          use("propose_action", {
+            action: "book",
+            branch_id: RIYADH,
+            service_id: service("consultation"),
+            starts_at: memo.unclear,
+            full_name: "سلمى الاختبار",
+            gender: "female",
+          }),
+        ];
+      },
+      () => say("أرسلي نعم للتأكيد."),
+    ]);
+    await write(phone, "أبغى استشارة، اسمي سلمى الاختبار، أنثى", turn1.client);
+    let answer: Record<string, unknown> = {};
+    const turn2 = scripted([
+      () => [use("confirm_action")],
+      (_req, [r]) => {
+        answer = r;
+        return say("تبين الساعة 5 بدلاً من ذلك؟");
+      },
+    ]);
+    await write(phone, "ممكن الساعة 5؟", turn2.client);
+    expect(answer.error).toBe("not_a_clear_yes");
+    const booked = await system((tx) =>
+      tx.select().from(appointments).where(eq(appointments.startsAt, new Date(memo.unclear))),
+    );
+    expect(booked.filter((b) => b.createdVia === "whatsapp")).toHaveLength(0);
+  });
+});
+
+describe("never silent, never stuck", () => {
+  it("a message is flagged 'needs reply' as soon as it arrives; the AI clears it once answered", async () => {
+    const phone = "0590007752";
+    await clearChat(phone);
+    let flaggedDuringTurn: boolean | undefined;
+    const client = scripted([
+      () => {
+        // While the AI is still thinking, the chat already shows as waiting for a person.
+        return [use("clinic_info")];
+      },
+      () => say("أهلاً! كيف أقدر أساعدك؟"),
+    ]);
+    const watching: ClaudeClient = {
+      async create(req) {
+        flaggedDuringTurn ??= (await convoOf(phone)).needsReply;
+        return client.client.create(req);
+      },
+    };
+    await write(phone, "السلام عليكم", watching);
+    expect(flaggedDuringTurn).toBe(true);
+    expect((await convoOf(phone)).needsReply).toBe(false);
+  });
+
+  it("a turn that runs out of time hands over to the team", async () => {
+    const phone = "0590007753";
+    await clearChat(phone);
+    await write(phone, "مرحبا", null); // stored, waits for a person
+    const c = await convoOf(phone);
+    const never = scripted([]);
+    const r = await runReceptionist(derma as never, c.id, {
+      client: never.client,
+      env: ENV,
+      now: NOW,
+      notify: async () => {},
+      waitingBefore: false,
+      budgetMs: 1,
+    });
+    expect(r.outcome).toBe("failed");
+    expect(never.calls).toHaveLength(0);
+    expect((await convoOf(phone)).needsReply).toBe(true);
+    const [fallback] = await outgoing(phone, "ai_reply");
+    expect(fallback.m.body).toBe(FALLBACK_REPLY.ar);
+  });
+
+  it("a long reply ends at a full sentence, not mid-word", () => {
+    const long = "جملة أولى قصيرة. ".repeat(120);
+    const fitted = fitReply(long, 1500);
+    expect(fitted.length).toBeLessThanOrEqual(1500);
+    expect(fitted.endsWith(".")).toBe(true);
+    expect(fitReply("short", 1500)).toBe("short");
+  });
+});
+
+describe("the real client", () => {
+  it("retries once when the service is busy, and marks the prompt for caching", async () => {
+    const realFetch = globalThis.fetch;
+    const bodies: Record<string, unknown>[] = [];
+    let n = 0;
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      n++;
+      return n === 1
+        ? new Response(JSON.stringify({ error: { type: "overloaded_error" } }), { status: 529 })
+        : new Response(
+            JSON.stringify({ content: [{ type: "text", text: "hi" }], stop_reason: "end_turn" }),
+            { status: 200 },
+          );
+    }) as typeof fetch;
+    try {
+      const client = anthropicClient({ ANTHROPIC_API_KEY: "sk-test" })!;
+      const res = await client.create({
+        system: "You are a receptionist.",
+        messages: [{ role: "user", content: "hi" }],
+        tools: TOOLS,
+        timeoutMs: 20_000,
+      });
+      expect(res.content).toEqual([{ type: "text", text: "hi" }]);
+      expect(n).toBe(2);
+      expect(bodies[0].system).toEqual([
+        { type: "text", text: "You are a receptionist.", cache_control: { type: "ephemeral" } },
+      ]);
+      const tools = bodies[0].tools as { cache_control?: unknown }[];
+      expect(tools.at(-1)?.cache_control).toEqual({ type: "ephemeral" });
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });
