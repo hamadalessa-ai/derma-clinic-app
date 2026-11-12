@@ -115,6 +115,17 @@ describe("migration statement order", () => {
     expect(out.indexOf("a_key")).toBeLessThan(out.indexOf("b_fk"));
     expect(out.indexOf("CREATE TABLE")).toBe(0);
   });
+
+  it("adds a new column before a unique constraint on it", async () => {
+    const { orderMigrationStatements } = await import("@/db/setup-sql");
+    const out = orderMigrationStatements(
+      [
+        `ALTER TABLE "t" ADD COLUMN "c" text;`,
+        `ALTER TABLE "t" ADD CONSTRAINT "t_c_unique" UNIQUE("c");`,
+      ].join("--> statement-breakpoint\n"),
+    );
+    expect(out.indexOf("ADD COLUMN")).toBeLessThan(out.indexOf("t_c_unique"));
+  });
 });
 
 describe("db/reset.sql", () => {
