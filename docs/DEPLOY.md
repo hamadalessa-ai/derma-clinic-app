@@ -554,6 +554,7 @@ connected yet".
 ## Part K — Alerts when something needs a person (optional, recommended)
 
 The platform now raises an **alert** when:
+
 - a WhatsApp message got **stuck** while sending (it is marked "failed — may or may not have
   arrived", never resent, and the chat shows in the inbox for staff to check);
 - the hourly scheduled messages **failed** for a clinic (the other clinics still run);
@@ -562,6 +563,7 @@ The platform now raises an **alert** when:
 
 Alerts always appear in Vercel → your project → **Logs** (search `ops_alert`). To get them on your
 phone too:
+
 1. In Slack, Microsoft Teams, Google Chat or Discord, create an **incoming webhook** for a channel
    only you (and your team) can see, and copy its address.
 2. Vercel → Settings → Environment Variables → add `OPS_ALERT_WEBHOOK_URL` = that address

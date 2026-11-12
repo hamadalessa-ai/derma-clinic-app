@@ -20,7 +20,10 @@ describe("stuck messages", () => {
     const phone = "0590009911";
     const { oldId, newId, convoId } = await withTenant(DERMA, async (tx) => {
       const convo = await ensureConversation(tx, { phone, profileName: "Stuck Test" });
-      await tx.update(conversations).set({ needsReply: false }).where(eq(conversations.id, convo.id));
+      await tx
+        .update(conversations)
+        .set({ needsReply: false })
+        .where(eq(conversations.id, convo.id));
       const base = {
         tenantId: DERMA,
         conversationId: convo.id,
@@ -42,14 +45,20 @@ describe("stuck messages", () => {
     const rows = await withTenant(DERMA, (tx) =>
       tx.select().from(messages).where(eq(messages.conversationId, convoId)),
     );
-    expect(rows.find((m) => m.id === oldId)).toMatchObject({ status: "failed", errorCode: STUCK_ERROR });
+    expect(rows.find((m) => m.id === oldId)).toMatchObject({
+      status: "failed",
+      errorCode: STUCK_ERROR,
+    });
     expect(rows.find((m) => m.id === newId)).toMatchObject({ status: "queued" });
     const [c] = await withTenant(DERMA, (tx) =>
       tx.select().from(conversations).where(eq(conversations.id, convoId)),
     );
     expect(c!.needsReply).toBe(true);
     const logged = await withTenant(DERMA, (tx) =>
-      tx.select().from(auditLogs).where(and(eq(auditLogs.action, "whatsapp.stuck"))),
+      tx
+        .select()
+        .from(auditLogs)
+        .where(and(eq(auditLogs.action, "whatsapp.stuck"))),
     );
     expect(logged.length).toBeGreaterThan(0);
     // Running again finds nothing new (and never resends).
