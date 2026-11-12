@@ -107,7 +107,11 @@ export async function aiCanAnswer(
 export const AI_PER_CHAT_DAY = 30;
 
 /** AI replies sent in one chat in the last 24 hours. */
-export async function aiRepliesInChat(tx: TenantTx, conversationId: string, now: Date = new Date()) {
+export async function aiRepliesInChat(
+  tx: TenantTx,
+  conversationId: string,
+  now: Date = new Date(),
+) {
   const [{ n }] = await tx
     .select({ n: count() })
     .from(messages)

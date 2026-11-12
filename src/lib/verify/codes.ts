@@ -91,10 +91,18 @@ export async function sendCode(
   if (!sender) throw new VerifyError("messaging_unavailable");
 
   const global: GlobalLimit[] = [
-    { key: `otp:phone:${input.phone}`, limit: CODE_RULES.globalPerPhoneDay, windowMinutes: 24 * 60 },
+    {
+      key: `otp:phone:${input.phone}`,
+      limit: CODE_RULES.globalPerPhoneDay,
+      windowMinutes: 24 * 60,
+    },
   ];
   if (input.ip) {
-    global.push({ key: `otp:ip:${input.ip}`, limit: CODE_RULES.globalPerIpHour, windowMinutes: 60 });
+    global.push({
+      key: `otp:ip:${input.ip}`,
+      limit: CODE_RULES.globalPerIpHour,
+      windowMinutes: 60,
+    });
   }
   if (!(await takeGlobalLimit(global))) throw new VerifyError("rate_limited");
 
