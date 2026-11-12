@@ -1,4 +1,5 @@
 // Full-page screenshots of the public pages for design review (see .github/workflows/screenshots.yml).
+import { createHmac } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { chromium, devices } from "@playwright/test";
 
@@ -171,6 +172,58 @@ try {
   await context.close();
 } catch (e) {
   console.error("platform screenshots failed:", e);
+}
+// Two-step verification, end to end (as a demo doctor): set it up in My account, sign out,
+// sign in again with password + authenticator code.
+function totp(base32Key) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const ch of base32Key.replace(/=+$/, "").toUpperCase())
+    bits += alphabet.indexOf(ch).toString(2).padStart(5, "0");
+  const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+  const h = createHmac("sha1", key).update(counter).digest();
+  const o = h[h.length - 1] & 15;
+  return String((h.readUInt32BE(o) & 0x7fffffff) % 1000000).padStart(6, "0");
+}
+try {
+  const password = process.env.DEMO_PASSWORD ?? "Demo-Local-2026";
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE }]);
+  const page = await context.newPage();
+  const signIn = async () => {
+    await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+    await page.locator('input[type="email"]').fill("dr.lina@derma.demo");
+    await page.locator('input[type="password"]').fill(password);
+    await page.locator('button[type="submit"]').click();
+  };
+  await signIn();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/account`, { waitUntil: "networkidle" });
+  await page.locator("#tf-password").fill(password);
+  await page.getByTestId("two-factor-setup").locator('button[type="submit"]').click();
+  const key = (await page.getByTestId("two-factor-key").textContent({ timeout: 15000 })).trim();
+  await page.screenshot({ path: "screenshots/two-factor-en-setup.png", fullPage: true });
+  await page.getByTestId("two-factor-code").fill(totp(key));
+  await page.getByTestId("two-factor-setup").locator('button[type="submit"]').click();
+  await page.getByTestId("two-factor-on").waitFor({ timeout: 15000 });
+  await page.screenshot({ path: "screenshots/two-factor-en-on.png", fullPage: true });
+  await context.clearCookies();
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "ar", url: BASE }]);
+  await signIn();
+  await page.getByTestId("login-code").waitFor({ timeout: 15000 });
+  await page.screenshot({ path: "screenshots/two-factor-ar-login-code.png", fullPage: true });
+  // A new 30-second window may be needed: the code used to switch it on can't be reused.
+  await page.waitForTimeout(31000);
+  await page.getByTestId("login-code").fill(totp(key));
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.screenshot({ path: "screenshots/two-factor-ar-signed-in.png" });
+  console.log("two-step verification: OK");
+  await context.close();
+} catch (e) {
+  console.error("two-step verification screenshots failed:", e);
 }
 await browser.close();
 console.log("Screenshots saved in screenshots/");
