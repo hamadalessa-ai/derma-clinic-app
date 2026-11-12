@@ -43,6 +43,42 @@ export const RETIRED_TABLES = [
   "outbound_messages", // Phase 2a message log, replaced by conversations + messages in Phase 2b
 ];
 
+/**
+ * Safety catch: reset is for the DEMO only. It refuses (and the whole transaction rolls back,
+ * changing nothing) when the database holds real patients: any patient not marked fake, or any
+ * patient of a clinic that is not a demo clinic. Real clinics get numbered db/upgrades files instead.
+ * FORCE RLS hides rows even from the table owner, so the check lifts FORCE for itself first —
+ * inside this transaction, so a refusal undoes that too. Works on databases from older phases
+ * (columns checked before use) and on an empty database.
+ */
+export const REAL_DATA_GUARD = `do $guard$
+declare
+  has_fake boolean;
+  has_demo boolean;
+  real_count int := 0;
+begin
+  if to_regclass('public.patients') is null or to_regclass('public.tenants') is null then
+    return;
+  end if;
+  select exists (select from information_schema.columns where table_schema = 'public'
+                   and table_name = 'patients' and column_name = 'is_fake') into has_fake;
+  select exists (select from information_schema.columns where table_schema = 'public'
+                   and table_name = 'tenants' and column_name = 'is_demo') into has_demo;
+  if not has_fake and not has_demo then
+    return;
+  end if;
+  execute 'alter table public.patients no force row level security';
+  execute 'alter table public.tenants no force row level security';
+  execute 'select count(*) from public.patients p join public.tenants t on t.id = p.tenant_id where '
+    || case when has_fake then 'not p.is_fake' else 'false' end
+    || case when has_demo then ' or not t.is_demo' else '' end
+    into real_count;
+  if real_count > 0 then
+    raise exception 'REFUSED: this database holds % real patient record(s). db/reset.sql is for the demo only and would delete them. Use a numbered db/upgrades file instead.', real_count;
+  end if;
+end
+$guard$;`;
+
 export function buildResetSql(): string {
   const tables = [...new Set([...schemaTables(), ...RETIRED_TABLES])]
     .sort()
@@ -54,6 +90,7 @@ export function buildResetSql(): string {
 -- (setup.sql just sets its password again).
 -- ════════════════════════════════════════════════════════════════════════════
 begin;
+${REAL_DATA_GUARD}
 drop table if exists
   ${tables.join(",\n  ")}
   cascade;

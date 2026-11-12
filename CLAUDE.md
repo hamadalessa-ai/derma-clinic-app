@@ -121,6 +121,8 @@ any role that allows something grants it. Clinical notes need the `practitioner`
   changes either file (secrets: `SUPABASE_ADMIN_URL`, `APP_DB_PASSWORD`, `DEMO_STAFF_PASSWORD`). Both files
   must keep exactly one `begin;` and one `commit;` line. The SQL Editor paste still works as a fallback.
   Once real clinics exist, this reset must stop: use numbered `db/upgrades/NNNN_*.sql` files instead.
+  `reset.sql` enforces this: it refuses (rolls back, changes nothing) when any patient is not fake or
+  belongs to a non-demo clinic (`REAL_DATA_GUARD` in `src/db/reset-sql.ts`).
   Founder guide: `docs/DEPLOY.md` (Part G).
 - If the tools can't be installed where you edit (no npm access), push the branch and run the GitHub
   workflow "Regenerate files" on it: it runs `db:generate`, `db:build-setup`, `docs:whatsapp` and
