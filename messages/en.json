@@ -223,7 +223,13 @@
     "two_factor_already_on": "Two-step verification is already on.",
     "team_password_too_common": "That password is too easy to guess. Please choose another.",
     "team_password_contains_name": "Please don't use your name or email in your password.",
-    "team_password_breached": "That password has appeared in a data leak on another website. Please choose a different one."
+    "team_password_breached": "That password has appeared in a data leak on another website. Please choose a different one.",
+    "wa_connect_not_found": "Clinic not found.",
+    "wa_connect_no_number": "Enter the phone number ID first.",
+    "wa_connect_bad_phone": "Enter a Saudi mobile number (05…).",
+    "wa_connect_number_taken": "This number is already connected to another clinic.",
+    "wa_connect_not_ready": "The connection isn't complete yet.",
+    "wa_connect_demo_clinic": "A demo clinic can't send real WhatsApp. Use a non-demo test clinic."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -953,7 +959,9 @@
       "takeOver": "Take over (pause AI)",
       "letAiAnswer": "Let the AI answer",
       "sentByAi": "AI receptionist"
-    }
+    },
+    "clinicNumber": "Clinic number",
+    "connectedByPlatform": "Real WhatsApp is connected by the platform team during go-live. Nothing to do here."
   },
   "pushLog": {
     "title": "Staff phone notifications (last 30)",
@@ -1446,7 +1454,8 @@
       "overview": "Overview",
       "billing": "Plan & billing",
       "status": "Status",
-      "support": "Support access"
+      "support": "Support access",
+      "whatsapp": "WhatsApp"
     },
     "planDefault": "Plan: {value}",
     "planTitle": "Plan",
@@ -1494,7 +1503,35 @@
     "supportOpenClinic": "Open the clinic",
     "supportNeedsDomain": "This clinic opens on its own address, which needs the platform's own domain.",
     "supportRecorded": "Every page you open is recorded in the clinic's log, and the clinic can end access at any time. Clinical notes and data downloads stay closed.",
-    "supportNone": "No support access. You can't see this clinic's patients. If the clinic needs help, its admin can allow access for a few hours in Settings → Team."
+    "supportNone": "No support access. You can't see this clinic's patients. If the clinic needs help, its admin can allow access for a few hours in Settings → Team.",
+    "wa": {
+      "liveBadge": "WhatsApp live",
+      "statusLive": "Live: reminders, codes and replies go from this clinic's own number.",
+      "statusReady": "Number entered, not live yet. Send a test, then switch live.",
+      "statusNone": "Not connected. The clinic uses no real WhatsApp yet.",
+      "hint": "Enter the details from Meta's WhatsApp Manager during go-live. The clinic doesn't need to do anything.",
+      "platformMissing": "Platform settings missing in Vercel: {names}",
+      "displayPhone": "Number shown to patients",
+      "phoneNumberId": "Phone number ID (Meta)",
+      "businessAccountId": "WhatsApp business account ID (Meta)",
+      "token": "Clinic access token (optional)",
+      "tokenReplace": "Replace the stored token",
+      "tokenPlatform": "empty = platform token",
+      "tokenHint": "Leave empty when the number is in your own Meta account (the platform token is used). A token entered here is stored encrypted and never shown again.",
+      "save": "Save",
+      "removeToken": "Remove stored token",
+      "saved": "Saved.",
+      "nowLive": "WhatsApp is live for this clinic.",
+      "testTitle": "Send a test message from this number",
+      "testSend": "Send test",
+      "testHint": "Sends Meta's standard \"hello world\" message to the mobile you enter. Works before going live.",
+      "testOk": "Sent. Check that phone's WhatsApp.",
+      "testFailed": "Not sent: {error}",
+      "goLive": "Switch WhatsApp live",
+      "goOff": "Switch WhatsApp off",
+      "demoNote": "Demo clinics never send real WhatsApp, because their made-up patients' numbers may belong to real people. To try it on your phone, add a non-demo test clinic with only your own number.",
+      "liveNote": "Once live, reminders, codes, staff replies and the AI receptionist use this number. Messages count towards the clinic's plan."
+    }
   },
   "support": {
     "intro": "If you need help, you can let the platform's support team open your clinic for a few hours. They work like a clinic admin but can never read clinical notes or download your data. Every page they open is recorded below, and you can end access at any time.",

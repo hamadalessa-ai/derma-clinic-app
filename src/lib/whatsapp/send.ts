@@ -30,7 +30,7 @@ import {
   type TemplateKind,
 } from "./catalog";
 import { buttonPayload } from "./buttons";
-import { liveConfig, whatsappMode } from "./config";
+import { clinicLiveConfig, whatsappMode, type WaTenant } from "./config";
 import { ensureConversation, recordMessage } from "./store";
 import {
   demoTransport,
@@ -40,7 +40,7 @@ import {
 } from "./transport";
 
 type Env = Record<string, string | undefined>;
-export type Tenant = {
+export type Tenant = WaTenant & {
   id: string;
   slug: string;
   isDemo: boolean;
@@ -92,7 +92,7 @@ export type Prepared =
 function transportFor(tenant: Tenant, env: Env): WhatsAppTransport | null {
   const mode = whatsappMode(tenant, env);
   if (mode === "demo") return demoTransport;
-  if (mode === "live") return liveTransport(liveConfig(env).config!);
+  if (mode === "live") return liveTransport(clinicLiveConfig(tenant, env).config!);
   return null;
 }
 

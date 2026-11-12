@@ -98,7 +98,7 @@ export async function setupOf(tenant: Tenant): Promise<Record<SetupStep, boolean
       consents: (await one(tx.select({ n: count() }).from(consentTemplates))) > 0,
       website: Object.keys(settings?.site ?? {}).length > 0,
       // Configured (demo or live), whatever the current status.
-      whatsapp: whatsappMode({ isDemo: tenant.isDemo, slug: tenant.slug }) !== "off",
+      whatsapp: whatsappMode({ ...tenant, status: "active" }) !== "off",
       booking: (await one(tx.select({ n: count() }).from(appointments))) > 0,
     };
   });

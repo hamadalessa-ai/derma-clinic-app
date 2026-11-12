@@ -10,7 +10,7 @@
  */
 import type { TenantTx } from "@/db/tenant";
 import { maskPhone } from "@/lib/phone";
-import { demoMessagingAllowed, whatsappMode } from "@/lib/whatsapp/config";
+import { demoMessagingAllowed, whatsappMode, type WaTenant } from "@/lib/whatsapp/config";
 import { sendInTransaction } from "@/lib/whatsapp/send";
 
 export { demoMessagingAllowed };
@@ -48,13 +48,13 @@ export class MessagingUnavailableError extends Error {
   }
 }
 
-type CodeTenant = { id: string; isDemo: boolean; slug?: string };
+type CodeTenant = WaTenant & { id: string; isDemo: boolean; slug?: string };
 
 /** The sender for this clinic, or null when none may be used (→ fail safely). */
 export function getMessageSender(tenant: CodeTenant, env: Env = process.env): MessageSender | null {
   // Sign-in codes still go out while a clinic is read-only (patients may still look at their page);
   // the public actions that ask for codes are already closed for suspended / closed clinics.
-  const mode = whatsappMode({ isDemo: tenant.isDemo, slug: tenant.slug }, env);
+  const mode = whatsappMode(tenant, env);
   if (mode === "off" || (!tenant.slug && mode !== "demo")) return null;
   return {
     channel: mode === "demo" ? "demo" : "whatsapp",
@@ -62,7 +62,7 @@ export function getMessageSender(tenant: CodeTenant, env: Env = process.env): Me
     async send(tx, msg) {
       const result = await sendInTransaction(
         tx,
-        { id: tenant.id, isDemo: tenant.isDemo, slug: tenant.slug ?? "" },
+        { ...tenant, slug: tenant.slug ?? "" },
         { kind: "verification_code", phone: msg.to, secrets: msg.secrets },
         env,
       );

@@ -9,6 +9,7 @@ import { requirePermission } from "@/lib/auth/session";
 import { pick } from "@/lib/brand";
 import { platformOverview, SETUP_STEPS } from "@/lib/platform/overview";
 import { PLANS } from "@/lib/platform/plans";
+import { clinicWhatsAppView } from "@/lib/platform/whatsapp";
 import type { Locale } from "@/i18n/config";
 
 export default async function PlatformPage() {
@@ -87,6 +88,7 @@ export default async function PlatformPage() {
                   }
                 : null,
               openUrl: openUrl(tenant.slug, tenant.id),
+              whatsapp: clinicWhatsAppView(tenant),
             }}
           />
         ))}

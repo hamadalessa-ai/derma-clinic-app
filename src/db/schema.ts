@@ -109,6 +109,19 @@ export const tenants = pgTable("tenants", {
   billingGraceDays: smallint("billing_grace_days").notNull().default(7),
   /** Read-only because of an unpaid statement: lifted automatically once it is paid. */
   pausedForBilling: boolean("paused_for_billing").notNull().default(false),
+  // ── WhatsApp connection (platform owner; the clinic does nothing) ──
+  /** Meta's id for the clinic's WhatsApp number (incoming messages are routed by it). */
+  whatsappPhoneNumberId: text("whatsapp_phone_number_id").unique(),
+  whatsappBusinessAccountId: text("whatsapp_business_account_id"),
+  /** The number as patients see it, e.g. +966 50 123 4567 (display only). */
+  whatsappDisplayPhone: text("whatsapp_display_phone"),
+  /**
+   * The clinic's own access token, ENCRYPTED (src/lib/security/secret-box.ts). Empty = use the
+   * platform's token (WHATSAPP_ACCESS_TOKEN), e.g. when all numbers sit in our own Meta account.
+   */
+  whatsappTokenEnc: text("whatsapp_token_enc"),
+  /** Switched on by the platform owner after a successful test message. */
+  whatsappLive: boolean("whatsapp_live").notNull().default(false),
   createdAt: createdAt(),
 });
 

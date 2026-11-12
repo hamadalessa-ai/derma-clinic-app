@@ -9,6 +9,8 @@ import {
   setClinicLimitsAction,
   setClinicPlanAction,
   setClinicStatusAction,
+  setClinicWhatsAppAction,
+  testClinicWhatsAppAction,
   voidStatementAction,
 } from "@/app/actions/clinic";
 import { Badge } from "@/components/ui/badge";
@@ -67,9 +69,19 @@ export interface PlatformClinicRow {
   support: { expiresAt: string; allowChanges: boolean; reason: string | null } | null;
   /** Where the owner opens the clinic during support (null = needs the platform's own domain). */
   openUrl: string | null;
+  /** The clinic's WhatsApp connection (never the token). */
+  whatsapp: {
+    phoneNumberId: string;
+    businessAccountId: string;
+    displayPhone: string;
+    live: boolean;
+    ownToken: boolean;
+    missing: string[];
+    platformMissing: string[];
+  };
 }
 
-type Tab = "overview" | "billing" | "status" | "support";
+type Tab = "overview" | "billing" | "whatsapp" | "status" | "support";
 
 const WARN_AT = 0.8;
 const pct = (used: number, limit: number | null) =>
@@ -116,6 +128,11 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
               </Badge>
               <Badge variant="outline">{t(`plan.${clinic.plan}`)}</Badge>
               {clinic.isDemo && <Badge variant="secondary">{t("demo")}</Badge>}
+              {clinic.whatsapp.live && (
+                <Badge variant="outline" data-testid="whatsapp-live-badge">
+                  {t("wa.liveBadge")}
+                </Badge>
+              )}
               {clinic.support && (
                 <Badge variant="outline" data-testid="support-badge">
                   {t("supportOpen")}
@@ -160,7 +177,7 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
         {open && (
           <div className="flex flex-col gap-4 border-t pt-4">
             <div className="flex flex-wrap gap-1" role="tablist">
-              {(["overview", "billing", "status", "support"] as const).map((k) => (
+              {(["overview", "billing", "whatsapp", "status", "support"] as const).map((k) => (
                 <button
                   key={k}
                   type="button"
@@ -202,6 +219,7 @@ export function PlatformClinic({ clinic }: { clinic: PlatformClinicRow }) {
               </div>
             )}
             {tab === "billing" && <BillingPanel clinic={clinic} />}
+            {tab === "whatsapp" && <WhatsAppPanel clinic={clinic} />}
             {tab === "support" && <SupportPanel clinic={clinic} />}
             {tab === "status" && (
               <div className="max-w-xl">
@@ -748,6 +766,164 @@ function SupportPanel({ clinic }: { clinic: PlatformClinicRow }) {
       ) : (
         <p className="text-muted-foreground">{t("supportNone")}</p>
       )}
+    </section>
+  );
+}
+
+/**
+ * The clinic's WhatsApp number at Meta, entered by the platform owner during go-live (the
+ * clinic does nothing). Test first; then switch live. The token is write-only.
+ */
+function WhatsAppPanel({ clinic }: { clinic: PlatformClinicRow }) {
+  const t = useTranslations("platformClinic");
+  const w = clinic.whatsapp;
+  const save = useAction();
+  const test = useAction();
+  const [form, setForm] = useState({
+    phoneNumberId: w.phoneNumberId,
+    businessAccountId: w.businessAccountId,
+    displayPhone: w.displayPhone,
+    accessToken: "",
+  });
+  const [testPhone, setTestPhone] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
+  const field = (k: keyof typeof form, label: string, extra: Record<string, unknown> = {}) => (
+    <div className="flex flex-col gap-1">
+      <Label htmlFor={`wa-${k}-${clinic.id}`}>{label}</Label>
+      <Input
+        id={`wa-${k}-${clinic.id}`}
+        dir="ltr"
+        value={form[k]}
+        onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+        data-testid={`wa-${k}`}
+        {...extra}
+      />
+    </div>
+  );
+  const submit = (live: boolean, clearToken = false) =>
+    save.run(
+      () =>
+        setClinicWhatsAppAction({
+          tenantId: clinic.id,
+          ...form,
+          accessToken: form.accessToken || null,
+          clearToken,
+          live,
+        }),
+      () => {
+        setForm({ ...form, accessToken: "" });
+        setMsg(live ? t("wa.nowLive") : t("wa.saved"));
+      },
+    );
+
+  return (
+    <section className="flex max-w-xl flex-col gap-4" data-testid="whatsapp-panel">
+      <div className="flex flex-col gap-1 text-sm">
+        <p className="font-semibold">
+          {w.live ? t("wa.statusLive") : w.phoneNumberId ? t("wa.statusReady") : t("wa.statusNone")}
+        </p>
+        <p className="text-muted-foreground text-xs">{t("wa.hint")}</p>
+        {w.platformMissing.length > 0 && (
+          <p className="text-warning-foreground text-xs">
+            {t("wa.platformMissing", { names: w.platformMissing.join(", ") })}
+          </p>
+        )}
+      </div>
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit(w.live);
+        }}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          {field("displayPhone", t("wa.displayPhone"), { placeholder: "+966 5x xxx xxxx" })}
+          {field("phoneNumberId", t("wa.phoneNumberId"), { inputMode: "numeric" })}
+          {field("businessAccountId", t("wa.businessAccountId"), { inputMode: "numeric" })}
+          {field("accessToken", w.ownToken ? t("wa.tokenReplace") : t("wa.token"), {
+            type: "password",
+            autoComplete: "off",
+            placeholder: w.ownToken ? "••••••••" : t("wa.tokenPlatform"),
+          })}
+        </div>
+        <p className="text-muted-foreground text-xs">{t("wa.tokenHint")}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="outline" size="sm" loading={save.pending}>
+            {t("wa.save")}
+          </Button>
+          {w.ownToken && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => submit(w.live, true)}>
+              {t("wa.removeToken")}
+            </Button>
+          )}
+        </div>
+      </form>
+
+      <div className="flex flex-col gap-2 border-t pt-3">
+        <Label htmlFor={`wa-test-${clinic.id}`}>{t("wa.testTitle")}</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            id={`wa-test-${clinic.id}`}
+            dir="ltr"
+            inputMode="tel"
+            placeholder="05xxxxxxxx"
+            className="w-44"
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+            data-testid="wa-test-phone"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            loading={test.pending}
+            disabled={!w.phoneNumberId || !testPhone}
+            onClick={() =>
+              test.run(
+                () => testClinicWhatsAppAction({ tenantId: clinic.id, phone: testPhone }),
+                (r) =>
+                  setTestMsg(
+                    r.ok ? t("wa.testOk") : t("wa.testFailed", { error: `${r.errorCode} ${r.errorText ?? ""}`.trim() }),
+                  ),
+              )
+            }
+          >
+            <Play />
+            {t("wa.testSend")}
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-xs">{t("wa.testHint")}</p>
+        {testMsg && (
+          <p className="text-sm" data-testid="wa-test-result">
+            {testMsg}
+          </p>
+        )}
+        <FormError message={test.error} />
+      </div>
+
+      <div className="flex flex-col gap-2 border-t pt-3">
+        {w.live ? (
+          <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => submit(false)}>
+            {t("wa.goOff")}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            className="self-start"
+            disabled={!form.phoneNumberId || w.platformMissing.length > 0 || clinic.isDemo}
+            loading={save.pending}
+            onClick={() => submit(true)}
+            data-testid="wa-go-live"
+          >
+            {t("wa.goLive")}
+          </Button>
+        )}
+        <p className="text-muted-foreground text-xs">{clinic.isDemo ? t("wa.demoNote") : t("wa.liveNote")}</p>
+      </div>
+      <FormError message={save.error} />
+      <FormSuccess message={msg} />
     </section>
   );
 }

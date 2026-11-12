@@ -78,6 +78,7 @@ import { setClinicLimits, setClinicStatus } from "@/lib/platform/status";
 import { planAllows, PLAN_TIERS } from "@/lib/platform/plans";
 import { endSupport, grantSupport, SUPPORT_HOURS } from "@/lib/support/grants";
 import { checkImport, MAX_IMPORT_BYTES, runImport } from "@/lib/patients/import";
+import { setClinicWhatsApp, testClinicWhatsApp } from "@/lib/platform/whatsapp";
 import {
   createConsentForm,
   saveBranch,
@@ -2111,5 +2112,42 @@ export async function runImportAction(input: { csv: string }) {
     );
     revalidatePath("/patients");
     return { imported: r.imported, packages: r.packages, skipped: r.skipped };
+  });
+}
+
+// ─── Platform owner: a clinic's WhatsApp connection ─────────────────────────
+
+export async function setClinicWhatsAppAction(input: {
+  tenantId: string;
+  phoneNumberId: string;
+  businessAccountId: string;
+  displayPhone: string;
+  accessToken?: string | null;
+  clearToken?: boolean;
+  live: boolean;
+}) {
+  return staffAction("platform:clinics", async (ctx) => {
+    const v = parse(
+      z.object({
+        tenantId: uuid,
+        phoneNumberId: z.string().trim().max(40).regex(/^\d*$/),
+        businessAccountId: z.string().trim().max(40).regex(/^\d*$/),
+        displayPhone: z.string().trim().max(30),
+        accessToken: z.string().trim().max(1000).nullish(),
+        clearToken: z.boolean().default(false),
+        live: z.boolean(),
+      }),
+      input,
+    );
+    const r = await setClinicWhatsApp({ userId: ctx.user.id, roles: ctx.roles }, v.tenantId, v);
+    revalidatePath("/platform");
+    return r;
+  });
+}
+
+export async function testClinicWhatsAppAction(input: { tenantId: string; phone: string }) {
+  return staffAction("platform:clinics", async (ctx) => {
+    const v = parse(z.object({ tenantId: uuid, phone: z.string().trim().min(9).max(20) }), input);
+    return testClinicWhatsApp({ userId: ctx.user.id, roles: ctx.roles }, v.tenantId, v.phone);
   });
 }
