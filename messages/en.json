@@ -1939,6 +1939,7 @@
     "subtitle": "Short guides for your work, step by step.",
     "forRole": "Guides for",
     "open": "Open",
-    "more": "Need more help? Ask the clinic admin, or contact platform support from Settings → Team."
+    "more": "Need more help? Ask your clinic admin.",
+    "moreAdmin": "Need more help? Contact platform support: give them time-limited access from Settings → Team."
   }
 }

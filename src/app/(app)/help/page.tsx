@@ -76,7 +76,9 @@ export default async function HelpPage({
           </Card>
         ))}
       </div>
-      <p className="text-muted-foreground text-sm">{t("more")}</p>
+      <p className="text-muted-foreground text-sm">
+        {can(ctx.roles, "support:grant") ? t("moreAdmin") : t("more")}
+      </p>
     </div>
   );
 }
