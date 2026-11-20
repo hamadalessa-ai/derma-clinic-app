@@ -46,33 +46,29 @@ const column = (page, stage) => page.locator(`[data-testid=flow-column][data-sta
 const desk = await signIn("reception.riyadh1@derma.demo");
 await board(desk);
 await shot(desk, "reception-board");
-// A patient of Dr. Sarah / Dr. Faisal (the nurse's doctors), no consent to sign, only once today.
-const candidates = column(desk, "expected")
+// A patient of Dr. Sarah / Dr. Faisal (the nurse's doctors) with no consent to sign. The same
+// patient may have another visit today, so the card is followed by patient AND time.
+const card = column(desk, "expected")
   .locator("[data-testid=flow-card]")
   .filter({ hasText: /Sarah|Faisal/ })
-  .filter({ hasNotText: "Consent to sign" });
-let card = null;
-let file = null;
-for (let i = 0; i < (await candidates.count()); i++) {
-  const f = await candidates.nth(i).getAttribute("data-patient");
-  if ((await desk.locator(`[data-testid=flow-card][data-patient="${f}"]`).count()) === 1) {
-    card = candidates.nth(i);
-    file = f;
-    break;
-  }
-}
-if (!card) throw new Error("no suitable expected patient of Dr. Sarah / Dr. Faisal");
-console.log("patient:", file);
+  .filter({ hasNotText: "Consent to sign" })
+  .first();
+const file = await card.getAttribute("data-patient");
+if (!file) throw new Error("no expected patient of Dr. Sarah / Dr. Faisal without a consent");
+const time = (await card.locator("span.font-mono").first().innerText()).trim();
+const ours = (stage) =>
+  column(desk, stage).locator(`[data-testid=flow-card][data-patient="${file}"]`).filter({ hasText: time });
+console.log("patient:", file, time);
 await card.getByTestId("flow-check-in").click();
-await column(desk, "waiting").locator(`[data-patient="${file}"]`).waitFor({ timeout: 15000 });
+await ours("waiting").waitFor({ timeout: 15000 });
 await shot(desk, "checked-in-waiting");
 
 // ── 2. Nurse Huda: her doctors' day → the visit → start ──
 const nurse = await signIn("nurse@derma.demo", { width: 1280, height: 900 });
 await nurse.goto(`${BASE}/my-day?date=${DAY}`, { waitUntil: "networkidle" });
-const mine = nurse.locator(
-  `[data-testid=my-day-card][data-patient="${file}"][data-status=arrived]`,
-);
+const mine = nurse
+  .locator(`[data-testid=my-day-card][data-patient="${file}"][data-status=arrived]`)
+  .filter({ hasText: time });
 await mine.waitFor({ timeout: 15000 });
 await mine.scrollIntoViewIfNeeded();
 await shot(nurse, "nurse-my-day");
@@ -82,7 +78,7 @@ await shot(nurse, "nurse-visit-started");
 
 // Reception sees "With nurse".
 await board(desk);
-await column(desk, "nurse").locator(`[data-patient="${file}"]`).waitFor({ timeout: 15000 });
+await ours("nurse").waitFor({ timeout: 15000 });
 
 // Note, a medication, a treatment plan, an invoice code.
 await nurse
@@ -120,7 +116,7 @@ await shot(nurse, "nurse-orders-codes-ready", true);
 
 // Reception sees "With doctor".
 await board(desk);
-await column(desk, "doctor").locator(`[data-patient="${file}"]`).waitFor({ timeout: 15000 });
+await ours("doctor").waitFor({ timeout: 15000 });
 await shot(desk, "board-with-doctor");
 
 // ── 3. The nurse posts the visit (in the doctor's name) ──
@@ -130,7 +126,7 @@ await shot(nurse, "nurse-posted");
 
 // ── 4. Reception: checkout ──
 await board(desk);
-const toPay = column(desk, "checkout").locator(`[data-patient="${file}"]`);
+const toPay = ours("checkout");
 await toPay.waitFor({ timeout: 15000 });
 await shot(desk, "board-checkout");
 await toPay.getByTestId("flow-checkout").click();
@@ -151,7 +147,7 @@ await desk.getByTestId("send-instructions").click();
 await desk.waitForTimeout(2500);
 await shot(desk, "checkout-paid-booked-sent", true);
 await board(desk);
-await column(desk, "done").locator(`[data-patient="${file}"]`).waitFor({ timeout: 15000 });
+await ours("done").waitFor({ timeout: 15000 });
 await shot(desk, "board-done");
 
 // Printed instructions.
