@@ -61,7 +61,9 @@ await shot(desk, "checked-in-waiting");
 // ── 2. Nurse Huda: her doctors' day → the visit → start ──
 const nurse = await signIn("nurse@derma.demo", { width: 1280, height: 900 });
 await nurse.goto(`${BASE}/my-day?date=${DAY}`, { waitUntil: "networkidle" });
-const mine = nurse.locator(`[data-testid=my-day-card][data-patient="${file}"]`);
+const mine = nurse.locator(
+  `[data-testid=my-day-card][data-patient="${file}"][data-status=arrived]`,
+);
 await mine.waitFor({ timeout: 15000 });
 await mine.scrollIntoViewIfNeeded();
 await shot(nurse, "nurse-my-day");
