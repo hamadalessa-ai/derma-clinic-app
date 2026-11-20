@@ -138,6 +138,10 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   appointments, never notes): printed at `/instructions/<id>` or sent as WhatsApp `visit_instructions` with a
   signed link `/care/<appointmentId>.<sig>` (`careToken`, first name only, 60 days). The board's "Checkout"
   column = completed without a checkout.
+- Front desk fast lane (`DeskBar` above the calendar, `src/lib/front-desk/desk.ts`): search by mobile / name / file
+  with today's visit → Check in, Walk-in (`walkIn`: book the tapped free time + check in in ONE transaction; a
+  needed consent is still asked first), Book, Call, WhatsApp. One-tap contact = `ContactButtons`: `tel:` and
+  `/whatsapp/open/<patientId>` (the clinic inbox chat, else wa.me on the device; inbox staff only).
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly
   pattern (`staff_schedules`, several shifts per weekday, each at a branch; old rows with a break = two shifts)
   unless `schedule_exceptions` has a change for that date (off / special hours, which also adds extra days).

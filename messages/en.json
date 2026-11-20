@@ -1905,5 +1905,25 @@
     "footer": "Questions or side effects? Contact the clinic. In an emergency call 997.",
     "print": "Print",
     "expired": "This link has expired. Please contact the clinic."
+  },
+  "desk": {
+    "placeholder": "Find a patient: mobile, name or file number",
+    "call": "Call {phone}",
+    "whatsapp": "WhatsApp",
+    "checkIn": "Check in",
+    "walkIn": "Walk-in",
+    "book": "Book",
+    "noMatch": "No patient found.",
+    "newName": "New patient {mobile} — full name (Arabic)",
+    "gender": "Gender",
+    "female": "Female",
+    "male": "Male",
+    "createWalkIn": "Add & walk-in",
+    "created": "{name} added.",
+    "checkedIn": "{name} is checked in.",
+    "walkInTitle": "Walk-in · {name}",
+    "nextFree": "Next free times today — tap one to book and check in",
+    "noFree": "No free time left today for this service.",
+    "walkInHint": "Booked with that doctor and checked in at once (consent and package handled as usual)."
   }
 }

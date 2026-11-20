@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
 import { ArrivalsList } from "@/components/clinic/arrivals-list";
+import { DeskBar } from "@/components/clinic/desk-bar";
 import { FlowBoard } from "@/components/clinic/flow-board";
 import { CalendarBoard, type BoardColumn } from "@/components/clinic/calendar-board";
 import { withActor } from "@/lib/auth/db";
@@ -177,6 +178,24 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           </>
         }
       />
+
+      {can(ctx.roles, "appointments:manage") && (
+        <DeskBar
+          branchId={branch.id}
+          day={riyadhDay(new Date())}
+          services={data.services
+            .filter((s) => !s.isVirtual)
+            .map((s) => ({
+              id: s.id,
+              nameAr: s.nameAr,
+              nameEn: s.nameEn,
+              durationMinutes: s.durationMinutes,
+            }))}
+          doctors={doctorOptions}
+          canCreate={can(ctx.roles, "patients:edit")}
+          canWhatsApp={can(ctx.roles, "whatsapp:inbox")}
+        />
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Link href={qs({ view: "day" })} className={tab(view === "day")}>

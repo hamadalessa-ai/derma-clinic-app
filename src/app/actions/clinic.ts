@@ -70,6 +70,7 @@ import {
 } from "@/lib/whatsapp/staff";
 import { sendBookingConfirmation, sendVisitInstructions } from "@/lib/whatsapp/outbox";
 import { checkOut } from "@/lib/visits/checkout";
+import { deskSearch, walkIn } from "@/lib/front-desk/desk";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
@@ -2359,5 +2360,74 @@ export async function sendVisitInstructionsAction(appointmentId: string) {
     return r.outcome === "skipped"
       ? { outcome: "skipped" as const, reason: r.reason }
       : { outcome: r.outcome, error: r.error };
+  });
+}
+
+// ─── Front desk (fast lane) ─────────────────────────────────────────────────
+
+/** Find a patient by mobile, name or file number — with today's visit, if any. */
+export async function deskSearchAction(query: string) {
+  return staffAction(
+    "appointments:manage",
+    async (_ctx, actor) => {
+      const q = parse(text(100), query);
+      return withActor(actor, (tx) => deskSearch(tx, actor, q));
+    },
+    PAUSED_OK,
+  );
+}
+
+/** Walk-in: book the chosen free time and check in, in one step. */
+export async function walkInAction(input: {
+  branchId: string;
+  patientId: string;
+  serviceId: string;
+  practitionerId: string;
+  startsAt: string;
+}) {
+  return staffAction("appointments:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        branchId: uuid,
+        patientId: uuid,
+        serviceId: uuid,
+        practitionerId: uuid,
+        startsAt: z.string().datetime({ offset: true }),
+      }),
+      input,
+    );
+    const r = await withActor(actor, (tx) =>
+      walkIn(tx, actor, { ...v, startsAt: new Date(v.startsAt) }),
+    );
+    refreshScreens();
+    notifyLater(actor.tenantId, [
+      { type: "new_booking", appointmentId: r.appointmentId, actorUserId: actor.userId },
+      ...(r.result.status === "checked_in"
+        ? [
+            {
+              type: "checked_in" as const,
+              appointmentId: r.appointmentId,
+              actorUserId: actor.userId,
+            },
+          ]
+        : []),
+    ]);
+    if (r.result.status === "consent_required") {
+      const t = r.result.template;
+      return {
+        appointmentId: r.appointmentId,
+        status: "consent_required" as const,
+        template: {
+          id: t.id,
+          code: t.code,
+          version: t.version,
+          titleAr: t.titleAr,
+          titleEn: t.titleEn,
+          bodyAr: t.bodyAr,
+          bodyEn: t.bodyEn,
+        },
+      };
+    }
+    return { appointmentId: r.appointmentId, status: r.result.status };
   });
 }

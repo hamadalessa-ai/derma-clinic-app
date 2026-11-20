@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ContactButtons } from "@/components/clinic/contact-buttons";
 import { AlertBadge, BalanceBadge, StatusBadge } from "@/components/clinic/badges";
 import { ConcernCard } from "@/components/clinic/concern-card";
 import {
@@ -206,12 +207,19 @@ export default async function PatientProfilePage({
             {age !== null && ` · ${t("age", { age })}`} · {t("fakeData")}
           </p>
         </div>
-        {can(ctx.roles, "appointments:manage") && (
-          <Link href={`/calendar?patient=${id}`} className={buttonVariants()}>
-            <CalendarPlus />
-            {t("bookFor")}
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <ContactButtons
+            patientId={id}
+            phone={p.phone}
+            whatsapp={can(ctx.roles, "whatsapp:inbox")}
+          />
+          {can(ctx.roles, "appointments:manage") && (
+            <Link href={`/calendar?patient=${id}`} className={buttonVariants()}>
+              <CalendarPlus />
+              {t("bookFor")}
+            </Link>
+          )}
+        </div>
       </div>
 
       {data.concerns.map((c) => (

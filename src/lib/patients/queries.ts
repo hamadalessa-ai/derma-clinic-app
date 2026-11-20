@@ -1,6 +1,9 @@
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import type { TenantTx } from "@/db/tenant";
 import { patientMedicalFlags, patients } from "@/db/schema";
+import { normalizePhoneQuery } from "./phone";
+
+export { normalizePhoneQuery };
 
 export type Patient = typeof patients.$inferSelect;
 
@@ -39,15 +42,6 @@ export async function getPatientAlerts(
 
 export function alertsFor(map: Map<string, PatientAlerts>, id: string): PatientAlerts {
   return map.get(id) ?? EMPTY;
-}
-
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
-
-/** Turns "٠٥٠٠ ٠١٠ ٠٠٣" or "+966 500010003" into "0500010003". */
-export function normalizePhoneQuery(q: string): string {
-  let digits = q.replace(/[٠-٩]/g, (d) => String(ARABIC_DIGITS.indexOf(d))).replace(/\D/g, "");
-  if (digits.startsWith("966")) digits = `0${digits.slice(3)}`;
-  return digits;
 }
 
 /**
