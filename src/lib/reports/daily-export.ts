@@ -4,7 +4,10 @@ import "server-only";
  * - visit: each invoice code of a completed visit (from the visit screen), or its service when it
  *   has none — at the price of that day (0 when a package session paid for it)
  * - package_sale: each package sold that day, at its price
+ * - visit_payment: reception's checkout of each of those visits — what was paid and how
  * - package_payment: each package payment recorded that day (cash / card / transfer)
+ * clinic_invoice_no: the invoice number reception typed at checkout (from the clinic's own system),
+ * on the visit's lines and its payment line, so the two can be matched.
  * The clinic's invoicing system issues the official (ZATCA) invoice; this file only feeds it.
  * No clinical information: services and prices only.
  */
@@ -20,6 +23,7 @@ import {
   tenantMembers,
   users,
   visitCharges,
+  visitCheckouts,
 } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
 import type { Actor } from "@/lib/auth/db";
@@ -46,6 +50,7 @@ export const DAILY_COLUMNS = [
   "list_price_sar",
   "amount_sar",
   "paid_by",
+  "clinic_invoice_no",
 ];
 
 const sar = (h: number) => (h / 100).toFixed(2);
@@ -124,8 +129,51 @@ export async function dailyInvoicingCsv(
     for (const c of all) lines.set(c.appointmentId, [...(lines.get(c.appointmentId) ?? []), c]);
   }
 
+  // Reception's checkouts of these visits (payment + the clinic system's invoice number).
+  const checkouts = new Map<string, typeof visitCheckouts.$inferSelect>();
+  if (visits.length) {
+    const all = await tx
+      .select()
+      .from(visitCheckouts)
+      .where(
+        inArray(
+          visitCheckouts.appointmentId,
+          visits.map((v) => v.id),
+        ),
+      );
+    for (const c of all) checkouts.set(c.appointmentId, c);
+  }
+
   const rows: (string | number | null)[][] = visits.flatMap((v) => {
     const pkg = covered.get(v.id);
+    const co = checkouts.get(v.id);
+    const invoice = co?.invoiceNumber ?? null;
+    // The payment line: what reception recorded at checkout (amount 0 = nothing to pay).
+    const payment = co
+      ? [
+          [
+            "visit_payment",
+            day,
+            riyadhTime(co.createdAt),
+            v.id.slice(0, 8),
+            v.branch,
+            v.fileNumber,
+            v.patientAr,
+            v.patientEn,
+            v.phone,
+            v.idNumber,
+            null,
+            null,
+            null,
+            null,
+            v.doctor,
+            sar(co.dueHalalas),
+            sar(co.paidHalalas),
+            co.method ?? "none",
+            invoice,
+          ],
+        ]
+      : [];
     const who = [
       day,
       riyadhTime(v.startsAt),
@@ -139,18 +187,21 @@ export async function dailyInvoicingCsv(
     ];
     const charged = lines.get(v.id);
     if (charged?.length) {
-      return charged.map((c) => [
-        "visit",
-        ...who,
-        c.code,
-        c.nameAr,
-        c.nameEn,
-        c.quantity,
-        v.doctor,
-        sar(c.unitPriceHalalas),
-        c.coveredByPackage ? "0.00" : sar(c.quantity * c.unitPriceHalalas),
-        c.coveredByPackage ? `package: ${pkg ?? ""}`.trim() : "at_clinic",
-      ]);
+      return charged
+        .map((c) => [
+          "visit",
+          ...who,
+          c.code,
+          c.nameAr,
+          c.nameEn,
+          c.quantity,
+          v.doctor,
+          sar(c.unitPriceHalalas),
+          c.coveredByPackage ? "0.00" : sar(c.quantity * c.unitPriceHalalas),
+          c.coveredByPackage ? `package: ${pkg ?? ""}`.trim() : "at_clinic",
+          invoice,
+        ])
+        .concat(payment);
     }
     return [
       [
@@ -164,7 +215,9 @@ export async function dailyInvoicingCsv(
         sar(v.price),
         pkg ? "0.00" : sar(v.price),
         pkg ? `package: ${pkg}` : "at_clinic",
+        invoice,
       ],
+      ...payment,
     ];
   });
 
@@ -206,6 +259,7 @@ export async function dailyInvoicingCsv(
         null,
         sar(p.price),
         sar(p.price),
+        null,
         null,
       ]);
 
@@ -249,6 +303,7 @@ export async function dailyInvoicingCsv(
         null,
         sar(p.amount),
         p.method,
+        null,
       ]);
   }
   return { csv: toCsv(DAILY_COLUMNS, rows), rows: rows.length, day: riyadhDay(from) };
