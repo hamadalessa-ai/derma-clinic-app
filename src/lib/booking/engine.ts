@@ -209,6 +209,18 @@ async function busyResources(tx: TenantTx, start: Date, until: Date, ignoreAppoi
   return new Set(rows.map((r) => `${r.kind}:${r.id}`));
 }
 
+/**
+ * Rooms kept for a department (e.g. the dental clinic): that department's services go there
+ * when the branch has one, and no other service ever uses it. Other rooms take any service.
+ */
+export function roomsForService<R extends { departmentId: string | null }>(
+  rows: R[],
+  service: { departmentId: string },
+): R[] {
+  const own = rows.filter((r) => r.departmentId === service.departmentId);
+  return own.length ? own : rows.filter((r) => r.departmentId === null);
+}
+
 async function pickRoomAndDevice(
   tx: TenantTx,
   opts: {
@@ -245,19 +257,22 @@ async function pickRoomAndDevice(
   }
 
   const wantedRoom = opts.roomId ?? deviceRoom;
-  const roomRows = await tx
-    .select()
-    .from(rooms)
-    .where(
-      and(
-        eq(rooms.branchId, opts.branchId),
-        // Video consultations use the branch's video room; everything else a real room.
-        eq(rooms.isVirtual, opts.service.isVirtual),
-        eq(rooms.isActive, true),
-        wantedRoom ? eq(rooms.id, wantedRoom) : undefined,
-      ),
-    )
-    .orderBy(asc(rooms.createdAt));
+  const roomRows = roomsForService(
+    await tx
+      .select()
+      .from(rooms)
+      .where(
+        and(
+          eq(rooms.branchId, opts.branchId),
+          // Video consultations use the branch's video room; everything else a real room.
+          eq(rooms.isVirtual, opts.service.isVirtual),
+          eq(rooms.isActive, true),
+          wantedRoom ? eq(rooms.id, wantedRoom) : undefined,
+        ),
+      )
+      .orderBy(asc(rooms.createdAt)),
+    opts.service,
+  );
   const room = roomRows.find((r) => !busy.has(`room:${r.id}`));
   if (!room) throw new BookingError(roomRows.length ? "slot_taken" : "no_room");
   return { roomId: room.id, deviceId };
@@ -739,16 +754,19 @@ export async function findFreeSlots(
           (d) => !opts.practitionerIds || opts.practitionerIds.includes(d.id),
         )
   ).filter((d) => !allowed || allowed.has(d.id));
-  const roomRows = await tx
-    .select()
-    .from(rooms)
-    .where(
-      and(
-        eq(rooms.branchId, opts.branchId),
-        eq(rooms.isVirtual, service.isVirtual),
-        eq(rooms.isActive, true),
+  const roomRows = roomsForService(
+    await tx
+      .select()
+      .from(rooms)
+      .where(
+        and(
+          eq(rooms.branchId, opts.branchId),
+          eq(rooms.isVirtual, service.isVirtual),
+          eq(rooms.isActive, true),
+        ),
       ),
-    );
+    service,
+  );
   const deviceRows = service.requiredDeviceType
     ? await tx
         .select()

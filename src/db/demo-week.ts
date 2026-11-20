@@ -3,7 +3,13 @@
  * working days relative to an anchor day (setup day, or "Refresh demo week" = today).
  * ALL FAKE. dayIndex: -3 … +4 working days (Fridays skipped by public.demo_workday()).
  */
-import { DERMA, DERMA_SERVICES, ONLINE_SERVICES, WORK_HOURS } from "./seed-data";
+import {
+  DERMA,
+  DERMA_DENTAL_SERVICES,
+  DERMA_SERVICES,
+  ONLINE_SERVICES,
+  WORK_HOURS,
+} from "./seed-data";
 
 export interface DemoAppointment {
   key: string;
@@ -154,6 +160,17 @@ const ROTATION: Record<string, string[]> = {
     "chemical_peeling",
   ],
   "derma-dr-majed": ["consultation", "fillers", "prp", "laser_hair_removal", "skin_boosters"],
+  // The dentist (dental room only). Planned in its own pass, so the other doctors' week is
+  // exactly what it was before the dental department existed.
+  "derma-dr-nawaf": [
+    "dental_consultation",
+    "dental_scaling",
+    "dental_filling",
+    "root_canal",
+    "dental_consultation",
+    "dental_crown",
+    "teeth_whitening",
+  ],
 };
 
 const POOLS: Record<string, string[]> = {
@@ -173,9 +190,12 @@ function statusFor(dayIndex: number, order: number, n: number): DemoAppointment[
 }
 
 export function generateDemoWeek(): DemoAppointment[] {
-  const services = new Map(DERMA_SERVICES.map((s) => [s.code, s]));
-  const rooms = (branch: string) =>
-    DERMA.rooms.filter((r) => r.branch === branch).map((r) => r.key);
+  const services = new Map([...DERMA_SERVICES, ...DERMA_DENTAL_SERVICES].map((s) => [s.code, s]));
+  // A department's own room (the dental clinic) only for that department's services.
+  const rooms = (branch: string, department = "dermatology") =>
+    DERMA.rooms
+      .filter((r) => r.branch === branch && (r.department ?? "dermatology") === department)
+      .map((r) => r.key);
   const devices = (branch: string, type: string) =>
     DERMA.devices.filter((d) => d.branch === branch && d.deviceType === type);
   const dayStart = toMin(WORK_HOURS.start);
@@ -185,6 +205,7 @@ export function generateDemoWeek(): DemoAppointment[] {
 
   const out: DemoAppointment[] = [];
   let n = 0;
+  let nDental = 0; // the dentist's own counter (see ROTATION)
   for (const dayIndex of DEMO_DAYS) {
     // Busy intervals per resource for this day: "kind:key" → [start, end) minutes.
     const busy = new Map<string, [number, number][]>();
@@ -208,7 +229,7 @@ export function generateDemoWeek(): DemoAppointment[] {
         return false;
       if (!isFree(`doc:${a.doctorKey}`, start, until)) return false;
       let deviceKey: string | null = null;
-      let roomChoices = rooms(a.branchKey);
+      let roomChoices = rooms(a.branchKey, svc.department);
       if (svc.requiredDeviceType) {
         const dev = devices(a.branchKey, svc.requiredDeviceType).find((d) =>
           isFree(`dev:${d.key}`, start, until),
@@ -239,7 +260,7 @@ export function generateDemoWeek(): DemoAppointment[] {
         throw new Error(`demo week: fixed booking does not fit: ${JSON.stringify(f)}`);
     }
 
-    const doctors = DERMA.staff.filter((s) => s.roles.includes("practitioner"));
+    const doctors = DERMA.staff.filter((s) => s.roles.includes("practitioner") && !s.department);
     doctors.forEach((doc, d) => {
       const pool = POOLS[doc.branch!];
       const rotation = ROTATION[doc.key];
@@ -275,6 +296,39 @@ export function generateDemoWeek(): DemoAppointment[] {
         if (cursor >= dayEnd) break;
       }
     });
+
+    // Department doctors (the dentist): same rules, own counter, own patients' rotation.
+    for (const doc of DERMA.staff.filter((s) => s.roles.includes("practitioner") && s.department)) {
+      const pool = POOLS[doc.branch!];
+      const rotation = ROTATION[doc.key];
+      let cursor = dayStart + 30;
+      let order = 0;
+      for (let tries = 0; tries < 80 && order < 5; tries++) {
+        const serviceCode = rotation[(nDental + order + dayIndex + 8) % rotation.length];
+        const ok = place(
+          {
+            dayIndex,
+            time: "",
+            doctorKey: doc.key,
+            branchKey: doc.branch!,
+            patientFile: pool[(nDental * 5 + 4) % pool.length],
+            serviceCode,
+            status: statusFor(dayIndex, order, nDental),
+            source: "reception",
+          },
+          cursor,
+        );
+        if (ok) {
+          const svc = services.get(serviceCode)!;
+          cursor += svc.durationMinutes + svc.bufferMinutes + (nDental % 2) * 30;
+          order++;
+          nDental++;
+        } else {
+          cursor += 15;
+        }
+        if (cursor >= dayEnd) break;
+      }
+    }
   }
   // Keep the fixed "today" order sensible: anything later than the fixed ones stays booked/confirmed.
   return out;

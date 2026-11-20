@@ -114,6 +114,7 @@ function tenantSql(t: SeedTenant): string {
         branch_id: ref("branch", r.branch),
         name_ar: r.nameAr,
         name_en: r.nameEn,
+        department_id: r.department ? ref("department", r.department) : null,
       })),
     ),
   );
@@ -222,7 +223,7 @@ function tenantSql(t: SeedTenant): string {
       t.services.map((s, i) => ({
         id: ref("service", s.code),
         tenant_id: tid,
-        department_id: ref("department", "dermatology"),
+        department_id: ref("department", s.department ?? "dermatology"),
         code: s.code,
         name_ar: s.nameAr,
         name_en: s.nameEn,
@@ -244,22 +245,37 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
-  // Which doctors do a service (none listed = every doctor). Demo: one less-used service lists
-  // all of the clinic's doctors, so nothing changes for booking.
+  // Which doctors do a service (none listed = every doctor). A clinic with department doctors
+  // (Derma's dentist): each service lists the doctors of its own department, so the dentist
+  // gets only dental work and dermatologists none. Otherwise one less-used service lists all
+  // of the clinic's doctors, so nothing changes for booking.
   const doctors = t.staff.filter((s) => s.roles.includes("practitioner"));
-  const firstService =
-    t.services.find((s) => s.code === "exosomes") ?? t.services.find((s) => s.code === "fillers");
-  if (firstService && doctors.length) {
-    out.push(
-      insert(
-        "service_practitioners",
-        doctors.map((d) => ({
-          tenant_id: tid,
-          service_id: ref("service", firstService.code),
-          member_id: ref("member", d.key),
-        })),
-      ),
-    );
+  if (doctors.some((d) => d.department)) {
+    const rows = t.services.flatMap((s) =>
+        doctors
+          .filter((d) => (d.department ?? "dermatology") === (s.department ?? "dermatology"))
+          .map((d) => ({
+            tenant_id: tid,
+            service_id: ref("service", s.code),
+            member_id: ref("member", d.key),
+          })),
+      );
+    out.push(insert("service_practitioners", rows));
+  } else {
+    const firstService =
+      t.services.find((s) => s.code === "exosomes") ?? t.services.find((s) => s.code === "fillers");
+    if (firstService && doctors.length) {
+      out.push(
+        insert(
+          "service_practitioners",
+          doctors.map((d) => ({
+            tenant_id: tid,
+            service_id: ref("service", firstService.code),
+            member_id: ref("member", d.key),
+          })),
+        ),
+      );
+    }
   }
   out.push(
     insert(
