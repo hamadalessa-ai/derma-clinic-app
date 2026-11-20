@@ -38,6 +38,7 @@ drop table if exists
   public.audit_logs,
   public.branch_holidays,
   public.branches,
+  public.care_team,
   public.clinical_note_addenda,
   public.clinical_notes,
   public.concern_events,
@@ -85,6 +86,7 @@ drop table if exists
   public.verifications,
   public.webhook_events
   cascade;
+drop function if exists public.app_assists;
 drop function if exists public.app_billing_enforce;
 drop function if exists public.app_branch_allowed;
 drop function if exists public.app_create_clinic;

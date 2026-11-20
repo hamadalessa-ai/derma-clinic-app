@@ -430,7 +430,8 @@ export default async function PatientProfilePage({
             patientId={id}
             userId={ctx.user.id}
             scribe={scribeOn}
-            canWrite={can(ctx.roles, "notes:write")}
+            // New notes and addenda: doctors. A nurse / assistant prepares notes from the visit screen.
+            canWrite={ctx.roles.includes("practitioner")}
             appointmentId={sp.appointment && UUID_RE.test(sp.appointment) ? sp.appointment : null}
             notes={data.notes.map((n) => ({
               id: n.id,
@@ -441,6 +442,7 @@ export default async function PatientProfilePage({
               createdAt: n.createdAt.toISOString(),
               signedAt: n.signedAt?.toISOString() ?? null,
               aiDrafted: !!n.aiDraftedAt,
+              enteredByName: n.enteredByName,
               appointmentId: n.appointmentId,
               addenda: n.addenda.map((a) => ({
                 id: a.id,

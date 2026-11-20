@@ -18,6 +18,7 @@ import { eq, sql } from "drizzle-orm";
 import { appointments, clinicalNotes, services, tenants } from "@/db/schema";
 import { withActor, type Actor } from "@/lib/auth/db";
 import { audit } from "@/lib/audit";
+import { assistsUser } from "@/lib/care-team/care-team";
 import { assertCan } from "@/lib/auth/permissions";
 import { getSettings } from "@/lib/booking/engine";
 import { riyadhDay } from "@/lib/booking/time";
@@ -111,7 +112,9 @@ export async function scribeDraft(
     const [note] = await tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, input.noteId));
     if (!note) throw new ScribeError("not_found");
     if (note.status === "signed") throw new ScribeError("signed");
-    if (note.authorUserId !== actor.userId) throw new ScribeError("not_author");
+    // The author's own draft — or her doctor's, for a nurse / assistant preparing it.
+    if (note.authorUserId !== actor.userId && !(await assistsUser(tx, actor, note.authorUserId)))
+      throw new ScribeError("not_author");
     let visit = "";
     if (note.appointmentId) {
       const [a] = await tx
@@ -157,14 +160,22 @@ export async function scribeDraft(
       .for("update");
     if (!note) throw new ScribeError("not_found");
     if (note.status === "signed") throw new ScribeError("signed");
-    if (note.authorUserId !== actor.userId) throw new ScribeError("not_author");
+    const forDoctor = note.authorUserId !== actor.userId;
+    if (forDoctor && !(await assistsUser(tx, actor, note.authorUserId)))
+      throw new ScribeError("not_author");
     // Merged note: only if the note is unchanged since we read it and nothing looks lost.
     const before = note.body.trim();
     const merged = !before || (note.body === current && draft.length >= before.length * 0.6);
     const body = (merged ? draft : `${note.body.trimEnd()}\n\n${draft}`).slice(0, MAX_NOTE);
     await tx
       .update(clinicalNotes)
-      .set({ body, aiDraftedAt: sql`now()` })
+      .set({
+        body,
+        aiDraftedAt: sql`now()`,
+        ...(forDoctor
+          ? { enteredByUserId: actor.userId, enteredByName: actor.name ?? actor.userId }
+          : {}),
+      })
       .where(eq(clinicalNotes.id, input.noteId));
     // The note text and the spoken words are never copied into the audit log.
     await audit(tx, {

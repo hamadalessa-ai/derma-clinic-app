@@ -49,7 +49,8 @@
     "platform_owner": "Platform owner",
     "clinic_admin": "Clinic admin",
     "practitioner": "Practitioner",
-    "receptionist": "Receptionist"
+    "receptionist": "Receptionist",
+    "assistant": "Nurse / assistant"
   },
   "dashboard": {
     "welcome": "Welcome, {name}",
@@ -229,7 +230,10 @@
     "wa_connect_bad_phone": "Enter a Saudi mobile number (05…).",
     "wa_connect_number_taken": "This number is already connected to another clinic.",
     "wa_connect_not_ready": "The connection isn't complete yet.",
-    "wa_connect_demo_clinic": "A demo clinic can't send real WhatsApp. Use a non-demo test clinic."
+    "wa_connect_demo_clinic": "A demo clinic can't send real WhatsApp. Use a non-demo test clinic.",
+    "care_team_not_assistant": "Give this person the Nurse / assistant role first.",
+    "care_team_not_doctor": "Only doctors can be chosen.",
+    "care_team_not_found": "Staff member not found."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -399,7 +403,9 @@
     "startVideo": "Start video",
     "startVisit": "Start visit",
     "continueVisit": "Continue visit",
-    "openVisit": "Open visit"
+    "openVisit": "Open visit",
+    "careTeam": "Your doctors today: {names}. Bring each patient in and prepare the note; the doctor signs.",
+    "noCareTeam": "You aren't linked to any doctor yet. Ask the clinic admin (Settings → Team)."
   },
   "patientsX": {
     "searchPlaceholder": "Search name (Arabic or English), mobile, file or ID number",
@@ -496,7 +502,9 @@
     "noDrafts": "No drafts",
     "signComplete": "Sign & complete",
     "signCompleteConfirm": "Sign this note and complete the visit? A signed note can't be edited (you can add an addendum).",
-    "signedCompleted": "Note signed and visit completed."
+    "signedCompleted": "Note signed and visit completed.",
+    "doctorSigns": "Prepared for {name}. The doctor signs.",
+    "enteredBy": "Entered by {name}"
   },
   "requests": {
     "title": "Reschedule requests",
@@ -1163,7 +1171,8 @@
     "package": "Package",
     "left": "{remaining} of {total} left",
     "earlier": "Earlier notes",
-    "noEarlier": "No earlier signed notes."
+    "noEarlier": "No earlier signed notes.",
+    "assisting": "You're preparing this visit for {name}. You can bring the patient in and write the note; the doctor signs."
   },
   "sign": {
     "title": "{name}, your consent form",
@@ -1311,7 +1320,9 @@
     "websiteProfile": "Website profile",
     "notOnWebsite": "Not on the website",
     "linked": "Website updated",
-    "former": "Former staff"
+    "former": "Former staff",
+    "careTeam": "Works with these doctors (sees their day, prepares their notes):",
+    "noDoctors": "Add a doctor first."
   },
   "invite": {
     "title": "Welcome to {clinic}",

@@ -9,6 +9,7 @@ import { clinicalNoteAddenda, clinicalNotes } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
+import { assistsUser } from "@/lib/care-team/care-team";
 
 export type ClinicalNote = typeof clinicalNotes.$inferSelect;
 export type Addendum = typeof clinicalNoteAddenda.$inferSelect;
@@ -22,13 +23,23 @@ export class NoteError extends Error {
 
 const MAX = 20_000;
 
-/** The author's draft for a visit (creates one if needed). */
+/**
+ * The author's draft for a visit (creates one if needed). `author`: a nurse / assistant opens
+ * the draft in her DOCTOR's name (the doctor stays the author; she is recorded as entered by).
+ */
 export async function openDraft(
   tx: TenantTx,
   actor: Actor,
-  input: { patientId: string; appointmentId?: string | null },
+  input: {
+    patientId: string;
+    appointmentId?: string | null;
+    author?: { userId: string; name: string };
+  },
 ) {
   assertCan(actor.roles, "notes:write");
+  const author = input.author ?? { userId: actor.userId, name: actor.name ?? actor.userId };
+  const forOther = author.userId !== actor.userId;
+  if (forOther && !(await assistsUser(tx, actor, author.userId))) throw new NoteError("not_author");
   if (input.appointmentId) {
     const [existing] = await tx
       .select()
@@ -36,7 +47,7 @@ export async function openDraft(
       .where(
         and(
           eq(clinicalNotes.appointmentId, input.appointmentId),
-          eq(clinicalNotes.authorUserId, actor.userId),
+          eq(clinicalNotes.authorUserId, author.userId),
         ),
       )
       .orderBy(desc(clinicalNotes.createdAt))
@@ -49,8 +60,11 @@ export async function openDraft(
       tenantId: actor.tenantId,
       patientId: input.patientId,
       appointmentId: input.appointmentId ?? null,
-      authorUserId: actor.userId,
-      authorName: actor.name ?? actor.userId,
+      authorUserId: author.userId,
+      authorName: author.name,
+      ...(forOther
+        ? { enteredByUserId: actor.userId, enteredByName: actor.name ?? actor.userId }
+        : {}),
     })
     .returning();
   await audit(tx, {
@@ -62,7 +76,11 @@ export async function openDraft(
   return note;
 }
 
-async function loadOwnDraft(tx: TenantTx, actor: Actor, id: string) {
+/**
+ * A draft this actor may work on: their own — or, for a nurse / assistant, her doctor's (to
+ * prepare, never to sign: `forSigning`).
+ */
+async function loadOwnDraft(tx: TenantTx, actor: Actor, id: string, forSigning = false) {
   const [note] = await tx
     .select()
     .from(clinicalNotes)
@@ -71,16 +89,27 @@ async function loadOwnDraft(tx: TenantTx, actor: Actor, id: string) {
     .limit(1);
   if (!note) throw new NoteError("not_found");
   if (note.status === "signed") throw new NoteError("signed");
-  if (note.authorUserId !== actor.userId) throw new NoteError("not_author");
+  if (note.authorUserId !== actor.userId) {
+    if (forSigning || !(await assistsUser(tx, actor, note.authorUserId))) {
+      throw new NoteError("not_author");
+    }
+  }
   return note;
+}
+
+/** "Entered by" when someone other than the author (a nurse / assistant) changes the draft. */
+function enteredBy(actor: Actor, note: { authorUserId: string }) {
+  return note.authorUserId === actor.userId
+    ? {}
+    : { enteredByUserId: actor.userId, enteredByName: actor.name ?? actor.userId };
 }
 
 export async function saveDraft(tx: TenantTx, actor: Actor, id: string, body: string) {
   assertCan(actor.roles, "notes:write");
-  await loadOwnDraft(tx, actor, id);
+  const draft = await loadOwnDraft(tx, actor, id);
   const [note] = await tx
     .update(clinicalNotes)
-    .set({ body: body.slice(0, MAX) })
+    .set({ body: body.slice(0, MAX), ...enteredBy(actor, draft) })
     .where(eq(clinicalNotes.id, id))
     .returning();
   // The note text itself is never copied into the audit log.
@@ -96,7 +125,8 @@ export async function saveDraft(tx: TenantTx, actor: Actor, id: string, body: st
 
 export async function signNote(tx: TenantTx, actor: Actor, id: string, body?: string) {
   assertCan(actor.roles, "notes:write");
-  const draft = await loadOwnDraft(tx, actor, id);
+  // Only the author signs: a nurse / assistant prepares, the doctor signs.
+  const draft = await loadOwnDraft(tx, actor, id, true);
   const finalBody = (body ?? draft.body).slice(0, MAX);
   if (!finalBody.trim()) throw new NoteError("empty");
   const [note] = await tx

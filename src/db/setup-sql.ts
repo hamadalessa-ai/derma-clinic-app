@@ -165,6 +165,20 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
+  if (t.careTeam?.length) {
+    out.push(
+      insert(
+        "care_team",
+        t.careTeam.flatMap((c) =>
+          c.doctors.map((d) => ({
+            tenant_id: tid,
+            assistant_member_id: ref("member", c.assistant),
+            practitioner_member_id: ref("member", d),
+          })),
+        ),
+      ),
+    );
+  }
   out.push(
     insert(
       "staff_schedules",
@@ -390,13 +404,37 @@ export function orderMigrationStatements(fileSql: string): string {
     .join("\n");
 }
 
-function migrationsSql(): string {
+function rawMigrationsSql(): string {
   const dir = path.join(ROOT, "db/migrations");
   return readdirSync(dir)
     .filter((f) => f.endsWith(".sql"))
     .sort()
     .map((f) => `-- ${f}\n${orderMigrationStatements(readFileSync(path.join(dir, f), "utf8"))}`)
     .join("\n");
+}
+
+/**
+ * A later migration may add a value to an enum (ALTER TYPE … ADD VALUE). Postgres won't let the
+ * seed use that value in the same transaction, and setup.sql is ONE transaction that builds
+ * everything from scratch — so the value is folded into the type's CREATE TYPE instead.
+ */
+export function foldEnumAdditions(sqlText: string): string {
+  let out = sqlText;
+  const re = /ALTER TYPE "public"\."([^"]+)" ADD VALUE '([^']+)';(?:--> statement-breakpoint)?\s*/g;
+  for (const [stmt, type, value] of [...sqlText.matchAll(re)]) {
+    const create = new RegExp(`(CREATE TYPE "public"\\."${type}" AS ENUM\\()([^)]*)\\)`);
+    if (!create.test(out)) continue; // not created here: leave the statement as it is
+    out = out.replace(
+      create,
+      (_m, head: string, values: string) => `${head}${values}, '${value}')`,
+    );
+    out = out.replace(stmt, "");
+  }
+  return out;
+}
+
+function migrationsSql(): string {
+  return foldEnumAdditions(rawMigrationsSql());
 }
 
 export function buildSetupSql(): string {

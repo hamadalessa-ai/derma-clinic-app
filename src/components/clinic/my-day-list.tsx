@@ -36,6 +36,7 @@ export function MyDayList({
   branchId,
   day,
   doctorsManageOwnSchedule,
+  assisting = false,
 }: {
   appointments: ApptView[];
   blocks: BlockView[];
@@ -45,6 +46,11 @@ export function MyDayList({
   branchId: string;
   day: string;
   doctorsManageOwnSchedule: boolean;
+  /**
+   * A nurse / assistant's day: her doctors' patients, each with the doctor's name. She brings
+   * the patient in and prepares the note; confirming, moving and blocking time are the doctor's.
+   */
+  assisting?: boolean;
 }) {
   const t = useTranslations("myDay");
   const tc = useTranslations("calendar");
@@ -63,12 +69,18 @@ export function MyDayList({
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
+  const doctorName = (id: string) => {
+    const d = doctors.find((x) => x.id === id);
+    return d ? name(d) : "";
+  };
   const next = (a: ApptView) =>
-    a.status === "booked"
-      ? { to: "confirmed", label: t("confirm"), icon: CalendarCheck }
-      : a.status === "in_session"
-        ? { to: "completed", label: t("complete"), icon: CheckCircle2 }
-        : null;
+    assisting
+      ? null
+      : a.status === "booked"
+        ? { to: "confirmed", label: t("confirm"), icon: CalendarCheck }
+        : a.status === "in_session"
+          ? { to: "completed", label: t("complete"), icon: CheckCircle2 }
+          : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -123,6 +135,11 @@ export function MyDayList({
                   <span className="inline-flex items-center gap-1">
                     <DoorOpen className="size-4" />
                     {locale === "en" ? room.nameEn : room.nameAr}
+                  </span>
+                )}
+                {assisting && (
+                  <span className="text-foreground font-medium" data-testid="my-day-doctor">
+                    {doctorName(a.practitionerId)}
                   </span>
                 )}
                 {a.pendingRequest && (
@@ -181,7 +198,7 @@ export function MyDayList({
                   <UserRound />
                   {tc("openProfile")}
                 </Link>
-                {(a.status === "booked" || a.status === "confirmed") && (
+                {!assisting && (a.status === "booked" || a.status === "confirmed") && (
                   <Button size="sm" variant="ghost" onClick={() => setOpenId(a.id)}>
                     {t("reschedule")}
                   </Button>
@@ -192,89 +209,95 @@ export function MyDayList({
         );
       })}
 
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-4">
-          <h2 className="font-semibold">{t("blockTime")}</h2>
-          {blocks.length > 0 && (
-            <ul className="flex flex-col gap-1 text-sm">
-              {blocks.map((b) => (
-                <li
-                  key={b.id}
-                  className="bg-muted flex items-center justify-between rounded-md px-3 py-1.5"
-                >
-                  <span>
-                    <span dir="ltr">
-                      {riyadhParts(b.startsAt).time}–{riyadhParts(b.endsAt).time}
-                    </span>
-                    {b.reason ? ` · ${b.reason}` : ""}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-label={t("removeBlock")}
-                    onClick={() => block.run(() => removeBlockAction(b.id))}
+      {!assisting && (
+        <Card>
+          <CardContent className="flex flex-col gap-3 pt-4">
+            <h2 className="font-semibold">{t("blockTime")}</h2>
+            {blocks.length > 0 && (
+              <ul className="flex flex-col gap-1 text-sm">
+                {blocks.map((b) => (
+                  <li
+                    key={b.id}
+                    className="bg-muted flex items-center justify-between rounded-md px-3 py-1.5"
                   >
-                    <Trash2 />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="block-from">{t("blockFrom")}</Label>
-              <Input
-                id="block-from"
-                type="time"
-                step={900}
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                dir="ltr"
-              />
+                    <span>
+                      <span dir="ltr">
+                        {riyadhParts(b.startsAt).time}–{riyadhParts(b.endsAt).time}
+                      </span>
+                      {b.reason ? ` · ${b.reason}` : ""}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={t("removeBlock")}
+                      onClick={() => block.run(() => removeBlockAction(b.id))}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="block-from">{t("blockFrom")}</Label>
+                <Input
+                  id="block-from"
+                  type="time"
+                  step={900}
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  dir="ltr"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="block-to">{t("blockTo")}</Label>
+                <Input
+                  id="block-to"
+                  type="time"
+                  step={900}
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  dir="ltr"
+                />
+              </div>
+              <div className="col-span-2 flex flex-col gap-1">
+                <Label htmlFor="block-reason">{t("blockReason")}</Label>
+                <Input
+                  id="block-reason"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="block-to">{t("blockTo")}</Label>
-              <Input
-                id="block-to"
-                type="time"
-                step={900}
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                dir="ltr"
-              />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1">
-              <Label htmlFor="block-reason">{t("blockReason")}</Label>
-              <Input id="block-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
-            </div>
-          </div>
-          <FormError message={block.error} />
-          <FormSuccess message={msg} />
-          <Button
-            className="self-end"
-            disabled={block.pending}
-            onClick={() =>
-              block.run(
-                () =>
-                  blockTimeAction({
-                    branchId,
-                    memberId,
-                    day,
-                    from,
-                    to,
-                    reason: reason || undefined,
-                  }),
-                () => {
-                  setMsg(t("blockedOk"));
-                  setReason("");
-                },
-              )
-            }
-          >
-            {tcom("save")}
-          </Button>
-        </CardContent>
-      </Card>
+            <FormError message={block.error} />
+            <FormSuccess message={msg} />
+            <Button
+              className="self-end"
+              disabled={block.pending}
+              onClick={() =>
+                block.run(
+                  () =>
+                    blockTimeAction({
+                      branchId,
+                      memberId,
+                      day,
+                      from,
+                      to,
+                      reason: reason || undefined,
+                    }),
+                  () => {
+                    setMsg(t("blockedOk"));
+                    setReason("");
+                  },
+                )
+              }
+            >
+              {tcom("save")}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <AppointmentDialog
         key={openId ?? "none"}
