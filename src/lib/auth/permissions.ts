@@ -15,6 +15,8 @@ const ALL_CLINIC_STAFF: Role[] = ["clinic_admin", "practitioner", "receptionist"
 
 export const PERMISSIONS = {
   "dashboard:view": ["platform_owner", ...ALL_CLINIC_STAFF],
+  /** Help centre: short guides per role. */
+  "help:view": ALL_CLINIC_STAFF,
   "patients:read": ALL_CLINIC_STAFF,
   "services:read": ALL_CLINIC_STAFF,
   // Clinical notes: practitioners — and nurses / assistants for the doctors they work with
@@ -145,6 +147,7 @@ export const NAV_ITEMS = [
     demoOnly: true,
   },
   { href: "/account", key: "account", permission: "account:manage" },
+  { href: "/help", key: "help", permission: "help:view" },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly {
   href: string;
@@ -167,6 +170,7 @@ export const MOBILE_PRIORITY = [
   "whatsapp",
   "simulator",
   "account",
+  "help",
 ] as const;
 
 /**

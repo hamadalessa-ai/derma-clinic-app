@@ -81,6 +81,13 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     receptionist: false,
     assistant: true,
   },
+  "help:view": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: true,
+    receptionist: true,
+    assistant: true,
+  },
   "visits:checkout": {
     platform_owner: false,
     clinic_admin: true,
