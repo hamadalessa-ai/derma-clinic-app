@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { and, asc, desc, eq, gt, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull } from "drizzle-orm";
 import { ArrowRight, FileText, Layers } from "lucide-react";
 import { AlertBadge, StatusBadge } from "@/components/clinic/badges";
 import { NotesPanel } from "@/components/clinic/patient-panels";
@@ -10,7 +10,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { VideoCall } from "@/components/video/video-call";
-import { appointments, billingItems, messages, patients, services } from "@/db/schema";
+import { appointments, billingItems, messages, patients, services, users } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
@@ -124,9 +124,20 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
           .where(eq(billingItems.isActive, true))
           .orderBy(asc(billingItems.code))
       : [];
+    // "Entered by" (the nurse) in the screen's language.
+    const enteredIds = [
+      ...new Set(notes.map((n) => n.enteredByUserId).filter((x): x is string => !!x)),
+    ];
+    const enteredNames = enteredIds.length
+      ? await tx
+          .select({ id: users.id, name: users.name, nameEn: users.nameEn })
+          .from(users)
+          .where(inArray(users.id, enteredIds))
+      : [];
     return {
       visit,
       patient,
+      enteredNames,
       alerts: alerts.get(visit.patientId),
       notes,
       settings,
@@ -171,7 +182,10 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
     createdAt: n.createdAt.toISOString(),
     signedAt: n.signedAt?.toISOString() ?? null,
     aiDrafted: !!n.aiDraftedAt,
-    enteredByName: n.enteredByName,
+    enteredByName: (() => {
+      const u = data.enteredNames.find((x) => x.id === n.enteredByUserId);
+      return u ? pick(locale, u.name, u.nameEn) : n.enteredByName;
+    })(),
     appointmentId: n.appointmentId,
     addenda: n.addenda.map((a) => ({
       id: a.id,
@@ -265,7 +279,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
                   aiDrafted: !!thisNote.aiDraftedAt,
                   // In the screen's language (the note itself keeps the name it was saved with).
                   authorName: pick(locale, data.doctor.name, data.doctor.nameEn),
-                  enteredByName: thisNote.enteredByName,
+                  enteredByName: toNoteView(thisNote).enteredByName,
                 }}
                 scribe={scribeOn}
                 preparingFor={preparingFor?.name ?? null}

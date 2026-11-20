@@ -12,6 +12,7 @@ import { dayRange, riyadhDay } from "@/lib/booking/time";
 import { DAILY_COLUMNS, dailyInvoicingCsv } from "@/lib/reports/daily-export";
 import { isMonth, monthDays, ownerReport, shiftMonth } from "@/lib/reports/owner";
 import { parseCsv } from "@/lib/patients/import";
+import { demoId } from "@/db/seed-data";
 import { admin, reception, RIYADH } from "./fixtures";
 
 afterAll(closeDb);
@@ -112,6 +113,33 @@ describe("daily invoicing file", () => {
     for (const v of fromPackage) expect(v[amount]).toBe("0.00");
     // Nothing clinical in the file.
     expect(r.csv).not.toMatch(/diagnos/i);
+  });
+
+  it("includes reception's checkout: amount, method and the clinic's invoice number", async () => {
+    // Demo: D-0019's past Botox visit, checked out by card as INV-2026-0412.
+    const id = demoId("derma:appointment:d0019-botox-past");
+    const [a] = await withActor(admin, (tx) =>
+      tx
+        .select({ startsAt: appointments.startsAt })
+        .from(appointments)
+        .where(eq(appointments.id, id)),
+    );
+    const r = await withActor(admin, (tx) =>
+      dailyInvoicingCsv(tx, admin, riyadhDay(a!.startsAt), null),
+    );
+    const [, ...rows] = parseCsv(r.csv);
+    const col = (name: string) => DAILY_COLUMNS.indexOf(name);
+    const mine = rows.filter((x) => x[col("reference")] === id.slice(0, 8));
+    const lines = mine.filter((x) => x[0] === "visit");
+    const [pay] = mine.filter((x) => x[0] === "visit_payment");
+    expect(lines.length).toBeGreaterThan(0);
+    for (const l of lines) expect(l[col("clinic_invoice_no")]).toBe("INV-2026-0412");
+    expect(pay).toBeDefined();
+    expect(pay![col("paid_by")]).toBe("card");
+    expect(pay![col("clinic_invoice_no")]).toBe("INV-2026-0412");
+    // Paid = the sum of the visit's lines.
+    const lineTotal = lines.reduce((sum, l) => sum + Number(l[col("amount_sar")]), 0);
+    expect(Number(pay![col("amount_sar")])).toBeCloseTo(lineTotal, 2);
   });
 
   it("is for clinic admins only", async () => {

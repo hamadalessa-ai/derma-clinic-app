@@ -122,7 +122,8 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   prescription) and invoice codes (`visit_charges`: a service or a price-list item from `billing_items`, Setup →
   Price list; code, name and price are COPIED at that moment). Once completed / cancelled / no-show, orders and
   codes are locked by the database (`app_visit_open()`); the note by the signed-note trigger. Corrections = addenda.
-  The daily invoicing file lists one row per invoice line. Never put medication text in audit metadata.
+  The daily invoicing file lists one row per invoice line, plus a `visit_payment` row per checkout (amount, method,
+  `clinic_invoice_no` on both). Never put medication text in audit metadata.
   Video calls show on the same screen (`/visits/<id>/video` redirects there).
 - Reception flow board (Calendar → "Patient flow", `src/lib/views/flow.ts`, `flow-board.tsx`): Expected → Waiting →
   With nurse → With doctor → Done, with time in each step. The times (`appointments.arrived_at`, `in_room_at`,

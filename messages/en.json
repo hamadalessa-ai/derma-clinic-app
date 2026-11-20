@@ -1811,7 +1811,7 @@
     "service": "Service",
     "value": "Value (est.)",
     "dailyTitle": "Daily file for your invoicing system",
-    "dailyHint": "One CSV per day with completed visits (list price, or 0 when a package paid), packages sold and package payments — ready to import into your accounting or e-invoicing (ZATCA) system.",
+    "dailyHint": "One CSV per day: each completed visit's invoice lines (0 when a package paid), what reception recorded at checkout (amount, method and your invoice number), packages sold and package payments — ready to import into your accounting or e-invoicing (ZATCA) system.",
     "day": "Day",
     "dailyDownload": "Download the day's file",
     "vsLastMonth": "vs last month"
