@@ -14,12 +14,21 @@ import { addCharge } from "@/lib/visits/visit";
 import { DentalError } from "./chart";
 import { isTooth, normalizeSurfaces } from "./teeth";
 
+/** The plan: still to do first (by tooth), then done (latest first), then cancelled. */
 export async function planFor(tx: TenantTx, patientId: string) {
-  return tx
+  const rows = await tx
     .select()
     .from(dentalPlanItems)
     .where(eq(dentalPlanItems.patientId, patientId))
     .orderBy(asc(dentalPlanItems.createdAt), asc(dentalPlanItems.id));
+  const rank = { planned: 0, done: 1, cancelled: 2 } as const;
+  return rows.sort(
+    (a, b) =>
+      rank[a.status] - rank[b.status] ||
+      (a.status === "done"
+        ? (b.doneAt?.getTime() ?? 0) - (a.doneAt?.getTime() ?? 0)
+        : (a.tooth ?? 99) - (b.tooth ?? 99)),
+  );
 }
 
 /** Estimate: planned (still to do) and done, at the copied prices. Cancelled items don't count. */

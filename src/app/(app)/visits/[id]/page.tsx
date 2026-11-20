@@ -61,7 +61,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
   const tv = await getTranslations("video");
   const tc = await getTranslations("calendar");
   const ts = await getTranslations("statuses");
-  const td = await getTranslations("dental");
+  const tp = await getTranslations("patientsX");
   const actor = actorOf(ctx);
 
   const data = await withActor(actor, async (tx) => {
@@ -282,6 +282,21 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             </Card>
           )}
 
+          {data.dentalVisit && (
+            <section className="flex flex-col gap-3" aria-labelledby="visit-dental">
+              <h2 id="visit-dental" className="text-[17px] leading-[26px] font-semibold">
+                {tp("dental")}
+              </h2>
+              <DentalSection
+                actor={actor}
+                patientId={visit.patientId}
+                appointmentId={visit.appointmentId}
+                visitOpen={!CLOSED_STATUSES.includes(status) && status === "in_session"}
+                practitionerId={visit.practitionerId}
+              />
+            </section>
+          )}
+
           <section className="flex flex-col gap-3" aria-labelledby="visit-note">
             <h2 id="visit-note" className="text-[17px] leading-[26px] font-semibold">
               {t("note")}
@@ -343,20 +358,6 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             )}
           </section>
 
-          {data.dentalVisit && (
-            <section className="flex flex-col gap-3" aria-labelledby="visit-dental">
-              <h2 id="visit-dental" className="text-[17px] leading-[26px] font-semibold">
-                {td("chart")}
-              </h2>
-              <DentalSection
-                actor={actor}
-                patientId={visit.patientId}
-                appointmentId={visit.appointmentId}
-                visitOpen={!CLOSED_STATUSES.includes(status) && status === "in_session"}
-                practitionerId={visit.practitionerId}
-              />
-            </section>
-          )}
         </div>
 
         <aside className="flex flex-col gap-4">
