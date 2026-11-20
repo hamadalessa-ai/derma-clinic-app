@@ -1177,7 +1177,7 @@
     "left": "{remaining} of {total} left",
     "earlier": "Earlier notes",
     "noEarlier": "No earlier signed notes.",
-    "assisting": "You're preparing this visit for {name}. You can bring the patient in and write the note; the doctor signs.",
+    "assisting": "You're preparing this visit for {name}. You can bring the patient in, write the note, add orders and invoice codes, and post the visit in the doctor's name.",
     "noteFor": "Visit note — {name}",
     "post": "Post visit",
     "postHint": "Posting saves the note, the orders and the invoice codes, and completes the visit. Corrections are added underneath afterwards.",
@@ -1205,7 +1205,7 @@
     "charges": "Invoice codes",
     "noCharges": "No invoice codes yet.",
     "total": "Total",
-    "sar": "{amount} SAR",
+    "sar": "SAR",
     "addCode": "Add code",
     "fromPriceList": "Price list",
     "fromServices": "Services",
@@ -1714,8 +1714,8 @@
       "procedure": "Procedure",
       "other": "Other"
     },
-    "sarPer": "{price} SAR per {unit}",
-    "each": "each",
+    "sarPer": "SAR per",
+    "each": "item",
     "unitAr": "Unit (Arabic)",
     "unitEn": "Unit (English)",
     "activePrice": "In use"
