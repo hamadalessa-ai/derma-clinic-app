@@ -57,7 +57,9 @@ const file = await card.getAttribute("data-patient");
 if (!file) throw new Error("no expected patient of Dr. Sarah / Dr. Faisal without a consent");
 const time = (await card.locator("span.font-mono").first().innerText()).trim();
 const ours = (stage) =>
-  column(desk, stage).locator(`[data-testid=flow-card][data-patient="${file}"]`).filter({ hasText: time });
+  column(desk, stage)
+    .locator(`[data-testid=flow-card][data-patient="${file}"]`)
+    .filter({ hasText: time });
 console.log("patient:", file, time);
 await card.getByTestId("flow-check-in").click();
 await ours("waiting").waitFor({ timeout: 15000 });
@@ -97,7 +99,10 @@ await orders.getByText("Adapalene 0.1% gel").waitFor({ timeout: 15000 });
 await orders.getByRole("button").last().click(); // "Add" again
 await orders.getByRole("button", { name: "Treatment plan" }).click();
 await nurse.getByTestId("order-name").fill("Chemical peel course");
-const peel = await nurse.locator("#o-svc option", { hasText: /peel/i }).first().getAttribute("value");
+const peel = await nurse
+  .locator("#o-svc option", { hasText: /peel/i })
+  .first()
+  .getAttribute("value");
 await nurse.locator("#o-svc").selectOption(peel);
 await nurse.locator("#o-sessions").fill("3");
 await nurse.locator("#o-weeks").fill("3");
