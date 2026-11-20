@@ -67,9 +67,7 @@ const mine = nurse.locator(
 await mine.waitFor({ timeout: 15000 });
 await mine.scrollIntoViewIfNeeded();
 await shot(nurse, "nurse-my-day");
-await mine.getByTestId("open-visit").click();
-await nurse.getByTestId("visit-screen").waitFor({ timeout: 20000 });
-await nurse.getByTestId("start-visit").click();
+await mine.getByTestId("start-visit").click(); // starts the visit and opens its screen
 await nurse.getByTestId("visit-workspace").waitFor({ timeout: 20000 });
 await shot(nurse, "nurse-visit-started");
 
