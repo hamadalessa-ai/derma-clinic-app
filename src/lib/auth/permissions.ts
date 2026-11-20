@@ -94,7 +94,7 @@ export const PERMISSIONS = {
 
   // ── Working hours ──
   /** Weekly hours and one-off changes: admins (all), reception (own branch), doctors (own, if allowed). */
-  "hours:edit": ALL_CLINIC_STAFF,
+  "hours:edit": ["clinic_admin", "practitioner", "receptionist"],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

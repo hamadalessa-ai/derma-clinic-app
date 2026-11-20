@@ -20,16 +20,15 @@ describe("db/setup.sql", () => {
 
   it("applies branch walls and the practitioner-only rule to the listed tables", () => {
     const rls = readFileSync(path.resolve(__dirname, "../db/rls.sql"), "utf8");
-    const branchLoop = rls.slice(
-      rls.indexOf("Branch-scoped tables"),
-      rls.indexOf("Clinical notes: ONLY"),
-    );
+    const notesStart = rls.indexOf("Nurse / assistant: does the signed-in user");
+    expect(notesStart).toBeGreaterThan(0);
+    const branchLoop = rls.slice(rls.indexOf("Branch-scoped tables"), notesStart);
     for (const table of BRANCH_SCOPED_TABLES) expect(branchLoop).toContain(`'${table}'`);
-    const notesLoop = rls.slice(
-      rls.indexOf("Clinical notes: ONLY"),
-      rls.indexOf("Notes and addenda are written"),
-    );
-    for (const table of PRACTITIONER_ONLY_TABLES) expect(notesLoop).toContain(`'${table}'`);
+    // Each notes table has its own restrictive "practitioners only" policy (nurses: their doctors').
+    const notesRules = rls.slice(notesStart, rls.indexOf("Notes are written in the doctor's"));
+    for (const table of PRACTITIONER_ONLY_TABLES) {
+      expect(notesRules).toContain(`${table}_practitioners_only on public.${table} as restrictive`);
+    }
   });
 
   it("contains no real-looking secrets, only placeholders", () => {
