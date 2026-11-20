@@ -45,7 +45,7 @@ describe("refresh demo week", () => {
       tx.select().from(rescheduleRequests).where(eq(rescheduleRequests.appointmentId, appt)),
     );
     const r = await withActor(lamsaAdmin, (tx) => refreshDemoWeek(tx, lamsaAdmin, "2030-03-10"));
-    expect(r.moved).toBe(1);
+    expect(r.moved).toBe(2); // today's visit and yesterday's checked-out one
     const [after] = await withActor(lamsaAdmin, (tx) =>
       tx.select().from(appointments).where(eq(appointments.id, appt)),
     );
