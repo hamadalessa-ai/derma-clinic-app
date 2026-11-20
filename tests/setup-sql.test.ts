@@ -3,8 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildSetupSql } from "@/db/setup-sql";
 import { BRANCH_SCOPED_TABLES, PRACTITIONER_ONLY_TABLES, TENANT_TABLES } from "@/db/schema";
-import { DERMA, DERMA_DENTAL_SERVICES,
-  DERMA_SERVICES, LAMSA } from "@/db/seed-data";
+import { DERMA, DERMA_DENTAL_SERVICES, DERMA_SERVICES, LAMSA } from "@/db/seed-data";
 import ar from "../messages/ar.json";
 import en from "../messages/en.json";
 
