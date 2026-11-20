@@ -267,9 +267,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
                 scribe={scribeOn}
                 preparingFor={preparingFor?.name ?? null}
                 handover={
-                  preparingFor && status === "in_session"
-                    ? { called: data.doctorCalled }
-                    : null
+                  preparingFor && status === "in_session" ? { called: data.doctorCalled } : null
                 }
                 charges={data.extras.charges}
                 orders={data.extras.orders}

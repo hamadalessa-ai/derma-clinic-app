@@ -142,7 +142,8 @@ export function demoSql(): string {
   // end. Dr. Sara's patient in the room is still with her nurse (Huda), so no doctor time yet.
   const flowTimes = (a: ReturnType<typeof generateDemoWeek>[number]) => {
     const step = ["arrived", "in_session", "completed"].indexOf(a.status);
-    if (step < 0) return { arrived_at: null, in_room_at: null, doctor_at: null, completed_at: null };
+    if (step < 0)
+      return { arrived_at: null, in_room_at: null, doctor_at: null, completed_at: null };
     const nurseOnly = a.status === "in_session" && a.doctorKey === "derma-dr-sara";
     return {
       arrived_at: at(a.dayIndex, a.time, -5),

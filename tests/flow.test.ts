@@ -12,16 +12,7 @@ import { bookAppointment, BookingError } from "@/lib/booking/engine";
 import { checkIn } from "@/lib/visits/check-in";
 import { postVisit, readyForDoctor, startVisit } from "@/lib/visits/visit";
 import { flowStage, minutesSince, needsAttention, stageSince } from "@/lib/views/flow";
-import {
-  drSara,
-  member,
-  nurse,
-  patient,
-  reception,
-  RIYADH,
-  riyadhAt,
-  service,
-} from "./fixtures";
+import { drSara, member, nurse, patient, reception, RIYADH, riyadhAt, service } from "./fixtures";
 
 afterAll(closeDb);
 
@@ -106,9 +97,9 @@ describe("flow times", () => {
     expect(flowStage(view(r))).toBe("nurse");
 
     // Only her: not reception, not the doctor.
-    await expect(
-      withActor(reception, (tx) => readyForDoctor(tx, reception, a.id)),
-    ).rejects.toThrow(PermissionError);
+    await expect(withActor(reception, (tx) => readyForDoctor(tx, reception, a.id))).rejects.toThrow(
+      PermissionError,
+    );
     await expect(withActor(drSara, (tx) => readyForDoctor(tx, drSara, a.id))).rejects.toThrow();
 
     expect(await withActor(nurse, (tx) => readyForDoctor(tx, nurse, a.id))).toEqual({
