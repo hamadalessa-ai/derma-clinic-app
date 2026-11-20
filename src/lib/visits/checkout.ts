@@ -325,3 +325,9 @@ export async function instructionsData(tx: TenantTx, appointmentId: string) {
   };
 }
 export type InstructionsData = NonNullable<Awaited<ReturnType<typeof instructionsData>>>;
+
+/** The WhatsApp care link opens for this many days after the visit. */
+export const CARE_LINK_DAYS = 60;
+export function careLinkOpen(visitStart: Date, now = new Date()) {
+  return now.getTime() - visitStart.getTime() <= CARE_LINK_DAYS * 86400_000;
+}

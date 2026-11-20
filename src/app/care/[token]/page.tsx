@@ -12,13 +12,10 @@ import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { getCurrentTenant } from "@/lib/tenant/current";
 import { publicPagesOpen } from "@/lib/tenant/status";
 import { parseCareToken } from "@/lib/video/link";
-import { instructionsData } from "@/lib/visits/checkout";
+import { careLinkOpen, instructionsData } from "@/lib/visits/checkout";
 import type { Locale } from "@/i18n/config";
 
 export const metadata: Metadata = { title: "Instructions · التعليمات" };
-
-/** The link opens for this many days after the visit. */
-const CARE_LINK_DAYS = 60;
 
 /**
  * The patient's after-visit instructions, from the WhatsApp link (signed, this visit only):
@@ -36,7 +33,7 @@ export default async function CarePage({ params }: { params: Promise<{ token: st
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("care");
   const tb = await getTranslations("book");
-  const expired = Date.now() - data.appointment.startsAt.getTime() > CARE_LINK_DAYS * 86400_000;
+  const expired = !careLinkOpen(data.appointment.startsAt);
   const clinicName = pick(locale, tenant.nameAr, tenant.nameEn);
 
   return (
