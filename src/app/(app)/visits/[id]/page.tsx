@@ -10,12 +10,21 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { VideoCall } from "@/components/video/video-call";
-import { appointments, billingItems, messages, patients, services, users } from "@/db/schema";
+import {
+  appointments,
+  billingItems,
+  departments,
+  messages,
+  patients,
+  services,
+  users,
+} from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { doctorOf } from "@/lib/care-team/care-team";
 import { mayWorkOnVisit, visitExtras } from "@/lib/visits/visit";
+import { DentalSection } from "@/components/clinic/dental-section";
 import { VisitExtras, VisitWorkspace } from "@/components/clinic/visit-workspace";
 import { getSettings } from "@/lib/booking/engine";
 import type { AppointmentStatus } from "@/lib/booking/status";
@@ -52,6 +61,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
   const tv = await getTranslations("video");
   const tc = await getTranslations("calendar");
   const ts = await getTranslations("statuses");
+  const td = await getTranslations("dental");
   const actor = actorOf(ctx);
 
   const data = await withActor(actor, async (tx) => {
@@ -96,6 +106,12 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
       .select({ doctorAt: appointments.doctorAt })
       .from(appointments)
       .where(eq(appointments.id, visit.appointmentId));
+    // A dental visit shows the tooth chart, the treatment plan and lab work.
+    const [dept] = await tx
+      .select({ code: departments.code })
+      .from(services)
+      .innerJoin(departments, eq(departments.id, services.departmentId))
+      .where(eq(services.id, visit.serviceId));
     const catalogServices = allowed
       ? await tx
           .select({
@@ -147,6 +163,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
       doctor,
       extras,
       doctorCalled: !!flow?.doctorAt,
+      dentalVisit: dept?.code === "dental",
       catalog: { services: catalogServices, items: catalogItems },
     };
   });
@@ -325,6 +342,21 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
               </Card>
             )}
           </section>
+
+          {data.dentalVisit && (
+            <section className="flex flex-col gap-3" aria-labelledby="visit-dental">
+              <h2 id="visit-dental" className="text-[17px] leading-[26px] font-semibold">
+                {td("chart")}
+              </h2>
+              <DentalSection
+                actor={actor}
+                patientId={visit.patientId}
+                appointmentId={visit.appointmentId}
+                visitOpen={!CLOSED_STATUSES.includes(status) && status === "in_session"}
+                practitionerId={visit.practitionerId}
+              />
+            </section>
+          )}
         </div>
 
         <aside className="flex flex-col gap-4">

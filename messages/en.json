@@ -44,7 +44,8 @@
     "simulator": "WhatsApp simulator",
     "setup": "Clinic set-up",
     "reports": "Reports",
-    "help": "Help"
+    "help": "Help",
+    "labCases": "Lab cases"
   },
   "roles": {
     "platform_owner": "Platform owner",
@@ -249,7 +250,11 @@
     "crashTitle": "Something went wrong",
     "crash": "This page couldn't be shown. Nothing was changed. Please try again; if it keeps happening, contact support with the reference below.",
     "tryAgain": "Try again",
-    "reference": "Reference"
+    "reference": "Reference",
+    "dental_bad_tooth": "That isn't a valid tooth number.",
+    "dental_not_found": "Not found.",
+    "dental_not_planned": "This step is no longer planned.",
+    "dental_bad_status": "That change isn't possible now."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -459,7 +464,8 @@
     "fakeData": "Fake data",
     "guardianFile": "Guardian's file number (optional)",
     "relationAr": "Relationship",
-    "import": "Import"
+    "import": "Import",
+    "dental": "Dental"
   },
   "packages": {
     "title": "Packages",
@@ -1941,5 +1947,101 @@
     "open": "Open",
     "more": "Need more help? Ask your clinic admin.",
     "moreAdmin": "Need more help? Contact platform support: give them time-limited access from Settings → Team."
+  },
+  "dental": {
+    "chart": "Dental chart",
+    "upper": "Upper jaw",
+    "lower": "Lower jaw",
+    "patientRight": "Patient's right",
+    "patientLeft": "Patient's left",
+    "legendTreat": "Needs treatment",
+    "legendDone": "Treated",
+    "toothN": "Tooth {n}",
+    "condition": "Condition",
+    "surfaces": "Surfaces",
+    "notePlaceholder": "Note (optional)",
+    "record": "Record",
+    "tooth": "Tooth",
+    "cond": {
+      "healthy": "Healthy",
+      "caries": "Caries",
+      "filled": "Filled",
+      "crown": "Crown",
+      "root_canal": "Root canal",
+      "missing": "Missing",
+      "implant": "Implant",
+      "bridge": "Bridge",
+      "extraction_needed": "To extract",
+      "watch": "Watch"
+    },
+    "short": {
+      "healthy": "",
+      "caries": "C",
+      "filled": "F",
+      "crown": "Cr",
+      "root_canal": "RCT",
+      "missing": "✕",
+      "implant": "Imp",
+      "bridge": "Br",
+      "extraction_needed": "Ext",
+      "watch": "W"
+    },
+    "surface": {
+      "M": "Mesial",
+      "O": "Occlusal",
+      "D": "Distal",
+      "B": "Buccal",
+      "L": "Lingual"
+    },
+    "plan": "Treatment plan",
+    "noPlan": "No treatment planned yet.",
+    "planned": "Planned",
+    "done": "Done",
+    "doneToday": "Done in this visit",
+    "cancelItem": "Remove from plan",
+    "remaining": "Still to do ({n})",
+    "doneTotal": "Done",
+    "sar": "SAR",
+    "addStep": "Add a step",
+    "procedure": "Procedure",
+    "lab": "Lab work",
+    "noLab": "No lab work.",
+    "overdue": "Overdue",
+    "sendToLab": "Send to lab",
+    "labWork": "Work",
+    "labName": "Lab",
+    "teeth": "Teeth",
+    "shade": "Shade",
+    "sentOn": "Sent",
+    "dueOn": "Due back",
+    "dentist": "Dentist",
+    "labNotes": "Notes for the lab",
+    "work": {
+      "crown": "Crown",
+      "bridge": "Bridge",
+      "veneer": "Veneer",
+      "denture": "Denture",
+      "aligner": "Aligner",
+      "night_guard": "Night guard",
+      "implant_part": "Implant part",
+      "other": "Other"
+    },
+    "labStatus": {
+      "sent": "At the lab",
+      "received": "Received",
+      "fitted": "Fitted",
+      "remake": "Remake",
+      "cancelled": "Cancelled"
+    },
+    "labTo": {
+      "received": "Received",
+      "fitted": "Fitted",
+      "remake": "Remake",
+      "cancelled": "Cancel"
+    },
+    "labTitle": "Lab cases",
+    "labSubtitle": "Work at dental labs: due dates and where each case is.",
+    "labOpen": "Open",
+    "labAll": "All"
   }
 }

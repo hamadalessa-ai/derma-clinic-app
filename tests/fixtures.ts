@@ -30,6 +30,7 @@ export const drLina = actor("derma-dr-lina", ["practitioner"], JEDDAH);
 export const reception = actor("derma-rec-ruh1", ["receptionist"], RIYADH);
 export const receptionJeddah = actor("derma-rec-jed", ["receptionist"], JEDDAH);
 export const nurse = actor("derma-nurse-ruh", ["assistant"], RIYADH);
+export const drNawaf = actor("derma-dr-nawaf", ["practitioner"], RIYADH); // dentist
 export const lamsaAdmin = actor("lamsa-admin", ["clinic_admin"], null, LAMSA);
 
 /** A Riyadh clinic time on a fixed future date (Sunday 13 Jan 2030 unless given). */

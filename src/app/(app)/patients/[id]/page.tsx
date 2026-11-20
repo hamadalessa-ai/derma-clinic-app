@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DentalSection } from "@/components/clinic/dental-section";
 import { ContactButtons } from "@/components/clinic/contact-buttons";
 import { AlertBadge, BalanceBadge, StatusBadge } from "@/components/clinic/badges";
 import { ConcernCard } from "@/components/clinic/concern-card";
@@ -29,6 +30,7 @@ import { WhatsAppConsentCard } from "@/components/whatsapp/consent-card";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
+import { dentalEnabled } from "@/lib/dental/chart";
 import { pick } from "@/lib/brand";
 import { consentsForPatient, currentTemplates, isIntact } from "@/lib/consents/consents";
 import { formatDualDate, formatGregorian } from "@/lib/format";
@@ -50,7 +52,7 @@ import type { Locale } from "@/i18n/config";
 /** The AI scribe may take a while to draft a long note. */
 export const maxDuration = 60;
 
-const TABS = ["overview", "visits", "packages", "consents", "notes"] as const;
+const TABS = ["overview", "visits", "packages", "consents", "dental", "notes"] as const;
 type Tab = (typeof TABS)[number];
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -73,7 +75,9 @@ export default async function PatientProfilePage({
   const tc = await getTranslations("calendar");
   const tco = await getTranslations("common");
   const canNotes = can(ctx.roles, "clinical_notes:read");
-  const tabs = TABS.filter((x) => x !== "notes" || canNotes);
+  // Dental tab only in clinics with a dental department.
+  const dental = await withActor(actorOf(ctx), (tx) => dentalEnabled(tx));
+  const tabs = TABS.filter((x) => (x !== "notes" || canNotes) && (x !== "dental" || dental));
   const tab: Tab = (tabs as readonly string[]).includes(sp.tab ?? "")
     ? (sp.tab as Tab)
     : "overview";
@@ -431,6 +435,8 @@ export default async function PatientProfilePage({
           canCollect={can(ctx.roles, "consents:collect")}
         />
       )}
+
+      {tab === "dental" && dental && <DentalSection actor={actor} patientId={id} />}
 
       {tab === "notes" && canNotes && (
         <>

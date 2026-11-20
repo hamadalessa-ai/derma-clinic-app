@@ -8,6 +8,7 @@ import { MobileNav } from "@/components/shell/mobile-nav";
 import { NavLinks } from "@/components/shell/nav-links";
 import { Button } from "@/components/ui/button";
 import { can, NAV_ITEMS } from "@/lib/auth/permissions";
+import { dentalEnabled } from "@/lib/dental/chart";
 import { requireStaff } from "@/lib/auth/session";
 import { brandStyle, pick } from "@/lib/brand";
 import { limitWarnings } from "@/lib/platform/overview";
@@ -33,8 +34,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       : null;
 
   const demo = whatsappMode(ctx.tenant) === "demo";
+  const dental = await withTenant(ctx.tenant.id, (tx) => dentalEnabled(tx));
   const items = NAV_ITEMS.filter(
-    (i) => can(ctx.roles, i.permission) && (!("demoOnly" in i) || demo),
+    (i) =>
+      can(ctx.roles, i.permission) &&
+      (!("demoOnly" in i) || demo) &&
+      (!("dentalOnly" in i) || dental),
   ).map((i) => ({
     href: i.href,
     key: i.key,

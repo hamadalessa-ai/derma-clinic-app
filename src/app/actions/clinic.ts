@@ -71,6 +71,10 @@ import {
 import { sendBookingConfirmation, sendVisitInstructions } from "@/lib/whatsapp/outbox";
 import { checkOut } from "@/lib/visits/checkout";
 import { deskSearch, walkIn } from "@/lib/front-desk/desk";
+import { recordTooth } from "@/lib/dental/chart";
+import { addPlanItem, cancelPlanItem, markPlanDone } from "@/lib/dental/plan";
+import { createLabCase, LAB_STATUSES, LAB_WORK, setLabStatus } from "@/lib/dental/lab";
+import { TOOTH_CONDITIONS } from "@/lib/dental/teeth";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
@@ -2429,5 +2433,142 @@ export async function walkInAction(input: {
       };
     }
     return { appointmentId: r.appointmentId, status: r.result.status };
+  });
+}
+
+// ─── Dental ─────────────────────────────────────────────────────────────────
+
+/** Patient file and visit screen show the dental chart and plan: refresh both. */
+function dentalChanged(patientId: string, appointmentId?: string | null) {
+  revalidatePath(`/patients/${patientId}`);
+  if (appointmentId) visitChanged(appointmentId);
+}
+
+export async function recordToothAction(input: {
+  patientId: string;
+  tooth: number;
+  condition: string;
+  surfaces?: string;
+  note?: string | null;
+  appointmentId?: string | null;
+}) {
+  return staffAction("dental:chart", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        patientId: uuid,
+        tooth: z.number().int().min(11).max(48),
+        condition: z.enum(TOOTH_CONDITIONS),
+        surfaces: text(5).optional(),
+        note: text(300).nullish(),
+        appointmentId: uuid.nullish(),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => recordTooth(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+export async function addPlanItemAction(input: {
+  patientId: string;
+  serviceId: string;
+  tooth?: number | null;
+  surfaces?: string;
+  note?: string | null;
+  appointmentId?: string | null;
+}) {
+  return staffAction("dental:plan", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        patientId: uuid,
+        serviceId: uuid,
+        tooth: z.number().int().min(11).max(48).nullish(),
+        surfaces: text(5).optional(),
+        note: text(300).nullish(),
+        appointmentId: uuid.nullish(),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => addPlanItem(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+export async function planDoneAction(input: {
+  patientId: string;
+  itemId: string;
+  appointmentId: string;
+}) {
+  return staffAction("dental:plan", async (_ctx, actor) => {
+    const v = parse(z.object({ patientId: uuid, itemId: uuid, appointmentId: uuid }), input);
+    await withActor(actor, (tx) => markPlanDone(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+export async function cancelPlanItemAction(input: {
+  patientId: string;
+  itemId: string;
+  appointmentId?: string | null;
+}) {
+  return staffAction("dental:plan", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ patientId: uuid, itemId: uuid, appointmentId: uuid.nullish() }),
+      input,
+    );
+    await withActor(actor, (tx) => cancelPlanItem(tx, actor, v.itemId));
+    dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+export async function createLabCaseAction(input: {
+  patientId: string;
+  practitionerId: string;
+  appointmentId?: string | null;
+  labName: string;
+  work: string;
+  teeth?: string;
+  shade?: string | null;
+  sentOn: string;
+  dueOn: string;
+  notes?: string | null;
+}) {
+  return staffAction("lab:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        patientId: uuid,
+        practitionerId: uuid,
+        appointmentId: uuid.nullish(),
+        labName: text(80).min(2),
+        work: z.enum(LAB_WORK),
+        teeth: text(40).optional(),
+        shade: text(20).nullish(),
+        sentOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        dueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        notes: text(300).nullish(),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => createLabCase(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    revalidatePath("/lab-cases");
+    return null;
+  });
+}
+
+export async function setLabStatusAction(input: { id: string; status: string; patientId: string }) {
+  return staffAction("lab:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ id: uuid, status: z.enum(LAB_STATUSES), patientId: uuid }),
+      input,
+    );
+    await withActor(actor, (tx) => setLabStatus(tx, actor, v));
+    dentalChanged(v.patientId);
+    revalidatePath("/lab-cases");
+    return null;
   });
 }
