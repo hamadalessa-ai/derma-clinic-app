@@ -93,9 +93,13 @@ try {
       await page.screenshot({ path: "screenshots/checkout-en.png", fullPage: true });
     }
     // A visit with orders (demo: D-0019's past Botox visit) — checked out, and its printed sheet.
-    await page.goto(`${BASE}/checkout/6cb8e300-9258-5346-a5b6-b2a191792506`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/checkout/6cb8e300-9258-5346-a5b6-b2a191792506`, {
+      waitUntil: "networkidle",
+    });
     await page.screenshot({ path: "screenshots/checkout-en-done.png", fullPage: true });
-    await page.goto(`${BASE}/instructions/6cb8e300-9258-5346-a5b6-b2a191792506`, { waitUntil: "networkidle" });
+    await page.goto(`${BASE}/instructions/6cb8e300-9258-5346-a5b6-b2a191792506`, {
+      waitUntil: "networkidle",
+    });
     await page.screenshot({ path: "screenshots/instructions-en.png", fullPage: true });
   }
   await page.goto(`${BASE}/reports`, { waitUntil: "networkidle" });
