@@ -103,6 +103,7 @@ import {
   addCharge,
   addOrder,
   postVisit,
+  readyForDoctor,
   removeCharge,
   removeOrder,
   signAndComplete,
@@ -769,6 +770,26 @@ export async function postVisitAction(input: {
     const r = await withActor(actor, (tx) => postVisit(tx, actor, v));
     visitChanged(v.appointmentId);
     revalidatePath("/clinical-notes");
+    if (r.completed) {
+      notifyLater(actor.tenantId, [
+        { type: "ready_for_checkout", appointmentId: v.appointmentId, actorUserId: actor.userId },
+      ]);
+    }
+    return r;
+  });
+}
+
+/** Nurse / assistant: the patient is prepared — tell the doctor ("ready for doctor"). */
+export async function readyForDoctorAction(appointmentId: string) {
+  return staffAction("visits:assist", async (_ctx, actor) => {
+    const id = parse(uuid, appointmentId);
+    const r = await withActor(actor, (tx) => readyForDoctor(tx, actor, id));
+    visitChanged(id);
+    if (r.changed) {
+      notifyLater(actor.tenantId, [
+        { type: "doctor_needed", appointmentId: id, actorUserId: actor.userId },
+      ]);
+    }
     return r;
   });
 }

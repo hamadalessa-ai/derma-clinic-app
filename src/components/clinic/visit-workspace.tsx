@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, Pill, Plus, Receipt, Repeat, Sparkles, X } from "lucide-react";
+import { BellRing, Check, Pill, Plus, Receipt, Repeat, Sparkles, X } from "lucide-react";
 import {
   addVisitChargeAction,
   addVisitOrderAction,
   postVisitAction,
+  readyForDoctorAction,
   removeVisitChargeAction,
   removeVisitOrderAction,
   saveDraftAction,
@@ -75,12 +76,15 @@ export function VisitWorkspace({
   note,
   scribe,
   preparingFor,
+  handover,
   charges,
   orders,
   catalog,
 }: {
   appointmentId: string;
   patientId: string;
+  /** Nurse / assistant while the patient is in the room: "ready for doctor" (once). */
+  handover: { called: boolean } | null;
   note: {
     id: string;
     body: string;
@@ -148,6 +152,8 @@ export function VisitWorkspace({
         </CardContent>
       </Card>
 
+      {handover && <ReadyForDoctor appointmentId={appointmentId} called={handover.called} />}
+
       <VisitExtras
         appointmentId={appointmentId}
         charges={charges}
@@ -181,6 +187,33 @@ export function VisitWorkspace({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** Nurse / assistant: tell the doctor the patient is prepared (push + reception board). */
+function ReadyForDoctor({ appointmentId, called }: { appointmentId: string; called: boolean }) {
+  const t = useTranslations("visit");
+  const act = useAction();
+  return (
+    <Card data-testid="ready-for-doctor">
+      <CardContent className="flex flex-wrap items-center gap-3 pt-4 md:pt-5">
+        <p className="text-muted-foreground min-w-0 flex-1 text-sm">
+          {called ? t("doctorCalled") : t("readyHint")}
+        </p>
+        {!called && (
+          <Button
+            variant="outline"
+            loading={act.pending}
+            data-testid="ready-for-doctor-button"
+            onClick={() => act.run(() => readyForDoctorAction(appointmentId))}
+          >
+            {!act.pending && <BellRing />}
+            {t("readyForDoctor")}
+          </Button>
+        )}
+        <FormError message={act.error} />
+      </CardContent>
+    </Card>
   );
 }
 

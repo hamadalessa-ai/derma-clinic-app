@@ -354,7 +354,8 @@
     "noArrivals": "No appointments this day.",
     "checkedInName": "{name} checked in",
     "otherTime": "Book a specific time instead",
-    "showFreeTimes": "Show the next free times"
+    "showFreeTimes": "Show the next free times",
+    "flow": "Patient flow"
   },
   "consent": {
     "sign": "Sign consent",
@@ -775,7 +776,9 @@
       "patient_concern": "Patient concern after a procedure (WhatsApp)",
       "concern_photo": "A patient with a concern sent a photo",
       "concern_note": "Internal note on a patient concern",
-      "follow_up_request": "Doctor asks to book a follow-up"
+      "follow_up_request": "Doctor asks to book a follow-up",
+      "doctor_needed": "The nurse says a patient is ready for me",
+      "ready_for_checkout": "Visit posted — ready for checkout"
     },
     "twoFactorTitle": "Two-step verification"
   },
@@ -1209,7 +1212,10 @@
     "addCode": "Add code",
     "fromPriceList": "Price list",
     "fromServices": "Services",
-    "qty": "Qty"
+    "qty": "Qty",
+    "readyHint": "When the patient is prepared, tell the doctor. Reception sees it on the flow board.",
+    "readyForDoctor": "Ready for doctor",
+    "doctorCalled": "The doctor has been told the patient is ready."
   },
   "sign": {
     "title": "{name}, your consent form",
@@ -1823,5 +1829,20 @@
     "code": "6-digit code",
     "confirm": "Turn on",
     "turnedOn": "Two-step verification is on. You'll need a code at your next sign-in."
+  },
+  "flow": {
+    "stage": {
+      "expected": "Expected",
+      "waiting": "Waiting",
+      "nurse": "With nurse",
+      "doctor": "With doctor",
+      "done": "Done"
+    },
+    "minutes": "{m} min",
+    "hours": "{h} h {m} min",
+    "late": "Late {time}",
+    "doneAgo": "{time} ago",
+    "none": "No one",
+    "empty": "No patients on this day."
   }
 }

@@ -3,24 +3,21 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CalendarCheck, UserCheck } from "lucide-react";
-import { checkInAction } from "@/app/actions/clinic";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { useToast } from "@/components/ui/toast";
 import type { Locale } from "@/i18n/config";
 import type { ApptView } from "@/lib/views/schedule";
 import { AppointmentDialog, type AppointmentPermissions } from "./appointment-dialog";
 import { AlertBadge, BalanceBadge, StatusBadge } from "./badges";
 import type { PickOption } from "./booking-dialog";
-import { ConsentSignDialog, type ConsentTemplateView } from "./consent-sign-dialog";
 import { FormError } from "./form-message";
 import { riyadhParts } from "./time";
-import { useAction } from "./use-action";
+import { useCheckIn } from "./use-check-in";
 
 /**
  * Reception's "Arrivals" list: today's appointments in time order, one "Check in" button per
- * row. If a consent is needed, the signature sheet opens and the check-in finishes on "Sign".
+ * row (useCheckIn: a needed consent opens the signature sheet first).
  */
 export function ArrivalsList({
   appointments,
@@ -38,38 +35,12 @@ export function ArrivalsList({
   const t = useTranslations("calendar");
   const ts = useTranslations("statuses");
   const locale = useLocale() as Locale;
-  const toast = useToast();
   const name = (o: { nameAr: string; nameEn: string | null }) =>
     locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
   const [openId, setOpenId] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [consent, setConsent] = useState<{ appt: ApptView; template: ConsentTemplateView } | null>(
-    null,
-  );
-  const { run, error } = useAction();
+  const { checkIn, busyId, error, consentDialog } = useCheckIn();
   const rows = appointments.filter((a) => a.status !== "cancelled");
   const open = rows.find((a) => a.id === openId) ?? null;
-
-  const checkIn = (a: ApptView) => {
-    setBusyId(a.id);
-    run(
-      () => checkInAction(a.id),
-      (r) => {
-        setBusyId(null);
-        if (r.status === "consent_required") {
-          setConsent({ appt: a, template: r.template });
-          return;
-        }
-        const who = name(a.patient);
-        if (r.status === "already_checked_in") toast(t("alreadyCheckedIn"), "info");
-        else if (r.deducted && r.remaining !== null && a.balance)
-          toast(
-            `${t("checkedInName", { name: who })} — ${t("deducted", { remaining: r.remaining, total: a.balance.total })}`,
-          );
-        else toast(t("checkedInName", { name: who }));
-      },
-    );
-  };
 
   if (!rows.length) {
     return (
@@ -150,20 +121,7 @@ export function ArrivalsList({
           } satisfies AppointmentPermissions
         }
       />
-      {consent && (
-        <ConsentSignDialog
-          open
-          template={consent.template}
-          patient={{ id: consent.appt.patient.id, nameAr: consent.appt.patient.nameAr }}
-          appointmentId={consent.appt.id}
-          onClose={() => setConsent(null)}
-          onSigned={() => {
-            const a = consent.appt;
-            setConsent(null);
-            checkIn(a); // consent signed → finish the check-in
-          }}
-        />
-      )}
+      {consentDialog}
     </>
   );
 }

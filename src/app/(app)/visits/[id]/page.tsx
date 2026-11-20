@@ -10,7 +10,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { VideoCall } from "@/components/video/video-call";
-import { billingItems, messages, patients, services } from "@/db/schema";
+import { appointments, billingItems, messages, patients, services } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
@@ -92,6 +92,10 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
     const extras = allowed
       ? await visitExtras(tx, visit.appointmentId)
       : { charges: [], orders: [] };
+    const [flow] = await tx
+      .select({ doctorAt: appointments.doctorAt })
+      .from(appointments)
+      .where(eq(appointments.id, visit.appointmentId));
     const catalogServices = allowed
       ? await tx
           .select({
@@ -131,6 +135,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
       allowed,
       doctor,
       extras,
+      doctorCalled: !!flow?.doctorAt,
       catalog: { services: catalogServices, items: catalogItems },
     };
   });
@@ -261,6 +266,11 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
                 }}
                 scribe={scribeOn}
                 preparingFor={preparingFor?.name ?? null}
+                handover={
+                  preparingFor && status === "in_session"
+                    ? { called: data.doctorCalled }
+                    : null
+                }
                 charges={data.extras.charges}
                 orders={data.extras.orders}
                 catalog={data.catalog}

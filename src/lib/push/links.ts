@@ -66,6 +66,8 @@ export function pushLink(type: PushType, roles: readonly Role[], c: LinkContext)
       ? ["/requests", myDay, calendar]
       : (DOCTOR_TYPES as readonly string[]).includes(type)
         ? [myDay, calendar]
-        : [calendar];
+        : type === "ready_for_checkout"
+          ? [`${calendar}&view=flow`]
+          : [calendar];
   return choices.find((url) => canOpen(roles, url)) ?? "/home";
 }

@@ -138,6 +138,19 @@ export function demoSql(): string {
     ]),
   );
 
+  // Patient flow times (reception board): arrived 5 min early, in the room on time, done at the
+  // end. Dr. Sara's patient in the room is still with her nurse (Huda), so no doctor time yet.
+  const flowTimes = (a: ReturnType<typeof generateDemoWeek>[number]) => {
+    const step = ["arrived", "in_session", "completed"].indexOf(a.status);
+    if (step < 0) return { arrived_at: null, in_room_at: null, doctor_at: null, completed_at: null };
+    const nurseOnly = a.status === "in_session" && a.doctorKey === "derma-dr-sara";
+    return {
+      arrived_at: at(a.dayIndex, a.time, -5),
+      in_room_at: step >= 1 ? at(a.dayIndex, a.time) : null,
+      doctor_at: step >= 1 && !nurseOnly ? at(a.dayIndex, a.time, 2) : null,
+      completed_at: step >= 2 ? at(a.dayIndex, a.time, a.durationMinutes) : null,
+    };
+  };
   // Appointments (the reservation triggers check there is no overlap).
   const week = generateDemoWeek();
   out.push(
@@ -156,6 +169,7 @@ export function demoSql(): string {
         ends_at: at(a.dayIndex, a.time, a.durationMinutes),
         blocked_until: at(a.dayIndex, a.time, a.durationMinutes + a.bufferMinutes),
         status: a.status,
+        ...flowTimes(a),
         reception_note: a.note ?? null,
         cancel_reason: a.status === "cancelled" ? "طلب المريض" : null,
         demo_day_index: a.dayIndex,

@@ -46,7 +46,11 @@ export async function refreshDemoWeek(tx: TenantTx, actor: Actor, today = riyadh
     update public.appointments
        set starts_at = ${newStart(today, "appointments")},
            ends_at = ${newStart(today, "appointments")} + (ends_at - starts_at),
-           blocked_until = ${newStart(today, "appointments")} + (blocked_until - starts_at)
+           blocked_until = ${newStart(today, "appointments")} + (blocked_until - starts_at),
+           arrived_at = ${newStart(today, "appointments")} + (arrived_at - starts_at),
+           in_room_at = ${newStart(today, "appointments")} + (in_room_at - starts_at),
+           doctor_at = ${newStart(today, "appointments")} + (doctor_at - starts_at),
+           completed_at = ${newStart(today, "appointments")} + (completed_at - starts_at)
      where demo_day_index is not null
     returning id`);
   await tx.execute(sql`

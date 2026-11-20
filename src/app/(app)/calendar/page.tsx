@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
 import { ArrivalsList } from "@/components/clinic/arrivals-list";
+import { FlowBoard } from "@/components/clinic/flow-board";
 import { CalendarBoard, type BoardColumn } from "@/components/clinic/calendar-board";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
@@ -36,7 +37,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   if (!branch) return null;
 
   const day = isDay(sp.date) ? sp.date : riyadhDay(new Date());
-  const view = sp.view === "week" ? "week" : sp.view === "list" ? "list" : "day";
+  const view =
+    sp.view === "week" ? "week" : sp.view === "list" ? "list" : sp.view === "flow" ? "flow" : "day";
   const by = sp.by === "room" ? "room" : "doctor";
   const actor = actorOf(ctx);
   const th = await getTranslations("hours");
@@ -190,6 +192,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         >
           {t("arrivals")}
         </Link>
+        <Link href={qs({ view: "flow" })} className={tab(view === "flow")} data-testid="flow-tab">
+          {t("flow")}
+        </Link>
         {can(ctx.roles, "hours:edit") && (
           <Link href="/working-hours" className={tab(false)} data-testid="working-hours-link">
             {th("title")}
@@ -221,7 +226,16 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         </span>
       </div>
 
-      {view === "list" ? (
+      {view === "flow" ? (
+        <FlowBoard
+          appointments={data.appointments}
+          doctors={doctorOptions}
+          canManage={can(ctx.roles, "appointments:manage")}
+          memberId={ctx.memberId}
+          doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
+          isToday={day === riyadhDay(new Date())}
+        />
+      ) : view === "list" ? (
         <ArrivalsList
           appointments={data.appointments}
           doctors={doctorOptions}

@@ -583,9 +583,19 @@ async function applyStatus(
   if (appt.status === to) return appt; // idempotent: double taps do nothing
   if (!canTransition(appt.status, to)) throw new BookingError("bad_status");
   const reason = reasonText?.trim() || null;
+  const now = new Date();
+  // Patient flow times for the reception board (the first time each step happens).
+  const flow =
+    to === "arrived"
+      ? { arrivedAt: appt.arrivedAt ?? now }
+      : to === "in_session"
+        ? { inRoomAt: appt.inRoomAt ?? now }
+        : to === "completed"
+          ? { completedAt: appt.completedAt ?? now }
+          : {};
   const [updated] = await tx
     .update(appointments)
-    .set({ status: to, ...(to === "cancelled" ? { cancelReason: reason } : {}) })
+    .set({ status: to, ...flow, ...(to === "cancelled" ? { cancelReason: reason } : {}) })
     .where(eq(appointments.id, appt.id))
     .returning();
   const { actorUserId, via } = auditActor(by);
@@ -602,6 +612,23 @@ async function applyStatus(
     },
   });
   return updated;
+}
+
+/**
+ * Patient flow: the doctor is now with the patient (the doctor started the visit, or the nurse
+ * said "ready for doctor"). Not a status — only the time, shown on the reception board.
+ * Callers check who may do it (lib/visits/visit.ts). Only while the visit is in the room.
+ */
+export async function markDoctorWithPatient(tx: TenantTx, appointmentId: string) {
+  const appt = await getAppointment(tx, appointmentId, true);
+  if (appt.status !== "in_session") throw new BookingError("bad_status");
+  if (appt.doctorAt) return { appt, changed: false };
+  const [updated] = await tx
+    .update(appointments)
+    .set({ doctorAt: new Date() })
+    .where(eq(appointments.id, appt.id))
+    .returning();
+  return { appt: updated, changed: true };
 }
 
 /**

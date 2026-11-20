@@ -19,7 +19,12 @@ import type { TenantTx } from "@/db/tenant";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
-import { BookingError, changeStatus, getAppointment } from "@/lib/booking/engine";
+import {
+  BookingError,
+  changeStatus,
+  getAppointment,
+  markDoctorWithPatient,
+} from "@/lib/booking/engine";
 import { assistsMember, doctorOf } from "@/lib/care-team/care-team";
 import { NoteError, openDraft, postNote } from "@/lib/notes/notes";
 
@@ -67,6 +72,10 @@ export async function startVisit(
     throw new BookingError("bad_status");
   }
   if (appt.status === "arrived") await changeStatus(tx, actor, appt.id, "in_session");
+  // The doctor themself started it: the doctor is with the patient (reception board).
+  if (!author && ["arrived", "in_session"].includes(appt.status)) {
+    await markDoctorWithPatient(tx, appt.id);
+  }
   const note = await openDraft(tx, actor, {
     patientId: appt.patientId,
     appointmentId: appt.id,
@@ -81,6 +90,26 @@ export async function startVisit(
  * completed — in ONE transaction. The doctor or her nurse / assistant may post. If the patient
  * was never checked in, the note is posted and the visit stays as it is (reception checks in).
  */
+/**
+ * Nurse / assistant: the patient is prepared — "ready for the doctor". Records the time (the
+ * reception board moves the patient to "with doctor") and tells the doctor (push, by the caller).
+ */
+export async function readyForDoctor(tx: TenantTx, actor: Actor, appointmentId: string) {
+  assertCan(actor.roles, "visits:assist");
+  const { appt, author } = await ownAppointment(tx, actor, appointmentId);
+  if (!author) throw new BookingError("not_allowed"); // the doctor doesn't call themself
+  const r = await markDoctorWithPatient(tx, appt.id);
+  if (r.changed) {
+    await audit(tx, {
+      actorUserId: actor.userId,
+      action: "visit.ready_for_doctor",
+      entityType: "appointment",
+      entityId: appt.id,
+    });
+  }
+  return { changed: r.changed };
+}
+
 export async function postVisit(
   tx: TenantTx,
   actor: Actor,
