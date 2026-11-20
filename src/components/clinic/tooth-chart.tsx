@@ -164,8 +164,7 @@ function ToothPanel({
   const [condition, setCondition] = useState<ToothCondition>(current?.condition ?? "caries");
   const [surfaces, setSurfaces] = useState(current?.surfaces ?? "");
   const [note, setNote] = useState("");
-  const toggle = (s: string) =>
-    setSurfaces((v) => (v.includes(s) ? v.replace(s, "") : v + s));
+  const toggle = (s: string) => setSurfaces((v) => (v.includes(s) ? v.replace(s, "") : v + s));
   const fmt = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "ar-SA-u-ca-gregory", {
     dateStyle: "medium",
     timeZone: "Asia/Riyadh",
@@ -232,7 +231,9 @@ function ToothPanel({
                   title={t(`surface.${s}`)}
                   className={cn(
                     "size-8 rounded-lg border font-mono text-xs",
-                    surfaces.includes(s) ? "bg-brand-soft text-brand-strong border-brand-strong" : "bg-card",
+                    surfaces.includes(s)
+                      ? "bg-brand-soft text-brand-strong border-brand-strong"
+                      : "bg-card",
                   )}
                   data-testid="surface"
                 >
@@ -250,12 +251,7 @@ function ToothPanel({
               className="min-w-48 flex-1"
               dir="auto"
             />
-            <Button
-              type="submit"
-              variant="outline"
-              loading={act.pending}
-              data-testid="tooth-save"
-            >
+            <Button type="submit" variant="outline" loading={act.pending} data-testid="tooth-save">
               {!act.pending && <Check />}
               {t("record")}
             </Button>

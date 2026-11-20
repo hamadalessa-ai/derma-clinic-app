@@ -73,7 +73,9 @@ export function LabCaseList({
               <span className="font-medium">
                 {t(`work.${c.work}`)}
                 {c.teeth ? <span className="font-mono text-xs"> · {c.teeth}</span> : null}
-                {c.shade ? <span className="text-muted-foreground text-xs"> · {c.shade}</span> : null}
+                {c.shade ? (
+                  <span className="text-muted-foreground text-xs"> · {c.shade}</span>
+                ) : null}
               </span>
               <span className="text-muted-foreground text-[13px]">
                 {showPatient && (
@@ -207,7 +209,16 @@ export function NewLabCase({
         {t("labWork")}
         <Select value={f.work} onChange={set("work")} data-testid="lab-work">
           {(
-            ["crown", "bridge", "veneer", "denture", "aligner", "night_guard", "implant_part", "other"] as const
+            [
+              "crown",
+              "bridge",
+              "veneer",
+              "denture",
+              "aligner",
+              "night_guard",
+              "implant_part",
+              "other",
+            ] as const
           ).map((w) => (
             <option key={w} value={w}>
               {t(`work.${w}`)}

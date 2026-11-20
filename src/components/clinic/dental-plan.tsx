@@ -84,7 +84,9 @@ export function DentalPlan({
                 <span className="text-muted-foreground w-10 font-mono text-xs" dir="ltr">
                   {i.tooth ?? "—"}
                 </span>
-                <span className={cn("min-w-0 flex-1", i.status === "done" && "text-muted-foreground")}>
+                <span
+                  className={cn("min-w-0 flex-1", i.status === "done" && "text-muted-foreground")}
+                >
                   {name(i)}
                   {i.surfaces ? (
                     <span className="text-muted-foreground font-mono text-xs"> · {i.surfaces}</span>
@@ -112,9 +114,7 @@ export function DentalPlan({
                         data-testid="plan-done"
                         onClick={() => {
                           setBusy(`d${i.id}`);
-                          act.run(() =>
-                            planDoneAction({ patientId, itemId: i.id, appointmentId }),
-                          );
+                          act.run(() => planDoneAction({ patientId, itemId: i.id, appointmentId }));
                         }}
                       >
                         <Check />

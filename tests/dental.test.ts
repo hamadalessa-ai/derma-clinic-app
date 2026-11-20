@@ -72,7 +72,10 @@ describe("dental chart", () => {
       withActor(reception, (tx) => chartHistory(tx, reception, patient("D-0015"))),
     ).rejects.toThrow(PermissionError);
     const rows = await withActor(reception, (tx) =>
-      tx.select().from(dentalChartEntries).where(eq(dentalChartEntries.patientId, patient("D-0015"))),
+      tx
+        .select()
+        .from(dentalChartEntries)
+        .where(eq(dentalChartEntries.patientId, patient("D-0015"))),
     );
     expect(rows).toHaveLength(0);
   });
@@ -90,7 +93,11 @@ describe("dental chart", () => {
     expect(
       await code(
         withActor(drNawaf, (tx) =>
-          recordTooth(tx, drNawaf, { patientId: patient("D-0016"), tooth: 19, condition: "caries" }),
+          recordTooth(tx, drNawaf, {
+            patientId: patient("D-0016"),
+            tooth: 19,
+            condition: "caries",
+          }),
         ),
       ),
     ).toBe("bad_tooth");
@@ -164,7 +171,10 @@ describe("treatment plan", () => {
       ),
     ).toBe("not_planned");
     const other = await withActor(drNawaf, (tx) =>
-      addPlanItem(tx, drNawaf, { patientId: patient("D-0017"), serviceId: service("dental_crown") }),
+      addPlanItem(tx, drNawaf, {
+        patientId: patient("D-0017"),
+        serviceId: service("dental_crown"),
+      }),
     );
     await withActor(drNawaf, (tx) => cancelPlanItem(tx, drNawaf, other.id));
     const after = await withActor(reception, (tx) => planFor(tx, patient("D-0017")));
@@ -228,9 +238,13 @@ describe("lab cases", () => {
     );
     expect(c.status).toBe("sent");
     expect(
-      await code(withActor(reception, (tx) => setLabStatus(tx, reception, { id: c.id, status: "fitted" }))),
+      await code(
+        withActor(reception, (tx) => setLabStatus(tx, reception, { id: c.id, status: "fitted" })),
+      ),
     ).toBe("bad_status");
-    await withActor(reception, (tx) => setLabStatus(tx, reception, { id: c.id, status: "received" }));
+    await withActor(reception, (tx) =>
+      setLabStatus(tx, reception, { id: c.id, status: "received" }),
+    );
     const fitted = await withActor(drNawaf, (tx) =>
       setLabStatus(tx, drNawaf, { id: c.id, status: "fitted" }),
     );

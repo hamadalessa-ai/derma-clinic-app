@@ -2562,10 +2562,7 @@ export async function createLabCaseAction(input: {
 
 export async function setLabStatusAction(input: { id: string; status: string; patientId: string }) {
   return staffAction("lab:manage", async (_ctx, actor) => {
-    const v = parse(
-      z.object({ id: uuid, status: z.enum(LAB_STATUSES), patientId: uuid }),
-      input,
-    );
+    const v = parse(z.object({ id: uuid, status: z.enum(LAB_STATUSES), patientId: uuid }), input);
     await withActor(actor, (tx) => setLabStatus(tx, actor, v));
     dentalChanged(v.patientId);
     revalidatePath("/lab-cases");
