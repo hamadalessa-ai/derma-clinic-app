@@ -656,6 +656,9 @@ export const TENANT_TABLES = [
   "support_grants",
   "service_practitioners",
   "care_team",
+  "billing_items",
+  "visit_charges",
+  "visit_orders",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1301,6 +1304,150 @@ export const patientConsents = pgTable(
 );
 
 // ─── Clinical notes (practitioners only — enforced by RLS) ──────────────────
+
+export const billingItemKind = pgEnum("billing_item_kind", [
+  "product", // e.g. sunscreen sold at checkout
+  "consumable", // e.g. botox units, filler syringe
+  "procedure", // an extra procedure not booked as a service
+  "other",
+]);
+
+/**
+ * Price list (Setup → Price list): what can be put on a visit's invoice besides the booked
+ * service — products, consumables, extra procedures. Each has the code the clinic's invoicing
+ * system knows it by. Never deleted (switched off).
+ */
+export const billingItems = pgTable(
+  "billing_items",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en").notNull(),
+    kind: billingItemKind("kind").notNull().default("other"),
+    priceHalalas: integer("price_halalas").notNull().default(0),
+    /** e.g. "unit", "syringe", "ml" (display only). */
+    unitAr: text("unit_ar"),
+    unitEn: text("unit_en"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("billing_items_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("billing_items_code_key").on(t.tenantId, t.code),
+    check("billing_items_price", sql`${t.priceHalalas} >= 0`),
+  ],
+);
+
+/**
+ * Invoice codes of a visit (the visit screen; reception's checkout reads them; the daily file
+ * for the clinic's invoicing system lists them). A copy of code, name and price at the time,
+ * so later price changes don't change past visits. Locked once the visit is posted (database).
+ */
+export const visitCharges = pgTable(
+  "visit_charges",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id").notNull(),
+    patientId: uuid("patient_id").notNull(),
+    serviceId: uuid("service_id"),
+    billingItemId: uuid("billing_item_id"),
+    code: text("code").notNull(),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en").notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    unitPriceHalalas: integer("unit_price_halalas").notNull(),
+    /** A package session pays for it (the booked service, deducted at check-in): amount 0. */
+    coveredByPackage: boolean("covered_by_package").notNull().default(false),
+    addedByUserId: text("added_by_user_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("visit_charges_tenant_id_id_key").on(t.tenantId, t.id),
+    index("visit_charges_appointment_idx").on(t.tenantId, t.appointmentId),
+    check("visit_charges_quantity", sql`${t.quantity} between 1 and 1000`),
+    check("visit_charges_price", sql`${t.unitPriceHalalas} >= 0`),
+    check("visit_charges_source", sql`(${t.serviceId} is null) <> (${t.billingItemId} is null)`),
+    foreignKey({
+      name: "visit_charges_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "visit_charges_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }),
+    foreignKey({
+      name: "visit_charges_service_fk",
+      columns: [t.tenantId, t.serviceId],
+      foreignColumns: [services.tenantId, services.id],
+    }),
+    foreignKey({
+      name: "visit_charges_item_fk",
+      columns: [t.tenantId, t.billingItemId],
+      foreignColumns: [billingItems.tenantId, billingItems.id],
+    }),
+  ],
+);
+
+export const visitOrderKind = pgEnum("visit_order_kind", ["medication", "treatment"]);
+
+/**
+ * The doctor's orders for a visit: medications (name, dose, how often, how long) and a treatment
+ * plan (e.g. 5 more laser sessions every 4 weeks). Clinic instructions for the patient — NOT an
+ * official e-prescription. Locked once the visit is posted (database).
+ */
+export const visitOrders = pgTable(
+  "visit_orders",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id").notNull(),
+    patientId: uuid("patient_id").notNull(),
+    kind: visitOrderKind("kind").notNull(),
+    name: text("name").notNull(),
+    dose: text("dose"),
+    frequency: text("frequency"),
+    duration: text("duration"),
+    /** Treatment plan: how many more sessions, how many weeks apart. */
+    sessions: integer("sessions"),
+    intervalWeeks: integer("interval_weeks"),
+    /** A service to book the sessions with (reception's checkout). */
+    serviceId: uuid("service_id"),
+    instructions: text("instructions"),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("visit_orders_tenant_id_id_key").on(t.tenantId, t.id),
+    index("visit_orders_appointment_idx").on(t.tenantId, t.appointmentId),
+    index("visit_orders_patient_idx").on(t.tenantId, t.patientId),
+    check("visit_orders_sessions", sql`${t.sessions} is null or ${t.sessions} between 1 and 50`),
+    check(
+      "visit_orders_interval",
+      sql`${t.intervalWeeks} is null or ${t.intervalWeeks} between 1 and 104`,
+    ),
+    foreignKey({
+      name: "visit_orders_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "visit_orders_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }),
+    foreignKey({
+      name: "visit_orders_service_fk",
+      columns: [t.tenantId, t.serviceId],
+      foreignColumns: [services.tenantId, services.id],
+    }),
+  ],
+);
 
 export const clinicalNotes = pgTable(
   "clinical_notes",

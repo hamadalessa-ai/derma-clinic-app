@@ -165,6 +165,24 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
+  if (t.billingItems?.length) {
+    out.push(
+      insert(
+        "billing_items",
+        t.billingItems.map((b) => ({
+          id: ref("billing_item", b.code),
+          tenant_id: tid,
+          code: b.code,
+          name_ar: b.nameAr,
+          name_en: b.nameEn,
+          kind: b.kind,
+          price_halalas: Math.round(b.priceSar * 100),
+          unit_ar: b.unitAr ?? null,
+          unit_en: b.unitEn ?? null,
+        })),
+      ),
+    );
+  }
   if (t.careTeam?.length) {
     out.push(
       insert(

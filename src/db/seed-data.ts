@@ -17,6 +17,55 @@ export function demoId(key: string): string {
 
 type Role = "clinic_admin" | "practitioner" | "receptionist" | "assistant";
 
+export interface SeedBillingItem {
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  kind: "product" | "consumable" | "procedure" | "other";
+  priceSar: number;
+  unitAr?: string;
+  unitEn?: string;
+}
+
+/** Sample price list (made-up prices) for the demo clinics. */
+export const DEMO_BILLING_ITEMS: SeedBillingItem[] = [
+  {
+    code: "BTX-U",
+    nameAr: "وحدة بوتوكس",
+    nameEn: "Botox unit",
+    kind: "consumable",
+    priceSar: 25,
+    unitAr: "وحدة",
+    unitEn: "unit",
+  },
+  {
+    code: "FIL-1ML",
+    nameAr: "حقنة فيلر 1 مل",
+    nameEn: "Filler syringe 1 ml",
+    kind: "consumable",
+    priceSar: 1200,
+    unitAr: "حقنة",
+    unitEn: "syringe",
+  },
+  { code: "NUMB", nameAr: "كريم مخدر", nameEn: "Numbing cream", kind: "consumable", priceSar: 50 },
+  {
+    code: "SPF50",
+    nameAr: "واقي شمس SPF 50",
+    nameEn: "Sunscreen SPF 50",
+    kind: "product",
+    priceSar: 120,
+    unitAr: "عبوة",
+    unitEn: "tube",
+  },
+  {
+    code: "PRP-KIT",
+    nameAr: "جلسة بلازما إضافية",
+    nameEn: "Extra PRP session",
+    kind: "procedure",
+    priceSar: 300,
+  },
+];
+
 export interface SeedStaff {
   key: string;
   email: string;
@@ -79,6 +128,8 @@ export interface SeedTenant {
   staff: SeedStaff[];
   /** Nurse / assistant → the doctors she works with (staff keys). */
   careTeam?: { assistant: string; doctors: string[] }[];
+  /** Price list: products, consumables, extra procedures (with invoicing codes). */
+  billingItems?: SeedBillingItem[];
   services: SeedService[]; // all in the "dermatology" department
   patients: SeedPatient[];
 }
@@ -572,6 +623,7 @@ export const DERMA: SeedTenant = {
     ),
   ],
   careTeam: [{ assistant: "derma-nurse-ruh", doctors: ["derma-dr-sara", "derma-dr-faisal"] }],
+  billingItems: DEMO_BILLING_ITEMS,
   services: DERMA_SERVICES,
   patients: withFamily(makeFakePatients(40, "D", "01")),
 };
@@ -627,6 +679,7 @@ export const LAMSA: SeedTenant = {
     nurse("lamsa-nurse", "nurse@lamsa.demo", "أمل الدوسري", "Amal Al-Dosari", "dammam"),
   ],
   careTeam: [{ assistant: "lamsa-nurse", doctors: ["lamsa-dr-mona"] }],
+  billingItems: DEMO_BILLING_ITEMS.filter((b) => ["FIL-1ML", "SPF50"].includes(b.code)),
   services: DERMA_SERVICES.filter((s) =>
     ["consultation", "botox", "fillers", "facial_treatment"].includes(s.code),
   ),

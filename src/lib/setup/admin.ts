@@ -7,6 +7,7 @@ import "server-only";
  */
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
+  billingItems,
   branches,
   consentTemplates,
   departments,
@@ -33,7 +34,8 @@ export class SetupError extends Error {
       | "bad_room"
       | "bad_doctor"
       | "bad_consent"
-      | "empty_text",
+      | "empty_text"
+      | "code_taken",
   ) {
     super(code);
   }
@@ -97,6 +99,7 @@ export async function loadSetup(tx: TenantTx) {
   const r = await tx.select().from(rooms).orderBy(asc(rooms.createdAt));
   const dv = await tx.select().from(devices).orderBy(asc(devices.createdAt));
   const p = await tx.select().from(packageTemplates).orderBy(asc(packageTemplates.createdAt));
+  const bi = await tx.select().from(billingItems).orderBy(asc(billingItems.code));
   const c = await tx
     .select()
     .from(consentTemplates)
@@ -122,6 +125,7 @@ export async function loadSetup(tx: TenantTx) {
     rooms: r,
     devices: dv,
     packages: p,
+    billingItems: bi,
     consents: c.map((x) => ({
       code: x.code,
       titleAr: x.titleAr,
@@ -444,6 +448,57 @@ export async function savePackage(tx: TenantTx, actor: Actor, v: PackageInput) {
     .values({ tenantId: actor.tenantId, ...values })
     .returning();
   await logChange(tx, actor, "package", row.id, true, values);
+  return row;
+}
+
+// ─── Price list (products, consumables, extra procedures) ────────────────────
+
+export interface BillingItemInput {
+  id?: string | null;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  kind: "product" | "consumable" | "procedure" | "other";
+  priceHalalas: number;
+  unitAr?: string | null;
+  unitEn?: string | null;
+  isActive: boolean;
+}
+
+/** The code is what the clinic's invoicing system knows the item by: unique in the clinic. */
+export async function saveBillingItem(tx: TenantTx, actor: Actor, v: BillingItemInput) {
+  assertCan(actor.roles, "setup:manage");
+  const values = {
+    code: v.code.trim().toUpperCase(),
+    nameAr: tidy(v.nameAr),
+    nameEn: tidy(v.nameEn),
+    kind: v.kind,
+    priceHalalas: v.priceHalalas,
+    unitAr: tidy(v.unitAr ?? "") || null,
+    unitEn: tidy(v.unitEn ?? "") || null,
+    isActive: v.isActive,
+  };
+  if (!values.code || !values.nameAr || !values.nameEn) throw new SetupError("empty_text");
+  const [same] = await tx
+    .select({ id: billingItems.id })
+    .from(billingItems)
+    .where(eq(billingItems.code, values.code));
+  if (same && same.id !== v.id) throw new SetupError("code_taken");
+  if (v.id) {
+    const [row] = await tx
+      .update(billingItems)
+      .set(values)
+      .where(eq(billingItems.id, v.id))
+      .returning();
+    if (!row) throw new SetupError("not_found");
+    await logChange(tx, actor, "billing_item", row.id, false, { code: values.code });
+    return row;
+  }
+  const [row] = await tx
+    .insert(billingItems)
+    .values({ tenantId: actor.tenantId, ...values })
+    .returning();
+  await logChange(tx, actor, "billing_item", row.id, true, { code: values.code });
   return row;
 }
 

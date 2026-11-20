@@ -102,11 +102,13 @@ describe("daily invoicing file", () => {
     const [header, ...rows] = parseCsv(r.csv);
     expect(header).toEqual(DAILY_COLUMNS);
     const visits = rows.filter((x) => x[0] === "visit");
-    expect(visits).toHaveLength(completed);
+    const ref = DAILY_COLUMNS.indexOf("reference");
+    // One or more lines per visit (its invoice codes), every completed visit listed.
+    expect(new Set(visits.map((v) => v[ref])).size).toBe(completed);
     const amount = DAILY_COLUMNS.indexOf("amount_sar");
     const paidBy = DAILY_COLUMNS.indexOf("paid_by");
     const fromPackage = visits.filter((v) => v[paidBy]!.startsWith("package"));
-    expect(fromPackage).toHaveLength(covered);
+    expect(new Set(fromPackage.map((v) => v[ref])).size).toBe(covered);
     for (const v of fromPackage) expect(v[amount]).toBe("0.00");
     // Nothing clinical in the file.
     expect(r.csv).not.toMatch(/diagnos/i);

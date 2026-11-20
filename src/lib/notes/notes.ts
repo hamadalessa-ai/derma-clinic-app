@@ -123,6 +123,30 @@ export async function saveDraft(tx: TenantTx, actor: Actor, id: string, body: st
   return note;
 }
 
+/**
+ * Posts a visit's note: final, in the doctor's (author's) name. Unlike signNote, the doctor's
+ * nurse / assistant may post it too (recorded as entered by her). Corrections = addenda.
+ */
+export async function postNote(tx: TenantTx, actor: Actor, id: string, body: string) {
+  assertCan(actor.roles, "notes:write");
+  const draft = await loadOwnDraft(tx, actor, id);
+  const finalBody = body.slice(0, MAX);
+  if (!finalBody.trim()) throw new NoteError("empty");
+  const [note] = await tx
+    .update(clinicalNotes)
+    .set({ body: finalBody, status: "signed", signedAt: new Date(), ...enteredBy(actor, draft) })
+    .where(eq(clinicalNotes.id, id))
+    .returning();
+  await audit(tx, {
+    actorUserId: actor.userId,
+    action: "note.post",
+    entityType: "clinical_note",
+    entityId: id,
+    metadata: { length: note.body.length, forDoctor: draft.authorUserId !== actor.userId },
+  });
+  return note;
+}
+
 export async function signNote(tx: TenantTx, actor: Actor, id: string, body?: string) {
   assertCan(actor.roles, "notes:write");
   // Only the author signs: a nurse / assistant prepares, the doctor signs.

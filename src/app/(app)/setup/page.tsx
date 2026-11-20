@@ -6,7 +6,15 @@ import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { loadSetup } from "@/lib/setup/admin";
 
-const TABS = ["branches", "departments", "services", "rooms", "packages", "consents"] as const;
+const TABS = [
+  "branches",
+  "departments",
+  "services",
+  "rooms",
+  "packages",
+  "prices",
+  "consents",
+] as const;
 
 /** Clinic set-up (clinic admin): the clinic shapes the standard platform to itself. */
 export default async function SetupPage({
@@ -38,6 +46,7 @@ export default async function SetupPage({
           rooms: data.rooms,
           devices: data.devices,
           packages: data.packages,
+          billingItems: data.billingItems,
           consents: data.consents,
           doctors: data.doctors,
         }}

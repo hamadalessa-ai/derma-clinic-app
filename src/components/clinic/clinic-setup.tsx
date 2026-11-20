@@ -9,6 +9,7 @@ import {
   saveBranchAction,
   saveDepartmentAction,
   saveDeviceAction,
+  saveBillingItemAction,
   savePackageAction,
   saveRoomAction,
   saveServiceAction,
@@ -90,11 +91,23 @@ export interface SetupData {
     validityDays: number;
     isActive: boolean;
   }[];
+  billingItems: {
+    id: string;
+    code: string;
+    nameAr: string;
+    nameEn: string;
+    kind: "product" | "consumable" | "procedure" | "other";
+    priceHalalas: number;
+    unitAr: string | null;
+    unitEn: string | null;
+    isActive: boolean;
+  }[];
   consents: { code: string; titleAr: string; titleEn: string; version: number }[];
   doctors: { id: string; name: string; nameEn: string | null }[];
 }
 
-export type SetupTab = "branches" | "departments" | "services" | "rooms" | "packages" | "consents";
+export type SetupTab =
+  "branches" | "departments" | "services" | "rooms" | "packages" | "prices" | "consents";
 
 function useL() {
   const ar = useLocale() === "ar";
@@ -270,6 +283,7 @@ export function ClinicSetup({ tab, data }: { tab: SetupTab; data: SetupData }) {
   if (tab === "services") return <Services data={data} />;
   if (tab === "rooms") return <Rooms data={data} />;
   if (tab === "packages") return <Packages data={data} />;
+  if (tab === "prices") return <Prices data={data} />;
   return <Consents data={data} />;
 }
 
@@ -1276,6 +1290,161 @@ function Consents({ data }: { data: SetupData }) {
             />
           </Field>
           <p className="text-muted-foreground text-xs">{t("consentNewHint")}</p>
+        </EditDialog>
+      )}
+    </div>
+  );
+}
+
+// ─── Price list ─────────────────────────────────────────────────────────────
+
+const KINDS = ["consumable", "product", "procedure", "other"] as const;
+
+function Prices({ data }: { data: SetupData }) {
+  const t = useTranslations("setup");
+  const L = useL();
+  const { run, pending, error } = useAction();
+  const { msg, saved } = useSaved();
+  const blank = {
+    id: null as string | null,
+    code: "",
+    nameAr: "",
+    nameEn: "",
+    kind: "consumable" as (typeof KINDS)[number],
+    price: "0",
+    unitAr: "",
+    unitEn: "",
+    isActive: true,
+  };
+  const [v, setV] = useState<typeof blank | null>(null);
+  return (
+    <div className="flex flex-col gap-4" data-testid="setup-prices">
+      <Toolbar
+        title={t("prices")}
+        hint={t("pricesHint")}
+        addLabel={t("addPrice")}
+        onAdd={() => setV(blank)}
+      />
+      <FormSuccess message={msg} />
+      <ListCard empty={t("none")}>
+        {data.billingItems.map((b) => (
+          <Row
+            key={b.id}
+            muted={!b.isActive}
+            onEdit={() =>
+              setV({
+                ...b,
+                price: sar(b.priceHalalas),
+                unitAr: b.unitAr ?? "",
+                unitEn: b.unitEn ?? "",
+              })
+            }
+          >
+            <span className="flex items-center gap-2 font-medium">
+              <span className="text-muted-foreground font-mono text-xs" dir="ltr">
+                {b.code}
+              </span>
+              {L(b.nameAr, b.nameEn)}
+              {!b.isActive && <Badge variant="secondary">{t("off")}</Badge>}
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {t(`kind.${b.kind}`)} · {sar(b.priceHalalas)} {t("sarPer")}{" "}
+              {L(b.unitAr, b.unitEn) || t("each")}
+            </span>
+          </Row>
+        ))}
+      </ListCard>
+      {v && (
+        <EditDialog
+          title={v.id ? t("editPrice") : t("addPrice")}
+          open
+          onClose={() => setV(null)}
+          pending={pending}
+          error={error}
+          onSave={() =>
+            run(
+              () => saveBillingItemAction({ ...v, priceSar: Number(v.price) || 0 }),
+              () => {
+                setV(null);
+                saved();
+              },
+            )
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field id="bi-code" label={t("invoiceCode")}>
+              <Input
+                id="bi-code"
+                dir="ltr"
+                required
+                value={v.code}
+                onChange={(e) => setV({ ...v, code: e.target.value })}
+              />
+            </Field>
+            <Field id="bi-kind" label={t("itemKind")}>
+              <Select
+                id="bi-kind"
+                value={v.kind}
+                onChange={(e) => setV({ ...v, kind: e.target.value as (typeof KINDS)[number] })}
+              >
+                {KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {t(`kind.${k}`)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="bi-ar" label={t("nameAr")}>
+              <Input
+                id="bi-ar"
+                dir="rtl"
+                required
+                value={v.nameAr}
+                onChange={(e) => setV({ ...v, nameAr: e.target.value })}
+              />
+            </Field>
+            <Field id="bi-en" label={t("nameEn")}>
+              <Input
+                id="bi-en"
+                dir="ltr"
+                required
+                value={v.nameEn}
+                onChange={(e) => setV({ ...v, nameEn: e.target.value })}
+              />
+            </Field>
+            <Field id="bi-price" label={t("priceSar")}>
+              <Input
+                id="bi-price"
+                type="number"
+                min={0}
+                step="0.01"
+                dir="ltr"
+                value={v.price}
+                onChange={(e) => setV({ ...v, price: e.target.value })}
+              />
+            </Field>
+            <Field id="bi-unit-ar" label={t("unitAr")}>
+              <Input
+                id="bi-unit-ar"
+                dir="rtl"
+                value={v.unitAr}
+                onChange={(e) => setV({ ...v, unitAr: e.target.value })}
+              />
+            </Field>
+            <Field id="bi-unit-en" label={t("unitEn")}>
+              <Input
+                id="bi-unit-en"
+                dir="ltr"
+                value={v.unitEn}
+                onChange={(e) => setV({ ...v, unitEn: e.target.value })}
+              />
+            </Field>
+          </div>
+          <Check
+            label={t("activePrice")}
+            checked={v.isActive}
+            onChange={(x) => setV({ ...v, isActive: x })}
+          />
         </EditDialog>
       )}
     </div>

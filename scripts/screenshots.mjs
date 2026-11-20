@@ -88,6 +88,8 @@ try {
   await page.keyboard.press("Escape");
   await page.goto(`${BASE}/setup?tab=rooms`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/setup-en-rooms.png", fullPage: true });
+  await page.goto(`${BASE}/setup?tab=prices`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/setup-en-prices.png", fullPage: true });
   await page.goto(`${BASE}/settings?tab=subscription`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/settings-en-subscription.png", fullPage: true });
   await page.goto(`${BASE}/settings?tab=team`, { waitUntil: "networkidle" });
@@ -208,6 +210,15 @@ try {
       await page.getByTestId("note-card").waitFor({ timeout: 20000 });
     }
     await page.screenshot({ path: "screenshots/nurse-ar-visit.png", fullPage: true });
+    // Post visit: a medication order and a price-list code before posting.
+    if (await page.getByTestId("visit-workspace").count()) {
+      await page.getByTestId("visit-note").fill("حب شباب خفيف. الخطة كما في الأوامر.");
+      await page.getByTestId("visit-orders").getByRole("button").first().click();
+      await page.getByTestId("order-name").fill("Adapalene 0.1% gel");
+      await page.getByTestId("order-add").click();
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: "screenshots/nurse-ar-post-visit.png", fullPage: true });
+    }
   }
   await context.clearCookies();
   await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE }]);

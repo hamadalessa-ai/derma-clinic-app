@@ -51,8 +51,9 @@ draft-only AI scribe. Multi-tenant: many clinics, strictly separated.
 Receptionists can never see clinical notes. A member can hold several roles (`tenant_members.roles`, at least one);
 any role that allows something grants it. Clinical notes need the `practitioner` role (admins alone are blocked).
 A nurse / assistant works for the doctors linked in `care_team` (`src/lib/care-team/care-team.ts`, Settings → Team):
-she sees their day (My Day), opens their visit screen, brings the patient in and prepares the note IN THE DOCTOR'S
-NAME (`clinical_notes.entered_by_*`); she never signs, never adds addenda, never sees other doctors' notes. The
+she sees their day (My Day), opens their visit screen, brings the patient in, prepares the note IN THE DOCTOR'S
+NAME (`clinical_notes.entered_by_*`) and may POST the visit; she never signs a note on its own (`signNote`), never
+adds addenda, never sees other doctors' notes. The
 database enforces it (`app_assists()` in `db/rls.sql`).
 
 ## Phase 1 rules (never bypass)
@@ -114,8 +115,14 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   Join only around the visit time and after the `telehealth` consent (`visit.ts`). The provider (Daily today,
   key `DAILY_API_KEY`) sits behind `provider.ts` so it can be swapped for a Saudi-hosted server. Never recorded.
   The patient joining = check-in (`videoCheckIn`: consent → package deduction once → "arrived").
-- Doctor's visit screen `/visits/<id>` (`src/lib/visits/visit.ts`): "Start visit" (arrived → in_session + the
-  visit's ONE note draft) and "Sign & complete" (sign + complete in ONE transaction). Own appointments only.
+- Doctor's visit screen `/visits/<id>` (`src/lib/visits/visit.ts`, UI `visit-workspace.tsx`): "Start visit" (arrived →
+  in_session + the visit's ONE note draft + the booked service as an invoice line) and "Post visit" (`postVisit`:
+  note + complete in ONE transaction, no separate signing step). Own appointments (or assisted doctors') only.
+  While open, the visit gets medication / treatment orders (`visit_orders`, clinic instructions, not a Wasfaty
+  prescription) and invoice codes (`visit_charges`: a service or a price-list item from `billing_items`, Setup →
+  Price list; code, name and price are COPIED at that moment). Once completed / cancelled / no-show, orders and
+  codes are locked by the database (`app_visit_open()`); the note by the signed-note trigger. Corrections = addenda.
+  The daily invoicing file lists one row per invoice line. Never put medication text in audit metadata.
   Video calls show on the same screen (`/visits/<id>/video` redirects there).
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly
   pattern (`staff_schedules`, several shifts per weekday, each at a branch; old rows with a break = two shifts)

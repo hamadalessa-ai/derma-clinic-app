@@ -36,6 +36,7 @@ drop table if exists
   public.accounts,
   public.appointments,
   public.audit_logs,
+  public.billing_items,
   public.branch_holidays,
   public.branches,
   public.care_team,
@@ -84,6 +85,8 @@ drop table if exists
   public.users,
   public.verification_codes,
   public.verifications,
+  public.visit_charges,
+  public.visit_orders,
   public.webhook_events
   cascade;
 drop function if exists public.app_assists;
@@ -102,6 +105,7 @@ drop function if exists public.app_set_clinic_limits;
 drop function if exists public.app_set_clinic_plan;
 drop function if exists public.app_set_clinic_status;
 drop function if exists public.app_set_clinic_whatsapp;
+drop function if exists public.app_visit_open;
 drop function if exists public.apply_package_session_event;
 drop function if exists public.demo_workday;
 drop function if exists public.guard_clinical_note;
@@ -111,7 +115,7 @@ drop function if exists public.normalize_search;
 drop function if exists public.sync_appointment_reservations;
 drop function if exists public.sync_time_block_reservations;
 -- Types last: functions may use them (e.g. app_set_clinic_status takes a clinic_status).
-drop type if exists public.appointment_status, public.booking_source, public.clinic_status, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.plan_tier, public.request_status, public.session_event_kind, public.statement_status;
+drop type if exists public.appointment_status, public.billing_item_kind, public.booking_source, public.clinic_status, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.plan_tier, public.request_status, public.session_event_kind, public.statement_status, public.visit_order_kind;
 do $$
 begin
   if exists (select from pg_roles where rolname = 'clinic_app') then

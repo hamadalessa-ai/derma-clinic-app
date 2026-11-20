@@ -298,8 +298,10 @@ function assertMayChangeStatus(
   assisting = false,
 ) {
   if (can(actor.roles, "appointments:manage")) return;
-  // A nurse / assistant brings her doctor's checked-in patient in ("with the doctor"). Nothing else.
+  // A nurse / assistant brings her doctor's checked-in patient in ("with the doctor") and
+  // completes the visit when she posts it. Nothing else.
   if (assisting && appt.status === "arrived" && to === "in_session") return;
+  if (assisting && appt.status === "in_session" && to === "completed") return;
   // Approving or rejecting an online request is reception's decision, not the doctor's.
   if (appt.status === "pending") throw new BookingError("not_allowed");
   if (

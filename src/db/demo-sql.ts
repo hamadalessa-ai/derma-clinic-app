@@ -367,6 +367,38 @@ export function demoSql(): string {
     ]),
   );
   out.push(
+    insert("visit_charges", [
+      {
+        tenant_id: lamsa,
+        appointment_id: lref("appointment", "today-1"),
+        patient_id: lref("patient", "L-0002"),
+        service_id: null,
+        billing_item_id: lref("billing_item", "SPF50"),
+        code: "SPF50",
+        name_ar: "واقي شمس SPF 50",
+        name_en: "Sunscreen SPF 50",
+        quantity: 1,
+        unit_price_halalas: 12000,
+        added_by_user_id: "usr_lamsa-dr-mona",
+      },
+    ]),
+  );
+  out.push(
+    insert("visit_orders", [
+      {
+        tenant_id: lamsa,
+        appointment_id: lref("appointment", "today-1"),
+        patient_id: lref("patient", "L-0002"),
+        kind: "medication",
+        name: "Moisturising cream",
+        dose: "Thin layer",
+        frequency: "Twice a day",
+        duration: "2 weeks",
+        created_by_user_id: "usr_lamsa-dr-mona",
+      },
+    ]),
+  );
+  out.push(
     insert("time_blocks", [
       {
         id: lref("time_block", "mona-break"),
@@ -1033,5 +1065,57 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
       },
     ]),
   );
+  // Invoice codes and orders of that posted visit.
+  const botox = DERMA.services.find((x) => x.code === "botox")!;
+  out.push(
+    insert("visit_charges", [
+      {
+        tenant_id: tenant,
+        appointment_id: ref("appointment", "d0019-botox-past"),
+        patient_id: ref("patient", "D-0019"),
+        service_id: ref("service", "botox"),
+        billing_item_id: null,
+        code: "botox",
+        name_ar: botox.nameAr,
+        name_en: botox.nameEn,
+        quantity: 1,
+        unit_price_halalas: Math.round(botox.priceSar * 100),
+        added_by_user_id: SARA.id,
+        created_at: daysAgo(125),
+      },
+      {
+        tenant_id: tenant,
+        appointment_id: ref("appointment", "d0019-botox-past"),
+        patient_id: ref("patient", "D-0019"),
+        service_id: null,
+        billing_item_id: ref("billing_item", "BTX-U"),
+        code: "BTX-U",
+        name_ar: "وحدة بوتوكس",
+        name_en: "Botox unit",
+        quantity: 20,
+        unit_price_halalas: 2500,
+        added_by_user_id: SARA.id,
+        created_at: daysAgo(125),
+      },
+    ]),
+  );
+  out.push(
+    insert("visit_orders", [
+      {
+        tenant_id: tenant,
+        appointment_id: ref("appointment", "d0019-botox-past"),
+        patient_id: ref("patient", "D-0019"),
+        kind: "treatment",
+        name: "Botox review and repeat",
+        sessions: 1,
+        interval_weeks: 16,
+        service_id: ref("service", "botox"),
+        instructions: "Repeat in about 4 months.",
+        created_by_user_id: SARA.id,
+        created_at: daysAgo(125),
+      },
+    ]),
+  );
+
   return out.join("\n");
 }
