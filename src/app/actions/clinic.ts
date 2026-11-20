@@ -82,6 +82,7 @@ import { setClinicWhatsApp, testClinicWhatsApp } from "@/lib/platform/whatsapp";
 import { setCareTeam } from "@/lib/care-team/care-team";
 import {
   createConsentForm,
+  saveBillingItem,
   saveBranch,
   saveDepartment,
   saveDevice,
@@ -98,7 +99,15 @@ import {
 import { CLINIC_STATUSES } from "@/lib/tenant/status";
 import { addMember, inviteInfo, linkWebsiteDoctor, setActive, updateMember } from "@/lib/team/team";
 import { inviteToken } from "@/lib/team/invite";
-import { signAndComplete, startVisit } from "@/lib/visits/visit";
+import {
+  addCharge,
+  addOrder,
+  postVisit,
+  removeCharge,
+  removeOrder,
+  signAndComplete,
+  startVisit,
+} from "@/lib/visits/visit";
 import { decideRequest, doctorReschedule } from "@/lib/visits/reschedule";
 import { parse, staffAction, ValidationError, PAUSED_OK } from "@/lib/actions";
 
@@ -737,6 +746,92 @@ export async function signAndCompleteAction(input: {
     revalidatePath("/clinical-notes");
     revalidatePath(`/visits/${v.appointmentId}`);
     return r;
+  });
+}
+
+// ─── Visit: orders, invoice codes, Post visit ───────────────────────────────
+
+function visitChanged(appointmentId: string) {
+  refreshScreens();
+  revalidatePath(`/visits/${appointmentId}`);
+}
+
+export async function postVisitAction(input: { appointmentId: string; noteId: string; body: string }) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ appointmentId: uuid, noteId: uuid, body: z.string().max(20000) }),
+      input,
+    );
+    const r = await withActor(actor, (tx) => postVisit(tx, actor, v));
+    visitChanged(v.appointmentId);
+    revalidatePath("/clinical-notes");
+    return r;
+  });
+}
+
+export async function addVisitChargeAction(input: {
+  appointmentId: string;
+  serviceId?: string | null;
+  billingItemId?: string | null;
+  quantity: number;
+}) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(
+      z
+        .object({
+          appointmentId: uuid,
+          serviceId: uuid.nullish(),
+          billingItemId: uuid.nullish(),
+          quantity: z.number().int().min(1).max(1000),
+        })
+        .refine((x) => !!x.serviceId !== !!x.billingItemId),
+      input,
+    );
+    await withActor(actor, (tx) => addCharge(tx, actor, v));
+    visitChanged(v.appointmentId);
+    return null;
+  });
+}
+
+export async function removeVisitChargeAction(input: { appointmentId: string; chargeId: string }) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(z.object({ appointmentId: uuid, chargeId: uuid }), input);
+    await withActor(actor, (tx) => removeCharge(tx, actor, v));
+    visitChanged(v.appointmentId);
+    return null;
+  });
+}
+
+export async function addVisitOrderAction(input: unknown) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const opt = (n: number) => z.string().trim().max(n).nullish();
+    const v = parse(
+      z.object({
+        appointmentId: uuid,
+        kind: z.enum(["medication", "treatment"]),
+        name: z.string().trim().min(1).max(200),
+        dose: opt(200),
+        frequency: opt(200),
+        duration: opt(200),
+        sessions: z.number().int().min(1).max(50).nullish(),
+        intervalWeeks: z.number().int().min(1).max(104).nullish(),
+        serviceId: uuid.nullish(),
+        instructions: opt(1000),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => addOrder(tx, actor, v));
+    visitChanged(v.appointmentId);
+    return null;
+  });
+}
+
+export async function removeVisitOrderAction(input: { appointmentId: string; orderId: string }) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(z.object({ appointmentId: uuid, orderId: uuid }), input);
+    await withActor(actor, (tx) => removeOrder(tx, actor, v));
+    visitChanged(v.appointmentId);
+    return null;
   });
 }
 
@@ -2055,6 +2150,36 @@ export async function savePackageAction(input: unknown) {
     const { priceSar, ...rest } = v;
     const row = await withActor(actor, (tx) =>
       savePackage(tx, actor, { ...rest, priceHalalas: sarToHalalas(priceSar) }),
+    );
+    setupDone();
+    return { id: row.id };
+  });
+}
+
+export async function saveBillingItemAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        code: z
+          .string()
+          .trim()
+          .min(1)
+          .max(30)
+          .regex(/^[A-Za-z0-9._-]+$/),
+        nameAr: label(),
+        nameEn: label(),
+        kind: z.enum(["product", "consumable", "procedure", "other"]),
+        priceSar: z.number().min(0).max(1_000_000),
+        unitAr: z.string().trim().max(40).nullish(),
+        unitEn: z.string().trim().max(40).nullish(),
+        isActive: z.boolean(),
+      }),
+      input,
+    );
+    const { priceSar, ...rest } = v;
+    const row = await withActor(actor, (tx) =>
+      saveBillingItem(tx, actor, { ...rest, priceHalalas: sarToHalalas(priceSar) }),
     );
     setupDone();
     return { id: row.id };

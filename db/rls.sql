@@ -325,6 +325,8 @@ grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
 -- Which doctors do which service (clinic admin): rows added and removed, never edited.
 grant select, insert, delete on public.service_practitioners to clinic_app;
 grant select, insert, delete on public.care_team to clinic_app;
+grant select, insert, update on public.billing_items to clinic_app;
+grant select, insert, delete on public.visit_charges, public.visit_orders to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -352,7 +354,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -408,7 +410,7 @@ create policy clinical_note_addenda_practitioners_only on public.clinical_note_a
   with check (public.app_has_role('practitioner'));
 
 -- Notes are written in the doctor's (author's) own name; only the author edits a draft — or
--- their nurse / assistant, who may prepare it but never sign it.
+-- their nurse / assistant, who prepares it and may post it with the visit (never starts one).
 create policy clinical_notes_author_insert on public.clinical_notes as restrictive
   for insert to clinic_app with check (
     author_user_id = public.app_current_user()
@@ -416,11 +418,36 @@ create policy clinical_notes_author_insert on public.clinical_notes as restricti
 create policy clinical_notes_author_update on public.clinical_notes as restrictive
   for update to clinic_app
   using (author_user_id = public.app_current_user() or public.app_assists(author_user_id))
-  with check (
-    author_user_id = public.app_current_user()
-    or (public.app_assists(author_user_id) and status = 'draft'));
+  with check (author_user_id = public.app_current_user() or public.app_assists(author_user_id));
 create policy clinical_note_addenda_author_insert on public.clinical_note_addenda as restrictive
   for insert to clinic_app with check (author_user_id = public.app_current_user());
+
+-- A visit's invoice codes and orders can change only while the visit is open: once it is
+-- posted (completed) — or cancelled / no-show — they are locked, whatever the app does.
+create or replace function public.app_visit_open(appt uuid) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select exists (
+    select 1 from public.appointments a
+     where a.id = appt and a.status not in ('completed', 'cancelled', 'no_show')
+  )
+$$;
+grant execute on function public.app_visit_open(uuid) to clinic_app;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['visit_charges', 'visit_orders'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for insert to clinic_app
+         with check (public.app_visit_open(appointment_id))', t || '_open_insert', t);
+    execute format(
+      'create policy %I on public.%I as restrictive for delete to clinic_app
+         using (public.app_visit_open(appointment_id))', t || '_open_delete', t);
+  end loop;
+end $$;
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;
@@ -531,7 +558,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

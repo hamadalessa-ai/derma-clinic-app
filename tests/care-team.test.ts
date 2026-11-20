@@ -1,6 +1,7 @@
 /**
  * Nurse / assistant: works for the doctors linked in care_team. She brings the patient in and
- * prepares the note IN THE DOCTOR'S NAME (recorded as entered by her); only the doctor signs.
+ * prepares the note IN THE DOCTOR'S NAME (recorded as entered by her) and may post the visit;
+ * only the doctor signs a note on its own or adds corrections.
  * She never sees other doctors' notes; reception still sees none. Enforced in the database too.
  */
 import { afterAll, describe, expect, it } from "vitest";
@@ -11,9 +12,9 @@ import { withActor } from "@/lib/auth/db";
 import { PermissionError } from "@/lib/auth/permissions";
 import { bookAppointment, BookingError } from "@/lib/booking/engine";
 import { assistedDoctors, CareTeamError, setCareTeam } from "@/lib/care-team/care-team";
-import { NoteError, openDraft, saveDraft } from "@/lib/notes/notes";
+import { NoteError, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { checkIn } from "@/lib/visits/check-in";
-import { signAndComplete, startVisit } from "@/lib/visits/visit";
+import { postVisit, startVisit } from "@/lib/visits/visit";
 import {
   admin,
   drReem,
@@ -69,7 +70,7 @@ describe("nurse / assistant", () => {
     );
   });
 
-  it("brings the patient in and prepares the note in the doctor's name; only the doctor signs", async () => {
+  it("brings the patient in, prepares the note in the doctor's name and posts the visit", async () => {
     const a = await bookedWith("derma-dr-sara", "D-0021", "10:00");
     const { noteId } = await withActor(nurse, (tx) => startVisit(tx, nurse, a.id));
     expect(await statusOf(a.id)).toBe("in_session");
@@ -84,29 +85,29 @@ describe("nurse / assistant", () => {
       status: "draft",
     });
 
-    // She can't sign — not through the app, not straight in the database.
-    expect(
-      await code(
-        withActor(nurse, (tx) =>
-          signAndComplete(tx, nurse, { appointmentId: a.id, noteId, body: "signed?" }),
-        ),
-      ),
-    ).toBe("not_author");
-    await expect(
-      withActor(nurse, (tx) =>
-        tx
-          .update(clinicalNotes)
-          .set({ status: "signed", signedAt: new Date() })
-          .where(eq(clinicalNotes.id, noteId)),
-      ),
-    ).rejects.toThrow();
+    // Signing a note on its own stays the doctor's.
+    expect(await code(withActor(nurse, (tx) => signNote(tx, nurse, noteId)))).toBe("not_author");
 
-    // The doctor reviews and signs: visit completed, same note, still marked as entered by her.
-    const r = await withActor(drSara, (tx) =>
-      signAndComplete(tx, drSara, { appointmentId: a.id, noteId, body: n!.body + " Reviewed." }),
+    // Posting the visit (room PC): note saved in the doctor's name, visit completed.
+    const r = await withActor(nurse, (tx) =>
+      postVisit(tx, nurse, { appointmentId: a.id, noteId, body: n!.body + " Plan agreed." }),
     );
     expect(r.completed).toBe(true);
     expect(await statusOf(a.id)).toBe("completed");
+    const [posted] = await withActor(drSara, (tx) =>
+      tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, noteId)),
+    );
+    expect(posted).toMatchObject({
+      status: "signed",
+      authorUserId: drSara.userId,
+      enteredByUserId: nurse.userId,
+    });
+    // Posted = locked, also straight in the database.
+    await expect(
+      withActor(nurse, (tx) =>
+        tx.update(clinicalNotes).set({ body: "rewritten" }).where(eq(clinicalNotes.id, noteId)),
+      ),
+    ).rejects.toThrow();
   });
 
   it("never works on other doctors' patients or sees their notes", async () => {

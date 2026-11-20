@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
-import { and, desc, eq, gt, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNotNull } from "drizzle-orm";
 import { ArrowRight, FileText, Layers } from "lucide-react";
 import { AlertBadge, StatusBadge } from "@/components/clinic/badges";
 import { NotesPanel } from "@/components/clinic/patient-panels";
@@ -10,12 +10,13 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { VideoCall } from "@/components/video/video-call";
-import { messages, patients } from "@/db/schema";
+import { billingItems, messages, patients, services } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { doctorOf } from "@/lib/care-team/care-team";
-import { mayWorkOnVisit } from "@/lib/visits/visit";
+import { mayWorkOnVisit, visitExtras } from "@/lib/visits/visit";
+import { VisitExtras, VisitWorkspace } from "@/components/clinic/visit-workspace";
 import { getSettings } from "@/lib/booking/engine";
 import type { AppointmentStatus } from "@/lib/booking/status";
 import { addMinutes } from "@/lib/booking/time";
@@ -40,6 +41,8 @@ const PHOTO_DAYS = 30;
  * earlier notes, the video call (video visits), and this visit's note with the AI scribe.
  * "Sign & complete" signs the note and completes the visit together.
  */
+const CLOSED_STATUSES = ["completed", "cancelled", "no_show"];
+
 export default async function VisitPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await requirePermission("my_day:view");
   const { id } = await params;
@@ -86,6 +89,37 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
     // Own doctor — or her nurse / assistant (care team), who prepares the note in the doctor's name.
     const allowed = await mayWorkOnVisit(tx, actor, visit.practitionerId);
     const doctor = allowed ? await doctorOf(tx, visit.practitionerId) : null;
+    const extras = allowed
+      ? await visitExtras(tx, visit.appointmentId)
+      : { charges: [], orders: [] };
+    const catalogServices = allowed
+      ? await tx
+          .select({
+            id: services.id,
+            code: services.code,
+            nameAr: services.nameAr,
+            nameEn: services.nameEn,
+            priceHalalas: services.priceHalalas,
+          })
+          .from(services)
+          .where(eq(services.isActive, true))
+          .orderBy(asc(services.sortOrder))
+      : [];
+    const catalogItems = allowed
+      ? await tx
+          .select({
+            id: billingItems.id,
+            code: billingItems.code,
+            nameAr: billingItems.nameAr,
+            nameEn: billingItems.nameEn,
+            priceHalalas: billingItems.priceHalalas,
+            unitAr: billingItems.unitAr,
+            unitEn: billingItems.unitEn,
+          })
+          .from(billingItems)
+          .where(eq(billingItems.isActive, true))
+          .orderBy(asc(billingItems.code))
+      : [];
     return {
       visit,
       patient,
@@ -96,6 +130,8 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
       photos,
       allowed,
       doctor,
+      extras,
+      catalog: { services: catalogServices, items: catalogItems },
     };
   });
   if (!data) notFound();
@@ -212,17 +248,43 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             <h2 id="visit-note" className="text-[17px] leading-[26px] font-semibold">
               {t("note")}
             </h2>
-            {thisNote ? (
-              <NotesPanel
-                patientId={visit.patientId}
-                userId={ctx.user.id}
-                scribe={scribeOn}
-                canWrite={can(ctx.roles, "notes:write")}
+            {thisNote && thisNote.status === "draft" && !CLOSED_STATUSES.includes(status) ? (
+              <VisitWorkspace
                 appointmentId={visit.appointmentId}
-                visit
-                preparingFor={preparingFor}
-                notes={[toNoteView(thisNote)]}
+                patientId={visit.patientId}
+                note={{
+                  id: thisNote.id,
+                  body: thisNote.body,
+                  aiDrafted: !!thisNote.aiDraftedAt,
+                  authorName: thisNote.authorName,
+                  enteredByName: thisNote.enteredByName,
+                }}
+                scribe={scribeOn}
+                preparingFor={preparingFor?.name ?? null}
+                charges={data.extras.charges}
+                orders={data.extras.orders}
+                catalog={data.catalog}
               />
+            ) : thisNote ? (
+              <>
+                <NotesPanel
+                  patientId={visit.patientId}
+                  userId={ctx.user.id}
+                  scribe={false}
+                  canWrite={ctx.roles.includes("practitioner")}
+                  appointmentId={visit.appointmentId}
+                  visit
+                  preparingFor={preparingFor}
+                  notes={[toNoteView(thisNote)]}
+                />
+                <VisitExtras
+                  appointmentId={visit.appointmentId}
+                  charges={data.extras.charges}
+                  orders={data.extras.orders}
+                  catalog={data.catalog}
+                  locked
+                />
+              </>
             ) : (
               <Card>
                 <CardContent className="flex flex-col items-start gap-3 pt-4 md:pt-5">

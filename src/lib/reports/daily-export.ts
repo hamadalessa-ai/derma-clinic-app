@@ -1,7 +1,8 @@
 import "server-only";
 /**
  * Reports → daily file for the clinic's invoicing / accounting system (one CSV per day):
- * - visit: each completed visit, at the service's list price (0 when a package session paid for it)
+ * - visit: each invoice code of a completed visit (from the visit screen), or its service when it
+ *   has none — at the price of that day (0 when a package session paid for it)
  * - package_sale: each package sold that day, at its price
  * - package_payment: each package payment recorded that day (cash / card / transfer)
  * The clinic's invoicing system issues the official (ZATCA) invoice; this file only feeds it.
@@ -18,6 +19,7 @@ import {
   services,
   tenantMembers,
   users,
+  visitCharges,
 } from "@/db/schema";
 import type { TenantTx } from "@/db/tenant";
 import type { Actor } from "@/lib/auth/db";
@@ -39,6 +41,7 @@ export const DAILY_COLUMNS = [
   "item_code",
   "item_ar",
   "item_en",
+  "quantity",
   "doctor",
   "list_price_sar",
   "amount_sar",
@@ -105,10 +108,25 @@ export async function dailyInvoicingCsv(
     for (const e of ev) if (e.appointmentId) covered.set(e.appointmentId, e.pkg);
   }
 
-  const rows: (string | number | null)[][] = visits.map((v) => {
+  // The visit's invoice codes (posted on the visit screen); a visit without any → its service.
+  const lines = new Map<string, (typeof visitCharges.$inferSelect)[]>();
+  if (visits.length) {
+    const all = await tx
+      .select()
+      .from(visitCharges)
+      .where(
+        inArray(
+          visitCharges.appointmentId,
+          visits.map((v) => v.id),
+        ),
+      )
+      .orderBy(asc(visitCharges.createdAt), asc(visitCharges.id));
+    for (const c of all) lines.set(c.appointmentId, [...(lines.get(c.appointmentId) ?? []), c]);
+  }
+
+  const rows: (string | number | null)[][] = visits.flatMap((v) => {
     const pkg = covered.get(v.id);
-    return [
-      "visit",
+    const who = [
       day,
       riyadhTime(v.startsAt),
       v.id.slice(0, 8),
@@ -118,13 +136,35 @@ export async function dailyInvoicingCsv(
       v.patientEn,
       v.phone,
       v.idNumber,
-      v.code,
-      v.serviceAr,
-      v.serviceEn,
-      v.doctor,
-      sar(v.price),
-      pkg ? "0.00" : sar(v.price),
-      pkg ? `package: ${pkg}` : "at_clinic",
+    ];
+    const charged = lines.get(v.id);
+    if (charged?.length) {
+      return charged.map((c) => [
+        "visit",
+        ...who,
+        c.code,
+        c.nameAr,
+        c.nameEn,
+        c.quantity,
+        v.doctor,
+        sar(c.unitPriceHalalas),
+        c.coveredByPackage ? "0.00" : sar(c.quantity * c.unitPriceHalalas),
+        c.coveredByPackage ? `package: ${pkg ?? ""}`.trim() : "at_clinic",
+      ]);
+    }
+    return [
+      [
+        "visit",
+        ...who,
+        v.code,
+        v.serviceAr,
+        v.serviceEn,
+        1,
+        v.doctor,
+        sar(v.price),
+        pkg ? "0.00" : sar(v.price),
+        pkg ? `package: ${pkg}` : "at_clinic",
+      ],
     ];
   });
 
@@ -162,6 +202,7 @@ export async function dailyInvoicingCsv(
         "package",
         p.nameAr,
         p.nameEn,
+        1,
         null,
         sar(p.price),
         sar(p.price),
@@ -203,6 +244,7 @@ export async function dailyInvoicingCsv(
         "package",
         p.nameAr,
         p.nameEn,
+        1,
         null,
         null,
         sar(p.amount),
