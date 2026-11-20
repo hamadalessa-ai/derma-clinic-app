@@ -15,6 +15,13 @@ const ALL_CLINIC_STAFF: Role[] = ["clinic_admin", "practitioner", "receptionist"
 
 export const PERMISSIONS = {
   "dashboard:view": ["platform_owner", ...ALL_CLINIC_STAFF],
+  /** Dental chart (clinical): doctors and nurses only. */
+  "dental:chart": ["practitioner", "assistant"],
+  /** Dental treatment plan: doctors and nurses change it (everyone reads it). */
+  "dental:plan": ["practitioner", "assistant"],
+  /** Lab cases: everyone follows them and updates where the work is. */
+  "lab:view": ALL_CLINIC_STAFF,
+  "lab:manage": ALL_CLINIC_STAFF,
   /** Help centre: short guides per role. */
   "help:view": ALL_CLINIC_STAFF,
   "patients:read": ALL_CLINIC_STAFF,
@@ -147,6 +154,7 @@ export const NAV_ITEMS = [
     demoOnly: true,
   },
   { href: "/account", key: "account", permission: "account:manage" },
+  { href: "/lab-cases", key: "labCases", permission: "lab:view", dentalOnly: true },
   { href: "/help", key: "help", permission: "help:view" },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly {
@@ -155,6 +163,8 @@ export const NAV_ITEMS = [
   permission: Permission;
   /** Only shown when the clinic is in WhatsApp demo mode. */
   demoOnly?: boolean;
+  /** Only shown when the clinic has a dental department. */
+  dentalOnly?: boolean;
 }[];
 
 /** Pages that matter most on a phone, in order. The first ones a role may see go in the bottom bar. */
@@ -170,6 +180,7 @@ export const MOBILE_PRIORITY = [
   "whatsapp",
   "simulator",
   "account",
+  "labCases",
   "help",
 ] as const;
 

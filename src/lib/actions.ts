@@ -5,6 +5,7 @@ import { NoteError } from "@/lib/notes/notes";
 import { ScribeError } from "@/lib/ai/scribe";
 import { VideoVisitError } from "@/lib/video/visit";
 import { VisitError } from "@/lib/visits/visit";
+import { DentalError } from "@/lib/dental/chart";
 import { HoursError } from "@/lib/booking/working-hours";
 import { PackageError } from "@/lib/packages/packages";
 import { can, PermissionError, type Permission } from "@/lib/auth/permissions";
@@ -87,6 +88,7 @@ export async function staffAction<T>(
     if (err instanceof ScribeError) return { ok: false, error: `scribe_${err.code}` };
     if (err instanceof VideoVisitError) return { ok: false, error: `video_${err.code}` };
     if (err instanceof VisitError) return { ok: false, error: `visit_${err.code}` };
+    if (err instanceof DentalError) return { ok: false, error: `dental_${err.code}` };
     if (err instanceof HoursError) return { ok: false, error: `hours_${err.code}` };
     if (err instanceof TeamError) return { ok: false, error: `team_${err.code}` };
     if (err instanceof ClinicError) return { ok: false, error: `clinic_${err.code}` };
@@ -137,6 +139,7 @@ export async function publicAction<T>(
     if (err instanceof TeamError) return { ok: false, error: `team_${err.code}` };
     if (err instanceof VideoVisitError) return { ok: false, error: `video_${err.code}` };
     if (err instanceof VisitError) return { ok: false, error: `visit_${err.code}` };
+    if (err instanceof DentalError) return { ok: false, error: `dental_${err.code}` };
     if (err instanceof ValidationError) return { ok: false, error: "invalid" };
     console.error("public action failed", err);
     return { ok: false, error: "unexpected" };

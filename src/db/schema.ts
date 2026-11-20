@@ -317,12 +317,22 @@ export const rooms = pgTable(
      * (any number of video visits at once; only the doctor's time is booked).
      */
     isVirtual: boolean("is_virtual").notNull().default(false),
+    /**
+     * A room kept for one department (e.g. the dental clinic with its chair): only that
+     * department's services are booked in it, and its services only there. Null = any service.
+     */
+    departmentId: uuid("department_id"),
     /** Switched off by the clinic admin: no new bookings; past ones keep it. */
     isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),
   },
   (t) => [
     unique("rooms_tenant_id_id_key").on(t.tenantId, t.id),
+    foreignKey({
+      name: "rooms_department_fk",
+      columns: [t.tenantId, t.departmentId],
+      foreignColumns: [departments.tenantId, departments.id],
+    }),
     unique("rooms_tenant_branch_id_key").on(t.tenantId, t.branchId, t.id),
     foreignKey({
       name: "rooms_branch_fk",
@@ -660,6 +670,9 @@ export const TENANT_TABLES = [
   "visit_charges",
   "visit_orders",
   "visit_checkouts",
+  "dental_chart_entries",
+  "dental_plan_items",
+  "lab_cases",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2012,4 +2025,186 @@ export const supportGrants = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("support_grants_tenant_expires_idx").on(t.tenantId, t.expiresAt)],
+);
+
+// ─── Dental ─────────────────────────────────────────────────────────────────
+
+/** A tooth's state on the dental chart. "healthy" clears what was recorded before. */
+export const toothCondition = pgEnum("tooth_condition", [
+  "healthy",
+  "caries",
+  "filled",
+  "crown",
+  "root_canal",
+  "missing",
+  "implant",
+  "bridge",
+  "extraction_needed",
+  "watch",
+]);
+
+/**
+ * The dental chart, as a history: each row is what a dentist (or their nurse) recorded for one
+ * tooth (FDI number 11–48) at one moment; the chart shows the latest per tooth. Never edited —
+ * a change is a new row. Clinical: only doctors and nurses see it (database policy).
+ */
+export const dentalChartEntries = pgTable(
+  "dental_chart_entries",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    tooth: smallint("tooth").notNull(),
+    /** Affected surfaces, any of M O D B L (mesial, occlusal, distal, buccal, lingual). */
+    surfaces: text("surfaces").notNull().default(""),
+    condition: toothCondition("condition").notNull(),
+    note: text("note"),
+    appointmentId: uuid("appointment_id"),
+    recordedByUserId: text("recorded_by_user_id").notNull(),
+    recordedByName: text("recorded_by_name").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("dental_chart_entries_tenant_id_id_key").on(t.tenantId, t.id),
+    index("dental_chart_entries_patient_idx").on(t.tenantId, t.patientId, t.tooth, t.createdAt),
+    check(
+      "dental_chart_entries_tooth",
+      sql`${t.tooth} between 11 and 48 and ${t.tooth} % 10 between 1 and 8`,
+    ),
+    check("dental_chart_entries_surfaces", sql`${t.surfaces} ~ '^[MODBL]{0,5}$'`),
+    foreignKey({
+      name: "dental_chart_entries_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "dental_chart_entries_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+  ],
+);
+
+export const dentalPlanStatus = pgEnum("dental_plan_status", ["planned", "done", "cancelled"]);
+
+/**
+ * A dental treatment plan across visits: each item is one procedure (a service) on a tooth,
+ * with its price copied when planned. "Done" in a visit adds it to that visit's invoice lines.
+ * Not clinical notes: reception sees it to book the next steps and to quote the estimate.
+ */
+export const dentalPlanItems = pgTable(
+  "dental_plan_items",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    tooth: smallint("tooth"),
+    surfaces: text("surfaces").notNull().default(""),
+    serviceId: uuid("service_id").notNull(),
+    code: text("code").notNull(),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en").notNull(),
+    priceHalalas: integer("price_halalas").notNull(),
+    status: dentalPlanStatus("status").notNull().default("planned"),
+    note: text("note"),
+    /** The visit it was done in. */
+    appointmentId: uuid("appointment_id"),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("dental_plan_items_tenant_id_id_key").on(t.tenantId, t.id),
+    index("dental_plan_items_patient_idx").on(t.tenantId, t.patientId, t.createdAt),
+    check(
+      "dental_plan_items_tooth",
+      sql`${t.tooth} is null or (${t.tooth} between 11 and 48 and ${t.tooth} % 10 between 1 and 8)`,
+    ),
+    check("dental_plan_items_price", sql`${t.priceHalalas} >= 0`),
+    check("dental_plan_items_done", sql`(${t.status} = 'done') = (${t.doneAt} is not null)`),
+    foreignKey({
+      name: "dental_plan_items_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "dental_plan_items_service_fk",
+      columns: [t.tenantId, t.serviceId],
+      foreignColumns: [services.tenantId, services.id],
+    }),
+    foreignKey({
+      name: "dental_plan_items_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+  ],
+);
+
+export const labWork = pgEnum("lab_work", [
+  "crown",
+  "bridge",
+  "veneer",
+  "denture",
+  "aligner",
+  "night_guard",
+  "implant_part",
+  "other",
+]);
+export const labCaseStatus = pgEnum("lab_case_status", [
+  "sent",
+  "received",
+  "fitted",
+  "remake",
+  "cancelled",
+]);
+
+/**
+ * Work sent to a dental lab (crowns, bridges, dentures…): which lab, when it is due back, and
+ * where it is now (sent → received → fitted). Reception follows due dates and calls the patient.
+ */
+export const labCases = pgTable(
+  "lab_cases",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    appointmentId: uuid("appointment_id"),
+    /** The dentist the work is for. */
+    practitionerId: uuid("practitioner_id").notNull(),
+    labName: text("lab_name").notNull(),
+    work: labWork("work").notNull(),
+    teeth: text("teeth").notNull().default(""),
+    shade: text("shade"),
+    sentOn: date("sent_on").notNull(),
+    dueOn: date("due_on").notNull(),
+    status: labCaseStatus("status").notNull().default("sent"),
+    notes: text("notes"),
+    receivedAt: timestamp("received_at", { withTimezone: true }),
+    fittedAt: timestamp("fitted_at", { withTimezone: true }),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    unique("lab_cases_tenant_id_id_key").on(t.tenantId, t.id),
+    index("lab_cases_due_idx").on(t.tenantId, t.status, t.dueOn),
+    index("lab_cases_patient_idx").on(t.tenantId, t.patientId),
+    check("lab_cases_dates", sql`${t.dueOn} >= ${t.sentOn}`),
+    foreignKey({
+      name: "lab_cases_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "lab_cases_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+    foreignKey({
+      name: "lab_cases_practitioner_fk",
+      columns: [t.tenantId, t.practitionerId],
+      foreignColumns: [tenantMembers.tenantId, tenantMembers.id],
+    }),
+  ],
 );

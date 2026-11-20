@@ -7,6 +7,7 @@ import {
   ChartColumn,
   FileLock2,
   Inbox,
+  FlaskConical,
   LayoutDashboard,
   LifeBuoy,
   BellRing,
@@ -37,6 +38,7 @@ export const NAV_ICONS = {
   simulator: Smartphone,
   account: BellRing,
   help: LifeBuoy,
+  labCases: FlaskConical,
 } as const;
 
 export function NavLinks({

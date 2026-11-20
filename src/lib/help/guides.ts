@@ -104,6 +104,22 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       ],
     },
     {
+      id: "lab",
+      titleAr: "أعمال معمل الأسنان",
+      titleEn: "Dental lab cases",
+      link: { href: "/lab-cases", permission: "lab:view" },
+      steps: [
+        s(
+          "«أعمال المعمل» تعرض الأعمال لدى المعامل؛ المتأخر يظهر أولاً بلون مختلف.",
+          "Lab cases lists work at the labs; overdue work comes first, highlighted.",
+        ),
+        s(
+          "عند وصول العمل اضغط «تم الاستلام» ثم اتصل بالمريض أو راسله لحجز التركيب.",
+          "When the work arrives press Received, then call or message the patient to book the fitting.",
+        ),
+      ],
+    },
+    {
       id: "inbox",
       titleAr: "رسائل واتساب",
       titleEn: "WhatsApp messages",
@@ -215,6 +231,25 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
         s(
           "«ترحيل الزيارة» يحفظ كل شيء وينهي الزيارة في خطوة واحدة. التصحيح لاحقاً = إضافة أسفل الملاحظة.",
           "Post visit saves everything and completes the visit in one step. Later corrections are added underneath the note.",
+        ),
+      ],
+    },
+    {
+      id: "dental",
+      titleAr: "الأسنان: المخطط والخطة والمعمل",
+      titleEn: "Dental: chart, plan and lab",
+      steps: [
+        s(
+          "في زيارة الأسنان يظهر مخطط الأسنان: اضغط السن، اختر الحالة والأسطح، ثم «تسجيل». كل تغيير يُحفظ مع تاريخه.",
+          "On a dental visit the tooth chart shows: tap a tooth, choose the condition and surfaces, then Record. Every change is kept with its date.",
+        ),
+        s(
+          "خطة العلاج: أضف الإجراء لكل سن بسعره. «تم في هذه الزيارة» يضيفه لرموز فاتورة الزيارة.",
+          "Treatment plan: add the procedure per tooth with its price. Done in this visit adds it to the visit's invoice codes.",
+        ),
+        s(
+          "«إرسال للمعمل» للتاج أو الجسر وغيرهما مع موعد الاستلام؛ يتابعه الاستقبال في «أعمال المعمل».",
+          "Send to lab for a crown, bridge and so on, with the due date; reception follows it in Lab cases.",
         ),
       ],
     },

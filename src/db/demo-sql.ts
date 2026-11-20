@@ -404,6 +404,63 @@ export function demoSql(): string {
       },
     ]),
   );
+  // Dental rows for the isolation tests (Lamsa has no dental department).
+  out.push(
+    insert("dental_chart_entries", [
+      {
+        tenant_id: lamsa,
+        patient_id: lref("patient", "L-0002"),
+        tooth: 21,
+        surfaces: "",
+        condition: "watch",
+        note: null,
+        appointment_id: null,
+        recorded_by_user_id: "usr_lamsa-dr-mona",
+        recorded_by_name: "Lamsa doctor",
+      },
+    ]),
+  );
+  out.push(
+    insert("dental_plan_items", [
+      {
+        tenant_id: lamsa,
+        patient_id: lref("patient", "L-0002"),
+        tooth: 21,
+        surfaces: "",
+        service_id: lref("service", "facial_treatment"),
+        code: "facial_treatment",
+        name_ar: "جلسة تنظيف البشرة",
+        name_en: "Facial Treatment",
+        price_halalas: 35000,
+        status: "planned",
+        note: null,
+        appointment_id: null,
+        done_at: null,
+        created_by_user_id: "usr_lamsa-dr-mona",
+      },
+    ]),
+  );
+  out.push(
+    insert("lab_cases", [
+      {
+        tenant_id: lamsa,
+        patient_id: lref("patient", "L-0002"),
+        appointment_id: null,
+        practitioner_id: lref("member", "lamsa-dr-mona"),
+        lab_name: "Lamsa Lab",
+        work: "other",
+        teeth: "",
+        shade: null,
+        sent_on: raw("current_date"),
+        due_on: raw("current_date + 5"),
+        status: "sent",
+        notes: null,
+        received_at: null,
+        fitted_at: null,
+        created_by_user_id: "usr_lamsa-dr-mona",
+      },
+    ]),
+  );
   out.push(
     insert("visit_checkouts", [
       {
@@ -1184,6 +1241,108 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
         checked_out_by_user_id: "usr_derma-rec-ruh1",
         created_at: daysAgo(125),
       },
+    ]),
+  );
+
+  // Dental: Dr. Nawaf's patient D-0015 — chart, a treatment plan across visits, lab work.
+  const NAWAF = { id: "usr_derma-dr-nawaf", name: "د. نواف الحربي" };
+  const dentalTooth = (
+    t: number,
+    condition: string,
+    surfaces = "",
+    note: string | null = null,
+    ago = 40,
+  ) => ({
+    tenant_id: tenant,
+    patient_id: ref("patient", "D-0015"),
+    tooth: t,
+    surfaces,
+    condition,
+    note,
+    appointment_id: null,
+    recorded_by_user_id: NAWAF.id,
+    recorded_by_name: NAWAF.name,
+    created_at: daysAgo(ago),
+  });
+  out.push(
+    insert("dental_chart_entries", [
+      dentalTooth(18, "missing"),
+      dentalTooth(28, "missing"),
+      dentalTooth(38, "extraction_needed", "", "Impacted wisdom tooth"),
+      dentalTooth(36, "caries", "MO", null, 40),
+      dentalTooth(36, "filled", "MO", "Composite", 20),
+      dentalTooth(46, "crown", "", "Zirconia crown (lab)", 20),
+      dentalTooth(25, "caries", "D", "Deep — pulp close", 20),
+      dentalTooth(11, "watch", "", "Small chip, check in 6 months", 20),
+    ]),
+  );
+  const dentalSvc = (code: string) => DERMA.services.find((x) => x.code === code)!;
+  const dentalPlan = (
+    key: string,
+    t: number | null,
+    code: string,
+    status: "planned" | "done",
+    surfaces = "",
+    ago = 20,
+  ) => ({
+    id: ref("dental_plan_item", key),
+    tenant_id: tenant,
+    patient_id: ref("patient", "D-0015"),
+    tooth: t,
+    surfaces,
+    service_id: ref("service", code),
+    code,
+    name_ar: dentalSvc(code).nameAr,
+    name_en: dentalSvc(code).nameEn,
+    price_halalas: Math.round(dentalSvc(code).priceSar * 100),
+    status,
+    note: null,
+    appointment_id: null,
+    done_at: status === "done" ? daysAgo(ago) : null,
+    created_by_user_id: NAWAF.id,
+    created_at: daysAgo(40),
+  });
+  out.push(
+    insert("dental_plan_items", [
+      dentalPlan("p1", null, "dental_scaling", "done", "", 40),
+      dentalPlan("p2", 36, "dental_filling", "done", "MO", 20),
+      dentalPlan("p3", 25, "root_canal", "planned"),
+      dentalPlan("p4", 25, "dental_crown", "planned"),
+      dentalPlan("p5", 38, "dental_extraction", "planned"),
+    ]),
+  );
+  const labRow = (
+    key: string,
+    file: string,
+    work: string,
+    teeth: string,
+    sentAgo: number,
+    dueIn: number,
+    status: string,
+    labName: string,
+  ) => ({
+    id: ref("lab_case", key),
+    tenant_id: tenant,
+    patient_id: ref("patient", file),
+    appointment_id: null,
+    practitioner_id: ref("member", "derma-dr-nawaf"),
+    lab_name: labName,
+    work,
+    teeth,
+    shade: work === "crown" || work === "bridge" ? "A2" : null,
+    sent_on: raw(`current_date - ${sentAgo}`),
+    due_on: raw(`current_date + ${dueIn}`),
+    status,
+    notes: null,
+    received_at: status === "received" ? daysAgo(1) : null,
+    fitted_at: null,
+    created_by_user_id: NAWAF.id,
+  });
+  out.push(
+    insert("lab_cases", [
+      labRow("l1", "D-0015", "crown", "46", 6, 2, "sent", "معمل الرياض للأسنان"),
+      labRow("l2", "D-0009", "bridge", "14–16", 10, -1, "sent", "Smile Lab"),
+      labRow("l3", "D-0004", "night_guard", "", 7, 0, "received", "Smile Lab"),
     ]),
   );
 

@@ -189,5 +189,25 @@ await shot(nurse, "help-nurse-ar", true);
 await desk.goto(`${BASE}/help`, { waitUntil: "networkidle" });
 await shot(desk, "help-reception-en", true);
 
+// ── 6. Dental: the dentist's patient file, a dental visit, and reception's lab cases ──
+const dentist = await signIn("dr.nawaf@derma.demo");
+await dentist.goto(`${BASE}/patients/${demoId("derma:patient:D-0015")}?tab=dental`, {
+  waitUntil: "networkidle",
+});
+await dentist.getByTestId("tooth-chart").waitFor({ timeout: 15000 });
+await dentist.locator("[data-testid=tooth][data-tooth='25']").click();
+await dentist.getByTestId("tooth-panel").waitFor({ timeout: 5000 });
+await shot(dentist, "dental-patient-file", true);
+await dentist.goto(`${BASE}/my-day?date=${DAY}`, { waitUntil: "networkidle" });
+const dentalStart = dentist.getByTestId("start-visit").first();
+if (await dentalStart.count()) {
+  await dentalStart.click();
+  await dentist.getByTestId("visit-workspace").waitFor({ timeout: 20000 });
+  await dentist.getByTestId("dental-section").waitFor({ timeout: 15000 });
+  await shot(dentist, "dental-visit", true);
+}
+await desk.goto(`${BASE}/lab-cases`, { waitUntil: "networkidle" });
+await shot(desk, "lab-cases-reception");
+
 await browser.close();
 console.log("walkthrough: OK");

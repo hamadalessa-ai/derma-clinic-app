@@ -75,6 +75,8 @@ export interface SeedStaff {
   branch: string | null; // branch key; null = all branches
   titleAr: string;
   titleEn: string;
+  /** Doctors of one department only (e.g. "dental"): they do only that department's services. */
+  department?: string;
 }
 
 export interface SeedService {
@@ -87,6 +89,8 @@ export interface SeedService {
   requiredDeviceType: string | null;
   /** A video consultation (booked in the branch's video room). */
   isVirtual?: boolean;
+  /** Department code (default "dermatology"). */
+  department?: string;
 }
 
 export interface SeedPatient {
@@ -116,7 +120,7 @@ export interface SeedTenant {
   brandColor: string;
   branches: { key: string; nameAr: string; nameEn: string; cityAr: string; cityEn: string }[];
   departments: { code: string; nameAr: string; nameEn: string; isActive: boolean }[];
-  rooms: { key: string; branch: string; nameAr: string; nameEn: string }[];
+  rooms: { key: string; branch: string; nameAr: string; nameEn: string; department?: string }[];
   devices: {
     key: string;
     branch: string;
@@ -130,7 +134,7 @@ export interface SeedTenant {
   careTeam?: { assistant: string; doctors: string[] }[];
   /** Price list: products, consumables, extra procedures (with invoicing codes). */
   billingItems?: SeedBillingItem[];
-  services: SeedService[]; // all in the "dermatology" department
+  services: SeedService[]; // "dermatology" unless the service names another department
   patients: SeedPatient[];
 }
 
@@ -382,6 +386,28 @@ function withFamily(patients: SeedPatient[]): SeedPatient[] {
 }
 
 /** Allergies, contraindications and medications (shown as warning badges). */
+/** Derma's dental department (demo estimates): done by the dentist, in the dental room. */
+export const DERMA_DENTAL_SERVICES: SeedService[] = [
+  ["dental_consultation", "كشف أسنان", "Dental Check-up", 30, 10, 200],
+  ["dental_scaling", "تنظيف الأسنان", "Scaling & Polishing", 45, 15, 350],
+  ["dental_filling", "حشوة تجميلية", "Composite Filling", 45, 15, 450],
+  ["root_canal", "علاج العصب", "Root Canal Treatment", 90, 15, 1500],
+  ["dental_crown", "تاج زيركون", "Zirconia Crown", 60, 15, 2200],
+  ["dental_extraction", "خلع سن", "Tooth Extraction", 45, 15, 500],
+  ["dental_implant", "زراعة سن", "Dental Implant", 120, 30, 5500],
+  ["teeth_whitening", "تبييض الأسنان", "Teeth Whitening", 60, 15, 1200],
+].map(([code, nameAr, nameEn, duration, buffer, price]) => ({
+  ...S(
+    code as string,
+    nameAr as string,
+    nameEn as string,
+    duration as number,
+    buffer as number,
+    price as number,
+  ),
+  department: "dental",
+}));
+
 export const DERMA_MEDICAL_FLAGS: SeedMedicalFlag[] = [
   {
     fileNumber: "D-0001",
@@ -476,7 +502,7 @@ export const DERMA: SeedTenant = {
       nameEn: "Dermatology & Aesthetics",
       isActive: true,
     },
-    { code: "dental", nameAr: "الأسنان", nameEn: "Dental", isActive: false },
+    { code: "dental", nameAr: "الأسنان", nameEn: "Dental", isActive: true },
     {
       code: "plastic_surgery",
       nameAr: "الجراحة التجميلية",
@@ -495,6 +521,13 @@ export const DERMA: SeedTenant = {
     { key: "ruh-2", branch: "riyadh", nameAr: "غرفة الكشف 2", nameEn: "Consultation Room 2" },
     { key: "ruh-3", branch: "riyadh", nameAr: "غرفة الليزر", nameEn: "Laser Room" },
     { key: "ruh-4", branch: "riyadh", nameAr: "غرفة الإجراءات", nameEn: "Procedure Room" },
+    {
+      key: "ruh-dental",
+      branch: "riyadh",
+      nameAr: "عيادة الأسنان",
+      nameEn: "Dental Clinic",
+      department: "dental",
+    },
     { key: "jed-1", branch: "jeddah", nameAr: "غرفة الكشف", nameEn: "Consultation Room" },
     { key: "jed-2", branch: "jeddah", nameAr: "غرفة الليزر", nameEn: "Laser Room" },
   ],
@@ -606,6 +639,17 @@ export const DERMA: SeedTenant = {
       "riyadh",
     ),
     nurse("derma-nurse-ruh", "nurse@derma.demo", "هدى الزهراني", "Huda Al-Zahrani", "riyadh"),
+    {
+      key: "derma-dr-nawaf",
+      email: "dr.nawaf@derma.demo",
+      nameAr: "د. نواف الحربي",
+      nameEn: "Dr. Nawaf Al-Harbi",
+      roles: ["practitioner"],
+      branch: "riyadh",
+      titleAr: "طبيب أسنان",
+      titleEn: "Dentist",
+      department: "dental",
+    },
     doctor("derma-dr-lina", "dr.lina@derma.demo", "د. لينا باناجة", "Dr. Lina Banaja", "jeddah"),
     doctor(
       "derma-dr-majed",
@@ -624,7 +668,7 @@ export const DERMA: SeedTenant = {
   ],
   careTeam: [{ assistant: "derma-nurse-ruh", doctors: ["derma-dr-sara", "derma-dr-faisal"] }],
   billingItems: DEMO_BILLING_ITEMS,
-  services: DERMA_SERVICES,
+  services: [...DERMA_SERVICES, ...DERMA_DENTAL_SERVICES],
   patients: withFamily(makeFakePatients(40, "D", "01")),
 };
 

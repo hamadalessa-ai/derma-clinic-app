@@ -147,6 +147,13 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   with today's visit → Check in, Walk-in (`walkIn`: book the tapped free time + check in in ONE transaction; a
   needed consent is still asked first), Book, Call, WhatsApp. One-tap contact = `ContactButtons`: `tel:` and
   `/whatsapp/open/<patientId>` (the clinic inbox chat, else wa.me on the device; inbox staff only).
+- Dental (`src/lib/dental/`, shown only when the clinic's `dental` department is active — `dentalEnabled`):
+  chart `dental_chart_entries` (FDI 11–48, a history: a change = a new row; clinical → `dental:chart` = doctors and
+  nurses only, database policy), treatment plan `dental_plan_items` (service + tooth, price COPIED; everyone reads,
+  doctors/nurses change — database policy; "Done in this visit" = `markPlanDone` → `addCharge` on the open visit),
+  lab cases `lab_cases` (sent → received → fitted / remake / cancelled, overdue after the due day; `/lab-cases`).
+  Rooms may belong to a department (`rooms.department_id`): `roomsForService` in the engine keeps the dental room
+  for dental services and sends dental services there. Patient file → Dental tab; dental visits show it too.
 - Help centre (`/help`, permission `help:view`, content `src/lib/help/guides.ts`): short step guides per role in Arabic
   and English. When a screen, tab or button name changes, update the guide (a test checks the links exist).
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly

@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildSetupSql } from "@/db/setup-sql";
 import { BRANCH_SCOPED_TABLES, PRACTITIONER_ONLY_TABLES, TENANT_TABLES } from "@/db/schema";
-import { DERMA, DERMA_SERVICES, LAMSA } from "@/db/seed-data";
+import { DERMA, DERMA_DENTAL_SERVICES, DERMA_SERVICES, LAMSA } from "@/db/seed-data";
 import ar from "../messages/ar.json";
 import en from "../messages/en.json";
 
@@ -44,18 +44,29 @@ describe("seed data matches the brief", () => {
     expect(DERMA.slug).toBe("derma");
     expect(DERMA.brandColor).toBe("#0b5d4c");
     expect(DERMA.branches.map((b) => b.key)).toEqual(["riyadh", "jeddah"]);
-    expect(DERMA.departments.filter((d) => d.isActive).map((d) => d.code)).toEqual(["dermatology"]);
+    expect(DERMA.departments.filter((d) => d.isActive).map((d) => d.code)).toEqual([
+      "dermatology",
+      "dental",
+    ]);
     expect(DERMA.departments).toHaveLength(4);
     const at = (branch: string, role: string) =>
       DERMA.staff.filter((s) => s.branch === branch && s.roles.includes(role as never)).length;
     expect(DERMA.staff.filter((s) => s.roles.includes("clinic_admin"))).toHaveLength(1);
-    expect([at("riyadh", "practitioner"), at("riyadh", "receptionist")]).toEqual([3, 2]);
+    // Riyadh: 3 dermatologists + the dentist.
+    expect([at("riyadh", "practitioner"), at("riyadh", "receptionist")]).toEqual([4, 2]);
+    expect(DERMA.staff.filter((s) => s.department === "dental").map((s) => s.key)).toEqual([
+      "derma-dr-nawaf",
+    ]);
     expect([at("jeddah", "practitioner"), at("jeddah", "receptionist")]).toEqual([2, 1]);
-    expect(DERMA.rooms.filter((r) => r.branch === "riyadh")).toHaveLength(4);
+    expect(DERMA.rooms.filter((r) => r.branch === "riyadh")).toHaveLength(5); // + dental clinic
+    expect(DERMA.rooms.filter((r) => r.department === "dental").map((r) => r.key)).toEqual([
+      "ruh-dental",
+    ]);
     expect(DERMA.rooms.filter((r) => r.branch === "jeddah")).toHaveLength(2);
     expect(DERMA.devices.filter((d) => d.branch === "riyadh")).toHaveLength(7);
     expect(DERMA.devices.filter((d) => d.branch === "jeddah")).toHaveLength(1);
     expect(DERMA_SERVICES).toHaveLength(23);
+    expect(DERMA_DENTAL_SERVICES).toHaveLength(8);
     expect(DERMA.patients).toHaveLength(40);
   });
 

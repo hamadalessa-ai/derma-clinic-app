@@ -44,7 +44,8 @@
     "simulator": "محاكي واتساب",
     "setup": "إعداد العيادة",
     "reports": "التقارير",
-    "help": "المساعدة"
+    "help": "المساعدة",
+    "labCases": "أعمال المعمل"
   },
   "roles": {
     "platform_owner": "مالك المنصة",
@@ -249,7 +250,11 @@
     "crashTitle": "حدث خطأ",
     "crash": "تعذّر عرض هذه الصفحة ولم يتغيّر شيء. حاول مرة أخرى، وإذا تكرر ذلك تواصل مع الدعم مع الرقم المرجعي أدناه.",
     "tryAgain": "حاول مرة أخرى",
-    "reference": "الرقم المرجعي"
+    "reference": "الرقم المرجعي",
+    "dental_bad_tooth": "رقم السن غير صحيح.",
+    "dental_not_found": "غير موجود.",
+    "dental_not_planned": "هذه الخطوة لم تعد مخططة.",
+    "dental_bad_status": "هذا التغيير غير ممكن الآن."
   },
   "deviceTypes": {
     "hair_removal_laser": "ليزر إزالة الشعر",
@@ -459,7 +464,8 @@
     "fakeData": "بيانات وهمية",
     "guardianFile": "رقم ملف وليّ الأمر (اختياري)",
     "relationAr": "صلة القرابة",
-    "import": "استيراد"
+    "import": "استيراد",
+    "dental": "الأسنان"
   },
   "packages": {
     "title": "الباقات",
@@ -1941,5 +1947,101 @@
     "open": "فتح",
     "more": "تحتاج مساعدة أكثر؟ اسأل مدير العيادة.",
     "moreAdmin": "تحتاج مساعدة أكثر؟ تواصل مع دعم المنصة وامنحهم وصولاً مؤقتاً من الإعدادات ← الفريق."
+  },
+  "dental": {
+    "chart": "مخطط الأسنان",
+    "upper": "الفك العلوي",
+    "lower": "الفك السفلي",
+    "patientRight": "يمين المريض",
+    "patientLeft": "يسار المريض",
+    "legendTreat": "يحتاج علاجاً",
+    "legendDone": "معالَج",
+    "toothN": "السن {n}",
+    "condition": "الحالة",
+    "surfaces": "الأسطح",
+    "notePlaceholder": "ملاحظة (اختياري)",
+    "record": "تسجيل",
+    "tooth": "السن",
+    "cond": {
+      "healthy": "سليم",
+      "caries": "تسوس",
+      "filled": "حشوة",
+      "crown": "تاج",
+      "root_canal": "علاج عصب",
+      "missing": "مفقود",
+      "implant": "زراعة",
+      "bridge": "جسر",
+      "extraction_needed": "يحتاج خلعاً",
+      "watch": "متابعة"
+    },
+    "short": {
+      "healthy": "",
+      "caries": "تسوس",
+      "filled": "حشوة",
+      "crown": "تاج",
+      "root_canal": "عصب",
+      "missing": "✕",
+      "implant": "زراعة",
+      "bridge": "جسر",
+      "extraction_needed": "خلع",
+      "watch": "متابعة"
+    },
+    "surface": {
+      "M": "إنسي (M)",
+      "O": "إطباقي (O)",
+      "D": "وحشي (D)",
+      "B": "خدّي (B)",
+      "L": "لساني (L)"
+    },
+    "plan": "خطة العلاج",
+    "noPlan": "لا توجد خطة علاج بعد.",
+    "planned": "مخطط",
+    "done": "تم",
+    "doneToday": "تم في هذه الزيارة",
+    "cancelItem": "إزالة من الخطة",
+    "remaining": "المتبقي ({n})",
+    "doneTotal": "المنجز",
+    "sar": "ريال",
+    "addStep": "إضافة خطوة",
+    "procedure": "الإجراء",
+    "lab": "أعمال المعمل",
+    "noLab": "لا توجد أعمال معمل.",
+    "overdue": "متأخر",
+    "sendToLab": "إرسال للمعمل",
+    "labWork": "العمل",
+    "labName": "المعمل",
+    "teeth": "الأسنان",
+    "shade": "اللون",
+    "sentOn": "أُرسل",
+    "dueOn": "موعد الاستلام",
+    "dentist": "طبيب الأسنان",
+    "labNotes": "ملاحظات للمعمل",
+    "work": {
+      "crown": "تاج",
+      "bridge": "جسر",
+      "veneer": "فينير",
+      "denture": "طقم أسنان",
+      "aligner": "تقويم شفاف",
+      "night_guard": "واقي ليلي",
+      "implant_part": "قطعة زراعة",
+      "other": "أخرى"
+    },
+    "labStatus": {
+      "sent": "في المعمل",
+      "received": "تم الاستلام",
+      "fitted": "تم التركيب",
+      "remake": "إعادة عمل",
+      "cancelled": "ملغى"
+    },
+    "labTo": {
+      "received": "تم الاستلام",
+      "fitted": "تم التركيب",
+      "remake": "إعادة عمل",
+      "cancelled": "إلغاء"
+    },
+    "labTitle": "أعمال المعمل",
+    "labSubtitle": "الأعمال لدى معامل الأسنان: مواعيد الاستلام وحالة كل عمل.",
+    "labOpen": "المفتوحة",
+    "labAll": "الكل"
   }
 }

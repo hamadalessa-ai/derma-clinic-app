@@ -329,6 +329,9 @@ grant select, insert, update on public.billing_items to clinic_app;
 grant select, insert, delete on public.visit_charges, public.visit_orders to clinic_app;
 -- Checkouts: one per visit, append-only (never edited or deleted).
 grant select, insert on public.visit_checkouts to clinic_app;
+-- Dental chart: a history, never edited. Plan items and lab cases change status.
+grant select, insert on public.dental_chart_entries to clinic_app;
+grant select, insert, update on public.dental_plan_items, public.lab_cases to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -356,7 +359,8 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
+    'dental_chart_entries', 'dental_plan_items', 'lab_cases'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -461,6 +465,19 @@ $$;
 grant execute on function public.app_visit_completed(uuid) to clinic_app;
 create policy visit_checkouts_completed_insert on public.visit_checkouts as restrictive
   for insert to clinic_app with check (public.app_visit_completed(appointment_id));
+
+-- Dental chart = clinical: only doctors and nurses read or add to it.
+create policy dental_chart_entries_clinical_only on public.dental_chart_entries as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+-- Treatment plan: everyone in the clinic reads it (booking, estimates); doctors and nurses change it.
+create policy dental_plan_items_clinical_insert on public.dental_plan_items as restrictive
+  for insert to clinic_app
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+create policy dental_plan_items_clinical_update on public.dental_plan_items as restrictive
+  for update to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'));
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;
@@ -571,7 +588,8 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
+    'dental_chart_entries', 'dental_plan_items', 'lab_cases', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
