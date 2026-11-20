@@ -338,6 +338,16 @@ try {
 } catch (e) {
   console.error("two-step verification screenshots failed:", e);
 }
+// Branded "page not found".
+try {
+  const ctx404 = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await ctx404.addCookies([{ name: "NEXT_LOCALE", value: "ar", url: BASE }]);
+  const p404 = await ctx404.newPage();
+  await p404.goto(`${BASE}/no-such-page`, { waitUntil: "networkidle" });
+  await p404.screenshot({ path: "screenshots/not-found-ar.png" });
+} catch (e) {
+  console.error("not-found screenshot failed:", e);
+}
 await browser.close();
 // Last (it changes the data): one whole clinic visit, reception → nurse → checkout → patient.
 try {
