@@ -298,7 +298,8 @@ grant select, insert on public.consent_templates to clinic_app;
 grant update (is_current) on public.consent_templates to clinic_app;
 -- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
 grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
-grant update (body, status, signed_at, updated_at, ai_drafted_at) on public.clinical_notes to clinic_app;
+grant update (body, status, signed_at, updated_at, ai_drafted_at, entered_by_user_id, entered_by_name)
+  on public.clinical_notes to clinic_app;
 -- Phase 2a: codes, rate limits, patient sessions, message log, push.
 grant select, insert, update on public.verification_codes, public.patient_sessions to clinic_app;
 grant select, insert, delete on public.rate_limit_hits to clinic_app;
@@ -323,6 +324,7 @@ grant select, insert on public.support_grants to clinic_app;
 grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
 -- Which doctors do which service (clinic admin): rows added and removed, never edited.
 grant select, insert, delete on public.service_practitioners to clinic_app;
+grant select, insert, delete on public.care_team to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -349,7 +351,8 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners'
+    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
+    'care_team'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -375,25 +378,47 @@ begin
   end loop;
 end $$;
 
--- Clinical notes: ONLY the practitioner role, enforced by the database itself.
-do $$
-declare
-  t text;
-begin
-  foreach t in array array['clinical_notes', 'clinical_note_addenda'] loop
-    execute format(
-      'create policy %I on public.%I as restrictive for all to clinic_app
-         using (public.app_has_role(''practitioner''))
-         with check (public.app_has_role(''practitioner''))',
-      t || '_practitioners_only', t);
-  end loop;
-end $$;
+-- Nurse / assistant: does the signed-in user assist the doctor whose user id is given?
+-- (care_team links the assistant's and the doctor's clinic memberships; read through RLS.)
+create or replace function public.app_assists(doctor_user_id text) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select public.app_has_role('assistant') and exists (
+    select 1
+      from public.care_team ct
+      join public.tenant_members a on a.id = ct.assistant_member_id and a.tenant_id = ct.tenant_id
+      join public.tenant_members d on d.id = ct.practitioner_member_id and d.tenant_id = ct.tenant_id
+     where a.user_id = public.app_current_user()
+       and d.user_id = doctor_user_id
+       and a.deactivated_at is null and d.deactivated_at is null
+  )
+$$;
+grant execute on function public.app_assists(text) to clinic_app;
 
--- Notes and addenda are written in the author's own name; only the author edits a draft.
+-- Clinical notes: the practitioner role — or a nurse / assistant for the notes of the doctors
+-- she works with (care_team). Addenda: practitioners only. Enforced by the database itself.
+create policy clinical_notes_practitioners_only on public.clinical_notes as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_assists(author_user_id))
+  with check (public.app_has_role('practitioner') or public.app_assists(author_user_id));
+create policy clinical_note_addenda_practitioners_only on public.clinical_note_addenda as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner'))
+  with check (public.app_has_role('practitioner'));
+
+-- Notes are written in the doctor's (author's) own name; only the author edits a draft — or
+-- their nurse / assistant, who may prepare it but never sign it.
 create policy clinical_notes_author_insert on public.clinical_notes as restrictive
-  for insert to clinic_app with check (author_user_id = public.app_current_user());
+  for insert to clinic_app with check (
+    author_user_id = public.app_current_user()
+    or (public.app_assists(author_user_id) and status = 'draft'));
 create policy clinical_notes_author_update on public.clinical_notes as restrictive
-  for update to clinic_app using (author_user_id = public.app_current_user());
+  for update to clinic_app
+  using (author_user_id = public.app_current_user() or public.app_assists(author_user_id))
+  with check (
+    author_user_id = public.app_current_user()
+    or (public.app_assists(author_user_id) and status = 'draft'));
 create policy clinical_note_addenda_author_insert on public.clinical_note_addenda as restrictive
   for insert to clinic_app with check (author_user_id = public.app_current_user());
 
@@ -506,7 +531,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'care_team', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

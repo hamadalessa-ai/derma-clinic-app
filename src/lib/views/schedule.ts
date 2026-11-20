@@ -3,7 +3,7 @@
  * appointments with patient, medical alerts, package balance; blocked time; doctors with
  * their hours; rooms; services. Everything runs inside withActor (RLS applies).
  */
-import { and, asc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { TenantTx } from "@/db/tenant";
 import {
   appointments,
@@ -143,7 +143,15 @@ export async function loadServices(tx: TenantTx) {
 
 export async function loadAppointments(
   tx: TenantTx,
-  opts: { branchId?: string; from: Date; to: Date; practitionerId?: string; patientId?: string },
+  opts: {
+    branchId?: string;
+    from: Date;
+    to: Date;
+    practitionerId?: string;
+    /** Several doctors (a nurse / assistant's care team). An empty list = no appointments. */
+    practitionerIds?: string[];
+    patientId?: string;
+  },
 ): Promise<ApptView[]> {
   const rows = await tx
     .select({ a: appointments, p: patients, s: services, d: devices })
@@ -157,6 +165,11 @@ export async function loadAppointments(
         lt(appointments.startsAt, opts.to),
         opts.branchId ? eq(appointments.branchId, opts.branchId) : undefined,
         opts.practitionerId ? eq(appointments.practitionerId, opts.practitionerId) : undefined,
+        opts.practitionerIds
+          ? opts.practitionerIds.length
+            ? inArray(appointments.practitionerId, opts.practitionerIds)
+            : sql`false`
+          : undefined,
         opts.patientId ? eq(appointments.patientId, opts.patientId) : undefined,
       ),
     )

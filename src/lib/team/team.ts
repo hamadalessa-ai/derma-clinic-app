@@ -21,6 +21,7 @@ import type { TenantTx } from "@/db/tenant";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan, type Role } from "@/lib/auth/permissions";
+import { careTeamMap } from "@/lib/care-team/care-team";
 import { passwordProblem } from "@/lib/security/password";
 
 export class TeamError extends Error {
@@ -84,9 +85,12 @@ export async function listTeam(tx: TenantTx) {
   );
   const [s] = await tx.select({ site: tenantSettings.site }).from(tenantSettings).limit(1);
   const site = (s?.site ?? {}) as SiteContent;
+  const team = await careTeamMap(tx);
   return {
     members: rows.map((m) => ({
       ...m,
+      /** A nurse / assistant: the doctors (member ids) she works with. */
+      careTeam: team.get(m.id) ?? [],
       invited: !withPassword.has(m.userId),
       websiteDoctor: (site.doctors ?? []).findIndex((d) => d.memberId === m.id),
     })),

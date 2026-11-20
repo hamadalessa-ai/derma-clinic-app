@@ -517,6 +517,8 @@ export interface NoteView {
   signedAt: string | null;
   /** The AI scribe drafted (part of) it. */
   aiDrafted?: boolean;
+  /** Typed by a nurse / assistant for the doctor (the doctor stays the author). */
+  enteredByName?: string | null;
   appointmentId: string | null;
   addenda: { id: string; body: string; authorName: string; createdAt: string }[];
 }
@@ -529,6 +531,7 @@ export function NotesPanel({
   appointmentId,
   scribe = false,
   visit = false,
+  preparingFor = null,
 }: {
   patientId: string;
   notes: NoteView[];
@@ -539,11 +542,16 @@ export function NotesPanel({
   scribe?: boolean;
   /** On the visit screen: "Sign & complete" signs the note AND completes the visit. */
   visit?: boolean;
+  /** A nurse / assistant preparing her doctor's note: she edits, the doctor signs. */
+  preparingFor?: { userId: string; name: string } | null;
 }) {
   const t = useTranslations("notes");
   const create = useAction();
   const forVisit = appointmentId
-    ? notes.find((n) => n.appointmentId === appointmentId && n.authorUserId === userId)
+    ? notes.find(
+        (n) =>
+          n.appointmentId === appointmentId && n.authorUserId === (preparingFor?.userId ?? userId),
+      )
     : null;
   return (
     <div className="flex flex-col gap-4">
@@ -565,6 +573,7 @@ export function NotesPanel({
           patientId={patientId}
           note={n}
           mine={n.authorUserId === userId}
+          preparing={!!preparingFor && n.authorUserId === preparingFor.userId}
           canWrite={canWrite}
           scribe={scribe}
           completes={
@@ -580,6 +589,7 @@ function NoteCard({
   patientId,
   note,
   mine,
+  preparing = false,
   canWrite,
   scribe,
   completes = null,
@@ -587,6 +597,8 @@ function NoteCard({
   patientId: string;
   note: NoteView;
   mine: boolean;
+  /** Prepared by a nurse / assistant for the doctor: editable, never signed by her. */
+  preparing?: boolean;
   canWrite: boolean;
   scribe: boolean;
   /** This visit's appointment: signing also completes it, then back to My Day. */
@@ -600,7 +612,7 @@ function NoteCard({
   const [addendum, setAddendum] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const { run, pending, error } = useAction();
-  const editable = note.status === "draft" && mine && canWrite;
+  const editable = note.status === "draft" && (mine || preparing) && canWrite;
   return (
     <Card data-testid="note-card" data-status={note.status}>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
@@ -644,6 +656,11 @@ function NoteCard({
               >
                 {t("saveDraft")}
               </Button>
+              {preparing && !mine ? (
+                <span className="text-muted-foreground self-center text-xs" data-testid="doctor-signs">
+                  {t("doctorSigns", { name: note.authorName })}
+                </span>
+              ) : (
               <Button
                 disabled={!body.trim()}
                 loading={pending}
@@ -670,10 +687,16 @@ function NoteCard({
                 {!pending && <Check />}
                 {completes ? t("signComplete") : t("sign")}
               </Button>
+              )}
             </div>
           </>
         ) : (
           <p className="text-sm leading-7 whitespace-pre-line">{note.body}</p>
+        )}
+        {note.enteredByName && (
+          <p className="text-muted-foreground text-xs" data-testid="entered-by">
+            {t("enteredBy", { name: note.enteredByName })}
+          </p>
         )}
         {note.signedAt && (
           <p className="text-muted-foreground text-xs">

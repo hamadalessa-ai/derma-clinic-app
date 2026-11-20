@@ -2,18 +2,25 @@
  * Who may do what. One place to read and change it.
  * Pages call requirePermission() (src/lib/auth/session.ts) with one of these permissions.
  */
-export const ROLES = ["platform_owner", "clinic_admin", "practitioner", "receptionist"] as const;
+export const ROLES = [
+  "platform_owner",
+  "clinic_admin",
+  "practitioner",
+  "receptionist",
+  "assistant",
+] as const;
 export type Role = (typeof ROLES)[number];
 
-const ALL_CLINIC_STAFF: Role[] = ["clinic_admin", "practitioner", "receptionist"];
+const ALL_CLINIC_STAFF: Role[] = ["clinic_admin", "practitioner", "receptionist", "assistant"];
 
 export const PERMISSIONS = {
   "dashboard:view": ["platform_owner", ...ALL_CLINIC_STAFF],
   "patients:read": ALL_CLINIC_STAFF,
   "services:read": ALL_CLINIC_STAFF,
-  // Clinical notes: practitioners only. Not admins (unless they are also a practitioner),
+  // Clinical notes: practitioners — and nurses / assistants for the doctors they work with
+  // (care_team; the database checks which notes). Not admins (unless also a practitioner),
   // never receptionists, never the platform owner.
-  "clinical_notes:read": ["practitioner"],
+  "clinical_notes:read": ["practitioner", "assistant"],
   "platform:read": ["platform_owner"],
 
   // ── Phase 1 ──
@@ -22,14 +29,20 @@ export const PERMISSIONS = {
   "appointments:manage": ["clinic_admin", "receptionist"],
   /** Doctors: confirm/start/complete their OWN appointments, block their own time, reschedule own. */
   "appointments:own": ["practitioner"],
-  "my_day:view": ["practitioner"],
+  /** My Day: a doctor's own day; a nurse / assistant sees the day of the doctors she works with. */
+  "my_day:view": ["practitioner", "assistant"],
+  /**
+   * Nurse / assistant: open the visit screen of her doctors' appointments, bring the patient in
+   * ("with the doctor"), prepare the note in the doctor's name. Never signs.
+   */
+  "visits:assist": ["assistant"],
   "requests:decide": ["clinic_admin", "receptionist"],
   "patients:edit": ["clinic_admin", "receptionist"],
   "packages:sell": ["clinic_admin", "receptionist"],
   "packages:override": ["clinic_admin", "receptionist"],
-  "consents:collect": ["clinic_admin", "receptionist", "practitioner"],
+  "consents:collect": ["clinic_admin", "receptionist", "practitioner", "assistant"],
   "consents:templates": ["clinic_admin"],
-  "notes:write": ["practitioner"],
+  "notes:write": ["practitioner", "assistant"],
   "settings:manage": ["clinic_admin"],
   /** Settings → Team: add staff, roles, branch, deactivate, link to the website profile. */
   "team:manage": ["clinic_admin"],
@@ -73,7 +86,7 @@ export const PERMISSIONS = {
    */
   "concerns:handle": ["clinic_admin", "practitioner", "receptionist"],
   /** Photos patients send (medical): doctors and admins. Reception sees "photo received". */
-  "photos:view": ["clinic_admin", "practitioner"],
+  "photos:view": ["clinic_admin", "practitioner", "assistant"],
 
   // ── Video consultations ──
   /** Join a video consultation (the appointment's own doctor only — checked in lib/video). */

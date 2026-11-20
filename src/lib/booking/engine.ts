@@ -22,6 +22,7 @@ import {
   timeBlocks,
 } from "@/db/schema";
 import { audit } from "@/lib/audit";
+import { assistsMember } from "@/lib/care-team/care-team";
 import type { Actor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { canTransition, MOVABLE_STATUSES, type AppointmentStatus } from "./status";
@@ -290,8 +291,15 @@ function isOwn(actor: Actor, appt: { practitionerId: string }) {
   return !!actor.memberId && appt.practitionerId === actor.memberId;
 }
 
-function assertMayChangeStatus(actor: Actor, appt: Appointment, to: AppointmentStatus) {
+function assertMayChangeStatus(
+  actor: Actor,
+  appt: Appointment,
+  to: AppointmentStatus,
+  assisting = false,
+) {
   if (can(actor.roles, "appointments:manage")) return;
+  // A nurse / assistant brings her doctor's checked-in patient in ("with the doctor"). Nothing else.
+  if (assisting && appt.status === "arrived" && to === "in_session") return;
   // Approving or rejecting an online request is reception's decision, not the doctor's.
   if (appt.status === "pending") throw new BookingError("not_allowed");
   if (
@@ -554,7 +562,9 @@ export async function changeStatus(
   opts: { reason?: string; viaCheckIn?: boolean } = {},
 ) {
   const appt = await getAppointment(tx, id, true);
-  assertMayChangeStatus(actor, appt, to);
+  const assisting =
+    can(actor.roles, "visits:assist") && (await assistsMember(tx, actor, appt.practitionerId));
+  assertMayChangeStatus(actor, appt, to, assisting);
   if (to === "arrived" && !opts.viaCheckIn && appt.status !== to) {
     throw new BookingError("not_allowed");
   }

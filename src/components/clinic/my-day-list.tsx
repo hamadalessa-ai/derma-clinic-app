@@ -36,6 +36,7 @@ export function MyDayList({
   branchId,
   day,
   doctorsManageOwnSchedule,
+  assisting = false,
 }: {
   appointments: ApptView[];
   blocks: BlockView[];
@@ -45,6 +46,11 @@ export function MyDayList({
   branchId: string;
   day: string;
   doctorsManageOwnSchedule: boolean;
+  /**
+   * A nurse / assistant's day: her doctors' patients, each with the doctor's name. She brings
+   * the patient in and prepares the note; confirming, moving and blocking time are the doctor's.
+   */
+  assisting?: boolean;
 }) {
   const t = useTranslations("myDay");
   const tc = useTranslations("calendar");
@@ -63,8 +69,14 @@ export function MyDayList({
   const [reason, setReason] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
+  const doctorName = (id: string) => {
+    const d = doctors.find((x) => x.id === id);
+    return d ? name(d) : "";
+  };
   const next = (a: ApptView) =>
-    a.status === "booked"
+    assisting
+      ? null
+      : a.status === "booked"
       ? { to: "confirmed", label: t("confirm"), icon: CalendarCheck }
       : a.status === "in_session"
         ? { to: "completed", label: t("complete"), icon: CheckCircle2 }
@@ -125,6 +137,11 @@ export function MyDayList({
                     {locale === "en" ? room.nameEn : room.nameAr}
                   </span>
                 )}
+                {assisting && (
+                  <span className="text-foreground font-medium" data-testid="my-day-doctor">
+                    {doctorName(a.practitionerId)}
+                  </span>
+                )}
                 {a.pendingRequest && (
                   <span className="text-warning-foreground">{t("pendingRequest")}</span>
                 )}
@@ -181,7 +198,7 @@ export function MyDayList({
                   <UserRound />
                   {tc("openProfile")}
                 </Link>
-                {(a.status === "booked" || a.status === "confirmed") && (
+                {!assisting && (a.status === "booked" || a.status === "confirmed") && (
                   <Button size="sm" variant="ghost" onClick={() => setOpenId(a.id)}>
                     {t("reschedule")}
                   </Button>
@@ -192,6 +209,7 @@ export function MyDayList({
         );
       })}
 
+      {!assisting && (
       <Card>
         <CardContent className="flex flex-col gap-3 pt-4">
           <h2 className="font-semibold">{t("blockTime")}</h2>
@@ -275,6 +293,7 @@ export function MyDayList({
           </Button>
         </CardContent>
       </Card>
+      )}
 
       <AppointmentDialog
         key={openId ?? "none"}

@@ -79,6 +79,7 @@ import { planAllows, PLAN_TIERS } from "@/lib/platform/plans";
 import { endSupport, grantSupport, SUPPORT_HOURS } from "@/lib/support/grants";
 import { checkImport, MAX_IMPORT_BYTES, runImport } from "@/lib/patients/import";
 import { setClinicWhatsApp, testClinicWhatsApp } from "@/lib/platform/whatsapp";
+import { setCareTeam } from "@/lib/care-team/care-team";
 import {
   createConsentForm,
   saveBranch,
@@ -1571,7 +1572,7 @@ export async function simulatorPhotoAction(input: {
 
 // ─── Settings → Team ────────────────────────────────────────────────────────
 
-const clinicRole = z.enum(["clinic_admin", "practitioner", "receptionist"]);
+const clinicRole = z.enum(["clinic_admin", "practitioner", "receptionist", "assistant"]);
 const memberFields = {
   roles: z.array(clinicRole).min(1).max(3),
   branchId: uuid.nullable(),
@@ -2149,5 +2150,16 @@ export async function testClinicWhatsAppAction(input: { tenantId: string; phone:
   return staffAction("platform:clinics", async (ctx) => {
     const v = parse(z.object({ tenantId: uuid, phone: z.string().trim().min(9).max(20) }), input);
     return testClinicWhatsApp({ userId: ctx.user.id, roles: ctx.roles }, v.tenantId, v.phone);
+  });
+}
+
+// ─── Care team: which doctors a nurse / assistant works with ────────────────
+
+export async function setCareTeamAction(input: { memberId: string; doctorIds: string[] }) {
+  return staffAction("team:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ memberId: uuid, doctorIds: z.array(uuid).max(50) }), input);
+    const r = await withActor(actor, (tx) => setCareTeam(tx, actor, v.memberId, v.doctorIds));
+    revalidatePath("/settings");
+    return r;
   });
 }

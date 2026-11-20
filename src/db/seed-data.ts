@@ -15,7 +15,7 @@ export function demoId(key: string): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-${variant}${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
-type Role = "clinic_admin" | "practitioner" | "receptionist";
+type Role = "clinic_admin" | "practitioner" | "receptionist" | "assistant";
 
 export interface SeedStaff {
   key: string;
@@ -77,6 +77,8 @@ export interface SeedTenant {
     nameEn: string;
   }[];
   staff: SeedStaff[];
+  /** Nurse / assistant → the doctors she works with (staff keys). */
+  careTeam?: { assistant: string; doctors: string[] }[];
   services: SeedService[]; // all in the "dermatology" department
   patients: SeedPatient[];
 }
@@ -367,6 +369,23 @@ const doctor = (
   titleEn: "Dermatologist",
 });
 
+const nurse = (
+  key: string,
+  email: string,
+  nameAr: string,
+  nameEn: string,
+  branch: string,
+): SeedStaff => ({
+  key,
+  email,
+  nameAr,
+  nameEn,
+  roles: ["assistant"],
+  branch,
+  titleAr: "ممرضة",
+  titleEn: "Nurse",
+});
+
 const reception = (
   key: string,
   email: string,
@@ -535,6 +554,7 @@ export const DERMA: SeedTenant = {
       "Abdullah Al-Harbi",
       "riyadh",
     ),
+    nurse("derma-nurse-ruh", "nurse@derma.demo", "هدى الزهراني", "Huda Al-Zahrani", "riyadh"),
     doctor("derma-dr-lina", "dr.lina@derma.demo", "د. لينا باناجة", "Dr. Lina Banaja", "jeddah"),
     doctor(
       "derma-dr-majed",
@@ -551,6 +571,7 @@ export const DERMA: SeedTenant = {
       "jeddah",
     ),
   ],
+  careTeam: [{ assistant: "derma-nurse-ruh", doctors: ["derma-dr-sara", "derma-dr-faisal"] }],
   services: DERMA_SERVICES,
   patients: withFamily(makeFakePatients(40, "D", "01")),
 };
@@ -603,7 +624,9 @@ export const LAMSA: SeedTenant = {
     },
     doctor("lamsa-dr-mona", "dr.mona@lamsa.demo", "د. منى السبيعي", "Dr. Mona Al-Subaie", "dammam"),
     reception("lamsa-rec", "reception@lamsa.demo", "سعد الشمري", "Saad Al-Shammari", "dammam"),
+    nurse("lamsa-nurse", "nurse@lamsa.demo", "أمل الدوسري", "Amal Al-Dosari", "dammam"),
   ],
+  careTeam: [{ assistant: "lamsa-nurse", doctors: ["lamsa-dr-mona"] }],
   services: DERMA_SERVICES.filter((s) =>
     ["consultation", "botox", "fillers", "facial_treatment"].includes(s.code),
   ),

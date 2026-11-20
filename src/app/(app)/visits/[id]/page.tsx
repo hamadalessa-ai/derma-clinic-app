@@ -14,6 +14,8 @@ import { messages, patients } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
+import { doctorOf } from "@/lib/care-team/care-team";
+import { mayWorkOnVisit } from "@/lib/visits/visit";
 import { getSettings } from "@/lib/booking/engine";
 import type { AppointmentStatus } from "@/lib/booking/status";
 import { addMinutes } from "@/lib/booking/time";
@@ -81,12 +83,27 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             .limit(12)
         : Promise.resolve([]),
     ]);
-    return { visit, patient, alerts: alerts.get(visit.patientId), notes, settings, pkgs, photos };
+    // Own doctor — or her nurse / assistant (care team), who prepares the note in the doctor's name.
+    const allowed = await mayWorkOnVisit(tx, actor, visit.practitionerId);
+    const doctor = allowed ? await doctorOf(tx, visit.practitionerId) : null;
+    return {
+      visit,
+      patient,
+      alerts: alerts.get(visit.patientId),
+      notes,
+      settings,
+      pkgs,
+      photos,
+      allowed,
+      doctor,
+    };
   });
   if (!data) notFound();
   const { visit } = data;
-  // Only the appointment's own doctor works on this screen.
-  if (visit.practitionerId !== ctx.memberId) redirect("/forbidden");
+  if (!data.allowed || !data.doctor) redirect("/forbidden");
+  const doctorUserId = data.doctor.userId;
+  const preparingFor =
+    doctorUserId === ctx.user.id ? null : { userId: doctorUserId, name: data.doctor.name };
 
   const status = visit.status as AppointmentStatus;
   const scribeOn =
@@ -95,7 +112,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
     data.settings.aiScribeEnabled;
   const patientName = pick(locale, data.patient?.nameAr ?? "", data.patient?.nameEn);
   const thisNote = data.notes.find(
-    (n) => n.appointmentId === visit.appointmentId && n.authorUserId === ctx.user.id,
+    (n) => n.appointmentId === visit.appointmentId && n.authorUserId === doctorUserId,
   );
   const earlier = data.notes
     .filter((n) => n.status === "signed" && n.appointmentId !== visit.appointmentId)
@@ -111,6 +128,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
     createdAt: n.createdAt.toISOString(),
     signedAt: n.signedAt?.toISOString() ?? null,
     aiDrafted: !!n.aiDraftedAt,
+    enteredByName: n.enteredByName,
     appointmentId: n.appointmentId,
     addenda: n.addenda.map((a) => ({
       id: a.id,
@@ -161,11 +179,16 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
+      {preparingFor && (
+        <Notice tone="info" data-testid="assisting-notice">
+          {t("assisting", { name: preparingFor.name })}
+        </Notice>
+      )}
       {visit.consentNeeded && <Notice tone="warning">{t("consentMissing")}</Notice>}
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-5">
-          {visit.isVirtual && (
+          {visit.isVirtual && !preparingFor && (
             <Card>
               <CardContent className="flex flex-col gap-3 pt-4 md:pt-5">
                 {videoNow === "too_early" && (
@@ -197,6 +220,7 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
                 canWrite={can(ctx.roles, "notes:write")}
                 appointmentId={visit.appointmentId}
                 visit
+                preparingFor={preparingFor}
                 notes={[toNoteView(thisNote)]}
               />
             ) : (

@@ -7,6 +7,7 @@ import {
   addTeamMemberAction,
   inviteLinkAction,
   linkWebsiteDoctorAction,
+  setCareTeamAction,
   setTeamMemberActiveAction,
   updateTeamMemberAction,
 } from "@/app/actions/clinic";
@@ -18,8 +19,8 @@ import { Select } from "@/components/ui/select";
 import { FormError, FormSuccess } from "./form-message";
 import { useAction } from "./use-action";
 
-type Role = "clinic_admin" | "practitioner" | "receptionist";
-const ROLES: Role[] = ["clinic_admin", "practitioner", "receptionist"];
+type Role = "clinic_admin" | "practitioner" | "receptionist" | "assistant";
+const ROLES: Role[] = ["clinic_admin", "practitioner", "receptionist", "assistant"];
 
 export interface TeamMember {
   id: string;
@@ -35,6 +36,8 @@ export interface TeamMember {
   deactivatedAt: string | null;
   invited: boolean;
   websiteDoctor: number;
+  /** A nurse / assistant: the doctors (member ids) she works with. */
+  careTeam: string[];
 }
 export interface WebsiteDoctor {
   index: number;
@@ -65,6 +68,9 @@ export function TeamSettings({
   const [adding, setAdding] = useState(false);
   const active = members.filter((m) => !m.deactivatedAt);
   const former = members.filter((m) => m.deactivatedAt);
+  const doctors = active
+    .filter((m) => m.roles.includes("practitioner"))
+    .map((m) => ({ id: m.id, name: nm(m.nameAr, m.nameEn) }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,6 +105,7 @@ export function TeamSettings({
             self={m.id === selfId}
             branches={branches}
             websiteDoctors={websiteDoctors}
+            doctors={doctors}
             onInvite={setInvite}
             nm={nm}
             tr={tr}
@@ -117,6 +124,7 @@ export function TeamSettings({
                 self={false}
                 branches={branches}
                 websiteDoctors={websiteDoctors}
+                doctors={doctors}
                 onInvite={setInvite}
                 nm={nm}
                 tr={tr}
@@ -134,6 +142,7 @@ function MemberRow({
   self,
   branches,
   websiteDoctors,
+  doctors,
   onInvite,
   nm,
   tr,
@@ -142,6 +151,7 @@ function MemberRow({
   self: boolean;
   branches: { id: string; name: string }[];
   websiteDoctors: WebsiteDoctor[];
+  doctors: { id: string; name: string }[];
   onInvite: (v: { name: string; url: string }) => void;
   nm: (a: string, e: string | null) => string;
   tr: (k: Role) => string;
@@ -247,6 +257,10 @@ function MemberRow({
               ))}
           </Select>
         </div>
+      )}
+
+      {!off && m.roles.includes("assistant") && (
+        <CareTeamPicker member={m} doctors={doctors} onSaved={() => setMsg(t("saved"))} />
       )}
 
       {editing && (
@@ -548,5 +562,57 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
       />
     </div>
+  );
+}
+
+/** A nurse / assistant: which doctors she works with (their day, visit screens, notes). */
+function CareTeamPicker({
+  member,
+  doctors,
+  onSaved,
+}: {
+  member: TeamMember;
+  doctors: { id: string; name: string }[];
+  onSaved: () => void;
+}) {
+  const t = useTranslations("team");
+  const { run, pending, error } = useAction();
+  const [chosen, setChosen] = useState<string[]>(member.careTeam);
+  const changed =
+    chosen.length !== member.careTeam.length || chosen.some((id) => !member.careTeam.includes(id));
+  return (
+    <fieldset className="flex flex-col gap-2 text-sm" data-testid="care-team">
+      <legend className="text-muted-foreground mb-1">{t("careTeam")}</legend>
+      {doctors.length === 0 && <p className="text-muted-foreground text-xs">{t("noDoctors")}</p>}
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {doctors.map((d) => (
+          <label key={d.id} className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={chosen.includes(d.id)}
+              onChange={(e) =>
+                setChosen(e.target.checked ? [...chosen, d.id] : chosen.filter((x) => x !== d.id))
+              }
+            />
+            {d.name}
+          </label>
+        ))}
+      </div>
+      {changed && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="self-start"
+          loading={pending}
+          onClick={() =>
+            run(() => setCareTeamAction({ memberId: member.id, doctorIds: chosen }), onSaved)
+          }
+          data-testid="care-team-save"
+        >
+          {t("save")}
+        </Button>
+      )}
+      <FormError message={error} />
+    </fieldset>
   );
 }

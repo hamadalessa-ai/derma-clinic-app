@@ -5,6 +5,7 @@ import { AutoRefresh } from "@/components/clinic/auto-refresh";
 import { MyDayList } from "@/components/clinic/my-day-list";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
+import { assistedDoctors } from "@/lib/care-team/care-team";
 import { getSettings } from "@/lib/booking/engine";
 import { addDays, dayRange, isDay, riyadhDay } from "@/lib/booking/time";
 import Link from "next/link";
@@ -19,7 +20,7 @@ import { formatDualDate } from "@/lib/format";
 import { loadAppointments, loadBlocks, loadDoctors, loadRooms } from "@/lib/views/schedule";
 import type { Locale } from "@/i18n/config";
 
-/** The doctor's day on their phone. */
+/** The doctor's day on their phone — or, for a nurse / assistant, her doctors' day. */
 export default async function MyDayPage({
   searchParams,
 }: {
@@ -38,17 +39,27 @@ export default async function MyDayPage({
   const day = isDay(sp.date) ? sp.date : today;
   const [from, to] = dayRange(day);
 
-  const data = await withActor(actorOf(ctx), async (tx) => {
+  // A nurse / assistant (not also a doctor) sees the day of the doctors she works with.
+  const assisting = !ctx.roles.includes("practitioner");
+  const actor = actorOf(ctx);
+  const data = await withActor(actor, async (tx) => {
+    const team = assisting ? await assistedDoctors(tx, actor) : [];
     const [appointments, blocks, rooms, doctors, settings, concerns] = await Promise.all([
-      loadAppointments(tx, { from, to, practitionerId: ctx.memberId! }),
-      loadBlocks(tx, { branchId: branch.id, from, to, memberId: ctx.memberId! }),
+      assisting
+        ? loadAppointments(tx, { from, to, practitionerIds: team.map((d) => d.memberId) })
+        : loadAppointments(tx, { from, to, practitionerId: ctx.memberId! }),
+      assisting
+        ? Promise.resolve([])
+        : loadBlocks(tx, { branchId: branch.id, from, to, memberId: ctx.memberId! }),
       loadRooms(tx, branch.id),
       loadDoctors(tx, branch.id),
       getSettings(tx),
       // Open post-care concerns about this doctor's own patients (any day, not only this one).
-      findConcerns(tx, { practitionerId: ctx.memberId!, openOnly: true }),
+      assisting
+        ? Promise.resolve([])
+        : findConcerns(tx, { practitionerId: ctx.memberId!, openOnly: true }),
     ]);
-    return { appointments, blocks, rooms, doctors, settings, concerns };
+    return { appointments, blocks, rooms, doctors, settings, concerns, team };
   });
   const active = data.appointments.filter((a) => a.status !== "cancelled");
 
@@ -113,10 +124,22 @@ export default async function MyDayPage({
           </CardContent>
         </Card>
       )}
-      <Notice tone="info">
-        {data.settings.doctorsManageOwnSchedule ? t("ownSchedule") : t("requestMode")}
-      </Notice>
-      {data.settings.doctorsEditOwnHours && (
+      {assisting ? (
+        <Notice tone="info" data-testid="care-team-notice">
+          {data.team.length
+            ? t("careTeam", {
+                names: data.team
+                  .map((d) => (locale === "en" && d.nameEn ? d.nameEn : d.name))
+                  .join("، "),
+              })
+            : t("noCareTeam")}
+        </Notice>
+      ) : (
+        <Notice tone="info">
+          {data.settings.doctorsManageOwnSchedule ? t("ownSchedule") : t("requestMode")}
+        </Notice>
+      )}
+      {!assisting && data.settings.doctorsEditOwnHours && (
         <Link
           href="/working-hours"
           className="text-brand-strong self-start text-sm font-medium underline"
@@ -136,6 +159,7 @@ export default async function MyDayPage({
         branchId={branch.id}
         day={day}
         doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
+        assisting={assisting}
       />
       <p className="text-muted-foreground text-center text-xs">{t("installHint")}</p>
       <AutoRefresh

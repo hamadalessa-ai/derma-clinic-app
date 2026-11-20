@@ -37,7 +37,13 @@ const updatedAt = () =>
     .defaultNow()
     .$onUpdate(() => new Date());
 
-export const memberRole = pgEnum("member_role", ["clinic_admin", "practitioner", "receptionist"]);
+export const memberRole = pgEnum("member_role", [
+  "clinic_admin",
+  "practitioner",
+  "receptionist",
+  /** Nurse / doctor's assistant: works for the doctors linked in care_team. */
+  "assistant",
+]);
 export const gender = pgEnum("gender", ["male", "female"]);
 /**
  * Clinic account status (set by the platform owner): active; read_only (staff can look, not change;
@@ -403,6 +409,7 @@ export const services = pgTable(
  */
 export const servicePractitioners = pgTable(
   "service_practitioners",
+  "care_team",
   {
     id: id(),
     tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
@@ -422,6 +429,36 @@ export const servicePractitioners = pgTable(
     foreignKey({
       name: "service_practitioners_member_fk",
       columns: [t.tenantId, t.memberId],
+      foreignColumns: [tenantMembers.tenantId, tenantMembers.id],
+    }).onDelete("cascade"),
+  ],
+);
+
+/**
+ * Care team: which doctors a nurse / assistant works with. She sees those doctors' day, opens
+ * their visit screen on the room PC and prepares their notes (the doctor stays the author).
+ */
+export const careTeam = pgTable(
+  "care_team",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    assistantMemberId: uuid("assistant_member_id").notNull(),
+    practitionerMemberId: uuid("practitioner_member_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("care_team_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("care_team_pair_key").on(t.tenantId, t.assistantMemberId, t.practitionerMemberId),
+    index("care_team_practitioner_idx").on(t.tenantId, t.practitionerMemberId),
+    foreignKey({
+      name: "care_team_assistant_fk",
+      columns: [t.tenantId, t.assistantMemberId],
+      foreignColumns: [tenantMembers.tenantId, tenantMembers.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "care_team_practitioner_fk",
+      columns: [t.tenantId, t.practitionerMemberId],
       foreignColumns: [tenantMembers.tenantId, tenantMembers.id],
     }).onDelete("cascade"),
   ],
@@ -1279,6 +1316,12 @@ export const clinicalNotes = pgTable(
     signedAt: timestamp("signed_at", { withTimezone: true }),
     /** The AI scribe drafted (part of) this note: shown as "AI draft — review before signing". */
     aiDraftedAt: timestamp("ai_drafted_at", { withTimezone: true }),
+    /**
+     * Who typed it, when not the author: a nurse / assistant preparing the doctor's note on the
+     * room PC ("entered by Nurse Huda for Dr. Lina"). The doctor stays the author.
+     */
+    enteredByUserId: text("entered_by_user_id"),
+    enteredByName: text("entered_by_name"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

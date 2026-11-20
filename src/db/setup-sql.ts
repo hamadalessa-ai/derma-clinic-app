@@ -165,6 +165,20 @@ function tenantSql(t: SeedTenant): string {
       })),
     ),
   );
+  if (t.careTeam?.length) {
+    out.push(
+      insert(
+        "care_team",
+        t.careTeam.flatMap((c) =>
+          c.doctors.map((d) => ({
+            tenant_id: tid,
+            assistant_member_id: ref("member", c.assistant),
+            practitioner_member_id: ref("member", d),
+          })),
+        ),
+      ),
+    );
+  }
   out.push(
     insert(
       "staff_schedules",
