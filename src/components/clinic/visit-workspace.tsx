@@ -323,7 +323,7 @@ function OrdersCard({
                     key={k}
                     type="button"
                     size="sm"
-                    variant={v.kind === k ? "secondary" : "ghost"}
+                    variant={v.kind === k ? "outline" : "ghost"}
                     aria-pressed={v.kind === k}
                     onClick={() => setV({ ...v, kind: k })}
                   >
