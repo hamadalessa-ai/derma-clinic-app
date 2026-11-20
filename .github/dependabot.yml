@@ -1,5 +1,6 @@
-# Weekly check for updates of the libraries we use (security fixes first). Small batches so each
-# update is a pull request the "Tests" workflow checks before anyone merges it.
+# Weekly check for updates of the libraries we use: minor and patch updates grouped in ONE pull
+# request (the "Tests" workflow checks it before anyone merges). Major versions are planned by hand.
+# Only the main branch deploys on Vercel (vercel.json), so these never use up deployments.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -8,12 +9,19 @@ updates:
       interval: weekly
       day: sunday
       timezone: Asia/Riyadh
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # Big version jumps change how libraries work: we plan those ourselves, not automatically.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      actions:
+        patterns: ["*"]
