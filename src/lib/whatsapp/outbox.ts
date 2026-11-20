@@ -3,6 +3,7 @@
  * through sendMessage(). Each one has a dedupe key, so calling it twice never sends twice.
  */
 import { withTenant } from "@/db/tenant";
+import { careUrl } from "@/lib/video/link";
 import { appBaseUrl } from "./config";
 import { appointmentVars, loadAppointmentContext, type Lang } from "./compose";
 import { sendMessage, type SendOutcome, type Tenant } from "./send";
@@ -111,6 +112,35 @@ export async function sendPostCare(tenant: Tenant, appointmentId: string, env: E
         { action: "concern", appointmentId },
       ],
       dedupeKey: `post_care:${appointmentId}`,
+    },
+    env,
+  );
+}
+
+/**
+ * At checkout: a link to the patient's after-visit instructions (medication, treatment plan,
+ * next appointments). The message itself carries no medical details — only the signed link.
+ */
+export async function sendVisitInstructions(
+  tenant: Tenant,
+  appointmentId: string,
+  env: Env = process.env,
+) {
+  const ctx = await context(tenant, appointmentId);
+  if (!ctx) return skipped("not_found");
+  if (ctx.appointment.status !== "completed") return skipped("not_completed");
+  const lang = langOf(ctx.patient);
+  return sendMessage(
+    tenant,
+    {
+      kind: "visit_instructions",
+      patientId: ctx.patient.id,
+      appointmentId,
+      vars: {
+        ...appointmentVars(ctx, lang, appBaseUrl(tenant, env)),
+        care_link: careUrl(appBaseUrl(tenant, env), tenant.id, appointmentId, env),
+      },
+      dedupeKey: `visit_instructions:${appointmentId}`,
     },
     env,
   );

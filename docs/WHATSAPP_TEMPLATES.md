@@ -132,6 +132,24 @@ English:
 Hello {{1}}, it's time to book {{2}} again. Book easily here: {{3}}
 ```
 
+## `visit_instructions`
+
+- **Category:** UTILITY
+- **Languages:** Arabic (`ar`), English (`en`)
+- **Variables:** {{1}} = patient_first_name, {{2}} = care_link
+
+Arabic:
+
+```text
+مرحبًا {{1}}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {{2}}
+```
+
+English:
+
+```text
+Hello {{1}}, thank you for your visit. Your after-visit instructions and next appointments are here: {{2}}
+```
+
 ## `verification_code`
 
 - **Category:** AUTHENTICATION

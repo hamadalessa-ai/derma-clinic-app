@@ -68,7 +68,8 @@ import {
   setWhatsappConsent,
   staffReply,
 } from "@/lib/whatsapp/staff";
-import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
+import { sendBookingConfirmation, sendVisitInstructions } from "@/lib/whatsapp/outbox";
+import { checkOut } from "@/lib/visits/checkout";
 import { removeSubscription, savePrefs, saveSubscription } from "@/lib/push/subscriptions";
 import { saveSiteContent, setMemberGender, setServiceOnline, updateSettings } from "@/lib/settings";
 import { checkIn } from "@/lib/visits/check-in";
@@ -2311,5 +2312,52 @@ export async function setCareTeamAction(input: { memberId: string; doctorIds: st
     const r = await withActor(actor, (tx) => setCareTeam(tx, actor, v.memberId, v.doctorIds));
     revalidatePath("/settings");
     return r;
+  });
+}
+
+// ─── Checkout (reception) ───────────────────────────────────────────────────
+
+export async function checkOutAction(input: {
+  appointmentId: string;
+  paidSar: number;
+  method: "cash" | "card" | "transfer" | null;
+  invoiceNumber?: string | null;
+  note?: string | null;
+}) {
+  return staffAction("visits:checkout", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        appointmentId: uuid,
+        paidSar: z.number().min(0).max(1_000_000),
+        method: z.enum(["cash", "card", "transfer"]).nullable(),
+        invoiceNumber: z.string().trim().max(60).nullable().optional(),
+        note: z.string().trim().max(500).nullable().optional(),
+      }),
+      input,
+    );
+    const r = await withActor(actor, (tx) =>
+      checkOut(tx, actor, {
+        appointmentId: v.appointmentId,
+        paidHalalas: Math.round(v.paidSar * 100),
+        method: v.method,
+        invoiceNumber: v.invoiceNumber ?? null,
+        note: v.note ?? null,
+      }),
+    );
+    refreshScreens();
+    revalidatePath(`/checkout/${v.appointmentId}`);
+    return { id: r.id };
+  });
+}
+
+/** Sends the patient the link to their after-visit instructions (once per visit). */
+export async function sendVisitInstructionsAction(appointmentId: string) {
+  return staffAction("visits:checkout", async (ctx) => {
+    const id = parse(uuid, appointmentId);
+    const r = await sendVisitInstructions(ctx.tenant, id);
+    revalidatePath(`/checkout/${id}`);
+    return r.outcome === "skipped"
+      ? { outcome: "skipped" as const, reason: r.reason }
+      : { outcome: r.outcome, error: r.error };
   });
 }

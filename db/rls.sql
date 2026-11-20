@@ -327,6 +327,8 @@ grant select, insert, delete on public.service_practitioners to clinic_app;
 grant select, insert, delete on public.care_team to clinic_app;
 grant select, insert, update on public.billing_items to clinic_app;
 grant select, insert, delete on public.visit_charges, public.visit_orders to clinic_app;
+-- Checkouts: one per visit, append-only (never edited or deleted).
+grant select, insert on public.visit_checkouts to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -354,7 +356,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'billing_items', 'visit_charges', 'visit_orders'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -448,6 +450,17 @@ begin
          using (public.app_visit_open(appointment_id))', t || '_open_delete', t);
   end loop;
 end $$;
+
+-- A checkout only for a posted (completed) visit.
+create or replace function public.app_visit_completed(appt uuid) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select exists (select 1 from public.appointments a where a.id = appt and a.status = 'completed')
+$$;
+grant execute on function public.app_visit_completed(uuid) to clinic_app;
+create policy visit_checkouts_completed_insert on public.visit_checkouts as restrictive
+  for insert to clinic_app with check (public.app_visit_completed(appointment_id));
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;
@@ -558,7 +571,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

@@ -1017,6 +1017,27 @@ ALTER TABLE "appointments" ADD COLUMN "arrived_at" timestamp with time zone;
 ALTER TABLE "appointments" ADD COLUMN "in_room_at" timestamp with time zone;
 ALTER TABLE "appointments" ADD COLUMN "doctor_at" timestamp with time zone;
 ALTER TABLE "appointments" ADD COLUMN "completed_at" timestamp with time zone;
+-- 0019_tense_jackal.sql
+CREATE TABLE "visit_checkouts" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"due_halalas" integer NOT NULL,
+	"paid_halalas" integer NOT NULL,
+	"method" "payment_method",
+	"invoice_number" text,
+	"note" text,
+	"checked_out_by_user_id" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "visit_checkouts_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "visit_checkouts_one_per_visit" UNIQUE("tenant_id","appointment_id"),
+	CONSTRAINT "visit_checkouts_amounts" CHECK ("visit_checkouts"."due_halalas" >= 0 and "visit_checkouts"."paid_halalas" >= 0 and ("visit_checkouts"."paid_halalas" = 0 or "visit_checkouts"."method" is not null))
+);
+ALTER TABLE "visit_checkouts" ADD CONSTRAINT "visit_checkouts_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "visit_checkouts" ADD CONSTRAINT "visit_checkouts_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "visit_checkouts" ADD CONSTRAINT "visit_checkouts_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+CREATE INDEX "visit_checkouts_created_idx" ON "visit_checkouts" USING btree ("tenant_id","created_at");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1554,6 +1575,7 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'post_care', true, 'مرحبًا {patient_first_name}، {question}', 'Hello {patient_first_name}, {question}', 'post_care_check_in', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'no_show', true, 'مرحبًا {patient_first_name}، افتقدناك في موعدك اليوم. نتمنى أن تكون بخير. يمكنك حجز موعد جديد من هنا: {booking_link}', 'Hello {patient_first_name}, we missed you at your appointment today. We hope you''re well. You can book a new time here: {booking_link}', 'missed_appointment', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
@@ -1745,6 +1767,7 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'post_care', true, 'مرحبًا {patient_first_name}، {question}', 'Hello {patient_first_name}, {question}', 'post_care_check_in', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'no_show', true, 'مرحبًا {patient_first_name}، افتقدناك في موعدك اليوم. نتمنى أن تكون بخير. يمكنك حجز موعد جديد من هنا: {booking_link}', 'Hello {patient_first_name}, we missed you at your appointment today. We hope you''re well. You can book a new time here: {booking_link}', 'missed_appointment', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
@@ -2085,6 +2108,12 @@ insert into public.clinical_note_addenda (tenant_id, note_id, author_user_id, au
 insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, created_by) values
   ('5be574b8-8c14-5b75-af31-fd4fb861b805', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', 'e12bccd6-9e21-52ec-bbcf-1b1727158b14', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 0, 'usr_lamsa-rec');
 
+insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, created_by) values
+  ('c6f2f0b5-635c-5a2a-9b07-facbbe776047', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', 'e12bccd6-9e21-52ec-bbcf-1b1727158b14', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -1) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -1, 'usr_lamsa-rec');
+
+insert into public.visit_checkouts (tenant_id, appointment_id, patient_id, due_halalas, paid_halalas, method, invoice_number, note, checked_out_by_user_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'c6f2f0b5-635c-5a2a-9b07-facbbe776047', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 35000, 35000, 'cash', null, null, 'usr_lamsa-rec');
+
 insert into public.visit_charges (tenant_id, appointment_id, patient_id, service_id, billing_item_id, code, name_ar, name_en, quantity, unit_price_halalas, added_by_user_id) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '5be574b8-8c14-5b75-af31-fd4fb861b805', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', null, 'cd7b33bc-0c0a-536f-b608-acd6b0157c29', 'SPF50', 'واقي شمس SPF 50', 'Sunscreen SPF 50', 1, 12000, 'usr_lamsa-dr-mona');
 
@@ -2238,6 +2267,9 @@ insert into public.visit_charges (tenant_id, appointment_id, patient_id, service
 
 insert into public.visit_orders (tenant_id, appointment_id, patient_id, kind, name, sessions, interval_weeks, service_id, instructions, created_by_user_id, created_at) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '6cb8e300-9258-5346-a5b6-b2a191792506', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'treatment', 'Botox review and repeat', 1, 16, 'f81befe7-9561-50af-adc9-2553e96b6277', 'Repeat in about 4 months.', 'usr_derma-dr-sara', now() - interval '125 days');
+
+insert into public.visit_checkouts (tenant_id, appointment_id, patient_id, due_halalas, paid_halalas, method, invoice_number, note, checked_out_by_user_id, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '6cb8e300-9258-5346-a5b6-b2a191792506', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 170000, 170000, 'card', 'INV-2026-0412', null, 'usr_derma-rec-ruh1', now() - interval '125 days');
 
 insert into public.platform_statements (id, tenant_id, number, period_start, period_end, amount_halalas, vat_halalas, total_halalas, due_on, status, paid_at, note, created_by) values
   ('960d71fe-eec4-5a5b-851e-a09ce63d2333', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-1', (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date, (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date - 1), 100000, 15000, 115000, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 7), 'paid', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3)::timestamptz, 'Sample', 'usr_platform-owner'),
@@ -2609,6 +2641,8 @@ grant select, insert, delete on public.service_practitioners to clinic_app;
 grant select, insert, delete on public.care_team to clinic_app;
 grant select, insert, update on public.billing_items to clinic_app;
 grant select, insert, delete on public.visit_charges, public.visit_orders to clinic_app;
+-- Checkouts: one per visit, append-only (never edited or deleted).
+grant select, insert on public.visit_checkouts to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -2636,7 +2670,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'billing_items', 'visit_charges', 'visit_orders'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2730,6 +2764,17 @@ begin
          using (public.app_visit_open(appointment_id))', t || '_open_delete', t);
   end loop;
 end $$;
+
+-- A checkout only for a posted (completed) visit.
+create or replace function public.app_visit_completed(appt uuid) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select exists (select 1 from public.appointments a where a.id = appt and a.status = 'completed')
+$$;
+grant execute on function public.app_visit_completed(uuid) to clinic_app;
+create policy visit_checkouts_completed_insert on public.visit_checkouts as restrictive
+  for insert to clinic_app with check (public.app_visit_completed(appointment_id));
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;
@@ -2840,7 +2885,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

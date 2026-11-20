@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Clock, UserCheck, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Clock, Receipt, UserCheck, Users } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Locale } from "@/i18n/config";
@@ -30,20 +31,23 @@ const STAGE_DOT: Record<FlowStage, string> = {
   waiting: "bg-status-arrived-foreground",
   nurse: "bg-status-in-session-foreground",
   doctor: "bg-status-in-session-foreground",
+  checkout: "bg-gold-foreground",
   done: "bg-status-completed-foreground",
 };
 
-/** On phones the columns stack: patients already here come first, then expected, then done. */
+/** On phones the columns stack: waiting and checkout first, then the rooms, expected, done. */
 const PHONE_ORDER: Record<FlowStage, string> = {
-  expected: "max-md:order-4",
+  expected: "max-md:order-5",
   waiting: "max-md:order-1",
-  nurse: "max-md:order-2",
-  doctor: "max-md:order-3",
-  done: "max-md:order-5",
+  nurse: "max-md:order-3",
+  doctor: "max-md:order-4",
+  checkout: "max-md:order-2",
+  done: "max-md:order-6",
 };
 
 /**
- * Reception's flow board for one day: Expected → Waiting → With nurse → With doctor → Done, with
+ * Reception's flow board for one day: Expected → Waiting → With nurse → With doctor → Checkout →
+ * Done, with
  * how long each patient has been in that step. Long waits and late patients stand out. Check in
  * from the "Expected" column; tap a card for the usual appointment sheet.
  */
@@ -54,6 +58,7 @@ export function FlowBoard({
   memberId,
   doctorsManageOwnSchedule,
   day,
+  canCheckout,
 }: {
   appointments: ApptView[];
   doctors: PickOption[];
@@ -62,6 +67,7 @@ export function FlowBoard({
   doctorsManageOwnSchedule: boolean;
   /** The day shown (YYYY-MM-DD, Riyadh). Times are shown only when it is today. */
   day: string;
+  canCheckout: boolean;
 }) {
   const t = useTranslations("flow");
   const tc = useTranslations("calendar");
@@ -96,7 +102,7 @@ export function FlowBoard({
   return (
     <>
       <FormError message={error} />
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5" data-testid="flow-board">
+      <div className="grid gap-3 md:grid-cols-3 2xl:grid-cols-6" data-testid="flow-board">
         {FLOW_STAGES.map((stage) => {
           const cards = placed
             .filter((x) => x.stage === stage)
@@ -180,12 +186,22 @@ export function FlowBoard({
                             <Clock className="size-3" />
                             {stage === "expected"
                               ? t("late", { time: duration(since) })
-                              : stage === "done"
+                              : stage === "done" || stage === "checkout"
                                 ? t("doneAgo", { time: duration(since) })
                                 : duration(since)}
                           </span>
                         )}
                       </div>
+                      {stage === "checkout" && canCheckout && (
+                        <Link
+                          href={`/checkout/${a.id}`}
+                          className={buttonVariants({ size: "sm", variant: "outline" })}
+                          data-testid="flow-checkout"
+                        >
+                          <Receipt />
+                          {t("checkout")}
+                        </Link>
+                      )}
                       {stage === "expected" && canManage && (
                         <Button
                           size="sm"
