@@ -409,7 +409,6 @@ export const services = pgTable(
  */
 export const servicePractitioners = pgTable(
   "service_practitioners",
-  "care_team",
   {
     id: id(),
     tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
@@ -656,6 +655,7 @@ export const TENANT_TABLES = [
   "platform_payments",
   "support_grants",
   "service_practitioners",
+  "care_team",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
