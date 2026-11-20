@@ -92,6 +92,23 @@ try {
       await page.waitForLoadState("networkidle");
       await page.screenshot({ path: "screenshots/checkout-en.png", fullPage: true });
     }
+    // Front desk: search by mobile; an unknown mobile → add the patient right there.
+    await page.goto(`${BASE}/calendar?view=flow&date=${day}`, { waitUntil: "networkidle" });
+    await page.getByTestId("desk-search").fill("050001001");
+    await page.getByTestId("desk-hit").first().waitFor({ timeout: 15000 });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: "screenshots/desk-en-search.png" });
+    const walk = page.getByTestId("desk-walk-in").first();
+    if (await walk.count()) {
+      await walk.click();
+      await page.getByTestId("walk-in-dialog").waitFor({ timeout: 15000 });
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: "screenshots/desk-en-walk-in.png" });
+      await page.keyboard.press("Escape");
+    }
+    await page.getByTestId("desk-search").fill("0555 123 456");
+    await page.getByTestId("desk-new").waitFor({ timeout: 15000 });
+    await page.screenshot({ path: "screenshots/desk-en-new.png" });
     // A visit with orders (demo: D-0019's past Botox visit) — checked out, and its printed sheet.
     await page.goto(`${BASE}/checkout/6cb8e300-9258-5346-a5b6-b2a191792506`, {
       waitUntil: "networkidle",
