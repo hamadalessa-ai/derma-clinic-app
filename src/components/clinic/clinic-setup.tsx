@@ -107,13 +107,7 @@ export interface SetupData {
 }
 
 export type SetupTab =
-  | "branches"
-  | "departments"
-  | "services"
-  | "rooms"
-  | "packages"
-  | "prices"
-  | "consents";
+  "branches" | "departments" | "services" | "rooms" | "packages" | "prices" | "consents";
 
 function useL() {
   const ar = useLocale() === "ar";

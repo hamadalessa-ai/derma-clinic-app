@@ -939,6 +939,79 @@ ALTER TABLE "care_team" ADD CONSTRAINT "care_team_tenant_id_tenants_id_fk" FOREI
 ALTER TABLE "care_team" ADD CONSTRAINT "care_team_assistant_fk" FOREIGN KEY ("tenant_id","assistant_member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "care_team" ADD CONSTRAINT "care_team_practitioner_fk" FOREIGN KEY ("tenant_id","practitioner_member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
 CREATE INDEX "care_team_practitioner_idx" ON "care_team" USING btree ("tenant_id","practitioner_member_id");
+-- 0017_eminent_barracuda.sql
+CREATE TYPE "public"."billing_item_kind" AS ENUM('product', 'consumable', 'procedure', 'other');
+CREATE TYPE "public"."visit_order_kind" AS ENUM('medication', 'treatment');
+CREATE TABLE "billing_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"code" text NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"kind" "billing_item_kind" DEFAULT 'other' NOT NULL,
+	"price_halalas" integer DEFAULT 0 NOT NULL,
+	"unit_ar" text,
+	"unit_en" text,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "billing_items_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "billing_items_code_key" UNIQUE("tenant_id","code"),
+	CONSTRAINT "billing_items_price" CHECK ("billing_items"."price_halalas" >= 0)
+);
+CREATE TABLE "visit_charges" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"service_id" uuid,
+	"billing_item_id" uuid,
+	"code" text NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"quantity" integer DEFAULT 1 NOT NULL,
+	"unit_price_halalas" integer NOT NULL,
+	"covered_by_package" boolean DEFAULT false NOT NULL,
+	"added_by_user_id" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "visit_charges_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "visit_charges_quantity" CHECK ("visit_charges"."quantity" between 1 and 1000),
+	CONSTRAINT "visit_charges_price" CHECK ("visit_charges"."unit_price_halalas" >= 0),
+	CONSTRAINT "visit_charges_source" CHECK (("visit_charges"."service_id" is null) <> ("visit_charges"."billing_item_id" is null))
+);
+CREATE TABLE "visit_orders" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"kind" "visit_order_kind" NOT NULL,
+	"name" text NOT NULL,
+	"dose" text,
+	"frequency" text,
+	"duration" text,
+	"sessions" integer,
+	"interval_weeks" integer,
+	"service_id" uuid,
+	"instructions" text,
+	"created_by_user_id" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "visit_orders_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "visit_orders_sessions" CHECK ("visit_orders"."sessions" is null or "visit_orders"."sessions" between 1 and 50),
+	CONSTRAINT "visit_orders_interval" CHECK ("visit_orders"."interval_weeks" is null or "visit_orders"."interval_weeks" between 1 and 104)
+);
+ALTER TABLE "billing_items" ADD CONSTRAINT "billing_items_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "visit_charges" ADD CONSTRAINT "visit_charges_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "visit_charges" ADD CONSTRAINT "visit_charges_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "visit_charges" ADD CONSTRAINT "visit_charges_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "visit_charges" ADD CONSTRAINT "visit_charges_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "visit_charges" ADD CONSTRAINT "visit_charges_item_fk" FOREIGN KEY ("tenant_id","billing_item_id") REFERENCES "public"."billing_items"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "visit_orders" ADD CONSTRAINT "visit_orders_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "visit_orders" ADD CONSTRAINT "visit_orders_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "visit_orders" ADD CONSTRAINT "visit_orders_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "visit_orders" ADD CONSTRAINT "visit_orders_service_fk" FOREIGN KEY ("tenant_id","service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+CREATE INDEX "visit_charges_appointment_idx" ON "visit_charges" USING btree ("tenant_id","appointment_id");
+CREATE INDEX "visit_orders_appointment_idx" ON "visit_orders" USING btree ("tenant_id","appointment_id");
+CREATE INDEX "visit_orders_patient_idx" ON "visit_orders" USING btree ("tenant_id","patient_id");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1223,6 +1296,13 @@ insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, tit
   ('5c4057f8-d074-56b7-8d43-0c8d82b720b5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-lina', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist', 'female', '{"specialtyAr":"التجميل الجلدي والحقن","specialtyEn":"Aesthetic dermatology & injectables","credentials":[{"ar":"البورد السعودي في الأمراض الجلدية","en":"Saudi Board of Dermatology"},{"ar":"زمالة الطب التجميلي","en":"Fellowship in aesthetic medicine"}],"languages":[{"ar":"العربية","en":"Arabic"},{"ar":"الإنجليزية","en":"English"}]}'),
   ('92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-majed', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist', 'male', '{"specialtyAr":"حب الشباب والندبات والتصبغات","specialtyEn":"Acne, scars & pigmentation","credentials":[{"ar":"البورد السعودي في الأمراض الجلدية","en":"Saudi Board of Dermatology"}],"languages":[{"ar":"العربية","en":"Arabic"},{"ar":"الإنجليزية","en":"English"}]}'),
   ('3973e5f5-1994-5c66-8033-04c749bad229', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-jed', '{receptionist}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'موظف استقبال', 'Receptionist', null, null);
+
+insert into public.billing_items (id, tenant_id, code, name_ar, name_en, kind, price_halalas, unit_ar, unit_en) values
+  ('148714de-0bdc-5f6c-a94e-b56f7148c813', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'BTX-U', 'وحدة بوتوكس', 'Botox unit', 'consumable', 2500, 'وحدة', 'unit'),
+  ('e8846ae8-aa95-5c91-b373-02e4d846063b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'FIL-1ML', 'حقنة فيلر 1 مل', 'Filler syringe 1 ml', 'consumable', 120000, 'حقنة', 'syringe'),
+  ('87e6cc5a-6be7-5712-b8e7-15730c9c0d08', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'NUMB', 'كريم مخدر', 'Numbing cream', 'consumable', 5000, null, null),
+  ('35c7749a-3c7c-50e1-b0b5-693cde90bdd8', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'SPF50', 'واقي شمس SPF 50', 'Sunscreen SPF 50', 'product', 12000, 'عبوة', 'tube'),
+  ('7793a6c9-4b9f-5168-888e-f06c91d5eb49', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'PRP-KIT', 'جلسة بلازما إضافية', 'Extra PRP session', 'procedure', 30000, null, null);
 
 insert into public.care_team (tenant_id, assistant_member_id, practitioner_member_id) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '56811db4-8b1a-522c-9015-7dce6ade7d82'),
@@ -1511,6 +1591,10 @@ insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, tit
   ('2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-dr-mona', '{practitioner}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'طبيب جلدية وتجميل', 'Dermatologist', 'female', null),
   ('09432151-a569-5185-b3af-b3ce36532332', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-rec', '{receptionist}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'موظف استقبال', 'Receptionist', null, null),
   ('f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-nurse', '{assistant}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'ممرضة', 'Nurse', null, null);
+
+insert into public.billing_items (id, tenant_id, code, name_ar, name_en, kind, price_halalas, unit_ar, unit_en) values
+  ('0e087991-763c-5d3a-bf59-1c9f32ef88b1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'FIL-1ML', 'حقنة فيلر 1 مل', 'Filler syringe 1 ml', 'consumable', 120000, 'حقنة', 'syringe'),
+  ('cd7b33bc-0c0a-536f-b608-acd6b0157c29', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'SPF50', 'واقي شمس SPF 50', 'Sunscreen SPF 50', 'product', 12000, 'عبوة', 'tube');
 
 insert into public.care_team (tenant_id, assistant_member_id, practitioner_member_id) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1');
@@ -1996,6 +2080,12 @@ insert into public.clinical_note_addenda (tenant_id, note_id, author_user_id, au
 insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, created_by) values
   ('5be574b8-8c14-5b75-af31-fd4fb861b805', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'dcb65889-a26a-5ec3-91a0-24f7df649c95', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', 'e12bccd6-9e21-52ec-bbcf-1b1727158b14', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '11:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'confirmed', null, null, 0, 'usr_lamsa-rec');
 
+insert into public.visit_charges (tenant_id, appointment_id, patient_id, service_id, billing_item_id, code, name_ar, name_en, quantity, unit_price_halalas, added_by_user_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '5be574b8-8c14-5b75-af31-fd4fb861b805', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', null, 'cd7b33bc-0c0a-536f-b608-acd6b0157c29', 'SPF50', 'واقي شمس SPF 50', 'Sunscreen SPF 50', 1, 12000, 'usr_lamsa-dr-mona');
+
+insert into public.visit_orders (tenant_id, appointment_id, patient_id, kind, name, dose, frequency, duration, created_by_user_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '5be574b8-8c14-5b75-af31-fd4fb861b805', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', 'medication', 'Moisturising cream', 'Thin layer', 'Twice a day', '2 weeks', 'usr_lamsa-dr-mona');
+
 insert into public.time_blocks (id, tenant_id, branch_id, member_id, starts_at, ends_at, reason, demo_day_index, created_by) values
   ('72211765-873d-5e3d-be2b-307fada23821', '55d937e8-cf0c-583b-871e-f90fbc8af348', '582af1ea-4eca-5c50-bef7-54515ca85695', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '16:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), 0) + time '17:00') at time zone 'Asia/Riyadh'), 'اجتماع', 0, 'usr_lamsa-admin');
 
@@ -2136,6 +2226,13 @@ insert into public.concern_events (tenant_id, appointment_id, conversation_id, p
 
 insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, source, created_by) values
   ('6cb8e300-9258-5346-a5b6-b2a191792506', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'f81befe7-9561-50af-adc9-2553e96b6277', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', null, date_trunc('day', now() - interval '125 days') + interval '8 hours', date_trunc('day', now() - interval '125 days') + interval '8 hours 30 minutes', date_trunc('day', now() - interval '125 days') + interval '8 hours 40 minutes', 'completed', null, null, null, 'reception', 'usr_derma-rec-ruh1');
+
+insert into public.visit_charges (tenant_id, appointment_id, patient_id, service_id, billing_item_id, code, name_ar, name_en, quantity, unit_price_halalas, added_by_user_id, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '6cb8e300-9258-5346-a5b6-b2a191792506', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'f81befe7-9561-50af-adc9-2553e96b6277', null, 'botox', 'بوتوكس', 'Botox', 1, 120000, 'usr_derma-dr-sara', now() - interval '125 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '6cb8e300-9258-5346-a5b6-b2a191792506', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', null, '148714de-0bdc-5f6c-a94e-b56f7148c813', 'BTX-U', 'وحدة بوتوكس', 'Botox unit', 20, 2500, 'usr_derma-dr-sara', now() - interval '125 days');
+
+insert into public.visit_orders (tenant_id, appointment_id, patient_id, kind, name, sessions, interval_weeks, service_id, instructions, created_by_user_id, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '6cb8e300-9258-5346-a5b6-b2a191792506', '0c224c98-8aa4-51cf-bd9b-cd9ee7b721f1', 'treatment', 'Botox review and repeat', 1, 16, 'f81befe7-9561-50af-adc9-2553e96b6277', 'Repeat in about 4 months.', 'usr_derma-dr-sara', now() - interval '125 days');
 
 insert into public.platform_statements (id, tenant_id, number, period_start, period_end, amount_halalas, vat_halalas, total_halalas, due_on, status, paid_at, note, created_by) values
   ('960d71fe-eec4-5a5b-851e-a09ce63d2333', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-1', (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date, (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date - 1), 100000, 15000, 115000, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 7), 'paid', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3)::timestamptz, 'Sample', 'usr_platform-owner'),
@@ -2505,6 +2602,8 @@ grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
 -- Which doctors do which service (clinic admin): rows added and removed, never edited.
 grant select, insert, delete on public.service_practitioners to clinic_app;
 grant select, insert, delete on public.care_team to clinic_app;
+grant select, insert, update on public.billing_items to clinic_app;
+grant select, insert, delete on public.visit_charges, public.visit_orders to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -2532,7 +2631,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2588,7 +2687,7 @@ create policy clinical_note_addenda_practitioners_only on public.clinical_note_a
   with check (public.app_has_role('practitioner'));
 
 -- Notes are written in the doctor's (author's) own name; only the author edits a draft — or
--- their nurse / assistant, who may prepare it but never sign it.
+-- their nurse / assistant, who prepares it and may post it with the visit (never starts one).
 create policy clinical_notes_author_insert on public.clinical_notes as restrictive
   for insert to clinic_app with check (
     author_user_id = public.app_current_user()
@@ -2596,11 +2695,36 @@ create policy clinical_notes_author_insert on public.clinical_notes as restricti
 create policy clinical_notes_author_update on public.clinical_notes as restrictive
   for update to clinic_app
   using (author_user_id = public.app_current_user() or public.app_assists(author_user_id))
-  with check (
-    author_user_id = public.app_current_user()
-    or (public.app_assists(author_user_id) and status = 'draft'));
+  with check (author_user_id = public.app_current_user() or public.app_assists(author_user_id));
 create policy clinical_note_addenda_author_insert on public.clinical_note_addenda as restrictive
   for insert to clinic_app with check (author_user_id = public.app_current_user());
+
+-- A visit's invoice codes and orders can change only while the visit is open: once it is
+-- posted (completed) — or cancelled / no-show — they are locked, whatever the app does.
+create or replace function public.app_visit_open(appt uuid) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select exists (
+    select 1 from public.appointments a
+     where a.id = appt and a.status not in ('completed', 'cancelled', 'no_show')
+  )
+$$;
+grant execute on function public.app_visit_open(uuid) to clinic_app;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['visit_charges', 'visit_orders'] loop
+    execute format(
+      'create policy %I on public.%I as restrictive for insert to clinic_app
+         with check (public.app_visit_open(appointment_id))', t || '_open_insert', t);
+    execute format(
+      'create policy %I on public.%I as restrictive for delete to clinic_app
+         using (public.app_visit_open(appointment_id))', t || '_open_delete', t);
+  end loop;
+end $$;
 
 -- Clinic directory: readable, never writable by the app.
 alter table public.tenants enable row level security;
@@ -2711,7 +2835,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'care_team', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

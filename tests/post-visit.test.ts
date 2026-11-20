@@ -81,7 +81,9 @@ describe("post visit", () => {
     const spf = await withActor(nurse, (tx) =>
       addCharge(tx, nurse, { appointmentId: a.id, billingItemId: SPF, quantity: 1 }),
     );
-    await withActor(nurse, (tx) => removeCharge(tx, nurse, { appointmentId: a.id, chargeId: spf.id }));
+    await withActor(nurse, (tx) =>
+      removeCharge(tx, nurse, { appointmentId: a.id, chargeId: spf.id }),
+    );
     // Another clinic's item is never usable.
     expect(
       await code(
@@ -140,7 +142,9 @@ describe("post visit", () => {
     ).toBe("locked");
     // …and in the database.
     await expect(
-      withActor(drSara, (tx) => tx.delete(visitCharges).where(eq(visitCharges.appointmentId, a.id))),
+      withActor(drSara, (tx) =>
+        tx.delete(visitCharges).where(eq(visitCharges.appointmentId, a.id)),
+      ),
     ).resolves.toBeDefined();
     const left = await withActor(drSara, (tx) =>
       tx.select().from(visitCharges).where(eq(visitCharges.appointmentId, a.id)),
@@ -173,9 +177,9 @@ describe("price list", () => {
       unitEn: "",
       isActive: true,
     };
-    await expect(withActor(reception, (tx) => saveBillingItem(tx, reception, input))).rejects.toThrow(
-      PermissionError,
-    );
+    await expect(
+      withActor(reception, (tx) => saveBillingItem(tx, reception, input)),
+    ).rejects.toThrow(PermissionError);
     await withActor(admin, (tx) => saveBillingItem(tx, admin, input));
     expect(await code(withActor(admin, (tx) => saveBillingItem(tx, admin, input)))).toBe(
       "code_taken",

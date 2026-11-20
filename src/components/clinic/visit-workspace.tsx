@@ -81,7 +81,13 @@ export function VisitWorkspace({
 }: {
   appointmentId: string;
   patientId: string;
-  note: { id: string; body: string; aiDrafted: boolean; authorName: string; enteredByName: string | null };
+  note: {
+    id: string;
+    body: string;
+    aiDrafted: boolean;
+    authorName: string;
+    enteredByName: string | null;
+  };
   scribe: boolean;
   preparingFor: string | null;
   charges: ChargeView[];
@@ -261,7 +267,9 @@ function OrdersCard({
                     : t("planLine", {
                         sessions: o.sessions ?? "—",
                         weeks: o.intervalWeeks ?? "—",
-                        service: o.serviceId ? L(svc(o.serviceId)?.nameAr, svc(o.serviceId)?.nameEn) : "",
+                        service: o.serviceId
+                          ? L(svc(o.serviceId)?.nameAr, svc(o.serviceId)?.nameEn)
+                          : "",
                       })}
                 </span>
                 {o.instructions && <span className="text-xs">{o.instructions}</span>}
@@ -272,7 +280,9 @@ function OrdersCard({
                   variant="ghost"
                   aria-label={t("remove")}
                   disabled={act.pending}
-                  onClick={() => act.run(() => removeVisitOrderAction({ appointmentId, orderId: o.id }))}
+                  onClick={() =>
+                    act.run(() => removeVisitOrderAction({ appointmentId, orderId: o.id }))
+                  }
                 >
                   <X />
                 </Button>
@@ -334,7 +344,11 @@ function OrdersCard({
                 {v.kind === "medication" ? (
                   <>
                     <Field id="o-dose" label={t("dose")}>
-                      <Input id="o-dose" value={v.dose} onChange={(e) => setV({ ...v, dose: e.target.value })} />
+                      <Input
+                        id="o-dose"
+                        value={v.dose}
+                        onChange={(e) => setV({ ...v, dose: e.target.value })}
+                      />
                     </Field>
                     <Field id="o-freq" label={t("frequency")}>
                       <Input
@@ -400,7 +414,13 @@ function OrdersCard({
                 />
               </Field>
               <div className="flex gap-2">
-                <Button type="submit" size="sm" variant="outline" loading={act.pending} data-testid="order-add">
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  loading={act.pending}
+                  data-testid="order-add"
+                >
                   {t("add")}
                 </Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>
@@ -409,7 +429,12 @@ function OrdersCard({
               </div>
             </form>
           ) : (
-            <Button variant="outline" size="sm" className="self-start" onClick={() => setAdding(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => setAdding(true)}
+            >
               <Plus />
               {t("addOrder")}
             </Button>
@@ -454,7 +479,11 @@ function ChargesCard({
         {charges.length === 0 && <p className="text-muted-foreground text-sm">{t("noCharges")}</p>}
         <ul className="flex flex-col divide-y rounded-lg border">
           {charges.map((c) => (
-            <li key={c.id} className="flex items-center gap-2 px-3 py-2 text-sm" data-testid="charge-line">
+            <li
+              key={c.id}
+              className="flex items-center gap-2 px-3 py-2 text-sm"
+              data-testid="charge-line"
+            >
               <span className="text-muted-foreground font-mono text-xs" dir="ltr">
                 {c.code}
               </span>
@@ -552,7 +581,14 @@ function ChargesCard({
                 data-testid="charge-qty"
               />
             </div>
-            <Button type="submit" size="sm" variant="outline" disabled={!pick} loading={act.pending} data-testid="charge-add">
+            <Button
+              type="submit"
+              size="sm"
+              variant="outline"
+              disabled={!pick}
+              loading={act.pending}
+              data-testid="charge-add"
+            >
               <Plus />
               {t("add")}
             </Button>

@@ -185,7 +185,12 @@ export async function ensureServiceCharge(
 export async function addCharge(
   tx: TenantTx,
   actor: Actor,
-  input: { appointmentId: string; serviceId?: string | null; billingItemId?: string | null; quantity: number },
+  input: {
+    appointmentId: string;
+    serviceId?: string | null;
+    billingItemId?: string | null;
+    quantity: number;
+  },
 ) {
   const { appt } = await openVisit(tx, actor, input.appointmentId);
   let line: { code: string; nameAr: string; nameEn: string; priceHalalas: number } | undefined;

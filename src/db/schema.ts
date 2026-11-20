@@ -1370,10 +1370,7 @@ export const visitCharges = pgTable(
     index("visit_charges_appointment_idx").on(t.tenantId, t.appointmentId),
     check("visit_charges_quantity", sql`${t.quantity} between 1 and 1000`),
     check("visit_charges_price", sql`${t.unitPriceHalalas} >= 0`),
-    check(
-      "visit_charges_source",
-      sql`(${t.serviceId} is null) <> (${t.billingItemId} is null)`,
-    ),
+    check("visit_charges_source", sql`(${t.serviceId} is null) <> (${t.billingItemId} is null)`),
     foreignKey({
       name: "visit_charges_appointment_fk",
       columns: [t.tenantId, t.appointmentId],

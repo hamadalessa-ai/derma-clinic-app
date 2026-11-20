@@ -29,11 +29,41 @@ export interface SeedBillingItem {
 
 /** Sample price list (made-up prices) for the demo clinics. */
 export const DEMO_BILLING_ITEMS: SeedBillingItem[] = [
-  { code: "BTX-U", nameAr: "وحدة بوتوكس", nameEn: "Botox unit", kind: "consumable", priceSar: 25, unitAr: "وحدة", unitEn: "unit" },
-  { code: "FIL-1ML", nameAr: "حقنة فيلر 1 مل", nameEn: "Filler syringe 1 ml", kind: "consumable", priceSar: 1200, unitAr: "حقنة", unitEn: "syringe" },
+  {
+    code: "BTX-U",
+    nameAr: "وحدة بوتوكس",
+    nameEn: "Botox unit",
+    kind: "consumable",
+    priceSar: 25,
+    unitAr: "وحدة",
+    unitEn: "unit",
+  },
+  {
+    code: "FIL-1ML",
+    nameAr: "حقنة فيلر 1 مل",
+    nameEn: "Filler syringe 1 ml",
+    kind: "consumable",
+    priceSar: 1200,
+    unitAr: "حقنة",
+    unitEn: "syringe",
+  },
   { code: "NUMB", nameAr: "كريم مخدر", nameEn: "Numbing cream", kind: "consumable", priceSar: 50 },
-  { code: "SPF50", nameAr: "واقي شمس SPF 50", nameEn: "Sunscreen SPF 50", kind: "product", priceSar: 120, unitAr: "عبوة", unitEn: "tube" },
-  { code: "PRP-KIT", nameAr: "جلسة بلازما إضافية", nameEn: "Extra PRP session", kind: "procedure", priceSar: 300 },
+  {
+    code: "SPF50",
+    nameAr: "واقي شمس SPF 50",
+    nameEn: "Sunscreen SPF 50",
+    kind: "product",
+    priceSar: 120,
+    unitAr: "عبوة",
+    unitEn: "tube",
+  },
+  {
+    code: "PRP-KIT",
+    nameAr: "جلسة بلازما إضافية",
+    nameEn: "Extra PRP session",
+    kind: "procedure",
+    priceSar: 300,
+  },
 ];
 
 export interface SeedStaff {

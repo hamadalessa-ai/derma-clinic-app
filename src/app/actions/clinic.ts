@@ -756,7 +756,11 @@ function visitChanged(appointmentId: string) {
   revalidatePath(`/visits/${appointmentId}`);
 }
 
-export async function postVisitAction(input: { appointmentId: string; noteId: string; body: string }) {
+export async function postVisitAction(input: {
+  appointmentId: string;
+  noteId: string;
+  body: string;
+}) {
   return staffAction("notes:write", async (_ctx, actor) => {
     const v = parse(
       z.object({ appointmentId: uuid, noteId: uuid, body: z.string().max(20000) }),
