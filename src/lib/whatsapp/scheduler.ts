@@ -8,13 +8,22 @@
  *    (a reminder any time from 24 h until 2 h before the visit), so a missed or late run is fine.
  *  - QUIET HOURS: nothing between 22:00 and 08:00 Riyadh time; it goes out after 08:00.
  *    (Verification codes don't use the scheduler, so they are never held back.)
+ *  - FAST + RESUMABLE: what was already sent is skipped in one query (message_dispatches), a few
+ *    messages go out at a time, and a run stops starting new sends before its time budget is up —
+ *    `more: true` tells the caller to call again (the hourly job loops), picking up where it stopped.
  *  - Demo only: "fast-forward 24 hours" sends what would be due a day from now, and quiet hours
  *    can be ignored — so a live demo works at any time of day.
  */
-import { and, asc, eq, gt, gte, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
-import { appointments, services } from "@/db/schema";
+import { and, asc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
+import { appointments, messageDispatches, services } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
-import { sendNoShowFollowUp, sendPostCare, sendRecall, sendReminder } from "./outbox";
+import {
+  SCHEDULED_KEYS,
+  sendNoShowFollowUp,
+  sendPostCare,
+  sendRecall,
+  sendReminder,
+} from "./outbox";
 import type { SendOutcome, Tenant } from "./send";
 
 type Env = Record<string, string | undefined>;
@@ -38,20 +47,28 @@ export interface RunOptions {
   /** Demo: send even between 22:00 and 08:00. */
   ignoreQuietHours?: boolean;
   env?: Env;
+  /** Stop starting new sends after this many ms (default 40 s); the rest goes on the next call. */
+  budgetMs?: number;
 }
+
+/** Messages sent at the same time (one clinic). Keeps the run fast without flooding the provider. */
+export const SEND_CONCURRENCY = 4;
+export const DEFAULT_BUDGET_MS = 40_000;
 
 export interface RunSummary {
   quietHours: boolean;
   sent: Record<string, number>;
   skipped: Record<string, number>;
   failed: Record<string, number>;
+  /** Not everything due was sent in this run's time budget: call again. */
+  more: boolean;
 }
 
 /** Which appointments are due for each scheduled message at time `due`. */
 export async function dueWork(tenantId: string, due: Date) {
   return withTenant(tenantId, async (tx) => {
     const reminders = await tx
-      .select({ id: appointments.id })
+      .select({ id: appointments.id, startsAt: appointments.startsAt })
       .from(appointments)
       .where(
         and(
@@ -90,14 +107,17 @@ export async function dueWork(tenantId: string, due: Date) {
 
     // Recalls: the LAST completed visit for a service with a recall delay, once the delay has
     // passed (sent within 30 days of it), and no newer booking for that service since.
-    const recallCandidates = await tx
-      .select({
-        id: appointments.id,
-        patientId: appointments.patientId,
-        serviceId: appointments.serviceId,
-        startsAt: appointments.startsAt,
-        recallDays: services.recallAfterDays,
-      })
+    // (One query: "no newer booking" is a NOT EXISTS, not a lookup per candidate.)
+    const newer = sql`not exists (
+      select 1 from ${appointments} as n
+      where n.tenant_id = ${appointments.tenantId}
+        and n.patient_id = ${appointments.patientId}
+        and n.service_id = ${appointments.serviceId}
+        and n.starts_at > ${appointments.startsAt}
+        and n.status <> 'cancelled'
+    )`;
+    const recalls = await tx
+      .select({ id: appointments.id })
       .from(appointments)
       .innerJoin(services, eq(services.id, appointments.serviceId))
       .where(
@@ -106,41 +126,78 @@ export async function dueWork(tenantId: string, due: Date) {
           isNotNull(services.recallAfterDays),
           sql`${appointments.startsAt} <= ${due.toISOString()}::timestamptz - make_interval(days => ${services.recallAfterDays})`,
           sql`${appointments.startsAt} >= ${due.toISOString()}::timestamptz - make_interval(days => ${services.recallAfterDays} + 30)`,
+          newer,
         ),
       );
-    const recalls: { id: string }[] = [];
-    for (const c of recallCandidates) {
-      const [newer] = await tx
-        .select({ id: appointments.id })
-        .from(appointments)
-        .where(
-          and(
-            eq(appointments.patientId, c.patientId),
-            eq(appointments.serviceId, c.serviceId),
-            gt(appointments.startsAt, c.startsAt),
-            ne(appointments.status, "cancelled"),
-          ),
-        )
-        .limit(1);
-      if (!newer) recalls.push({ id: c.id });
-    }
     return { reminders, postCare, noShows, recalls };
   });
+}
+
+/** Of these dedupe keys, the ones already sent (or deliberately skipped) before. */
+async function alreadyDone(tenantId: string, keys: string[]) {
+  if (!keys.length) return new Set<string>();
+  const done = new Set<string>();
+  for (let i = 0; i < keys.length; i += 1000) {
+    const rows = await withTenant(tenantId, (tx) =>
+      tx
+        .select({ key: messageDispatches.dedupeKey })
+        .from(messageDispatches)
+        .where(inArray(messageDispatches.dedupeKey, keys.slice(i, i + 1000))),
+    );
+    for (const r of rows) done.add(r.key);
+  }
+  return done;
 }
 
 export async function runScheduledMessages(
   tenant: Tenant,
   options: RunOptions = {},
 ): Promise<RunSummary> {
+  const started = Date.now();
+  const budget = options.budgetMs ?? DEFAULT_BUDGET_MS;
   const now = options.now ?? new Date();
   const env = options.env ?? process.env;
-  const summary: RunSummary = { quietHours: false, sent: {}, skipped: {}, failed: {} };
+  const summary: RunSummary = {
+    quietHours: false,
+    sent: {},
+    skipped: {},
+    failed: {},
+    more: false,
+  };
   if (inQuietHours(now) && !options.ignoreQuietHours) {
     summary.quietHours = true;
     return summary;
   }
   const due = new Date(now.getTime() + (options.fastForwardHours ?? 0) * HOUR);
   const work = await dueWork(tenant.id, due);
+  const jobs: { kind: string; key: string; send: () => Promise<SendOutcome> }[] = [
+    ...work.reminders.map((a) => ({
+      kind: "reminder",
+      key: SCHEDULED_KEYS.reminder(a.id, a.startsAt),
+      send: () => sendReminder(tenant, a.id, env),
+    })),
+    ...work.postCare.map((a) => ({
+      kind: "post_care",
+      key: SCHEDULED_KEYS.post_care(a.id),
+      send: () => sendPostCare(tenant, a.id, env),
+    })),
+    ...work.noShows.map((a) => ({
+      kind: "no_show",
+      key: SCHEDULED_KEYS.no_show(a.id),
+      send: () => sendNoShowFollowUp(tenant, a.id, env),
+    })),
+    ...work.recalls.map((a) => ({
+      kind: "recall",
+      key: SCHEDULED_KEYS.recall(a.id),
+      send: () => sendRecall(tenant, a.id, env),
+    })),
+  ];
+  const done = await alreadyDone(
+    tenant.id,
+    jobs.map((j) => j.key),
+  );
+  const todo = jobs.filter((j) => !done.has(j.key));
+
   const count = (kind: string, r: SendOutcome) => {
     const bucket =
       r.outcome === "sent"
@@ -150,9 +207,18 @@ export async function runScheduledMessages(
           : summary.skipped;
     bucket[kind] = (bucket[kind] ?? 0) + 1;
   };
-  for (const a of work.reminders) count("reminder", await sendReminder(tenant, a.id, env));
-  for (const a of work.postCare) count("post_care", await sendPostCare(tenant, a.id, env));
-  for (const a of work.noShows) count("no_show", await sendNoShowFollowUp(tenant, a.id, env));
-  for (const a of work.recalls) count("recall", await sendRecall(tenant, a.id, env));
+  // A few at a time; no new send starts once the budget is spent (the next call continues).
+  let next = 0;
+  const worker = async () => {
+    while (next < todo.length) {
+      if (Date.now() - started > budget) {
+        summary.more = true;
+        return;
+      }
+      const job = todo[next++]!;
+      count(job.kind, await job.send());
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(SEND_CONCURRENCY, todo.length) }, worker));
   return summary;
 }

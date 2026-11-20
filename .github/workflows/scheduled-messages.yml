@@ -17,7 +17,7 @@ permissions: {}
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Call the app
         env:
@@ -28,6 +28,12 @@ jobs:
             echo "::error::Add the APP_URL and CRON_SECRET secrets (see docs/DEPLOY.md)."
             exit 1
           fi
-          curl --fail-with-body --silent --show-error --max-time 120 \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            "${APP_URL%/}/api/cron/messages"
+          # Each call stops before its time limit and answers "more": true when messages are left;
+          # call again (at most 6 times) so a busy hour still finishes.
+          for i in 1 2 3 4 5 6; do
+            body=$(curl --fail-with-body --silent --show-error --max-time 120 \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "${APP_URL%/}/api/cron/messages")
+            echo "$body"
+            echo "$body" | grep -q '"more":true' || break
+          done

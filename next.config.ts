@@ -3,6 +3,31 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+/**
+ * What pages may load. Everything comes from our own address, except the video call frame
+ * (Daily). No other site may put our pages in a frame (clickjacking), no plugins, forms only
+ * post back to us. Next.js needs inline scripts/styles; development also needs eval + websockets.
+ */
+function contentSecurityPolicy() {
+  const dev = process.env.NODE_ENV !== "production";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "media-src 'self' blob:",
+    `connect-src 'self'${dev ? " ws: wss:" : ""}`,
+    "frame-src https://*.daily.co",
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
 // Cache Components is intentionally OFF: every page in this multi-tenant app is rendered
 // per request, so one clinic's data can never be served from a cache to another clinic.
 const nextConfig: NextConfig = {
@@ -26,6 +51,7 @@ const nextConfig: NextConfig = {
         value: "geolocation=(), payment=(), usb=(), interest-cohort=()",
       },
       { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+      { key: "Content-Security-Policy", value: contentSecurityPolicy() },
     ];
     // Signed links (/visit, /sign, staff /invite): never cached, never leaked in a Referer, never indexed.
     const tokenPages = [
@@ -38,6 +64,8 @@ const nextConfig: NextConfig = {
       { source: "/visit/:token", headers: tokenPages },
       { source: "/sign/:token", headers: tokenPages },
       { source: "/invite/:token", headers: tokenPages },
+      { source: "/care/:token", headers: tokenPages },
+      { source: "/instructions/:id", headers: tokenPages },
     ];
   },
   turbopack: {

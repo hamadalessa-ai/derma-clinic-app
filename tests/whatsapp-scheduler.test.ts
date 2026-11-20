@@ -112,6 +112,21 @@ describe("reminders", () => {
     expect(await sentFor(a.id, "reminder")).toHaveLength(1);
   });
 
+  it("out of time: nothing new starts, 'more' says call again; the next call finishes", async () => {
+    const a = await book("D-0007", "2033-05-05");
+    const opts = { now: hoursBefore(a.startsAt, 20), env: ENV, ignoreQuietHours: true };
+    const first = await runScheduledMessages(derma, { ...opts, budgetMs: -1 });
+    expect(first.more).toBe(true);
+    expect(await sentFor(a.id, "reminder")).toHaveLength(0);
+    const second = await runScheduledMessages(derma, opts);
+    expect(second.more).toBe(false);
+    expect(await sentFor(a.id, "reminder")).toHaveLength(1);
+    // Already sent: skipped up front, not even tried again.
+    const third = await runScheduledMessages(derma, opts);
+    expect(third.sent.reminder ?? 0).toBe(0);
+    expect(third.skipped.reminder ?? 0).toBe(0);
+  });
+
   it("opted-out patients get no reminder", async () => {
     const a = await book("D-0014", "2033-05-04"); // seeded: sent STOP
     await runScheduledMessages(derma, {

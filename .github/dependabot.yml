@@ -1,0 +1,19 @@
+# Weekly check for updates of the libraries we use (security fixes first). Small batches so each
+# update is a pull request the "Tests" workflow checks before anyone merges it.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+      timezone: Asia/Riyadh
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
