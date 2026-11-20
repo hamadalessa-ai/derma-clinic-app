@@ -1246,7 +1246,13 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
 
   // Dental: Dr. Nawaf's patient D-0015 — chart, a treatment plan across visits, lab work.
   const NAWAF = { id: "usr_derma-dr-nawaf", name: "د. نواف الحربي" };
-  const dentalTooth = (t: number, condition: string, surfaces = "", note: string | null = null, ago = 40) => ({
+  const dentalTooth = (
+    t: number,
+    condition: string,
+    surfaces = "",
+    note: string | null = null,
+    ago = 40,
+  ) => ({
     tenant_id: tenant,
     patient_id: ref("patient", "D-0015"),
     tooth: t,

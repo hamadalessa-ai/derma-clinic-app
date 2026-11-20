@@ -252,14 +252,14 @@ function tenantSql(t: SeedTenant): string {
   const doctors = t.staff.filter((s) => s.roles.includes("practitioner"));
   if (doctors.some((d) => d.department)) {
     const rows = t.services.flatMap((s) =>
-        doctors
-          .filter((d) => (d.department ?? "dermatology") === (s.department ?? "dermatology"))
-          .map((d) => ({
-            tenant_id: tid,
-            service_id: ref("service", s.code),
-            member_id: ref("member", d.key),
-          })),
-      );
+      doctors
+        .filter((d) => (d.department ?? "dermatology") === (s.department ?? "dermatology"))
+        .map((d) => ({
+          tenant_id: tid,
+          service_id: ref("service", s.code),
+          member_id: ref("member", d.key),
+        })),
+    );
     out.push(insert("service_practitioners", rows));
   } else {
     const firstService =

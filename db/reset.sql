@@ -46,10 +46,13 @@ drop table if exists
   public.consent_rules,
   public.consent_templates,
   public.conversations,
+  public.dental_chart_entries,
+  public.dental_plan_items,
   public.departments,
   public.devices,
   public.files,
   public.global_rate_hits,
+  public.lab_cases,
   public.message_dispatches,
   public.message_templates,
   public.messages,
@@ -117,7 +120,7 @@ drop function if exists public.normalize_search;
 drop function if exists public.sync_appointment_reservations;
 drop function if exists public.sync_time_block_reservations;
 -- Types last: functions may use them (e.g. app_set_clinic_status takes a clinic_status).
-drop type if exists public.appointment_status, public.billing_item_kind, public.booking_source, public.clinic_status, public.gender, public.id_type, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.plan_tier, public.request_status, public.session_event_kind, public.statement_status, public.visit_order_kind;
+drop type if exists public.appointment_status, public.billing_item_kind, public.booking_source, public.clinic_status, public.dental_plan_status, public.gender, public.id_type, public.lab_case_status, public.lab_work, public.medical_flag_kind, public.member_role, public.note_status, public.payment_method, public.plan_tier, public.request_status, public.session_event_kind, public.statement_status, public.tooth_condition, public.visit_order_kind;
 do $$
 begin
   if exists (select from pg_roles where rolname = 'clinic_app') then

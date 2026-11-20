@@ -2122,10 +2122,7 @@ export const dentalPlanItems = pgTable(
       sql`${t.tooth} is null or (${t.tooth} between 11 and 48 and ${t.tooth} % 10 between 1 and 8)`,
     ),
     check("dental_plan_items_price", sql`${t.priceHalalas} >= 0`),
-    check(
-      "dental_plan_items_done",
-      sql`(${t.status} = 'done') = (${t.doneAt} is not null)`,
-    ),
+    check("dental_plan_items_done", sql`(${t.status} = 'done') = (${t.doneAt} is not null)`),
     foreignKey({
       name: "dental_plan_items_patient_fk",
       columns: [t.tenantId, t.patientId],

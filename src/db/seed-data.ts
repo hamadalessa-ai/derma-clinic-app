@@ -397,7 +397,14 @@ export const DERMA_DENTAL_SERVICES: SeedService[] = [
   ["dental_implant", "زراعة سن", "Dental Implant", 120, 30, 5500],
   ["teeth_whitening", "تبييض الأسنان", "Teeth Whitening", 60, 15, 1200],
 ].map(([code, nameAr, nameEn, duration, buffer, price]) => ({
-  ...S(code as string, nameAr as string, nameEn as string, duration as number, buffer as number, price as number),
+  ...S(
+    code as string,
+    nameAr as string,
+    nameEn as string,
+    duration as number,
+    buffer as number,
+    price as number,
+  ),
   department: "dental",
 }));
 
