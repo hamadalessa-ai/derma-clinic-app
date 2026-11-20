@@ -44,14 +44,15 @@ export function FlowBoard({
   canManage,
   memberId,
   doctorsManageOwnSchedule,
-  isToday,
+  day,
 }: {
   appointments: ApptView[];
   doctors: PickOption[];
   canManage: boolean;
   memberId: string | null;
   doctorsManageOwnSchedule: boolean;
-  isToday: boolean;
+  /** The day shown (YYYY-MM-DD, Riyadh). Times are shown only when it is today. */
+  day: string;
 }) {
   const t = useTranslations("flow");
   const tc = useTranslations("calendar");
@@ -67,6 +68,7 @@ export function FlowBoard({
     return () => clearInterval(id);
   }, []);
 
+  const isToday = riyadhParts(now.toISOString()).day === day;
   const placed = appointments
     .map((a) => ({ a, stage: flowStage(a) }))
     .filter((x): x is { a: ApptView; stage: FlowStage } => x.stage !== null);

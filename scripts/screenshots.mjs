@@ -68,6 +68,22 @@ try {
   await page.locator('input[type="password"]').fill(process.env.DEMO_PASSWORD ?? "Demo-Local-2026");
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  // Patient flow board on the demo day (the next working day), at 1 pm on the browser's clock.
+  {
+    const d = new Date(Date.now() + 3 * 3600_000);
+    while (d.getUTCDay() === 5) d.setUTCDate(d.getUTCDate() + 1);
+    const day = d.toISOString().slice(0, 10);
+    await page.clock.setFixedTime(new Date(`${day}T13:00:00+03:00`));
+    await page.goto(`${BASE}/calendar?view=flow&date=${day}`, { waitUntil: "networkidle" });
+    await page.screenshot({ path: "screenshots/flow-en.png", fullPage: true });
+    await context.addCookies([{ name: "NEXT_LOCALE", value: "ar", url: BASE }]);
+    await page.reload({ waitUntil: "networkidle" });
+    await page.screenshot({ path: "screenshots/flow-ar.png", fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: "screenshots/flow-ar-phone.png", fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE }]);
+  }
   await page.goto(`${BASE}/reports`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/reports-en.png", fullPage: true });
   await page.goto(`${BASE}/patients/import`, { waitUntil: "networkidle" });

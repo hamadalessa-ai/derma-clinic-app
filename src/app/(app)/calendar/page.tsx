@@ -233,7 +233,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           canManage={can(ctx.roles, "appointments:manage")}
           memberId={ctx.memberId}
           doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
-          isToday={day === riyadhDay(new Date())}
+          day={day}
         />
       ) : view === "list" ? (
         <ArrivalsList
