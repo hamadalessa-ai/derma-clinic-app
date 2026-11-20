@@ -201,11 +201,11 @@ try {
   const open = page.getByTestId("open-visit").first();
   if (await open.count()) {
     await open.click();
-    await page.waitForLoadState("networkidle");
+    await page.getByTestId("visit-screen").waitFor({ timeout: 20000 });
     const start = page.getByRole("button").filter({ hasText: /تحضير الملاحظة|بدء الزيارة/ });
     if (await start.count()) {
       await start.first().click();
-      await page.waitForTimeout(2500);
+      await page.getByTestId("note-card").waitFor({ timeout: 20000 });
     }
     await page.screenshot({ path: "screenshots/nurse-ar-visit.png", fullPage: true });
   }
