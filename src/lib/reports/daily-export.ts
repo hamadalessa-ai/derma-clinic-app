@@ -187,19 +187,21 @@ export async function dailyInvoicingCsv(
     ];
     const charged = lines.get(v.id);
     if (charged?.length) {
-      return charged.map((c) => [
-        "visit",
-        ...who,
-        c.code,
-        c.nameAr,
-        c.nameEn,
-        c.quantity,
-        v.doctor,
-        sar(c.unitPriceHalalas),
-        c.coveredByPackage ? "0.00" : sar(c.quantity * c.unitPriceHalalas),
-        c.coveredByPackage ? `package: ${pkg ?? ""}`.trim() : "at_clinic",
-        invoice,
-      ]).concat(payment);
+      return charged
+        .map((c) => [
+          "visit",
+          ...who,
+          c.code,
+          c.nameAr,
+          c.nameEn,
+          c.quantity,
+          v.doctor,
+          sar(c.unitPriceHalalas),
+          c.coveredByPackage ? "0.00" : sar(c.quantity * c.unitPriceHalalas),
+          c.coveredByPackage ? `package: ${pkg ?? ""}`.trim() : "at_clinic",
+          invoice,
+        ])
+        .concat(payment);
     }
     return [
       [
