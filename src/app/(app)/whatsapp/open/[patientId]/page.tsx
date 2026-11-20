@@ -11,11 +11,7 @@ const UUID_RE = /^[0-9a-f-]{36}$/i;
  * One-tap WhatsApp for a patient: their chat in the clinic's inbox (the clinic's own number,
  * kept on record). No chat yet → WhatsApp on this device, to the patient's mobile.
  */
-export default async function OpenWhatsApp({
-  params,
-}: {
-  params: Promise<{ patientId: string }>;
-}) {
+export default async function OpenWhatsApp({ params }: { params: Promise<{ patientId: string }> }) {
   const ctx = await requirePermission("whatsapp:inbox");
   const { patientId } = await params;
   if (!UUID_RE.test(patientId)) notFound();
@@ -34,5 +30,7 @@ export default async function OpenWhatsApp({
     return { phone: p.phone, conversationId: c?.id ?? null };
   });
   if (!found) notFound();
-  redirect(found.conversationId ? `/whatsapp?f=all&c=${found.conversationId}` : waLink(found.phone));
+  redirect(
+    found.conversationId ? `/whatsapp?f=all&c=${found.conversationId}` : waLink(found.phone),
+  );
 }

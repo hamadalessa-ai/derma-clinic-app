@@ -2403,7 +2403,13 @@ export async function walkInAction(input: {
     notifyLater(actor.tenantId, [
       { type: "new_booking", appointmentId: r.appointmentId, actorUserId: actor.userId },
       ...(r.result.status === "checked_in"
-        ? [{ type: "checked_in" as const, appointmentId: r.appointmentId, actorUserId: actor.userId }]
+        ? [
+            {
+              type: "checked_in" as const,
+              appointmentId: r.appointmentId,
+              actorUserId: actor.userId,
+            },
+          ]
         : []),
     ]);
     if (r.result.status === "consent_required") {

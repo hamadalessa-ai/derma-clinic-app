@@ -115,7 +115,8 @@ export function DeskBar({
             const today = h.today;
             const here = today && today.branchId === branchId;
             const canCheckIn = here && ["booked", "confirmed"].includes(today.status);
-            const open = today && ["booked", "confirmed", "arrived", "in_session"].includes(today.status);
+            const open =
+              today && ["booked", "confirmed", "arrived", "in_session"].includes(today.status);
             const target = {
               id: today?.id ?? "",
               balance: null,
@@ -314,7 +315,8 @@ function WalkInDialog({
     if (!serviceId) return;
     let cancelled = false;
     freeSlotsAction({ branchId, serviceId, day, limit: 8 }).then((r) => {
-      if (!cancelled) setSlots(r.ok ? r.data.filter((s) => riyadhParts(s.startsAt).day === day) : []);
+      if (!cancelled)
+        setSlots(r.ok ? r.data.filter((s) => riyadhParts(s.startsAt).day === day) : []);
     });
     return () => {
       cancelled = true;
@@ -327,7 +329,12 @@ function WalkInDialog({
   };
 
   return (
-    <Dialog open onClose={onClose} title={t("walkInTitle", { name: name(who) })} closeLabel={tc("close")}>
+    <Dialog
+      open
+      onClose={onClose}
+      title={t("walkInTitle", { name: name(who) })}
+      closeLabel={tc("close")}
+    >
       <div className="flex flex-col gap-4" data-testid="walk-in-dialog">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="walk-in-service">{tc("service")}</Label>
@@ -372,7 +379,10 @@ function WalkInDialog({
                           startsAt: s.startsAt,
                         }),
                       (r) =>
-                        onDone(r.appointmentId, r.status === "consent_required" ? r.template : null),
+                        onDone(
+                          r.appointmentId,
+                          r.status === "consent_required" ? r.template : null,
+                        ),
                     );
                   }}
                 >

@@ -23,9 +23,10 @@ export function useCheckIn() {
   const toast = useToast();
   const { run, error } = useAction();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [consent, setConsent] = useState<{ appt: CheckInTarget; template: ConsentTemplateView } | null>(
-    null,
-  );
+  const [consent, setConsent] = useState<{
+    appt: CheckInTarget;
+    template: ConsentTemplateView;
+  } | null>(null);
   const name = (o: { nameAr: string; nameEn: string | null }) =>
     locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
 
