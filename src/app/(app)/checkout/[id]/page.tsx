@@ -258,7 +258,11 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
                   )}
                   <dt className="text-muted-foreground">{t("by")}</dt>
                   <dd>
-                    {data.checkedOutBy ?? "—"} · {formatTime(data.checkout.createdAt, locale)}
+                    <bdi>{data.checkedOutBy ?? "—"}</bdi> ·{" "}
+                    <bdi>
+                      {formatGregorian(data.checkout.createdAt, locale, "medium")}{" "}
+                      {formatTime(data.checkout.createdAt, locale)}
+                    </bdi>
                   </dd>
                 </dl>
               ) : posted ? (
