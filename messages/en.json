@@ -409,7 +409,7 @@
     "startVisit": "Start visit",
     "continueVisit": "Continue visit",
     "openVisit": "Open visit",
-    "careTeam": "Your doctors today: {names}. Bring each patient in and prepare the note; the doctor signs.",
+    "careTeam": "Your doctors today: {names}. Bring each patient in, prepare the note and post the visit.",
     "noCareTeam": "You aren't linked to any doctor yet. Ask the clinic admin (Settings → Team)."
   },
   "patientsX": {
@@ -508,7 +508,7 @@
     "signComplete": "Sign & complete",
     "signCompleteConfirm": "Sign this note and complete the visit? A signed note can't be edited (you can add an addendum).",
     "signedCompleted": "Note signed and visit completed.",
-    "doctorSigns": "Prepared for {name}. The doctor signs.",
+    "doctorSigns": "Prepared for {name}.",
     "enteredBy": "Entered by {name}"
   },
   "requests": {
