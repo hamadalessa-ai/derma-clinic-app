@@ -46,13 +46,22 @@ const column = (page, stage) => page.locator(`[data-testid=flow-column][data-sta
 const desk = await signIn("reception.riyadh1@derma.demo");
 await board(desk);
 await shot(desk, "reception-board");
-const card = column(desk, "expected")
+// A patient of Dr. Sarah / Dr. Faisal (the nurse's doctors), no consent to sign, only once today.
+const candidates = column(desk, "expected")
   .locator("[data-testid=flow-card]")
   .filter({ hasText: /Sarah|Faisal/ })
-  .filter({ hasNotText: "Consent to sign" })
-  .first();
-const file = await card.getAttribute("data-patient");
-if (!file) throw new Error("no expected patient of Dr. Sarah / Dr. Faisal without a consent");
+  .filter({ hasNotText: "Consent to sign" });
+let card = null;
+let file = null;
+for (let i = 0; i < (await candidates.count()); i++) {
+  const f = await candidates.nth(i).getAttribute("data-patient");
+  if ((await desk.locator(`[data-testid=flow-card][data-patient="${f}"]`).count()) === 1) {
+    card = candidates.nth(i);
+    file = f;
+    break;
+  }
+}
+if (!card) throw new Error("no suitable expected patient of Dr. Sarah / Dr. Faisal");
 console.log("patient:", file);
 await card.getByTestId("flow-check-in").click();
 await column(desk, "waiting").locator(`[data-patient="${file}"]`).waitFor({ timeout: 15000 });
