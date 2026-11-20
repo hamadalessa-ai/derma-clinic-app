@@ -116,6 +116,15 @@ describe("migration statement order", () => {
     expect(out.indexOf("CREATE TABLE")).toBe(0);
   });
 
+  it("folds a later enum value into the type, so the seed can use it in the same transaction", async () => {
+    const { foldEnumAdditions } = await import("@/db/setup-sql");
+    const out = foldEnumAdditions(
+      `CREATE TYPE "public"."r" AS ENUM('a', 'b');\nCREATE TABLE t (x int);\nALTER TYPE "public"."r" ADD VALUE 'c';\n`,
+    );
+    expect(out).toContain(`AS ENUM('a', 'b', 'c')`);
+    expect(out).not.toContain("ADD VALUE");
+  });
+
   it("adds a new column before a unique constraint on it", async () => {
     const { orderMigrationStatements } = await import("@/db/setup-sql");
     const out = orderMigrationStatements(
