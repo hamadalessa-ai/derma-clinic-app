@@ -181,5 +181,13 @@ await shot(pp, "patient-care-link-phone", true);
 await desk.goto(`${BASE}/whatsapp/simulator`, { waitUntil: "networkidle" });
 await shot(desk, "whatsapp-simulator");
 
+// Help centre: the nurse's guides (Arabic) and reception's (English).
+await nurse.context().addCookies([{ name: "NEXT_LOCALE", value: "ar", url: BASE }]);
+await nurse.goto(`${BASE}/help`, { waitUntil: "networkidle" });
+await nurse.getByTestId("help-guide").first().waitFor({ timeout: 15000 });
+await shot(nurse, "help-nurse-ar", true);
+await desk.goto(`${BASE}/help`, { waitUntil: "networkidle" });
+await shot(desk, "help-reception-en", true);
+
 await browser.close();
 console.log("walkthrough: OK");
