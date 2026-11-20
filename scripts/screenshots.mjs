@@ -180,6 +180,45 @@ try {
 } catch (e) {
   console.error("platform screenshots failed:", e);
 }
+// Nurse / assistant: her doctors' day, a visit she prepares, and the care team in Settings → Team.
+try {
+  const password = process.env.DEMO_PASSWORD ?? "Demo-Local-2026";
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "ar", url: BASE }]);
+  const page = await context.newPage();
+  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  await page.locator('input[type="email"]').fill("nurse@derma.demo");
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/my-day`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/nurse-ar-my-day.png", fullPage: true });
+  const open = page.getByTestId("open-visit").first();
+  if (await open.count()) {
+    await open.click();
+    await page.waitForLoadState("networkidle");
+    const start = page.getByRole("button").filter({ hasText: /تحضير الملاحظة|بدء الزيارة/ });
+    if (await start.count()) {
+      await start.first().click();
+      await page.waitForTimeout(2500);
+    }
+    await page.screenshot({ path: "screenshots/nurse-ar-visit.png", fullPage: true });
+  }
+  await context.clearCookies();
+  await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE }]);
+  await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  await page.locator('input[type="email"]').fill("admin@derma.demo");
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+  await page.goto(`${BASE}/settings?tab=team`, { waitUntil: "networkidle" });
+  await page.screenshot({ path: "screenshots/team-en-care-team.png", fullPage: true });
+  console.log("nurse screenshots: OK");
+  await context.close();
+} catch (e) {
+  console.error("nurse screenshots failed:", e);
+}
+
 // Two-step verification, end to end (as a demo doctor): set it up in My account, sign out,
 // sign in again with password + authenticator code.
 function totp(base32Key) {
