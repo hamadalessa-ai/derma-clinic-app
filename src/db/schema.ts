@@ -869,6 +869,12 @@ export const appointments = pgTable(
     /** Demo data only: working-day number relative to tenant_settings.demo_anchor_day. */
     demoDayIndex: smallint("demo_day_index"),
     cancelReason: text("cancel_reason"),
+    /** Patient flow (reception board): when each step happened. Set by the booking engine. */
+    arrivedAt: timestamp("arrived_at", { withTimezone: true }),
+    inRoomAt: timestamp("in_room_at", { withTimezone: true }),
+    /** The doctor is with the patient (started the visit, or the nurse said "ready for doctor"). */
+    doctorAt: timestamp("doctor_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
     createdBy: text("created_by"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

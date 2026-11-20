@@ -15,6 +15,7 @@ export const DOCTOR_TYPES = [
   "checked_in",
   "request_answered",
   "concern_photo",
+  "doctor_needed",
 ] as const;
 export const RECEPTION_TYPES = [
   "online_booking",
@@ -22,6 +23,7 @@ export const RECEPTION_TYPES = [
   "patient_rescheduled",
   "reschedule_request",
   "follow_up_request",
+  "ready_for_checkout",
 ] as const;
 /** Both the appointment's doctor AND that branch's reception (e.g. a WhatsApp "concern"). */
 export const SHARED_TYPES = ["patient_concern", "concern_note"] as const;
@@ -47,6 +49,8 @@ const TITLES: Record<PushType, string> = {
   concern_photo: "أرسل المريض صورة · Patient sent a photo",
   concern_note: "ملاحظة داخلية على قلق مريض · Internal note on a concern",
   follow_up_request: "طلب حجز متابعة من الطبيب · Follow-up booking request",
+  doctor_needed: "المريض جاهز لك · Patient ready for you",
+  ready_for_checkout: "زيارة جاهزة للمحاسبة · Ready for checkout",
 };
 
 /** "العنود سليمان الرشيد" → "ع. ر." ; "Sara Ahmed" → "S. A." (first and last name only). */

@@ -124,6 +124,11 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   codes are locked by the database (`app_visit_open()`); the note by the signed-note trigger. Corrections = addenda.
   The daily invoicing file lists one row per invoice line. Never put medication text in audit metadata.
   Video calls show on the same screen (`/visits/<id>/video` redirects there).
+- Reception flow board (Calendar → "Patient flow", `src/lib/views/flow.ts`, `flow-board.tsx`): Expected → Waiting →
+  With nurse → With doctor → Done, with time in each step. The times (`appointments.arrived_at`, `in_room_at`,
+  `doctor_at`, `completed_at`) are written ONLY by the booking engine (`applyStatus`, `markDoctorWithPatient`);
+  "with doctor" = the doctor started the visit or the nurse pressed "Ready for doctor" (`readyForDoctor`, push
+  `doctor_needed`). Posting a visit pushes `ready_for_checkout` to reception. Demo refresh shifts these times too.
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly
   pattern (`staff_schedules`, several shifts per weekday, each at a branch; old rows with a break = two shifts)
   unless `schedule_exceptions` has a change for that date (off / special hours, which also adds extra days).
