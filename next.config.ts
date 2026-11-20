@@ -5,7 +5,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /**
  * What pages may load. Everything comes from our own address, except the video call frame
- * (Daily). No other site may put our pages in a frame (clickjacking), no plugins, forms only
+* (Daily) and pictures (any https address: clinic photos). No other site may put our pages in a frame (clickjacking), no plugins, forms only
  * post back to us. Next.js needs inline scripts/styles; development also needs eval + websockets.
  */
 function contentSecurityPolicy() {
@@ -14,7 +14,8 @@ function contentSecurityPolicy() {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    // Clinic websites show the clinic's own photos and partner logos from its image host.
+    "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     "media-src 'self' blob:",
     `connect-src 'self'${dev ? " ws: wss:" : ""}`,
