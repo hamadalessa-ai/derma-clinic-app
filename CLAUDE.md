@@ -129,6 +129,15 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   `doctor_at`, `completed_at`) are written ONLY by the booking engine (`applyStatus`, `markDoctorWithPatient`);
   "with doctor" = the doctor started the visit or the nurse pressed "Ready for doctor" (`readyForDoctor`, push
   `doctor_needed`). Posting a visit pushes `ready_for_checkout` to reception. Demo refresh shifts these times too.
+- Checkout (`/checkout/<id>`, `src/lib/visits/checkout.ts`, permission `visits:checkout`: admin + reception): the
+  visit's invoice lines (package sessions at 0; no lines → the booked service at list price), payment, method and
+  the invoice number from the clinic's OWN (ZATCA) system → ONE `visit_checkouts` row per visit, append-only, only
+  for a completed visit (database policy `app_visit_completed()`). The amount due is computed on the server.
+  Treatment-plan orders suggest the next sessions (first free time from each target day, same doctor first),
+  booked through the normal booking engine. Patient instructions = `InstructionSheet` (orders + next
+  appointments, never notes): printed at `/instructions/<id>` or sent as WhatsApp `visit_instructions` with a
+  signed link `/care/<appointmentId>.<sig>` (`careToken`, first name only, 60 days). The board's "Checkout"
+  column = completed without a checkout.
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly
   pattern (`staff_schedules`, several shifts per weekday, each at a branch; old rows with a break = two shifts)
   unless `schedule_exceptions` has a change for that date (off / special hours, which also adds extra days).

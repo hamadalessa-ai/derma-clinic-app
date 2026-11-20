@@ -659,6 +659,7 @@ export const TENANT_TABLES = [
   "billing_items",
   "visit_charges",
   "visit_orders",
+  "visit_checkouts",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1451,6 +1452,47 @@ export const visitOrders = pgTable(
       name: "visit_orders_service_fk",
       columns: [t.tenantId, t.serviceId],
       foreignColumns: [services.tenantId, services.id],
+    }),
+  ],
+);
+
+/**
+ * Reception's checkout of a posted visit: what was due, what the patient paid, how, and the
+ * number of the invoice in the clinic's own (ZATCA) system. One per visit; append-only.
+ */
+export const visitCheckouts = pgTable(
+  "visit_checkouts",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id").notNull(),
+    patientId: uuid("patient_id").notNull(),
+    /** The visit's invoice lines not covered by a package, at the copied prices. */
+    dueHalalas: integer("due_halalas").notNull(),
+    paidHalalas: integer("paid_halalas").notNull(),
+    method: paymentMethod("method"),
+    invoiceNumber: text("invoice_number"),
+    note: text("note"),
+    checkedOutByUserId: text("checked_out_by_user_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("visit_checkouts_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("visit_checkouts_one_per_visit").on(t.tenantId, t.appointmentId),
+    index("visit_checkouts_created_idx").on(t.tenantId, t.createdAt),
+    check(
+      "visit_checkouts_amounts",
+      sql`${t.dueHalalas} >= 0 and ${t.paidHalalas} >= 0 and (${t.paidHalalas} = 0 or ${t.method} is not null)`,
+    ),
+    foreignKey({
+      name: "visit_checkouts_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "visit_checkouts_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
     }),
   ],
 );

@@ -80,3 +80,25 @@ export function parseConsentToken(
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   return m[1];
 }
+
+// ─── Visit instructions: /care/<appointmentId>.<signature> ──────────────────
+// The patient's instructions after a visit (medication, treatment plan, next appointments,
+// aftercare). Sent only to the patient's own WhatsApp; opens for a limited time after the visit.
+
+export function careToken(tenantId: string, appointmentId: string, env: Env = process.env) {
+  const sig = mac("care-link", tenantId, appointmentId, env).digest("base64url").slice(0, 22);
+  return `${appointmentId}.${sig}`;
+}
+
+export function careUrl(baseUrl: string, tenantId: string, appointmentId: string, env: Env = process.env) {
+  return `${baseUrl}/care/${careToken(tenantId, appointmentId, env)}`;
+}
+
+export function parseCareToken(tenantId: string, token: string, env: Env = process.env) {
+  const m = /^([0-9a-f-]{36})\.([A-Za-z0-9_-]{22})$/.exec(token.trim());
+  if (!m) return null;
+  const expected = Buffer.from(careToken(tenantId, m[1], env).split(".")[1]);
+  const given = Buffer.from(m[2]);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  return m[1];
+}

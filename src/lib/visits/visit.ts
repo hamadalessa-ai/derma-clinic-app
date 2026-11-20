@@ -29,7 +29,16 @@ import { assistsMember, doctorOf } from "@/lib/care-team/care-team";
 import { NoteError, openDraft, postNote } from "@/lib/notes/notes";
 
 export class VisitError extends Error {
-  constructor(public code: "locked" | "bad_item" | "not_found" | "no_note") {
+  constructor(
+    public code:
+      | "locked"
+      | "bad_item"
+      | "not_found"
+      | "no_note"
+      | "not_completed"
+      | "checked_out"
+      | "method_needed",
+  ) {
     super(code);
     this.name = "VisitError";
   }

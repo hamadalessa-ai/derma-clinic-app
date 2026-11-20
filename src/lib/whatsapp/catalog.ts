@@ -5,6 +5,7 @@
  *
  * Placeholders: {patient_first_name} {appointment} {service} {date} {time} {doctor} {branch}
  * {map_link} {my_link} {booking_link} {minutes} {instructions} {consent_note} {question} {code}
+ * {care_link}
  * {appointment} is "موعد بوتوكس" / "your Botox appointment" — or just "موعدك" / "your appointment"
  * when the clinic switches "show service name in WhatsApp messages" off.
  */
@@ -16,6 +17,7 @@ export const TEMPLATE_KINDS = [
   "post_care",
   "no_show",
   "recall",
+  "visit_instructions",
   "verification_code",
 ] as const;
 export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
@@ -153,6 +155,17 @@ export const TEMPLATES: Record<TemplateKind, TemplateDefinition> = {
       "مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}",
     bodyEn:
       "Hello {patient_first_name}, it's time to book {appointment} again. Book easily here: {booking_link}",
+    buttons: [],
+    canDisable: true,
+  },
+  visit_instructions: {
+    kind: "visit_instructions",
+    metaName: "visit_instructions",
+    variables: ["patient_first_name", "care_link"],
+    bodyAr:
+      "مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}",
+    bodyEn:
+      "Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}",
     buttons: [],
     canDisable: true,
   },

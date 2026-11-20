@@ -36,6 +36,8 @@ export const PERMISSIONS = {
    * ("with the doctor"), prepare the note in the doctor's name. Never signs.
    */
   "visits:assist": ["assistant"],
+  /** Checkout of a posted visit: payment, the clinic's invoice number, next sessions, instructions. */
+  "visits:checkout": ["clinic_admin", "receptionist"],
   "requests:decide": ["clinic_admin", "receptionist"],
   "patients:edit": ["clinic_admin", "receptionist"],
   "packages:sell": ["clinic_admin", "receptionist"],

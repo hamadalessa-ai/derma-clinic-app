@@ -17,6 +17,7 @@ import {
   tenantMembers,
   timeBlocks,
   users,
+  visitCheckouts,
 } from "@/db/schema";
 import { consentStatusFor } from "@/lib/consents/consents";
 import { reasonView, type ConsentReasonView } from "@/lib/consents/rules";
@@ -38,6 +39,7 @@ export interface ApptView {
     inRoomAt: string | null;
     doctorAt: string | null;
     completedAt: string | null;
+    checkedOutAt: string | null;
   };
   /** Where the booking came from: reception, online (/book) or WhatsApp. */
   source: "reception" | "online" | "whatsapp";
@@ -225,6 +227,17 @@ export async function loadAppointments(
           )
       : Promise.resolve([]),
   ]);
+  // Reception's checkouts of completed visits (flow board: "checkout" vs "done").
+  const doneIds = rows.filter((r) => r.a.status === "completed").map((r) => r.a.id);
+  const checkedOut = new Map(
+    (doneIds.length
+      ? await tx
+          .select({ id: visitCheckouts.appointmentId, at: visitCheckouts.createdAt })
+          .from(visitCheckouts)
+          .where(inArray(visitCheckouts.appointmentId, doneIds))
+      : []
+    ).map((c) => [c.id, c.at]),
+  );
   return rows.map(({ a, p, s, d }) => {
     const req = requests.find((r) => r.appointmentId === a.id);
     const bal = balanceFor(pkgs, p.id, s.id);
@@ -240,6 +253,7 @@ export async function loadAppointments(
         inRoomAt: a.inRoomAt?.toISOString() ?? null,
         doctorAt: a.doctorAt?.toISOString() ?? null,
         completedAt: a.completedAt?.toISOString() ?? null,
+        checkedOutAt: checkedOut.get(a.id)?.toISOString() ?? null,
       },
       source: a.source,
       needsCompletion: p.needsCompletion,

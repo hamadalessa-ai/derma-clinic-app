@@ -381,6 +381,44 @@ export function demoSql(): string {
       },
     ]),
   );
+  // A posted visit Lamsa's reception already checked out (cash).
+  out.push(
+    insert("appointments", [
+      {
+        id: lref("appointment", "past-1"),
+        tenant_id: lamsa,
+        branch_id: lref("branch", "dammam"),
+        patient_id: lref("patient", "L-0002"),
+        service_id: lref("service", "facial_treatment"),
+        practitioner_id: lref("member", "lamsa-dr-mona"),
+        room_id: lref("room", "dmm-1"),
+        device_id: null,
+        starts_at: at(-1, "11:00"),
+        ends_at: at(-1, "11:00", 60),
+        blocked_until: at(-1, "11:00", 75),
+        status: "completed",
+        reception_note: null,
+        cancel_reason: null,
+        demo_day_index: -1,
+        created_by: "usr_lamsa-rec",
+      },
+    ]),
+  );
+  out.push(
+    insert("visit_checkouts", [
+      {
+        tenant_id: lamsa,
+        appointment_id: lref("appointment", "past-1"),
+        patient_id: lref("patient", "L-0002"),
+        due_halalas: 35000,
+        paid_halalas: 35000,
+        method: "cash",
+        invoice_number: null,
+        note: null,
+        checked_out_by_user_id: "usr_lamsa-rec",
+      },
+    ]),
+  );
   out.push(
     insert("visit_charges", [
       {
@@ -1127,6 +1165,23 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
         service_id: ref("service", "botox"),
         instructions: "Repeat in about 4 months.",
         created_by_user_id: SARA.id,
+        created_at: daysAgo(125),
+      },
+    ]),
+  );
+  // Reception checked it out: paid by card, invoice number from the clinic's own system.
+  out.push(
+    insert("visit_checkouts", [
+      {
+        tenant_id: tenant,
+        appointment_id: ref("appointment", "d0019-botox-past"),
+        patient_id: ref("patient", "D-0019"),
+        due_halalas: Math.round(botox.priceSar * 100) + 20 * 2500,
+        paid_halalas: Math.round(botox.priceSar * 100) + 20 * 2500,
+        method: "card",
+        invoice_number: "INV-2026-0412",
+        note: null,
+        checked_out_by_user_id: "usr_derma-rec-ruh1",
         created_at: daysAgo(125),
       },
     ]),

@@ -234,6 +234,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           memberId={ctx.memberId}
           doctorsManageOwnSchedule={data.settings.doctorsManageOwnSchedule}
           day={day}
+          canCheckout={can(ctx.roles, "visits:checkout")}
         />
       ) : view === "list" ? (
         <ArrivalsList

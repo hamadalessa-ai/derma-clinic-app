@@ -43,13 +43,20 @@ const view = (a: Awaited<ReturnType<typeof row>>) => ({
     inRoomAt: a.inRoomAt?.toISOString() ?? null,
     doctorAt: a.doctorAt?.toISOString() ?? null,
     completedAt: a.completedAt?.toISOString() ?? null,
+    checkedOutAt: null,
   },
 });
 
 describe("flow stages (pure)", () => {
   const base = {
     startsAt: "2036-04-06T07:00:00.000Z",
-    flow: { arrivedAt: null, inRoomAt: null, doctorAt: null, completedAt: null },
+    flow: {
+      arrivedAt: null,
+      inRoomAt: null,
+      doctorAt: null,
+      completedAt: null,
+      checkedOutAt: null,
+    },
   };
   it("places each status in its column", () => {
     expect(flowStage({ ...base, status: "confirmed" })).toBe("expected");
@@ -58,7 +65,14 @@ describe("flow stages (pure)", () => {
     expect(
       flowStage({ ...base, status: "in_session", flow: { ...base.flow, doctorAt: base.startsAt } }),
     ).toBe("doctor");
-    expect(flowStage({ ...base, status: "completed" })).toBe("done");
+    expect(flowStage({ ...base, status: "completed" })).toBe("checkout");
+    expect(
+      flowStage({
+        ...base,
+        status: "completed",
+        flow: { ...base.flow, checkedOutAt: base.startsAt },
+      }),
+    ).toBe("done");
     expect(flowStage({ ...base, status: "cancelled" })).toBeNull();
     expect(flowStage({ ...base, status: "pending" })).toBeNull();
   });
@@ -116,7 +130,7 @@ describe("flow times", () => {
     );
     r = await row(a.id);
     expect(r.completedAt).toBeInstanceOf(Date);
-    expect(flowStage(view(r))).toBe("done");
+    expect(flowStage(view(r))).toBe("checkout"); // posted: reception's turn
   });
 
   it("the doctor starting the visit is 'with doctor' straight away", async () => {

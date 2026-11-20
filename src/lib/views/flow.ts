@@ -1,10 +1,10 @@
 /**
  * The reception flow board: where each of today's patients is, and since when.
- * Expected → Waiting → With nurse → With doctor → Done. Pure functions (tested in flow.test.ts).
+ * Expected → Waiting → With nurse → With doctor → Checkout → Done. Pure functions (flow.test.ts).
  */
 import type { AppointmentStatus } from "@/lib/booking/status";
 
-export const FLOW_STAGES = ["expected", "waiting", "nurse", "doctor", "done"] as const;
+export const FLOW_STAGES = ["expected", "waiting", "nurse", "doctor", "checkout", "done"] as const;
 export type FlowStage = (typeof FLOW_STAGES)[number];
 
 export interface FlowInput {
@@ -15,6 +15,8 @@ export interface FlowInput {
     inRoomAt: string | null;
     doctorAt: string | null;
     completedAt: string | null;
+    /** Reception's checkout (visit_checkouts). */
+    checkedOutAt: string | null;
   };
 }
 
@@ -29,7 +31,7 @@ export function flowStage(a: FlowInput): FlowStage | null {
     case "in_session":
       return a.flow.doctorAt ? "doctor" : "nurse";
     case "completed":
-      return "done";
+      return a.flow.checkedOutAt ? "done" : "checkout";
     default:
       return null;
   }
@@ -50,8 +52,10 @@ export function stageSince(a: FlowInput, stage: FlowStage): string {
       return f.inRoomAt ?? f.arrivedAt ?? a.startsAt;
     case "doctor":
       return f.doctorAt ?? f.inRoomAt ?? a.startsAt;
-    case "done":
+    case "checkout":
       return f.completedAt ?? a.startsAt;
+    case "done":
+      return f.checkedOutAt ?? f.completedAt ?? a.startsAt;
   }
 }
 

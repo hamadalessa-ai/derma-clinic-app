@@ -238,7 +238,10 @@
     "visit_bad_item": "That code isn't on the price list (or is switched off).",
     "visit_not_found": "Visit not found.",
     "visit_no_note": "Write the visit note before posting.",
-    "setup_code_taken": "Another item already uses this code."
+    "setup_code_taken": "Another item already uses this code.",
+    "visit_not_completed": "The visit hasn't been posted yet.",
+    "visit_checked_out": "This visit is already checked out.",
+    "visit_method_needed": "Choose how the patient paid."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -865,7 +868,8 @@
       "reschedule_unavailable": "Auto-reply",
       "inbound_image": "Photo",
       "photo_request": "Photo request",
-      "ai_reply": "AI receptionist"
+      "ai_reply": "AI receptionist",
+      "visit_instructions": "Visit instructions"
     },
     "simChats": "Chats",
     "simNewNumber": "Simulate a message from a new number",
@@ -1836,6 +1840,7 @@
       "waiting": "Waiting",
       "nurse": "With nurse",
       "doctor": "With doctor",
+      "checkout": "Checkout",
       "done": "Done"
     },
     "minutes": "{m} min",
@@ -1844,6 +1849,61 @@
     "doneAgo": "{time} ago",
     "none": "No one",
     "empty": "No patients on this day.",
-    "consent": "Consent to sign"
+    "consent": "Consent to sign",
+    "checkout": "Checkout"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "back": "Patient flow",
+    "notPosted": "This visit hasn't been posted by the doctor or nurse yet.",
+    "invoice": "Invoice lines",
+    "due": "Amount due",
+    "payment": "Payment",
+    "paid": "Amount paid (SAR)",
+    "method": "Method",
+    "noPayment": "Nothing to pay",
+    "methods": {
+      "cash": "Cash",
+      "card": "Card / mada",
+      "transfer": "Bank transfer"
+    },
+    "invoiceNumber": "Invoice number (clinic system)",
+    "note": "Note",
+    "invoiceHint": "The official tax invoice is issued in the clinic's own system; write its number here so the two match.",
+    "complete": "Complete checkout",
+    "by": "Checked out by",
+    "nextSessions": "Next sessions (treatment plan)",
+    "session": "Session {n}",
+    "alreadyBooked": "Already booked",
+    "noSlot": "No free time in the week of {date} — book from the calendar.",
+    "noPlan": "No treatment plan for this visit.",
+    "planNoService": "The plan has no service or schedule to book from.",
+    "upcoming": "Already booked",
+    "book": "Book",
+    "booked": "Booked ✓",
+    "instructions": "Patient instructions",
+    "instructionsHint": "{meds} medication(s), {plans} treatment plan(s), and the next appointments.",
+    "print": "Print",
+    "send": "Send on WhatsApp",
+    "sent": "Sent on WhatsApp ✓",
+    "sentNow": "Sent on WhatsApp.",
+    "sendFailed": "WhatsApp couldn't deliver it. Print the instructions instead.",
+    "notSent": "Not sent ({reason})."
+  },
+  "care": {
+    "title": "Your instructions, {name}",
+    "titleFor": "Instructions — {name}",
+    "medication": "Medication",
+    "noMedication": "No medication for this visit.",
+    "dose": "Dose",
+    "frequency": "How often",
+    "duration": "For how long",
+    "plan": "Treatment plan",
+    "planLine": "{sessions} sessions · every {weeks} weeks",
+    "next": "Your next appointments",
+    "noNext": "No upcoming appointments yet.",
+    "footer": "Questions or side effects? Contact the clinic. In an emergency call 997.",
+    "print": "Print",
+    "expired": "This link has expired. Please contact the clinic."
   }
 }
