@@ -339,4 +339,10 @@ try {
   console.error("two-step verification screenshots failed:", e);
 }
 await browser.close();
+// Last (it changes the data): one whole clinic visit, reception → nurse → checkout → patient.
+try {
+  await import("./walkthrough.mjs");
+} catch (e) {
+  console.error("walkthrough failed:", e);
+}
 console.log("Screenshots saved in screenshots/");

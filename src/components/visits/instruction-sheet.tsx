@@ -24,7 +24,6 @@ export async function InstructionSheet({
   const name = pick(locale, data.patient.nameAr, data.patient.nameEn);
   const first = name.trim().split(/\s+/)[0] ?? "";
   const a = data.appointment;
-  const opt = (label: string, v: string | null) => (v ? `${label}: ${v}` : null);
 
   return (
     <div className="flex flex-col gap-5" data-testid="instruction-sheet">
@@ -58,15 +57,24 @@ export async function InstructionSheet({
                 <div className="font-medium" dir="auto">
                   {m.name}
                 </div>
-                <div className="text-muted-foreground text-sm" dir="auto">
-                  {[
-                    opt(t("dose"), m.dose),
-                    opt(t("frequency"), m.frequency),
-                    opt(t("duration"), m.duration),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </div>
+                <dl className="text-muted-foreground mt-1 grid grid-cols-[auto_1fr] gap-x-3 text-sm">
+                  {(
+                    [
+                      [t("dose"), m.dose],
+                      [t("frequency"), m.frequency],
+                      [t("duration"), m.duration],
+                    ] as const
+                  )
+                    .filter(([, v]) => v)
+                    .map(([label, v]) => (
+                      <div key={label} className="contents">
+                        <dt>{label}</dt>
+                        <dd className="text-foreground">
+                          <bdi>{v}</bdi>
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
                 {m.instructions && (
                   <p className="mt-1 text-sm" dir="auto">
                     {m.instructions}
