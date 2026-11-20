@@ -1,0 +1,342 @@
+/**
+ * Help centre: short guides per role, in Arabic and English. Plain words, one action per step.
+ * `link` points at the screen the step talks about (shown only if the reader may open it).
+ * Keep in step with the screens: tab and button names here match messages/{ar,en}.json.
+ */
+import type { Permission } from "@/lib/auth/permissions";
+
+export const HELP_ROLES = ["receptionist", "assistant", "practitioner", "clinic_admin"] as const;
+export type HelpRole = (typeof HELP_ROLES)[number];
+
+export interface HelpStep {
+  ar: string;
+  en: string;
+}
+export interface HelpGuide {
+  id: string;
+  titleAr: string;
+  titleEn: string;
+  steps: HelpStep[];
+  link?: { href: string; permission: Permission };
+}
+
+const s = (ar: string, en: string): HelpStep => ({ ar, en });
+
+export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
+  receptionist: [
+    {
+      id: "day",
+      titleAr: "بداية اليوم: لوحة سير المرضى",
+      titleEn: "Start of the day: the patient flow board",
+      link: { href: "/calendar?view=flow", permission: "calendar:view" },
+      steps: [
+        s(
+          "افتح التقويم ثم «سير المرضى». ترى كل مريض اليوم: متوقع، في الانتظار، مع الممرضة، مع الطبيب، المحاسبة، انتهت.",
+          "Open Calendar → Patient flow. Every patient today is in a column: Expected, Waiting, With nurse, With doctor, Checkout, Done.",
+        ),
+        s(
+          "البطاقة المحاطة بلون برتقالي تعني انتظاراً أكثر من 15 دقيقة أو تأخراً أكثر من 10 دقائق.",
+          "A card outlined in amber means waiting 15+ minutes, or running 10+ minutes late.",
+        ),
+        s(
+          "اضغط أي بطاقة لفتح الموعد: نقل، إلغاء، ملاحظة، اتصال أو واتساب.",
+          "Tap any card to open the appointment: move, cancel, note, call or WhatsApp.",
+        ),
+      ],
+    },
+    {
+      id: "find",
+      titleAr: "البحث عن مريض بسرعة",
+      titleEn: "Find a patient fast",
+      link: { href: "/calendar", permission: "appointments:manage" },
+      steps: [
+        s(
+          "اكتب في مربع البحث أعلى التقويم: الجوال (بأي شكل: ٠٥…، 05…، +966…)، أو الاسم، أو رقم الملف.",
+          "Type in the search box above the calendar: the mobile (any form: 05…, Arabic digits, +966…), the name or the file number.",
+        ),
+        s(
+          "إذا كان للمريض موعد اليوم يظهر وقته وحالته، وزر «تسجيل الحضور».",
+          "If the patient has a visit today you see its time and status, and a Check in button.",
+        ),
+        s(
+          "رقم غير مسجّل؟ اكتب الاسم واختر الجنس ثم «إضافة وحضور الآن».",
+          "Unknown mobile? Type the name, pick the gender, then Add & walk-in.",
+        ),
+      ],
+    },
+    {
+      id: "checkin",
+      titleAr: "تسجيل الحضور والحضور بدون موعد",
+      titleEn: "Check-in and walk-ins",
+      steps: [
+        s(
+          "اضغط «تسجيل الحضور». إذا احتاجت الخدمة موافقة تفتح ورقة التوقيع أولاً: يوقّع المريض ثم يكتمل الحضور.",
+          "Press Check in. If the service needs a consent, the signature sheet opens first: the patient signs, then check-in completes.",
+        ),
+        s(
+          "إذا كان للمريض باقة تُخصم الجلسة تلقائياً ويظهر الرصيد المتبقي.",
+          "If the patient has a package, the session is deducted automatically and the remaining balance is shown.",
+        ),
+        s(
+          "حضور بدون موعد: «حضور بدون موعد» ← اختر الخدمة ← اضغط أقرب وقت متاح. يُحجز ويُسجّل الحضور معاً.",
+          "Walk-in: Walk-in → choose the service → tap the first free time. It is booked and checked in together.",
+        ),
+      ],
+    },
+    {
+      id: "checkout",
+      titleAr: "المحاسبة بعد الزيارة",
+      titleEn: "Checkout after the visit",
+      link: { href: "/calendar?view=flow", permission: "visits:checkout" },
+      steps: [
+        s(
+          "عندما يرحّل الطبيب أو الممرضة الزيارة يصلك إشعار، وينتقل المريض إلى عمود «المحاسبة». اضغط «المحاسبة».",
+          "When the doctor or nurse posts the visit you get a notification and the patient moves to Checkout. Press Checkout.",
+        ),
+        s(
+          "ترى بنود الفاتورة والمبلغ المستحق (الجلسات المدفوعة بالباقة = صفر). أدخل المبلغ وطريقة الدفع ورقم الفاتورة من نظام العيادة، ثم «إتمام المحاسبة».",
+          "You see the invoice lines and the amount due (package sessions = 0). Enter the amount, method and the invoice number from the clinic's system, then Complete checkout.",
+        ),
+        s(
+          "احجز الجلسات القادمة من خطة العلاج بضغطة واحدة، ثم اطبع التعليمات أو أرسلها عبر واتساب.",
+          "Book the next sessions from the treatment plan in one tap, then print the instructions or send them on WhatsApp.",
+        ),
+      ],
+    },
+    {
+      id: "inbox",
+      titleAr: "رسائل واتساب",
+      titleEn: "WhatsApp messages",
+      link: { href: "/whatsapp", permission: "whatsapp:inbox" },
+      steps: [
+        s(
+          "افتح «الرسائل». المحادثات التي تحتاج رداً تظهر أولاً.",
+          "Open Inbox. Chats that need a reply come first.",
+        ),
+        s(
+          "موظف الاستقبال الذكي يجيب عن المواعيد والأسعار. أي سؤال طبي يُحوَّل إليكم مباشرة.",
+          "The AI receptionist answers bookings and prices. Any medical question is handed to you straight away.",
+        ),
+        s(
+          "عندما تردّون في محادثة يتوقف الذكاء الاصطناعي فيها حتى تعيدوه.",
+          "Once you reply in a chat, the AI stays quiet there until you hand it back.",
+        ),
+      ],
+    },
+  ],
+
+  assistant: [
+    {
+      id: "myday",
+      titleAr: "يومي: مرضى أطبائك",
+      titleEn: "My Day: your doctors' patients",
+      link: { href: "/my-day", permission: "my_day:view" },
+      steps: [
+        s(
+          "«يومي» يعرض مواعيد الأطباء الذين تعملين معهم (تحدّدهم الإدارة في الإعدادات ← الفريق).",
+          "My Day shows the appointments of the doctors you work with (the admin sets them in Settings → Team).",
+        ),
+        s(
+          "عندما يسجّل الاستقبال حضور المريض يظهر زر «بدء الزيارة». اضغطه لفتح شاشة الزيارة.",
+          "When reception checks the patient in, a Start visit button appears. Press it to open the visit screen.",
+        ),
+      ],
+    },
+    {
+      id: "prepare",
+      titleAr: "تجهيز الزيارة باسم الطبيب",
+      titleEn: "Prepare the visit in the doctor's name",
+      steps: [
+        s(
+          "اكتبي الملاحظة (أو استخدمي الإملاء الصوتي إن كان مفعّلاً). تُحفظ باسم الطبيب ويُكتب أنها أُدخلت بواسطتك.",
+          "Write the note (or dictate, if the AI scribe is on). It is saved in the doctor's name, marked as entered by you.",
+        ),
+        s(
+          "أضيفي الأدوية وخطة العلاج ورموز الفاتورة من قائمة الأسعار.",
+          "Add medication, the treatment plan and invoice codes from the price list.",
+        ),
+        s(
+          "عندما يكون المريض جاهزاً اضغطي «جاهز للطبيب»: يصل إشعار للطبيب ويرى الاستقبال «مع الطبيب».",
+          "When the patient is ready press Ready for doctor: the doctor gets a notification and reception sees With doctor.",
+        ),
+      ],
+    },
+    {
+      id: "post",
+      titleAr: "ترحيل الزيارة",
+      titleEn: "Post the visit",
+      steps: [
+        s(
+          "بعد انتهاء الطبيب اضغطي «ترحيل الزيارة». تُحفظ الملاحظة والأوامر والرموز وتنتهي الزيارة.",
+          "When the doctor is done press Post visit. The note, orders and codes are saved and the visit is completed.",
+        ),
+        s(
+          "بعد الترحيل لا يمكن التعديل؛ التصحيح يضيفه الطبيب أسفل الملاحظة.",
+          "After posting nothing can be changed; the doctor adds any correction underneath the note.",
+        ),
+        s(
+          "لا ترين ملاحظات أطباء آخرين لا تعملين معهم.",
+          "You never see the notes of doctors you don't work with.",
+        ),
+      ],
+    },
+  ],
+
+  practitioner: [
+    {
+      id: "phone",
+      titleAr: "يومي على الجوال",
+      titleEn: "My Day on your phone",
+      link: { href: "/my-day", permission: "my_day:view" },
+      steps: [
+        s(
+          "افتح «يومي» على الجوال وأضفه إلى الشاشة الرئيسية من قائمة المتصفح.",
+          "Open My Day on your phone and add it to the home screen from the browser menu.",
+        ),
+        s(
+          "فعّل الإشعارات من «حسابي»: يصلك إشعار عند حضور المريض أو عندما تقول الممرضة إنه جاهز.",
+          "Turn on notifications in My account: you are told when a patient arrives or the nurse says they are ready.",
+        ),
+      ],
+    },
+    {
+      id: "visit",
+      titleAr: "الزيارة: الملاحظة والأوامر والترحيل",
+      titleEn: "The visit: note, orders, post",
+      steps: [
+        s(
+          "اضغط «بدء الزيارة». اكتب الملاحظة أو أملِها: الذكاء الاصطناعي يكتب مسودة بالإنجليزية فقط، ولا يضيف تشخيصاً أو جرعات من عنده، ولا يوقّع أبداً.",
+          "Press Start visit. Type or dictate the note: the AI only writes an English draft, adds no diagnosis or doses of its own, and never signs.",
+        ),
+        s(
+          "أضف الأدوية وخطة العلاج (عدد الجلسات وكل كم أسبوع) ورموز الفاتورة.",
+          "Add medication, the treatment plan (sessions and weeks between them) and invoice codes.",
+        ),
+        s(
+          "«ترحيل الزيارة» يحفظ كل شيء وينهي الزيارة في خطوة واحدة. التصحيح لاحقاً = إضافة أسفل الملاحظة.",
+          "Post visit saves everything and completes the visit in one step. Later corrections are added underneath the note.",
+        ),
+      ],
+    },
+    {
+      id: "video",
+      titleAr: "الاستشارات بالفيديو",
+      titleEn: "Video consultations",
+      steps: [
+        s(
+          "زر «انضمام» يظهر في «يومي» قبل الموعد بقليل. المريض ينضم من رابط واتساب بعد توقيع موافقة الاستشارة عن بُعد.",
+          "A Join button appears on My Day shortly before the visit. The patient joins from the WhatsApp link after signing the telehealth consent.",
+        ),
+        s("المكالمات لا تُسجَّل أبداً.", "Calls are never recorded."),
+      ],
+    },
+    {
+      id: "hours",
+      titleAr: "ساعات العمل والإجازات",
+      titleEn: "Working hours and days off",
+      link: { href: "/working-hours", permission: "hours:edit" },
+      steps: [
+        s(
+          "التقويم ← «ساعات العمل»: الجدول الأسبوعي، ويوم إجازة أو ساعات خاصة لتاريخ معين.",
+          "Calendar → Working hours: the weekly pattern, plus a day off or special hours on a date.",
+        ),
+        s(
+          "تغيير الساعات لا ينقل ولا يلغي أي حجز؛ تظهر لك المواعيد المتعارضة لتتصرف فيها.",
+          "Changing hours never moves or cancels a booking; you are shown the clashing appointments to handle.",
+        ),
+      ],
+    },
+  ],
+
+  clinic_admin: [
+    {
+      id: "setup",
+      titleAr: "إعداد العيادة",
+      titleEn: "Clinic set-up",
+      link: { href: "/setup", permission: "setup:manage" },
+      steps: [
+        s(
+          "«إعداد العيادة»: الفروع، الأقسام، الخدمات (السعر، المدة، الجهاز، الموافقة، الحجز أونلاين)، الغرف والأجهزة، الباقات، نماذج الموافقة.",
+          "Clinic set-up: branches, departments, services (price, duration, device, consent, online booking), rooms and devices, packages, consent forms.",
+        ),
+        s(
+          "«قائمة الأسعار»: المنتجات والمستهلكات والإجراءات برموزها، يضيفها الطبيب للزيارة. السعر يُنسخ إلى الزيارة فلا يتغير الماضي.",
+          "Price list: products, consumables and procedures with their codes, added to visits by the doctor. The price is copied onto the visit, so the past never changes.",
+        ),
+      ],
+    },
+    {
+      id: "team",
+      titleAr: "الفريق والأدوار",
+      titleEn: "Team and roles",
+      link: { href: "/settings?tab=team", permission: "team:manage" },
+      steps: [
+        s(
+          "الإعدادات ← الفريق: أضف موظفاً فيصله رابط دعوة، واختر دوره وفرعه.",
+          "Settings → Team: add a staff member (they get an invitation link) and choose their role and branch.",
+        ),
+        s(
+          "للممرضة: اختر الأطباء الذين تعمل معهم، فترى أيامهم وتجهّز زياراتهم.",
+          "For a nurse: choose the doctors she works with, so she sees their days and prepares their visits.",
+        ),
+        s(
+          "دعم المنصة لا يرى بيانات المرضى إلا بإذن مؤقت منك (من نفس الصفحة)، وكل ما يفعله مسجّل.",
+          "Platform support sees no patient data unless you grant time-limited access (same page); everything they do is logged.",
+        ),
+      ],
+    },
+    {
+      id: "reports",
+      titleAr: "التقارير وملف الفوترة اليومي",
+      titleEn: "Reports and the daily invoicing file",
+      link: { href: "/reports", permission: "reports:view" },
+      steps: [
+        s(
+          "«التقارير»: الحجوزات، المكتملة، نسبة عدم الحضور، الحجز أونلاين، الباقات، المرضى الجدد، مقارنة بالشهر السابق.",
+          "Reports: bookings, completed visits, no-show rate, online share, packages, new patients, compared with last month.",
+        ),
+        s(
+          "ملف اليوم: بنود كل زيارة، وما دُفع عند المحاسبة ورقم فاتورتكم، والباقات — لاستيراده في نظام المحاسبة أو زاتكا.",
+          "The day's file: each visit's lines, what was paid at checkout with your invoice number, and packages — to import into your accounting or ZATCA system.",
+        ),
+      ],
+    },
+    {
+      id: "whatsapp",
+      titleAr: "واتساب والذكاء الاصطناعي",
+      titleEn: "WhatsApp and AI",
+      link: { href: "/settings/whatsapp", permission: "settings:manage" },
+      steps: [
+        s(
+          "اختر الرسائل التلقائية: التأكيد، التذكير، تعليمات قبل الزيارة، المتابعة بعدها، عدم الحضور، الاستدعاء. لا تُرسل رسائل بين 10 مساءً و8 صباحاً.",
+          "Choose the automatic messages: confirmation, reminder, pre-visit, after-care, no-show, recall. Nothing is sent between 10 pm and 8 am.",
+        ),
+        s(
+          "من نفس الصفحة شغّل أو أوقف موظف الاستقبال الذكي. الإملاء الصوتي للأطباء من الإعدادات ← العيادة.",
+          "On the same page switch the AI receptionist on or off. The doctors' AI scribe is in Settings → Clinic.",
+        ),
+      ],
+    },
+    {
+      id: "security",
+      titleAr: "الأمان",
+      titleEn: "Security",
+      link: { href: "/account", permission: "account:manage" },
+      steps: [
+        s(
+          "فعّل التحقق بخطوتين من «حسابي» (تطبيق المصادقة + رموز احتياطية).",
+          "Turn on two-step verification in My account (authenticator app + backup codes).",
+        ),
+        s(
+          "تنزيل بيانات العيادة من الإعدادات ← العيادة (بدون ملاحظات سريرية)، وكل تنزيل مسجّل.",
+          "Download clinic data from Settings → Clinic (no clinical notes); every download is logged.",
+        ),
+      ],
+    },
+  ],
+};
+
+/** Which guide set opens first for these roles (the first role that has guides). */
+export function helpRoleFor(roles: readonly string[]): HelpRole {
+  return (HELP_ROLES.find((r) => roles.includes(r)) ?? "receptionist") as HelpRole;
+}

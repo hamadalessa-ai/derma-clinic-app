@@ -8,6 +8,7 @@ import {
   FileLock2,
   Inbox,
   LayoutDashboard,
+  LifeBuoy,
   BellRing,
   MessageCircle,
   Smartphone,
@@ -35,6 +36,7 @@ export const NAV_ICONS = {
   whatsapp: MessageCircle,
   simulator: Smartphone,
   account: BellRing,
+  help: LifeBuoy,
 } as const;
 
 export function NavLinks({

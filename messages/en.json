@@ -43,7 +43,8 @@
     "whatsapp": "Inbox",
     "simulator": "WhatsApp simulator",
     "setup": "Clinic set-up",
-    "reports": "Reports"
+    "reports": "Reports",
+    "help": "Help"
   },
   "roles": {
     "platform_owner": "Platform owner",
@@ -1932,5 +1933,12 @@
     "nextFree": "Next free times today — tap one to book and check in",
     "noFree": "No free time left today for this service.",
     "walkInHint": "Booked with that doctor and checked in at once (consent and package handled as usual)."
+  },
+  "help": {
+    "title": "Help centre",
+    "subtitle": "Short guides for your work, step by step.",
+    "forRole": "Guides for",
+    "open": "Open",
+    "more": "Need more help? Ask the clinic admin, or contact platform support from Settings → Team."
   }
 }
