@@ -90,7 +90,12 @@ export function careToken(tenantId: string, appointmentId: string, env: Env = pr
   return `${appointmentId}.${sig}`;
 }
 
-export function careUrl(baseUrl: string, tenantId: string, appointmentId: string, env: Env = process.env) {
+export function careUrl(
+  baseUrl: string,
+  tenantId: string,
+  appointmentId: string,
+  env: Env = process.env,
+) {
   return `${baseUrl}/care/${careToken(tenantId, appointmentId, env)}`;
 }
 

@@ -95,7 +95,10 @@ describe("checkout", () => {
     );
 
     const [consult] = await withActor(reception, (tx) =>
-      tx.select().from(services).where(eq(services.id, service("consultation"))),
+      tx
+        .select()
+        .from(services)
+        .where(eq(services.id, service("consultation"))),
     );
     const d = await withActor(reception, (tx) => checkoutData(tx, reception, a.id));
     expect(d.lines.map((l) => l.code).sort()).toEqual(["BTX-U", consult!.code].sort());

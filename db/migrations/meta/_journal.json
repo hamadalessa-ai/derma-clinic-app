@@ -134,6 +134,13 @@
       "when": 1795178100535,
       "tag": "0018_long_stepford_cuckoos",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795179383521,
+      "tag": "0019_tense_jackal",
+      "breakpoints": true
     }
   ]
 }

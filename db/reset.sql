@@ -86,6 +86,7 @@ drop table if exists
   public.verification_codes,
   public.verifications,
   public.visit_charges,
+  public.visit_checkouts,
   public.visit_orders,
   public.webhook_events
   cascade;
@@ -105,6 +106,7 @@ drop function if exists public.app_set_clinic_limits;
 drop function if exists public.app_set_clinic_plan;
 drop function if exists public.app_set_clinic_status;
 drop function if exists public.app_set_clinic_whatsapp;
+drop function if exists public.app_visit_completed;
 drop function if exists public.app_visit_open;
 drop function if exists public.apply_package_session_event;
 drop function if exists public.demo_workday;

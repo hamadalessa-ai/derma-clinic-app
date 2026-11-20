@@ -238,13 +238,18 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
             </CardHeader>
             <CardContent>
               {data.checkout ? (
-                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm" data-testid="checkout-done">
+                <dl
+                  className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"
+                  data-testid="checkout-done"
+                >
                   <dt className="text-muted-foreground">{t("paid")}</dt>
                   <dd className="font-medium" dir="ltr">
                     {sar(data.checkout.paidHalalas)} {tv("sar")}
                   </dd>
                   <dt className="text-muted-foreground">{t("method")}</dt>
-                  <dd>{data.checkout.method ? t(`methods.${data.checkout.method}`) : t("noPayment")}</dd>
+                  <dd>
+                    {data.checkout.method ? t(`methods.${data.checkout.method}`) : t("noPayment")}
+                  </dd>
                   {data.checkout.invoiceNumber && (
                     <>
                       <dt className="text-muted-foreground">{t("invoiceNumber")}</dt>
