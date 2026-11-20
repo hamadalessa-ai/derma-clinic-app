@@ -19,7 +19,7 @@ import { mayWorkOnVisit, visitExtras } from "@/lib/visits/visit";
 import { VisitExtras, VisitWorkspace } from "@/components/clinic/visit-workspace";
 import { getSettings } from "@/lib/booking/engine";
 import type { AppointmentStatus } from "@/lib/booking/status";
-import { addMinutes } from "@/lib/booking/time";
+import { addMinutes, riyadhDay } from "@/lib/booking/time";
 import { pick } from "@/lib/brand";
 import { formatGregorian, formatTime } from "@/lib/format";
 import { notesForPatient } from "@/lib/notes/notes";
@@ -144,7 +144,9 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
   if (!data.allowed || !data.doctor) redirect("/forbidden");
   const doctorUserId = data.doctor.userId;
   const preparingFor =
-    doctorUserId === ctx.user.id ? null : { userId: doctorUserId, name: data.doctor.name };
+    doctorUserId === ctx.user.id
+      ? null
+      : { userId: doctorUserId, name: pick(locale, data.doctor.name, data.doctor.nameEn) };
 
   const status = visit.status as AppointmentStatus;
   const scribeOn =
@@ -261,11 +263,13 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
                   id: thisNote.id,
                   body: thisNote.body,
                   aiDrafted: !!thisNote.aiDraftedAt,
-                  authorName: thisNote.authorName,
+                  // In the screen's language (the note itself keeps the name it was saved with).
+                  authorName: pick(locale, data.doctor.name, data.doctor.nameEn),
                   enteredByName: thisNote.enteredByName,
                 }}
                 scribe={scribeOn}
                 preparingFor={preparingFor?.name ?? null}
+                visitDay={riyadhDay(visit.startsAt)}
                 handover={
                   preparingFor && status === "in_session" ? { called: data.doctorCalled } : null
                 }

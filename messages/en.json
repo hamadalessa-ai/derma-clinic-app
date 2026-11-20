@@ -1205,7 +1205,7 @@
     "sessions": "Sessions",
     "intervalWeeks": "Weeks between sessions",
     "instructions": "Instructions",
-    "planLine": "{sessions} sessions · every {weeks} weeks {service}",
+    "planLine": "{sessions} sessions · every {weeks} weeks · {service}",
     "add": "Add",
     "cancel": "Cancel",
     "remove": "Remove",

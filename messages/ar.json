@@ -1205,7 +1205,7 @@
     "sessions": "الجلسات",
     "intervalWeeks": "أسابيع بين الجلسات",
     "instructions": "التعليمات",
-    "planLine": "{sessions} جلسات · كل {weeks} أسابيع {service}",
+    "planLine": "{sessions} جلسات · كل {weeks} أسابيع · {service}",
     "add": "إضافة",
     "cancel": "إلغاء",
     "remove": "حذف",

@@ -77,6 +77,7 @@ export function VisitWorkspace({
   scribe,
   preparingFor,
   handover,
+  visitDay,
   charges,
   orders,
   catalog,
@@ -85,6 +86,8 @@ export function VisitWorkspace({
   patientId: string;
   /** Nurse / assistant while the patient is in the room: "ready for doctor" (once). */
   handover: { called: boolean } | null;
+  /** The visit's day (Riyadh): after posting, My Day opens on it. */
+  visitDay: string;
   note: {
     id: string;
     body: string;
@@ -176,7 +179,7 @@ export function VisitWorkspace({
               if (!window.confirm(t("postConfirm"))) return;
               post.run(
                 () => postVisitAction({ appointmentId, noteId: note.id, body }),
-                () => router.push("/my-day"),
+                () => router.push(`/my-day?date=${visitDay}`),
               );
             }}
           >
@@ -303,7 +306,7 @@ function OrdersCard({
                         service: o.serviceId
                           ? L(svc(o.serviceId)?.nameAr, svc(o.serviceId)?.nameEn)
                           : "",
-                      })}
+                      }).replace(/ · $/, "")}
                 </span>
                 {o.instructions && <span className="text-xs">{o.instructions}</span>}
               </div>
