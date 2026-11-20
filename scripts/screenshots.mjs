@@ -191,7 +191,12 @@ try {
   await page.locator('input[type="password"]').fill(password);
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
-  await page.goto(`${BASE}/my-day`, { waitUntil: "networkidle" });
+  // The next working day (Friday and Saturday have no demo appointments).
+  const d = new Date(Date.now() + 3 * 3600_000);
+  while ([5, 6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() + 1);
+  await page.goto(`${BASE}/my-day?date=${d.toISOString().slice(0, 10)}`, {
+    waitUntil: "networkidle",
+  });
   await page.screenshot({ path: "screenshots/nurse-ar-my-day.png", fullPage: true });
   const open = page.getByTestId("open-visit").first();
   if (await open.count()) {
