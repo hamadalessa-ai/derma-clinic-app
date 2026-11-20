@@ -83,6 +83,20 @@ try {
     await page.screenshot({ path: "screenshots/flow-ar-phone.png", fullPage: true });
     await page.setViewportSize({ width: 1440, height: 900 });
     await context.addCookies([{ name: "NEXT_LOCALE", value: "en", url: BASE }]);
+    // Checkout from the board's "Checkout" column, then the printed instructions.
+    await page.reload({ waitUntil: "networkidle" });
+    const co = page.getByTestId("flow-checkout").first();
+    if (await co.count()) {
+      await co.click();
+      await page.getByTestId("checkout-screen").waitFor({ timeout: 20000 });
+      await page.waitForLoadState("networkidle");
+      await page.screenshot({ path: "screenshots/checkout-en.png", fullPage: true });
+    }
+    // A visit with orders (demo: D-0019's past Botox visit) — checked out, and its printed sheet.
+    await page.goto(`${BASE}/checkout/6cb8e300-9258-5346-a5b6-b2a191792506`, { waitUntil: "networkidle" });
+    await page.screenshot({ path: "screenshots/checkout-en-done.png", fullPage: true });
+    await page.goto(`${BASE}/instructions/6cb8e300-9258-5346-a5b6-b2a191792506`, { waitUntil: "networkidle" });
+    await page.screenshot({ path: "screenshots/instructions-en.png", fullPage: true });
   }
   await page.goto(`${BASE}/reports`, { waitUntil: "networkidle" });
   await page.screenshot({ path: "screenshots/reports-en.png", fullPage: true });
