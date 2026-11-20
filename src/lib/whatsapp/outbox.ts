@@ -20,6 +20,18 @@ const langOf = (p: { preferredLanguage: string }): Lang =>
 const skipped = (reason: string): SendOutcome => ({ outcome: "skipped", reason });
 
 /** "Your appointment is booked" — after any booking (reception, online, WhatsApp). */
+/**
+ * The "already sent?" keys of the scheduled messages — one place, so the scheduler can skip
+ * what was sent before without trying again (send.ts still guarantees at most once).
+ */
+export const SCHEDULED_KEYS = {
+  reminder: (appointmentId: string, startsAt: Date) =>
+    `reminder:${appointmentId}:${startsAt.toISOString()}`,
+  post_care: (appointmentId: string) => `post_care:${appointmentId}`,
+  no_show: (appointmentId: string) => `no_show:${appointmentId}`,
+  recall: (appointmentId: string) => `recall:${appointmentId}`,
+};
+
 export async function sendBookingConfirmation(
   tenant: Tenant,
   appointmentId: string,
@@ -60,7 +72,7 @@ export async function sendReminder(tenant: Tenant, appointmentId: string, env: E
         { action: "cancel", appointmentId },
       ],
       // A moved appointment gets a fresh reminder for its new time.
-      dedupeKey: `reminder:${appointmentId}:${ctx.appointment.startsAt.toISOString()}`,
+      dedupeKey: SCHEDULED_KEYS.reminder(appointmentId, ctx.appointment.startsAt),
     },
     env,
   );
@@ -111,7 +123,7 @@ export async function sendPostCare(tenant: Tenant, appointmentId: string, env: E
         { action: "all_good", appointmentId },
         { action: "concern", appointmentId },
       ],
-      dedupeKey: `post_care:${appointmentId}`,
+      dedupeKey: SCHEDULED_KEYS.post_care(appointmentId),
     },
     env,
   );
@@ -161,7 +173,7 @@ export async function sendNoShowFollowUp(
       patientId: ctx.patient.id,
       appointmentId,
       vars: appointmentVars(ctx, langOf(ctx.patient), appBaseUrl(tenant, env)),
-      dedupeKey: `no_show:${appointmentId}`,
+      dedupeKey: SCHEDULED_KEYS.no_show(appointmentId),
     },
     env,
   );
@@ -182,7 +194,7 @@ export async function sendRecall(
       patientId: ctx.patient.id,
       appointmentId: lastAppointmentId,
       vars: appointmentVars(ctx, langOf(ctx.patient), appBaseUrl(tenant, env)),
-      dedupeKey: `recall:${lastAppointmentId}`,
+      dedupeKey: SCHEDULED_KEYS.recall(lastAppointmentId),
     },
     env,
   );

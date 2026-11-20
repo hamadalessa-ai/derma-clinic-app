@@ -241,7 +241,14 @@
     "setup_code_taken": "Another item already uses this code.",
     "visit_not_completed": "The visit hasn't been posted yet.",
     "visit_checked_out": "This visit is already checked out.",
-    "visit_method_needed": "Choose how the patient paid."
+    "visit_method_needed": "Choose how the patient paid.",
+    "notFoundTitle": "Page not found",
+    "notFound": "This page doesn't exist, or the link is no longer valid. Check the address, or go back to the start.",
+    "backStart": "Back to start",
+    "crashTitle": "Something went wrong",
+    "crash": "This page couldn't be shown. Nothing was changed. Please try again; if it keeps happening, contact support with the reference below.",
+    "tryAgain": "Try again",
+    "reference": "Reference"
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",

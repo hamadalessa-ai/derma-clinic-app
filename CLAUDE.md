@@ -41,6 +41,8 @@ draft-only AI scribe. Multi-tenant: many clinics, strictly separated.
 - The clinic comes from the subdomain (`derma.localhost`); hosts outside `APP_ROOT_DOMAIN`
   (e.g. `*.vercel.app`) fall back to `DEMO_DEFAULT_CLINIC`.
 - Next.js Cache Components stay OFF: no cross-request caching of clinic data.
+- Security headers + Content-Security-Policy live in `next.config.ts` (only Daily may be framed; nobody may frame us).
+  Signed-link pages (`/visit`, `/sign`, `/care`, `/invite`, `/instructions`) are never cached or indexed.
 - Platform owners have NO backdoor to patient data.
 
 ## Roles
@@ -89,6 +91,8 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   at most once; consent rules; demo simulator / live provider chosen by settings in `config.ts`).
   Everything patients send goes through `handleInbound()` (`inbound.ts`) — simulator and webhook alike.
   Wording lives in `catalog.ts`; after changing it run `pnpm docs:whatsapp` (a test checks the doc).
+  The scheduler (`scheduler.ts`) skips already-sent keys (`SCHEDULED_KEYS` in `outbox.ts`) in one query, sends a few
+  at a time and stops before its time budget (`more: true` → the hourly workflow calls again).
   Each clinic has its OWN number (`tenants.whatsapp_*`, token encrypted by `src/lib/security/secret-box.ts`),
   connected by the platform owner (Platform → clinic → WhatsApp tab; `src/lib/platform/whatsapp.ts`); one Meta app
   for all clinics (`WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, optional `WHATSAPP_ACCESS_TOKEN`); the webhook

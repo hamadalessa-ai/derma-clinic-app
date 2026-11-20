@@ -18,6 +18,6 @@ export async function GET(request: NextRequest) {
   const removed = { ...(await dailyCleanup()), globalRateHits: await purgeGlobalLimits() };
   // Billing first: a clinic that just became read-only for an unpaid statement sends no reminders.
   const billing = await runBilling();
-  const messages = await runScheduledMessagesForAllClinics();
+  const messages = await runScheduledMessagesForAllClinics(30_000);
   return NextResponse.json({ ok: true, removed, billing, messages });
 }
