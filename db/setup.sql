@@ -923,6 +923,23 @@ ALTER TABLE "tenants" ADD COLUMN "whatsapp_display_phone" text;
 ALTER TABLE "tenants" ADD COLUMN "whatsapp_token_enc" text;
 ALTER TABLE "tenants" ADD COLUMN "whatsapp_live" boolean DEFAULT false NOT NULL;
 ALTER TABLE "tenants" ADD CONSTRAINT "tenants_whatsapp_phone_number_id_unique" UNIQUE("whatsapp_phone_number_id");
+-- 0016_thin_the_spike.sql
+CREATE TABLE "care_team" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"assistant_member_id" uuid NOT NULL,
+	"practitioner_member_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "care_team_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "care_team_pair_key" UNIQUE("tenant_id","assistant_member_id","practitioner_member_id")
+);
+ALTER TABLE "clinical_notes" ADD COLUMN "entered_by_user_id" text;
+ALTER TABLE "clinical_notes" ADD COLUMN "entered_by_name" text;
+ALTER TYPE "public"."member_role" ADD VALUE 'assistant';
+ALTER TABLE "care_team" ADD CONSTRAINT "care_team_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "care_team" ADD CONSTRAINT "care_team_assistant_fk" FOREIGN KEY ("tenant_id","assistant_member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "care_team" ADD CONSTRAINT "care_team_practitioner_fk" FOREIGN KEY ("tenant_id","practitioner_member_id") REFERENCES "public"."tenant_members"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "care_team_practitioner_idx" ON "care_team" USING btree ("tenant_id","practitioner_member_id");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1184,6 +1201,9 @@ insert into public.accounts (id, account_id, provider_id, user_id, password) val
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-rec-ruh2', 'عبدالله الحربي', 'Abdullah Al-Harbi', 'reception.riyadh2@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-rec-ruh2', 'usr_derma-rec-ruh2', 'credential', 'usr_derma-rec-ruh2', (select demo_password_hash from pg_temp.setup_params));
 
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-nurse-ruh', 'هدى الزهراني', 'Huda Al-Zahrani', 'nurse@derma.demo', true, false);
+insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-nurse-ruh', 'usr_derma-nurse-ruh', 'credential', 'usr_derma-nurse-ruh', (select demo_password_hash from pg_temp.setup_params));
+
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_derma-dr-lina', 'د. لينا باناجة', 'Dr. Lina Banaja', 'dr.lina@derma.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_derma-dr-lina', 'usr_derma-dr-lina', 'credential', 'usr_derma-dr-lina', (select demo_password_hash from pg_temp.setup_params));
 
@@ -1200,9 +1220,14 @@ insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, tit
   ('e20f9e2f-edec-5542-a7ee-b67d174a130b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-reem', '{practitioner}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'طبيب جلدية وتجميل', 'Dermatologist', 'female', '{"specialtyAr":"جلدية الأطفال والأمراض الجلدية","specialtyEn":"Pediatric & medical dermatology","credentials":[{"ar":"البورد العربي في الأمراض الجلدية","en":"Arab Board of Dermatology"}],"languages":[{"ar":"العربية","en":"Arabic"},{"ar":"الإنجليزية","en":"English"}]}'),
   ('f17eb715-8314-58e7-8a8f-4b63b1be7918', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-ruh1', '{receptionist}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'موظف استقبال', 'Receptionist', null, null),
   ('761952ff-7913-554c-a169-f8844548a4cd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-ruh2', '{receptionist}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'موظف استقبال', 'Receptionist', null, null),
+  ('5a68caa3-f41c-58cb-b20b-7be8120e8890', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-nurse-ruh', '{assistant}', '476edfa8-32de-5660-8aad-64aef84f81c4', 'ممرضة', 'Nurse', null, null),
   ('5c4057f8-d074-56b7-8d43-0c8d82b720b5', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-lina', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist', 'female', '{"specialtyAr":"التجميل الجلدي والحقن","specialtyEn":"Aesthetic dermatology & injectables","credentials":[{"ar":"البورد السعودي في الأمراض الجلدية","en":"Saudi Board of Dermatology"},{"ar":"زمالة الطب التجميلي","en":"Fellowship in aesthetic medicine"}],"languages":[{"ar":"العربية","en":"Arabic"},{"ar":"الإنجليزية","en":"English"}]}'),
   ('92f8431f-3e55-5e84-a7f4-7a3bb57e3c7e', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-dr-majed', '{practitioner}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'طبيب جلدية وتجميل', 'Dermatologist', 'male', '{"specialtyAr":"حب الشباب والندبات والتصبغات","specialtyEn":"Acne, scars & pigmentation","credentials":[{"ar":"البورد السعودي في الأمراض الجلدية","en":"Saudi Board of Dermatology"}],"languages":[{"ar":"العربية","en":"Arabic"},{"ar":"الإنجليزية","en":"English"}]}'),
   ('3973e5f5-1994-5c66-8033-04c749bad229', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'usr_derma-rec-jed', '{receptionist}', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 'موظف استقبال', 'Receptionist', null, null);
+
+insert into public.care_team (tenant_id, assistant_member_id, practitioner_member_id) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '56811db4-8b1a-522c-9015-7dce6ade7d82'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '356e5967-34b6-564e-a086-32c2e4a387d1');
 
 insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time, break_start, break_end) values
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '56811db4-8b1a-522c-9015-7dce6ade7d82', '476edfa8-32de-5660-8aad-64aef84f81c4', 6, '10:00', '20:00', '14:00', '15:00'),
@@ -1235,6 +1260,12 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '761952ff-7913-554c-a169-f8844548a4cd', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '476edfa8-32de-5660-8aad-64aef84f81c4', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '476edfa8-32de-5660-8aad-64aef84f81c4', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '476edfa8-32de-5660-8aad-64aef84f81c4', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '476edfa8-32de-5660-8aad-64aef84f81c4', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '476edfa8-32de-5660-8aad-64aef84f81c4', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5a68caa3-f41c-58cb-b20b-7be8120e8890', '476edfa8-32de-5660-8aad-64aef84f81c4', 4, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 6, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 0, '10:00', '20:00', '14:00', '15:00'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '5c4057f8-d074-56b7-8d43-0c8d82b720b5', 'bf17d28d-ae19-50a1-ab69-44a15687a64e', 1, '10:00', '20:00', '14:00', '15:00'),
@@ -1473,10 +1504,17 @@ insert into public.accounts (id, account_id, provider_id, user_id, password) val
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_lamsa-rec', 'سعد الشمري', 'Saad Al-Shammari', 'reception@lamsa.demo', true, false);
 insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_lamsa-rec', 'usr_lamsa-rec', 'credential', 'usr_lamsa-rec', (select demo_password_hash from pg_temp.setup_params));
 
+insert into public.users (id, name, name_en, email, email_verified, is_platform_owner) values ('usr_lamsa-nurse', 'أمل الدوسري', 'Amal Al-Dosari', 'nurse@lamsa.demo', true, false);
+insert into public.accounts (id, account_id, provider_id, user_id, password) values ('acc_usr_lamsa-nurse', 'usr_lamsa-nurse', 'credential', 'usr_lamsa-nurse', (select demo_password_hash from pg_temp.setup_params));
+
 insert into public.tenant_members (id, tenant_id, user_id, roles, branch_id, title_ar, title_en, gender, profile) values
   ('40beeb7c-ed87-5385-a2ba-1f0c7644674c', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-admin', '{clinic_admin}', null, 'مدير العيادة', 'Clinic Manager', null, null),
   ('2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-dr-mona', '{practitioner}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'طبيب جلدية وتجميل', 'Dermatologist', 'female', null),
-  ('09432151-a569-5185-b3af-b3ce36532332', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-rec', '{receptionist}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'موظف استقبال', 'Receptionist', null, null);
+  ('09432151-a569-5185-b3af-b3ce36532332', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-rec', '{receptionist}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'موظف استقبال', 'Receptionist', null, null),
+  ('f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'usr_lamsa-nurse', '{assistant}', '582af1ea-4eca-5c50-bef7-54515ca85695', 'ممرضة', 'Nurse', null, null);
+
+insert into public.care_team (tenant_id, assistant_member_id, practitioner_member_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1');
 
 insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, start_time, end_time, break_start, break_end) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '2d04078e-96ff-5cc9-9baa-4b28bcb222f1', '582af1ea-4eca-5c50-bef7-54515ca85695', 6, '10:00', '20:00', '14:00', '15:00'),
@@ -1490,7 +1528,13 @@ insert into public.staff_schedules (tenant_id, member_id, branch_id, weekday, st
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '20:00', '14:00', '15:00'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '20:00', '14:00', '15:00'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
-  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00');
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '09432151-a569-5185-b3af-b3ce36532332', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '582af1ea-4eca-5c50-bef7-54515ca85695', 6, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '582af1ea-4eca-5c50-bef7-54515ca85695', 0, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '582af1ea-4eca-5c50-bef7-54515ca85695', 1, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '582af1ea-4eca-5c50-bef7-54515ca85695', 2, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '582af1ea-4eca-5c50-bef7-54515ca85695', 3, '10:00', '20:00', '14:00', '15:00'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f8cc1fb4-330a-5da2-bbef-2fe2dc6e98d1', '582af1ea-4eca-5c50-bef7-54515ca85695', 4, '10:00', '20:00', '14:00', '15:00');
 
 insert into public.services (id, tenant_id, department_id, code, name_ar, name_en, duration_minutes, buffer_minutes, price_halalas, required_device_type, consent_code, is_demo_value, online_bookable, is_virtual, pre_visit_ar, pre_visit_en, post_care_ar, post_care_en, recall_after_days, sort_order) values
   ('88886ea2-441f-550b-95ec-d630ae9d1fb1', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'a7669099-a791-51b7-a6c3-8c0137a796dd', 'consultation', 'استشارة طبية', 'Consultation', 20, 10, 30000, null, null, true, true, false, 'أحضر قائمة بأي أدوية أو منتجات تستخدمها حاليًا.', 'Bring a list of any medicines or skin products you use now.', null, null, null, 1),
@@ -2435,7 +2479,8 @@ grant select, insert on public.consent_templates to clinic_app;
 grant update (is_current) on public.consent_templates to clinic_app;
 -- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
 grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
-grant update (body, status, signed_at, updated_at, ai_drafted_at) on public.clinical_notes to clinic_app;
+grant update (body, status, signed_at, updated_at, ai_drafted_at, entered_by_user_id, entered_by_name)
+  on public.clinical_notes to clinic_app;
 -- Phase 2a: codes, rate limits, patient sessions, message log, push.
 grant select, insert, update on public.verification_codes, public.patient_sessions to clinic_app;
 grant select, insert, delete on public.rate_limit_hits to clinic_app;
@@ -2460,6 +2505,7 @@ grant select, insert on public.support_grants to clinic_app;
 grant update (revoked_at, revoked_by) on public.support_grants to clinic_app;
 -- Which doctors do which service (clinic admin): rows added and removed, never edited.
 grant select, insert, delete on public.service_practitioners to clinic_app;
+grant select, insert, delete on public.care_team to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -2486,7 +2532,8 @@ begin
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
-    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners'
+    'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
+    'care_team'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -2512,25 +2559,47 @@ begin
   end loop;
 end $$;
 
--- Clinical notes: ONLY the practitioner role, enforced by the database itself.
-do $$
-declare
-  t text;
-begin
-  foreach t in array array['clinical_notes', 'clinical_note_addenda'] loop
-    execute format(
-      'create policy %I on public.%I as restrictive for all to clinic_app
-         using (public.app_has_role(''practitioner''))
-         with check (public.app_has_role(''practitioner''))',
-      t || '_practitioners_only', t);
-  end loop;
-end $$;
+-- Nurse / assistant: does the signed-in user assist the doctor whose user id is given?
+-- (care_team links the assistant's and the doctor's clinic memberships; read through RLS.)
+create or replace function public.app_assists(doctor_user_id text) returns boolean
+  language sql stable
+  set search_path = ''
+as $$
+  select public.app_has_role('assistant') and exists (
+    select 1
+      from public.care_team ct
+      join public.tenant_members a on a.id = ct.assistant_member_id and a.tenant_id = ct.tenant_id
+      join public.tenant_members d on d.id = ct.practitioner_member_id and d.tenant_id = ct.tenant_id
+     where a.user_id = public.app_current_user()
+       and d.user_id = doctor_user_id
+       and a.deactivated_at is null and d.deactivated_at is null
+  )
+$$;
+grant execute on function public.app_assists(text) to clinic_app;
 
--- Notes and addenda are written in the author's own name; only the author edits a draft.
+-- Clinical notes: the practitioner role — or a nurse / assistant for the notes of the doctors
+-- she works with (care_team). Addenda: practitioners only. Enforced by the database itself.
+create policy clinical_notes_practitioners_only on public.clinical_notes as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_assists(author_user_id))
+  with check (public.app_has_role('practitioner') or public.app_assists(author_user_id));
+create policy clinical_note_addenda_practitioners_only on public.clinical_note_addenda as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner'))
+  with check (public.app_has_role('practitioner'));
+
+-- Notes are written in the doctor's (author's) own name; only the author edits a draft — or
+-- their nurse / assistant, who may prepare it but never sign it.
 create policy clinical_notes_author_insert on public.clinical_notes as restrictive
-  for insert to clinic_app with check (author_user_id = public.app_current_user());
+  for insert to clinic_app with check (
+    author_user_id = public.app_current_user()
+    or (public.app_assists(author_user_id) and status = 'draft'));
 create policy clinical_notes_author_update on public.clinical_notes as restrictive
-  for update to clinic_app using (author_user_id = public.app_current_user());
+  for update to clinic_app
+  using (author_user_id = public.app_current_user() or public.app_assists(author_user_id))
+  with check (
+    author_user_id = public.app_current_user()
+    or (public.app_assists(author_user_id) and status = 'draft'));
 create policy clinical_note_addenda_author_insert on public.clinical_note_addenda as restrictive
   for insert to clinic_app with check (author_user_id = public.app_current_user());
 
@@ -2643,7 +2712,7 @@ begin
     'push_log', 'consent_rules', 'concern_events',
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
-    'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'care_team', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

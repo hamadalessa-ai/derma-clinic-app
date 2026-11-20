@@ -657,36 +657,44 @@ function NoteCard({
                 {t("saveDraft")}
               </Button>
               {preparing && !mine ? (
-                <span className="text-muted-foreground self-center text-xs" data-testid="doctor-signs">
+                <span
+                  className="text-muted-foreground self-center text-xs"
+                  data-testid="doctor-signs"
+                >
                   {t("doctorSigns", { name: note.authorName })}
                 </span>
               ) : (
-              <Button
-                disabled={!body.trim()}
-                loading={pending}
-                data-testid={completes ? "sign-complete" : "sign-note"}
-                onClick={() => {
-                  if (!window.confirm(t(completes ? "signCompleteConfirm" : "signConfirm"))) return;
-                  if (completes) {
-                    run(
-                      () =>
-                        signAndCompleteAction({ appointmentId: completes, noteId: note.id, body }),
-                      (r) => {
-                        setMsg(t(r.completed ? "signedCompleted" : "signedOk"));
-                        if (r.completed) router.push("/my-day");
-                      },
-                    );
-                  } else {
-                    run(
-                      () => signNoteAction({ patientId, noteId: note.id, body }),
-                      () => setMsg(t("signedOk")),
-                    );
-                  }
-                }}
-              >
-                {!pending && <Check />}
-                {completes ? t("signComplete") : t("sign")}
-              </Button>
+                <Button
+                  disabled={!body.trim()}
+                  loading={pending}
+                  data-testid={completes ? "sign-complete" : "sign-note"}
+                  onClick={() => {
+                    if (!window.confirm(t(completes ? "signCompleteConfirm" : "signConfirm")))
+                      return;
+                    if (completes) {
+                      run(
+                        () =>
+                          signAndCompleteAction({
+                            appointmentId: completes,
+                            noteId: note.id,
+                            body,
+                          }),
+                        (r) => {
+                          setMsg(t(r.completed ? "signedCompleted" : "signedOk"));
+                          if (r.completed) router.push("/my-day");
+                        },
+                      );
+                    } else {
+                      run(
+                        () => signNoteAction({ patientId, noteId: note.id, body }),
+                        () => setMsg(t("signedOk")),
+                      );
+                    }
+                  }}
+                >
+                  {!pending && <Check />}
+                  {completes ? t("signComplete") : t("sign")}
+                </Button>
               )}
             </div>
           </>

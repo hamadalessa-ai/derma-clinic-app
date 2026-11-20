@@ -62,7 +62,9 @@ export async function openDraft(
       appointmentId: input.appointmentId ?? null,
       authorUserId: author.userId,
       authorName: author.name,
-      ...(forOther ? { enteredByUserId: actor.userId, enteredByName: actor.name ?? actor.userId } : {}),
+      ...(forOther
+        ? { enteredByUserId: actor.userId, enteredByName: actor.name ?? actor.userId }
+        : {}),
     })
     .returning();
   await audit(tx, {

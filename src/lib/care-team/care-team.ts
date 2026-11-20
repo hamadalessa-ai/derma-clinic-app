@@ -79,7 +79,8 @@ export async function setCareTeam(
     .limit(1);
   if (!assistant) throw new CareTeamError("not_found");
   const ids = [...new Set(doctorMemberIds)];
-  if (ids.length && !assistant.roles.includes("assistant")) throw new CareTeamError("not_assistant");
+  if (ids.length && !assistant.roles.includes("assistant"))
+    throw new CareTeamError("not_assistant");
   if (ids.length) {
     const doctors = await tx
       .select({ id: tenantMembers.id, roles: tenantMembers.roles })
