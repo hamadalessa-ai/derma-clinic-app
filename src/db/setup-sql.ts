@@ -424,7 +424,10 @@ export function foldEnumAdditions(sqlText: string): string {
   for (const [stmt, type, value] of [...sqlText.matchAll(re)]) {
     const create = new RegExp(`(CREATE TYPE "public"\\."${type}" AS ENUM\\()([^)]*)\\)`);
     if (!create.test(out)) continue; // not created here: leave the statement as it is
-    out = out.replace(create, (_m, head: string, values: string) => `${head}${values}, '${value}')`);
+    out = out.replace(
+      create,
+      (_m, head: string, values: string) => `${head}${values}, '${value}')`,
+    );
     out = out.replace(stmt, "");
   }
   return out;
