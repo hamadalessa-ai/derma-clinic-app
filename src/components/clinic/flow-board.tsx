@@ -33,6 +33,15 @@ const STAGE_DOT: Record<FlowStage, string> = {
   done: "bg-status-completed-foreground",
 };
 
+/** On phones the columns stack: patients already here come first, then expected, then done. */
+const PHONE_ORDER: Record<FlowStage, string> = {
+  expected: "max-md:order-4",
+  waiting: "max-md:order-1",
+  nurse: "max-md:order-2",
+  doctor: "max-md:order-3",
+  done: "max-md:order-5",
+};
+
 /**
  * Reception's flow board for one day: Expected → Waiting → With nurse → With doctor → Done, with
  * how long each patient has been in that step. Long waits and late patients stand out. Check in
@@ -95,7 +104,7 @@ export function FlowBoard({
           return (
             <Card
               key={stage}
-              className="flex flex-col"
+              className={cn("flex flex-col", PHONE_ORDER[stage])}
               data-testid="flow-column"
               data-stage={stage}
             >
@@ -155,7 +164,7 @@ export function FlowBoard({
                         )}
                         {a.consent && !a.consent.signed && stage === "expected" && (
                           <span className="bg-warning text-warning-foreground rounded-md px-2 text-xs leading-6">
-                            {tc("consentNeeded")}
+                            {t("consent")}
                           </span>
                         )}
                         {isToday && (stage !== "expected" || late) && (

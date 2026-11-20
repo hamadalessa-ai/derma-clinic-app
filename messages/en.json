@@ -1843,6 +1843,7 @@
     "late": "Late {time}",
     "doneAgo": "{time} ago",
     "none": "No one",
-    "empty": "No patients on this day."
+    "empty": "No patients on this day.",
+    "consent": "Consent to sign"
   }
 }
