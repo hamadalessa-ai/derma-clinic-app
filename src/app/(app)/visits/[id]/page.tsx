@@ -357,7 +357,6 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
               </Card>
             )}
           </section>
-
         </div>
 
         <aside className="flex flex-col gap-4">
