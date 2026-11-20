@@ -12,19 +12,24 @@ import { useAction } from "./use-action";
  * Reception's check-in, shared by the Arrivals list and the flow board: one tap; if a consent is
  * needed the signature sheet opens and the check-in finishes on "Sign".
  */
+/** What check-in needs to know about the visit (a calendar row, or a just-booked walk-in). */
+export type CheckInTarget = Pick<ApptView, "id" | "balance"> & {
+  patient: Pick<ApptView["patient"], "id" | "nameAr" | "nameEn">;
+};
+
 export function useCheckIn() {
   const t = useTranslations("calendar");
   const locale = useLocale();
   const toast = useToast();
   const { run, error } = useAction();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [consent, setConsent] = useState<{ appt: ApptView; template: ConsentTemplateView } | null>(
+  const [consent, setConsent] = useState<{ appt: CheckInTarget; template: ConsentTemplateView } | null>(
     null,
   );
   const name = (o: { nameAr: string; nameEn: string | null }) =>
     locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
 
-  const checkIn = (a: ApptView) => {
+  const checkIn = (a: CheckInTarget) => {
     setBusyId(a.id);
     run(
       () => checkInAction(a.id),
@@ -60,5 +65,9 @@ export function useCheckIn() {
     />
   ) : null;
 
-  return { checkIn, busyId, error, consentDialog };
+  /** A walk-in whose booking needs a consent first: sign, then the usual check-in. */
+  const askConsent = (a: CheckInTarget, template: ConsentTemplateView) =>
+    setConsent({ appt: a, template });
+
+  return { checkIn, busyId, error, consentDialog, askConsent };
 }

@@ -27,6 +27,7 @@ import { Select } from "@/components/ui/select";
 import type { ApptView } from "@/lib/views/schedule";
 import { formatDualDate } from "@/lib/format";
 import type { Locale } from "@/i18n/config";
+import { ContactButtons } from "./contact-buttons";
 import { AlertBadge, BalanceBadge, SourceBadge, StatusBadge } from "./badges";
 import { ConsentReason } from "./consent-reason";
 import { ConsentSignDialog, type ConsentTemplateView } from "./consent-sign-dialog";
@@ -127,6 +128,12 @@ export function AppointmentDialog({
               {appt.patient.fileNumber} · {appt.patient.phone}
             </span>
             <AlertBadge alerts={appt.alerts} label={t("allergy")} />
+            <ContactButtons
+              patientId={appt.patient.id}
+              phone={appt.patient.phone}
+              whatsapp={perms.manage}
+              className="ms-auto"
+            />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={s} label={ts(s)} />
