@@ -75,7 +75,9 @@ describe("lab work ready", () => {
     );
     // Not back yet: nothing to say.
     expect((await sendLabReady(derma, c.id, ENV)).outcome).toBe("skipped");
-    await withActor(reception, (tx) => setLabStatus(tx, reception, { id: c.id, status: "received" }));
+    await withActor(reception, (tx) =>
+      setLabStatus(tx, reception, { id: c.id, status: "received" }),
+    );
     expect((await sendLabReady(derma, c.id, ENV)).outcome).toBe("sent");
     expect((await sendLabReady(derma, c.id, ENV)).outcome).toBe("skipped");
     const sent = await withTenant(DERMA, (tx) =>
