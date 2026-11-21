@@ -756,7 +756,11 @@
       "too_soon": "This day is too soon. Choose a time at least 2 hours from now.",
       "closed": "The clinic is closed on this day (holiday or no doctor working). Choose another day."
     },
-    "joinVideo": "Join video consultation"
+    "joinVideo": "Join video consultation",
+    "dentalPlan": "Dental treatment plan",
+    "dentalPlanHint": "What your dentist has planned, with the estimated cost. Final prices are confirmed at the clinic.",
+    "dentalEstimate": "Estimated total",
+    "sar": "SAR"
   },
   "account": {
     "title": "My account & notifications",
@@ -883,7 +887,8 @@
       "inbound_image": "Photo",
       "photo_request": "Photo request",
       "ai_reply": "AI receptionist",
-      "visit_instructions": "Visit instructions"
+      "visit_instructions": "Visit instructions",
+      "lab_ready": "Lab work ready"
     },
     "simChats": "Chats",
     "simNewNumber": "Simulate a message from a new number",
@@ -1742,7 +1747,10 @@
     "each": "item",
     "unitAr": "Unit (Arabic)",
     "unitEn": "Unit (English)",
-    "activePrice": "In use"
+    "activePrice": "In use",
+    "roomDepartment": "Department",
+    "roomDepartmentHint": "Keep this room for one department (e.g. the dental clinic): only its services are booked here, and its services only here.",
+    "anyDepartment": "Any department"
   },
   "patientImport": {
     "title": "Import patients",

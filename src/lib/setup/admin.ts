@@ -323,6 +323,8 @@ export interface RoomInput {
   nameAr: string;
   nameEn: string;
   isVirtual?: boolean;
+  /** A room kept for one department (its services only). */
+  departmentId?: string | null;
   isActive: boolean;
 }
 
@@ -339,9 +341,17 @@ export async function saveRoom(tx: TenantTx, actor: Actor, v: RoomInput) {
     nameAr: tidy(v.nameAr),
     nameEn: tidy(v.nameEn),
     isVirtual: v.isVirtual ?? false,
+    departmentId: v.isVirtual ? null : (v.departmentId ?? null),
     isActive: v.isActive,
   };
   if (!values.nameAr || !values.nameEn) throw new SetupError("empty_text");
+  if (values.departmentId) {
+    const [d] = await tx
+      .select({ id: departments.id })
+      .from(departments)
+      .where(eq(departments.id, values.departmentId));
+    if (!d) throw new SetupError("not_found");
+  }
   if (v.id) {
     const [row] = await tx.update(rooms).set(values).where(eq(rooms.id, v.id)).returning();
     if (!row) throw new SetupError("not_found");

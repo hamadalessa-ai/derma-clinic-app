@@ -70,6 +70,7 @@ export interface SetupData {
     nameAr: string;
     nameEn: string;
     isVirtual: boolean;
+    departmentId: string | null;
     isActive: boolean;
   }[];
   devices: {
@@ -791,6 +792,7 @@ function Rooms({ data }: { data: SetupData }) {
     nameAr: string;
     nameEn: string;
     isVirtual: boolean;
+    departmentId: string | null;
     isActive: boolean;
   } | null>(null);
   const [d, setD] = useState<{
@@ -819,6 +821,7 @@ function Rooms({ data }: { data: SetupData }) {
                 nameAr: "",
                 nameEn: "",
                 isVirtual: false,
+                departmentId: null,
                 isActive: true,
               })
             }
@@ -860,6 +863,14 @@ function Rooms({ data }: { data: SetupData }) {
                     <span className="flex items-center gap-2 font-medium">
                       {L(x.nameAr, x.nameEn)}
                       {x.isVirtual && <Badge variant="outline">{t("video")}</Badge>}
+                      {x.departmentId && (
+                        <Badge variant="outline">
+                          {(() => {
+                            const dep = data.departments.find((z) => z.id === x.departmentId);
+                            return dep ? L(dep.nameAr, dep.nameEn) : "";
+                          })()}
+                        </Badge>
+                      )}
                       {!x.isActive && <Badge variant="secondary">{t("off")}</Badge>}
                     </span>
                     <span className="text-muted-foreground text-xs">{t("room")}</span>
@@ -895,7 +906,7 @@ function Rooms({ data }: { data: SetupData }) {
           error={room.error}
           onSave={() =>
             room.run(
-              () => saveRoomAction(r),
+              () => saveRoomAction({ ...r, departmentId: r.isVirtual ? null : r.departmentId }),
               () => {
                 setR(null);
                 saved();
@@ -936,6 +947,25 @@ function Rooms({ data }: { data: SetupData }) {
               />
             </Field>
           </div>
+          {!r.isVirtual && (
+            <Field id="r-dept" label={t("roomDepartment")} hint={t("roomDepartmentHint")}>
+              <Select
+                id="r-dept"
+                value={r.departmentId ?? ""}
+                onChange={(e) => setR({ ...r, departmentId: e.target.value || null })}
+                data-testid="room-department"
+              >
+                <option value="">{t("anyDepartment")}</option>
+                {data.departments
+                  .filter((x) => x.isActive)
+                  .map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {L(x.nameAr, x.nameEn)}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          )}
           <Check
             label={t("videoRoom")}
             checked={r.isVirtual}

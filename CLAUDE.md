@@ -151,8 +151,10 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   chart `dental_chart_entries` (FDI 11–48, a history: a change = a new row; clinical → `dental:chart` = doctors and
   nurses only, database policy), treatment plan `dental_plan_items` (service + tooth, price COPIED; everyone reads,
   doctors/nurses change — database policy; "Done in this visit" = `markPlanDone` → `addCharge` on the open visit),
-  lab cases `lab_cases` (sent → received → fitted / remake / cancelled, overdue after the due day; `/lab-cases`).
-  Rooms may belong to a department (`rooms.department_id`): `roomsForService` in the engine keeps the dental room
+  lab cases `lab_cases` (sent → received → fitted / remake / cancelled, overdue after the due day; `/lab-cases`;
+  "received" sends WhatsApp `lab_ready` with the booking link, once per receipt). Patients see their PLANNED items + the
+  estimate on `/my` (patient wall allows `dental_plan_items`, never the chart).
+  Rooms may belong to a department (`rooms.department_id`, Clinic set-up → Rooms): `roomsForService` in the engine keeps the dental room
   for dental services and sends dental services there. Patient file → Dental tab; dental visits show it too.
 - Help centre (`/help`, permission `help:view`, content `src/lib/help/guides.ts`): short step guides per role in Arabic
   and English. When a screen, tab or button name changes, update the guide (a test checks the links exist).

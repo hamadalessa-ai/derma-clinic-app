@@ -26,6 +26,8 @@ import { formatGregorian } from "@/lib/format";
 import type { PortalData } from "@/lib/portal/data";
 import { Choice } from "./choice";
 
+const sar = (h: number) => (h / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
+
 type Appt = PortalData["upcoming"][number];
 type Doctor = { nameAr: string; nameEn: string | null } | null;
 type SlotOptions =
@@ -162,6 +164,48 @@ export function PortalHome({ data }: { data: PortalData }) {
           </div>
         ))}
       </section>
+
+      {data.dentalPlan.length > 0 && (
+        <section className="flex flex-col gap-2" data-testid="dental-quote">
+          <h2 className="font-semibold">{t("dentalPlan")}</h2>
+          <p className="text-muted-foreground text-sm">{t("dentalPlanHint")}</p>
+          {[...new Set(data.dentalPlan.map((i) => i.patientId))].map((pid) => {
+            const items = data.dentalPlan.filter((i) => i.patientId === pid);
+            const total = items.reduce((s, i) => s + i.priceHalalas, 0);
+            return (
+              <div key={pid} className="bg-card flex flex-col rounded-xl border text-sm">
+                {pid !== me.id && (
+                  <div className="text-muted-foreground border-b px-3 py-2 text-xs">
+                    {t("forPerson", { name: personName(pid) })}
+                  </div>
+                )}
+                <ul className="divide-y">
+                  {items.map((i) => (
+                    <li key={i.id} className="flex items-center gap-3 px-3 py-2">
+                      <span className="text-muted-foreground w-12 font-mono text-xs" dir="ltr">
+                        {i.tooth ? `#${i.tooth}` : ""}
+                      </span>
+                      <span className="min-w-0 flex-1">{pick(i.nameAr, i.nameEn)}</span>
+                      <span className="tabular-nums" dir="ltr">
+                        {sar(i.priceHalalas)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div
+                  className="flex items-center justify-between border-t px-3 py-2 font-semibold"
+                  data-testid="dental-quote-total"
+                >
+                  <span>{t("dentalEstimate")}</span>
+                  <span dir="ltr">
+                    {sar(total)} {t("sar")}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       <section className="flex flex-col gap-2" data-testid="signed-consents">
         <h2 className="font-semibold">{t("signedConsents")}</h2>
