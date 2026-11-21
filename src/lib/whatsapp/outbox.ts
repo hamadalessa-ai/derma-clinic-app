@@ -3,7 +3,9 @@
  * through sendMessage(). Each one has a dedupe key, so calling it twice never sends twice.
  */
 import { eq } from "drizzle-orm";
-import { labCases, patients } from "@/db/schema";
+import { labCases, patientMemberships, patients } from "@/db/schema";
+import { atRiyadh } from "@/lib/booking/time";
+import { formatGregorian } from "@/lib/format";
 import { withTenant } from "@/db/tenant";
 import { careUrl } from "@/lib/video/link";
 import { appBaseUrl } from "./config";
@@ -32,6 +34,7 @@ export const SCHEDULED_KEYS = {
   post_care: (appointmentId: string) => `post_care:${appointmentId}`,
   no_show: (appointmentId: string) => `no_show:${appointmentId}`,
   recall: (appointmentId: string) => `recall:${appointmentId}`,
+  membership_renewal: (membershipId: string) => `membership_renewal:${membershipId}`,
 };
 
 export async function sendBookingConfirmation(
@@ -243,6 +246,40 @@ export async function sendLabReady(tenant: Tenant, labCaseId: string, env: Env =
         booking_link: `${appBaseUrl(tenant, env)}/book`,
       },
       dedupeKey: `lab_ready:${row.c.id}:${row.c.receivedAt.toISOString()}`,
+    },
+    env,
+  );
+}
+
+/** "Your membership ends on …": a few days before a period ends (scheduler). Once per period. */
+export async function sendMembershipRenewal(
+  tenant: Tenant,
+  membershipId: string,
+  env: Env = process.env,
+) {
+  const row = await withTenant(tenant.id, async (tx) => {
+    const [r] = await tx
+      .select({ m: patientMemberships, p: patients })
+      .from(patientMemberships)
+      .innerJoin(patients, eq(patients.id, patientMemberships.patientId))
+      .where(eq(patientMemberships.id, membershipId));
+    return r ?? null;
+  });
+  if (!row) return skipped("not_found");
+  if (row.m.cancelledAt) return skipped("cancelled");
+  const lang = langOf(row.p);
+  const full = (lang === "en" && row.p.fullNameEn) || row.p.fullNameAr;
+  return sendMessage(
+    tenant,
+    {
+      kind: "membership_renewal",
+      patientId: row.p.id,
+      vars: {
+        patient_first_name: full.trim().split(/\s+/)[0] ?? "",
+        plan_name: lang === "en" ? row.m.nameEn : row.m.nameAr,
+        end_date: formatGregorian(atRiyadh(row.m.endsOn, "12:00"), lang, "full"),
+      },
+      dedupeKey: SCHEDULED_KEYS.membership_renewal(row.m.id),
     },
     env,
   );

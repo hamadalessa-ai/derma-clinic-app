@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   ChartColumn,
+  Crown,
   FileLock2,
   Inbox,
   FlaskConical,
@@ -39,6 +40,7 @@ export const NAV_ICONS = {
   account: BellRing,
   help: LifeBuoy,
   labCases: FlaskConical,
+  memberships: Crown,
 } as const;
 
 export function NavLinks({

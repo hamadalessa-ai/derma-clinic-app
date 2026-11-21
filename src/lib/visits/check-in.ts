@@ -13,12 +13,20 @@ import {
   markArrivedByVideo,
 } from "@/lib/booking/engine";
 import { missingConsent, type ConsentTemplate } from "@/lib/consents/consents";
+import { takeIncludedVisit } from "@/lib/memberships/memberships";
 import { deductForAppointment } from "@/lib/packages/packages";
 
 export type CheckInResult =
   | { status: "consent_required"; template: ConsentTemplate }
   | { status: "already_checked_in" }
-  | { status: "checked_in"; deducted: boolean; packageId: string | null; remaining: number | null };
+  | {
+      status: "checked_in";
+      deducted: boolean;
+      packageId: string | null;
+      remaining: number | null;
+      /** One of the membership's included visits was used. */
+      membershipVisit: boolean;
+    };
 
 export async function checkIn(
   tx: TenantTx,
@@ -36,6 +44,8 @@ export async function checkIn(
   if (template) return { status: "consent_required", template };
 
   const deduction = await deductForAppointment(tx, actor, appt);
+  // No package session for it: maybe an included membership visit.
+  const member = deduction.packageId ? null : await takeIncludedVisit(tx, actor, appt);
   await changeStatus(tx, actor, appt.id, "arrived", { viaCheckIn: true });
   await audit(tx, {
     actorUserId: actor.userId,
@@ -46,6 +56,7 @@ export async function checkIn(
       packageId: deduction.packageId,
       deducted: deduction.deducted,
       remaining: deduction.remaining,
+      membershipVisit: !!member?.used,
     },
   });
   return {
@@ -53,6 +64,7 @@ export async function checkIn(
     deducted: deduction.deducted,
     packageId: deduction.packageId,
     remaining: deduction.remaining,
+    membershipVisit: !!member?.used,
   };
 }
 
@@ -66,6 +78,7 @@ export async function videoCheckIn(tx: TenantTx, tenantId: string, appointmentId
   if (!["booked", "confirmed"].includes(appt.status)) return { status: "unchanged" as const };
   if (await missingConsent(tx, appt)) return { status: "unchanged" as const };
   const deduction = await deductForAppointment(tx, { tenantId, userId: null }, appt);
+  if (!deduction.packageId) await takeIncludedVisit(tx, { tenantId, userId: null }, appt);
   await markArrivedByVideo(tx, appt.id);
   await audit(tx, {
     actorUserId: null,

@@ -10,6 +10,7 @@ import {
   saveDepartmentAction,
   saveDeviceAction,
   saveBillingItemAction,
+  saveMembershipPlanAction,
   savePackageAction,
   saveRoomAction,
   saveServiceAction,
@@ -92,6 +93,17 @@ export interface SetupData {
     validityDays: number;
     isActive: boolean;
   }[];
+  memberships: {
+    id: string;
+    nameAr: string;
+    nameEn: string;
+    priceHalalas: number;
+    periodMonths: number;
+    includedServiceId: string | null;
+    includedVisits: number;
+    discountPercent: number;
+    isActive: boolean;
+  }[];
   billingItems: {
     id: string;
     code: string;
@@ -108,7 +120,14 @@ export interface SetupData {
 }
 
 export type SetupTab =
-  "branches" | "departments" | "services" | "rooms" | "packages" | "prices" | "consents";
+  | "branches"
+  | "departments"
+  | "services"
+  | "rooms"
+  | "packages"
+  | "memberships"
+  | "prices"
+  | "consents";
 
 function useL() {
   const ar = useLocale() === "ar";
@@ -284,6 +303,7 @@ export function ClinicSetup({ tab, data }: { tab: SetupTab; data: SetupData }) {
   if (tab === "services") return <Services data={data} />;
   if (tab === "rooms") return <Rooms data={data} />;
   if (tab === "packages") return <Packages data={data} />;
+  if (tab === "memberships") return <Memberships data={data} />;
   if (tab === "prices") return <Prices data={data} />;
   return <Consents data={data} />;
 }
@@ -1213,6 +1233,189 @@ function Packages({ data }: { data: SetupData }) {
           </div>
           <Check
             label={t("activePackage")}
+            checked={v.isActive}
+            onChange={(x) => setV({ ...v, isActive: x })}
+          />
+        </EditDialog>
+      )}
+    </div>
+  );
+}
+
+// ─── Membership plans ───────────────────────────────────────────────────────
+
+function Memberships({ data }: { data: SetupData }) {
+  const t = useTranslations("setup");
+  const L = useL();
+  const { run, pending, error } = useAction();
+  const { msg, saved } = useSaved();
+  const blank = {
+    id: null as string | null,
+    nameAr: "",
+    nameEn: "",
+    price: "0",
+    periodMonths: 1,
+    includedServiceId: null as string | null,
+    includedVisits: 0,
+    discountPercent: 10,
+    isActive: true,
+  };
+  const [v, setV] = useState<typeof blank | null>(null);
+  const svc = (id: string | null) => data.services.find((s) => s.id === id);
+  return (
+    <div className="flex flex-col gap-4">
+      <Toolbar
+        title={t("memberships")}
+        hint={t("membershipsHint")}
+        addLabel={t("addMembership")}
+        onAdd={() => setV(blank)}
+      />
+      <FormSuccess message={msg} />
+      <ListCard empty={t("none")}>
+        {data.memberships.map((p) => (
+          <Row
+            key={p.id}
+            muted={!p.isActive}
+            onEdit={() => setV({ ...p, price: sar(p.priceHalalas) })}
+          >
+            <span className="flex items-center gap-2 font-medium">
+              {L(p.nameAr, p.nameEn)}
+              {!p.isActive && <Badge variant="secondary">{t("off")}</Badge>}
+            </span>
+            <span className="text-muted-foreground text-xs" data-testid="membership-plan-line">
+              {t("membershipLine", { price: sar(p.priceHalalas), months: p.periodMonths })}
+              {p.includedVisits > 0 &&
+                ` · ${t("membershipIncluded", {
+                  n: p.includedVisits,
+                  service: L(svc(p.includedServiceId)?.nameAr, svc(p.includedServiceId)?.nameEn),
+                })}`}
+              {p.discountPercent > 0 &&
+                ` · ${t("membershipDiscount", { percent: p.discountPercent })}`}
+            </span>
+          </Row>
+        ))}
+      </ListCard>
+      {v && (
+        <EditDialog
+          title={v.id ? t("editMembership") : t("addMembership")}
+          open
+          onClose={() => setV(null)}
+          pending={pending}
+          error={error}
+          onSave={() =>
+            run(
+              () =>
+                saveMembershipPlanAction({
+                  id: v.id,
+                  nameAr: v.nameAr,
+                  nameEn: v.nameEn,
+                  priceSar: Number(v.price) || 0,
+                  periodMonths: Number(v.periodMonths),
+                  includedServiceId: v.includedVisits > 0 ? v.includedServiceId : null,
+                  includedVisits: v.includedServiceId ? Number(v.includedVisits) : 0,
+                  discountPercent: Number(v.discountPercent),
+                  isActive: v.isActive,
+                }),
+              () => {
+                setV(null);
+                saved();
+              },
+            )
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field id="m-ar" label={t("nameAr")}>
+              <Input
+                id="m-ar"
+                dir="rtl"
+                required
+                value={v.nameAr}
+                onChange={(e) => setV({ ...v, nameAr: e.target.value })}
+              />
+            </Field>
+            <Field id="m-en" label={t("nameEn")}>
+              <Input
+                id="m-en"
+                dir="ltr"
+                required
+                value={v.nameEn}
+                onChange={(e) => setV({ ...v, nameEn: e.target.value })}
+              />
+            </Field>
+            <Field id="m-price" label={t("priceSar")}>
+              <Input
+                id="m-price"
+                type="number"
+                min={0}
+                step="0.01"
+                dir="ltr"
+                value={v.price}
+                onChange={(e) => setV({ ...v, price: e.target.value })}
+              />
+            </Field>
+            <Field id="m-period" label={t("membershipPeriod")}>
+              <Select
+                id="m-period"
+                value={v.periodMonths}
+                onChange={(e) => setV({ ...v, periodMonths: Number(e.target.value) })}
+              >
+                {[1, 3, 6, 12].map((n) => (
+                  <option key={n} value={n}>
+                    {t("months", { n })}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="m-svc" label={t("membershipService")}>
+              <Select
+                id="m-svc"
+                value={v.includedServiceId ?? ""}
+                onChange={(e) =>
+                  setV({
+                    ...v,
+                    includedServiceId: e.target.value || null,
+                    includedVisits: e.target.value ? Math.max(1, v.includedVisits) : 0,
+                  })
+                }
+              >
+                <option value="">{t("noIncluded")}</option>
+                {data.services
+                  .filter((s) => s.isActive || s.id === v.includedServiceId)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {L(s.nameAr, s.nameEn)}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+            {v.includedServiceId && (
+              <Field id="m-visits" label={t("membershipVisits")}>
+                <Input
+                  id="m-visits"
+                  type="number"
+                  min={1}
+                  max={100}
+                  dir="ltr"
+                  value={v.includedVisits}
+                  onChange={(e) => setV({ ...v, includedVisits: Number(e.target.value) })}
+                />
+              </Field>
+            )}
+            <Field id="m-disc" label={t("membershipDiscountLabel")}>
+              <Input
+                id="m-disc"
+                type="number"
+                min={0}
+                max={50}
+                dir="ltr"
+                value={v.discountPercent}
+                onChange={(e) => setV({ ...v, discountPercent: Number(e.target.value) })}
+              />
+            </Field>
+          </div>
+          <p className="text-muted-foreground text-xs">{t("membershipTermsCopied")}</p>
+          <Check
+            label={t("activeMembership")}
             checked={v.isActive}
             onChange={(x) => setV({ ...v, isActive: x })}
           />

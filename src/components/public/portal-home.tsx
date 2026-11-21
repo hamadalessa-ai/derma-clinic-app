@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { CalendarPlus, FileSignature, Layers, LogOut, Video } from "lucide-react";
+import { CalendarPlus, Crown, FileSignature, Layers, LogOut, Video } from "lucide-react";
 import {
   portalCancelAction,
   portalMoveAction,
@@ -142,6 +142,30 @@ export function PortalHome({ data }: { data: PortalData }) {
           </p>
         )}
       </section>
+
+      {data.memberships.length > 0 && (
+        <section className="flex flex-col gap-2" data-testid="my-membership">
+          <h2 className="font-semibold">{t("membership")}</h2>
+          {data.memberships.map((m) => (
+            <div
+              key={m.id}
+              className="bg-card flex items-center gap-3 rounded-xl border p-3 text-sm"
+            >
+              <Crown className="text-gold-foreground size-5 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{pick(m.nameAr, m.nameEn)}</div>
+                <div className="text-muted-foreground text-xs">
+                  {m.patientId !== me.id &&
+                    `${t("forPerson", { name: personName(m.patientId) })} · `}
+                  {t("validUntil", { date: date(`${m.endsOn}T12:00:00+03:00`) })}
+                  {m.discountPercent > 0 &&
+                    ` · ${t("memberDiscount", { percent: m.discountPercent })}`}
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="flex flex-col gap-2" data-testid="packages">
         <h2 className="font-semibold">{t("packages")}</h2>

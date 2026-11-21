@@ -168,6 +168,24 @@ English:
 Hello {{1}}, your {{2}} is back from the lab. Book your fitting here: {{3}} or reply to this message.
 ```
 
+## `membership_renewal`
+
+- **Category:** UTILITY
+- **Languages:** Arabic (`ar`), English (`en`)
+- **Variables:** {{1}} = patient_first_name, {{2}} = plan_name, {{3}} = end_date
+
+Arabic:
+
+```text
+مرحبًا {{1}}، تنتهي عضويتك ({{2}}) يوم {{3}}. جدّدها في زيارتك القادمة أو ردّ على هذه الرسالة وسنساعدك.
+```
+
+English:
+
+```text
+Hello {{1}}, your {{2}} membership ends on {{3}}. Renew it at your next visit, or reply to this message and we'll help.
+```
+
 ## `verification_code`
 
 - **Category:** AUTHENTICATION

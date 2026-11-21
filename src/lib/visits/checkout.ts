@@ -22,6 +22,7 @@ import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
 import { findFreeSlots, getAppointment } from "@/lib/booking/engine";
+import { coveredByMembership, discountOf, membershipOn } from "@/lib/memberships/memberships";
 import { addDays, atRiyadh, riyadhDay } from "@/lib/booking/time";
 import { VisitError, visitExtras } from "./visit";
 
@@ -31,18 +32,47 @@ export interface InvoiceLine {
   nameEn: string;
   quantity: number;
   unitPriceHalalas: number;
+  /** Prepaid (amount 0): a package session or an included membership visit. */
   coveredByPackage: boolean;
+  /** The prepaid line is a membership visit (label only). */
+  coveredByMembership: boolean;
 }
 
-/** Amount due: the lines a package didn't cover. */
+/** Amount due before any membership discount: the lines nothing covered. */
 export const dueOf = (lines: InvoiceLine[]) =>
   lines.reduce((s, l) => s + (l.coveredByPackage ? 0 : l.quantity * l.unitPriceHalalas), 0);
+
+/**
+ * What the patient pays: the uncovered lines, less the member's discount when the patient
+ * was a member on the visit day.
+ */
+async function amounts(
+  tx: TenantTx,
+  appt: { id: string; patientId: string; serviceId: string; startsAt: Date },
+) {
+  const lines = await invoiceLines(tx, appt);
+  const gross = dueOf(lines);
+  const m = await membershipOn(tx, appt.patientId, riyadhDay(appt.startsAt));
+  const discount = m ? discountOf(gross, m.discountPercent) : 0;
+  return {
+    lines,
+    gross,
+    discount,
+    due: gross - discount,
+    membership: m
+      ? { id: m.id, nameAr: m.nameAr, nameEn: m.nameEn, discountPercent: m.discountPercent }
+      : null,
+  };
+}
 
 /**
  * The visit's invoice lines. Visits posted before invoice codes existed (or with none added)
  * get the booked service at its list price — 0 when a package session paid for it.
  */
-async function invoiceLines(tx: TenantTx, appt: { id: string; serviceId: string }) {
+async function invoiceLines(
+  tx: TenantTx,
+  appt: { id: string; serviceId: string },
+): Promise<InvoiceLine[]> {
   const { charges } = await visitExtras(tx, appt.id);
   if (charges.length) {
     return charges.map((c) => ({
@@ -52,6 +82,7 @@ async function invoiceLines(tx: TenantTx, appt: { id: string; serviceId: string 
       quantity: c.quantity,
       unitPriceHalalas: c.unitPriceHalalas,
       coveredByPackage: c.coveredByPackage,
+      coveredByMembership: c.coveredByMembership,
     }));
   }
   const [s] = await tx.select().from(services).where(eq(services.id, appt.serviceId));
@@ -65,6 +96,7 @@ async function invoiceLines(tx: TenantTx, appt: { id: string; serviceId: string 
       ),
     )
     .limit(1);
+  const member = !deduction && (await coveredByMembership(tx, appt.id));
   return s
     ? [
         {
@@ -73,7 +105,8 @@ async function invoiceLines(tx: TenantTx, appt: { id: string; serviceId: string 
           nameEn: s.nameEn,
           quantity: 1,
           unitPriceHalalas: s.priceHalalas,
-          coveredByPackage: !!deduction,
+          coveredByPackage: !!deduction || member,
+          coveredByMembership: member,
         },
       ]
     : [];
@@ -119,7 +152,7 @@ export async function checkoutData(tx: TenantTx, actor: Actor, appointmentId: st
     .where(eq(appointments.id, appointmentId));
   if (!row) throw new VisitError("not_found");
   const a = row.a;
-  const lines = await invoiceLines(tx, a);
+  const money = await amounts(tx, a);
   const { orders } = await visitExtras(tx, a.id);
   const [checkout] = await tx
     .select()
@@ -200,8 +233,11 @@ export async function checkoutData(tx: TenantTx, actor: Actor, appointmentId: st
     service: row.service,
     branch: row.branch,
     doctor: { nameAr: row.doctorName, nameEn: row.doctorNameEn },
-    lines,
-    due: dueOf(lines),
+    lines: money.lines,
+    gross: money.gross,
+    discount: money.discount,
+    due: money.due,
+    membership: money.membership,
     orders,
     checkout: checkout ?? null,
     upcoming,
@@ -229,7 +265,7 @@ export async function checkOut(tx: TenantTx, actor: Actor, input: CheckoutInput)
   if (already) throw new VisitError("checked_out");
   const paid = Math.max(0, Math.round(input.paidHalalas));
   if (paid > 0 && !input.method) throw new VisitError("method_needed");
-  const due = dueOf(await invoiceLines(tx, appt));
+  const { due, discount } = await amounts(tx, appt);
   const [row] = await tx
     .insert(visitCheckouts)
     .values({
@@ -237,6 +273,7 @@ export async function checkOut(tx: TenantTx, actor: Actor, input: CheckoutInput)
       appointmentId: appt.id,
       patientId: appt.patientId,
       dueHalalas: due,
+      discountHalalas: discount,
       paidHalalas: paid,
       method: paid > 0 ? input.method : null,
       invoiceNumber: input.invoiceNumber?.trim() || null,
@@ -249,7 +286,7 @@ export async function checkOut(tx: TenantTx, actor: Actor, input: CheckoutInput)
     action: "visit.checkout",
     entityType: "appointment",
     entityId: appt.id,
-    metadata: { due, paid, method: row.method, invoiceNumber: row.invoiceNumber },
+    metadata: { due, discount, paid, method: row.method, invoiceNumber: row.invoiceNumber },
   });
   return row;
 }

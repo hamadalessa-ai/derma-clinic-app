@@ -45,7 +45,8 @@
     "setup": "Clinic set-up",
     "reports": "Reports",
     "help": "Help",
-    "labCases": "Lab cases"
+    "labCases": "Lab cases",
+    "memberships": "Memberships"
   },
   "roles": {
     "platform_owner": "Platform owner",
@@ -254,7 +255,14 @@
     "dental_bad_tooth": "That isn't a valid tooth number.",
     "dental_not_found": "Not found.",
     "dental_not_planned": "This step is no longer planned.",
-    "dental_bad_status": "That change isn't possible now."
+    "dental_bad_status": "That change isn't possible now.",
+    "membership_not_found": "Membership not found.",
+    "membership_already_member": "This patient already has a membership running. Renew it instead.",
+    "membership_bad_amount": "Enter a valid amount.",
+    "membership_overpaid": "The amount is more than what's still to pay.",
+    "membership_cancelled": "This membership was cancelled.",
+    "membership_renewed": "This membership was already renewed.",
+    "membership_plan_off": "This plan is no longer on sale."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -760,7 +768,9 @@
     "dentalPlan": "Dental treatment plan",
     "dentalPlanHint": "What your dentist has planned, with the estimated cost. Final prices are confirmed at the clinic.",
     "dentalEstimate": "Estimated total",
-    "sar": "SAR"
+    "sar": "SAR",
+    "membership": "My membership",
+    "memberDiscount": "{percent}% off"
   },
   "account": {
     "title": "My account & notifications",
@@ -888,7 +898,8 @@
       "photo_request": "Photo request",
       "ai_reply": "AI receptionist",
       "visit_instructions": "Visit instructions",
-      "lab_ready": "Lab work ready"
+      "lab_ready": "Lab work ready",
+      "membership_renewal": "Membership renewal"
     },
     "simChats": "Chats",
     "simNewNumber": "Simulate a message from a new number",
@@ -1238,7 +1249,8 @@
     "qty": "Qty",
     "readyHint": "When the patient is prepared, tell the doctor. Reception sees it on the flow board.",
     "readyForDoctor": "Ready for doctor",
-    "doctorCalled": "The doctor has been told the patient is ready."
+    "doctorCalled": "The doctor has been told the patient is ready.",
+    "membership": "Membership"
   },
   "sign": {
     "title": "{name}, your consent form",
@@ -1641,7 +1653,8 @@
       "rooms": "Rooms & devices",
       "packages": "Packages",
       "consents": "Consent forms",
-      "prices": "Price list"
+      "prices": "Price list",
+      "memberships": "Memberships"
     },
     "save": "Save",
     "cancel": "Cancel",
@@ -1750,7 +1763,22 @@
     "activePrice": "In use",
     "roomDepartment": "Department",
     "roomDepartmentHint": "Keep this room for one department (e.g. the dental clinic): only its services are booked here, and its services only here.",
-    "anyDepartment": "Any department"
+    "anyDepartment": "Any department",
+    "memberships": "Membership plans",
+    "membershipsHint": "Monthly or yearly plans: included visits of one service and a discount on everything else. Reception sells them from the patient file.",
+    "addMembership": "Add plan",
+    "editMembership": "Edit plan",
+    "membershipLine": "{price} SAR every {months, plural, =1 {month} other {# months}}",
+    "membershipIncluded": "{n} × {service} included",
+    "membershipDiscount": "{percent}% off other items",
+    "membershipPeriod": "Renews every",
+    "months": "{n, plural, =1 {month} other {# months}}",
+    "membershipService": "Included service",
+    "noIncluded": "None (discount only)",
+    "membershipVisits": "Included visits per period",
+    "membershipDiscountLabel": "Discount on other items (%)",
+    "membershipTermsCopied": "Changes apply to new sales and renewals. Members keep the terms they bought.",
+    "activeMembership": "On sale"
   },
   "patientImport": {
     "title": "Import patients",
@@ -1836,7 +1864,9 @@
     "dailyHint": "One CSV per day: each completed visit's invoice lines (0 when a package paid), what reception recorded at checkout (amount, method and your invoice number), packages sold and package payments — ready to import into your accounting or e-invoicing (ZATCA) system.",
     "day": "Day",
     "dailyDownload": "Download the day's file",
-    "vsLastMonth": "vs last month"
+    "vsLastMonth": "vs last month",
+    "members": "Members today",
+    "membersMonthly": "{amount} a month"
   },
   "twoFactor": {
     "on": "Two-step verification is on.",
@@ -1910,7 +1940,8 @@
     "sent": "Sent on WhatsApp ✓",
     "sentNow": "Sent on WhatsApp.",
     "sendFailed": "WhatsApp couldn't deliver it. Print the instructions instead.",
-    "notSent": "Not sent ({reason})."
+    "notSent": "Not sent ({reason}).",
+    "memberDiscount": "{plan}: {percent}% member discount"
   },
   "care": {
     "title": "Your instructions, {name}",
@@ -2051,5 +2082,56 @@
     "labSubtitle": "Work at dental labs: due dates and where each case is.",
     "labOpen": "Open",
     "labAll": "All"
+  },
+  "memberships": {
+    "title": "Membership",
+    "none": "Not a member.",
+    "history": "Earlier periods ({n})",
+    "state": {
+      "running": "Active",
+      "upcoming": "Starts soon",
+      "ended": "Ended",
+      "cancelled": "Cancelled"
+    },
+    "dates": "{from} – {to}",
+    "visitsLeft": "{left} of {total} × {service} left",
+    "discount": "{percent}% off other items",
+    "price": "{price} / {months, plural, =1 {month} other {# months}}",
+    "owed": "Still to pay: {amount}",
+    "cancel": "Cancel membership",
+    "cancelConfirm": "End this membership now?",
+    "cancelYes": "Yes, cancel",
+    "keep": "Keep",
+    "payNow": "Paid now (SAR)",
+    "method": "Method",
+    "invoice": "Clinic invoice no.",
+    "methods": {
+      "card": "Card",
+      "cash": "Cash",
+      "transfer": "Transfer"
+    },
+    "sell": "Sell a membership",
+    "plan": "Plan",
+    "soldOk": "Membership sold.",
+    "renew": "Renew",
+    "renewedOk": "Membership renewed.",
+    "lapsed": "The last membership has ended. Renew it to start a new period today.",
+    "recordPayment": "Record payment",
+    "paidOk": "Payment recorded.",
+    "pageTitle": "Memberships",
+    "pageSubtitle": "Members, monthly income and who is due for renewal.",
+    "statMembers": "Members today",
+    "statMonthly": "Monthly recurring income",
+    "statMonthlyHint": "A yearly plan counts as 1/12 of its price.",
+    "statDue": "Due for renewal",
+    "renewalsTitle": "Due for renewal",
+    "renewalsHint": "Ending in the next 14 days, or ended in the last 30 and not renewed. Members get a WhatsApp reminder 3 days before.",
+    "endsOn": "ends {date}",
+    "endsToday": "Ends today",
+    "endsInDays": "{n, plural, =1 {Ends tomorrow} other {Ends in # days}}",
+    "lapsedDays": "{n, plural, =1 {Ended yesterday} other {Ended # days ago}}",
+    "noRenewals": "Nobody is due for renewal.",
+    "activeTitle": "Active members ({n})",
+    "noMembers": "No members yet."
   }
 }

@@ -53,6 +53,9 @@ drop table if exists
   public.files,
   public.global_rate_hits,
   public.lab_cases,
+  public.membership_payments,
+  public.membership_plans,
+  public.membership_visits,
   public.message_dispatches,
   public.message_templates,
   public.messages,
@@ -63,6 +66,7 @@ drop table if exists
   public.package_templates,
   public.patient_consents,
   public.patient_medical_flags,
+  public.patient_memberships,
   public.patient_packages,
   public.patient_sessions,
   public.patients,
@@ -117,6 +121,7 @@ drop function if exists public.guard_clinical_note;
 drop function if exists public.guard_note_addendum;
 drop function if exists public.guard_package_balance;
 drop function if exists public.normalize_search;
+drop function if exists public.patient_memberships_guard;
 drop function if exists public.sync_appointment_reservations;
 drop function if exists public.sync_time_block_reservations;
 -- Types last: functions may use them (e.g. app_set_clinic_status takes a clinic_status).

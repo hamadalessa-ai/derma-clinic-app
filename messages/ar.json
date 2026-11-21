@@ -45,7 +45,8 @@
     "setup": "إعداد العيادة",
     "reports": "التقارير",
     "help": "المساعدة",
-    "labCases": "أعمال المعمل"
+    "labCases": "أعمال المعمل",
+    "memberships": "العضويات"
   },
   "roles": {
     "platform_owner": "مالك المنصة",
@@ -254,7 +255,14 @@
     "dental_bad_tooth": "رقم السن غير صحيح.",
     "dental_not_found": "غير موجود.",
     "dental_not_planned": "هذه الخطوة لم تعد مخططة.",
-    "dental_bad_status": "هذا التغيير غير ممكن الآن."
+    "dental_bad_status": "هذا التغيير غير ممكن الآن.",
+    "membership_not_found": "لم يتم العثور على العضوية.",
+    "membership_already_member": "لدى هذا المريض عضوية سارية. جدّدها بدلًا من ذلك.",
+    "membership_bad_amount": "أدخل مبلغًا صحيحًا.",
+    "membership_overpaid": "المبلغ أكبر من المتبقي للدفع.",
+    "membership_cancelled": "هذه العضوية ملغاة.",
+    "membership_renewed": "تم تجديد هذه العضوية من قبل.",
+    "membership_plan_off": "هذه الخطة لم تعد متاحة للبيع."
   },
   "deviceTypes": {
     "hair_removal_laser": "ليزر إزالة الشعر",
@@ -760,7 +768,9 @@
     "dentalPlan": "خطة علاج الأسنان",
     "dentalPlanHint": "ما خطّط له طبيب الأسنان مع التكلفة التقديرية. تُؤكَّد الأسعار النهائية في العيادة.",
     "dentalEstimate": "الإجمالي التقديري",
-    "sar": "ر.س"
+    "sar": "ر.س",
+    "membership": "عضويتي",
+    "memberDiscount": "خصم {percent}٪"
   },
   "account": {
     "title": "حسابي والإشعارات",
@@ -888,7 +898,8 @@
       "photo_request": "طلب صورة",
       "ai_reply": "موظف الاستقبال الذكي",
       "visit_instructions": "تعليمات الزيارة",
-      "lab_ready": "جاهزية عمل المعمل"
+      "lab_ready": "جاهزية عمل المعمل",
+      "membership_renewal": "تجديد العضوية"
     },
     "simChats": "المحادثات",
     "simNewNumber": "محاكاة رسالة من رقم جديد",
@@ -1238,7 +1249,8 @@
     "qty": "الكمية",
     "readyHint": "عندما يكون المريض جاهزاً، أبلغي الطبيب. يظهر ذلك للاستقبال في لوحة سير المرضى.",
     "readyForDoctor": "جاهز للطبيب",
-    "doctorCalled": "تم إبلاغ الطبيب بأن المريض جاهز."
+    "doctorCalled": "تم إبلاغ الطبيب بأن المريض جاهز.",
+    "membership": "عضوية"
   },
   "sign": {
     "title": "{name}، نموذج الموافقة",
@@ -1641,7 +1653,8 @@
       "rooms": "الغرف والأجهزة",
       "packages": "الباقات",
       "consents": "نماذج الموافقة",
-      "prices": "قائمة الأسعار"
+      "prices": "قائمة الأسعار",
+      "memberships": "العضويات"
     },
     "save": "حفظ",
     "cancel": "إلغاء",
@@ -1750,7 +1763,22 @@
     "activePrice": "مستخدم",
     "roomDepartment": "القسم",
     "roomDepartmentHint": "خصّص الغرفة لقسم واحد (مثل عيادة الأسنان): تُحجز فيها خدماته فقط، وخدماته فيها فقط.",
-    "anyDepartment": "أي قسم"
+    "anyDepartment": "أي قسم",
+    "memberships": "خطط العضوية",
+    "membershipsHint": "خطط شهرية أو سنوية: زيارات مشمولة لخدمة واحدة وخصم على باقي الخدمات. يبيعها الاستقبال من ملف المريض.",
+    "addMembership": "إضافة خطة",
+    "editMembership": "تعديل الخطة",
+    "membershipLine": "{price} ر.س كل {months, plural, =1 {شهر} =2 {شهرين} few {# أشهر} other {# شهرًا}}",
+    "membershipIncluded": "{n} × {service} مشمولة",
+    "membershipDiscount": "خصم {percent}٪ على الباقي",
+    "membershipPeriod": "تتجدد كل",
+    "months": "{n, plural, =1 {شهر} =2 {شهرين} few {# أشهر} other {# شهرًا}}",
+    "membershipService": "الخدمة المشمولة",
+    "noIncluded": "لا شيء (خصم فقط)",
+    "membershipVisits": "الزيارات المشمولة في كل فترة",
+    "membershipDiscountLabel": "الخصم على باقي الخدمات (٪)",
+    "membershipTermsCopied": "التعديلات تسري على المبيعات والتجديدات الجديدة. يحتفظ الأعضاء بالشروط التي اشتروها.",
+    "activeMembership": "متاحة للبيع"
   },
   "patientImport": {
     "title": "استيراد المرضى",
@@ -1836,7 +1864,9 @@
     "dailyHint": "ملف CSV لكل يوم: بنود فاتورة كل زيارة مكتملة (صفر عند الدفع بالباقة)، وما سجّله الاستقبال عند المحاسبة (المبلغ وطريقة الدفع ورقم فاتورتكم)، والباقات المباعة ودفعاتها — جاهز للاستيراد في نظام المحاسبة أو الفوترة الإلكترونية (زاتكا).",
     "day": "اليوم",
     "dailyDownload": "تحميل ملف اليوم",
-    "vsLastMonth": "مقارنة بالشهر الماضي"
+    "vsLastMonth": "مقارنة بالشهر الماضي",
+    "members": "الأعضاء اليوم",
+    "membersMonthly": "{amount} شهريًا"
   },
   "twoFactor": {
     "on": "التحقق بخطوتين مفعّل.",
@@ -1910,7 +1940,8 @@
     "sent": "أُرسلت عبر واتساب ✓",
     "sentNow": "تم الإرسال عبر واتساب.",
     "sendFailed": "تعذّر التسليم عبر واتساب. اطبع التعليمات بدلاً من ذلك.",
-    "notSent": "لم تُرسل ({reason})."
+    "notSent": "لم تُرسل ({reason}).",
+    "memberDiscount": "{plan}: خصم الأعضاء {percent}٪"
   },
   "care": {
     "title": "تعليماتك يا {name}",
@@ -2051,5 +2082,56 @@
     "labSubtitle": "الأعمال لدى معامل الأسنان: مواعيد الاستلام وحالة كل عمل.",
     "labOpen": "المفتوحة",
     "labAll": "الكل"
+  },
+  "memberships": {
+    "title": "العضوية",
+    "none": "ليس عضوًا.",
+    "history": "الفترات السابقة ({n})",
+    "state": {
+      "running": "سارية",
+      "upcoming": "تبدأ قريبًا",
+      "ended": "منتهية",
+      "cancelled": "ملغاة"
+    },
+    "dates": "{from} – {to}",
+    "visitsLeft": "متبقٍ {left} من {total} × {service}",
+    "discount": "خصم {percent}٪ على الباقي",
+    "price": "{price} / {months, plural, =1 {شهر} =2 {شهرين} few {# أشهر} other {# شهرًا}}",
+    "owed": "المتبقي للدفع: {amount}",
+    "cancel": "إلغاء العضوية",
+    "cancelConfirm": "إنهاء هذه العضوية الآن؟",
+    "cancelYes": "نعم، ألغِ",
+    "keep": "تراجع",
+    "payNow": "المدفوع الآن (ر.س)",
+    "method": "طريقة الدفع",
+    "invoice": "رقم فاتورة العيادة",
+    "methods": {
+      "card": "بطاقة",
+      "cash": "نقدًا",
+      "transfer": "تحويل"
+    },
+    "sell": "بيع عضوية",
+    "plan": "الخطة",
+    "soldOk": "تم بيع العضوية.",
+    "renew": "تجديد",
+    "renewedOk": "تم تجديد العضوية.",
+    "lapsed": "انتهت آخر عضوية. جدّدها لتبدأ فترة جديدة اليوم.",
+    "recordPayment": "تسجيل دفعة",
+    "paidOk": "تم تسجيل الدفعة.",
+    "pageTitle": "العضويات",
+    "pageSubtitle": "الأعضاء والدخل الشهري ومن يحين تجديده.",
+    "statMembers": "الأعضاء اليوم",
+    "statMonthly": "الدخل الشهري المتكرر",
+    "statMonthlyHint": "الخطة السنوية تُحسب 1/12 من سعرها.",
+    "statDue": "بحاجة إلى تجديد",
+    "renewalsTitle": "بحاجة إلى تجديد",
+    "renewalsHint": "تنتهي خلال 14 يومًا، أو انتهت خلال آخر 30 يومًا ولم تُجدَّد. يصل الأعضاءَ تذكيرٌ عبر واتساب قبل 3 أيام.",
+    "endsOn": "تنتهي {date}",
+    "endsToday": "تنتهي اليوم",
+    "endsInDays": "{n, plural, =1 {تنتهي غدًا} =2 {تنتهي بعد يومين} few {تنتهي بعد # أيام} other {تنتهي بعد # يومًا}}",
+    "lapsedDays": "{n, plural, =1 {انتهت أمس} =2 {انتهت قبل يومين} few {انتهت قبل # أيام} other {انتهت قبل # يومًا}}",
+    "noRenewals": "لا أحد بحاجة إلى تجديد.",
+    "activeTitle": "الأعضاء الحاليون ({n})",
+    "noMembers": "لا يوجد أعضاء بعد."
   }
 }

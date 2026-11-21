@@ -144,6 +144,13 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     receptionist: true,
     assistant: false,
   },
+  "memberships:sell": {
+    platform_owner: false,
+    clinic_admin: true,
+    practitioner: false,
+    receptionist: true,
+    assistant: false,
+  },
   "packages:override": {
     platform_owner: false,
     clinic_admin: true,

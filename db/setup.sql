@@ -1121,6 +1121,87 @@ CREATE INDEX "dental_plan_items_patient_idx" ON "dental_plan_items" USING btree 
 CREATE INDEX "lab_cases_due_idx" ON "lab_cases" USING btree ("tenant_id","status","due_on");
 CREATE INDEX "lab_cases_patient_idx" ON "lab_cases" USING btree ("tenant_id","patient_id");
 ALTER TABLE "rooms" ADD CONSTRAINT "rooms_department_fk" FOREIGN KEY ("tenant_id","department_id") REFERENCES "public"."departments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+-- 0021_needy_sasquatch.sql
+CREATE TABLE "membership_payments" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_membership_id" uuid NOT NULL,
+	"amount_halalas" integer NOT NULL,
+	"method" "payment_method" NOT NULL,
+	"invoice_number" text,
+	"recorded_by_user_id" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "membership_payments_positive" CHECK ("membership_payments"."amount_halalas" > 0)
+);
+CREATE TABLE "membership_plans" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"price_halalas" integer NOT NULL,
+	"period_months" smallint NOT NULL,
+	"included_service_id" uuid,
+	"included_visits" smallint DEFAULT 0 NOT NULL,
+	"discount_percent" smallint DEFAULT 0 NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "membership_plans_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "membership_plans_values" CHECK ("membership_plans"."price_halalas" >= 0 and "membership_plans"."period_months" in (1, 3, 6, 12)
+        and "membership_plans"."included_visits" between 0 and 100 and "membership_plans"."discount_percent" between 0 and 50
+        and (("membership_plans"."included_service_id" is null) = ("membership_plans"."included_visits" = 0)))
+);
+CREATE TABLE "membership_visits" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_membership_id" uuid NOT NULL,
+	"appointment_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "membership_visits_one_per_appointment" UNIQUE("tenant_id","appointment_id")
+);
+CREATE TABLE "patient_memberships" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"plan_id" uuid NOT NULL,
+	"name_ar" text NOT NULL,
+	"name_en" text NOT NULL,
+	"price_halalas" integer NOT NULL,
+	"period_months" smallint NOT NULL,
+	"included_service_id" uuid,
+	"included_visits" smallint DEFAULT 0 NOT NULL,
+	"discount_percent" smallint DEFAULT 0 NOT NULL,
+	"starts_on" date NOT NULL,
+	"ends_on" date NOT NULL,
+	"renews_id" uuid,
+	"cancelled_at" timestamp with time zone,
+	"cancelled_by_user_id" text,
+	"sold_by_user_id" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "patient_memberships_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "patient_memberships_values" CHECK ("patient_memberships"."ends_on" >= "patient_memberships"."starts_on" and "patient_memberships"."price_halalas" >= 0
+        and "patient_memberships"."included_visits" between 0 and 100 and "patient_memberships"."discount_percent" between 0 and 50)
+);
+ALTER TABLE "visit_charges" ADD COLUMN "covered_by_membership" boolean DEFAULT false NOT NULL;
+ALTER TABLE "visit_checkouts" ADD COLUMN "discount_halalas" integer DEFAULT 0 NOT NULL;
+ALTER TABLE "visit_checkouts" DROP CONSTRAINT "visit_checkouts_amounts";
+ALTER TABLE "membership_payments" ADD CONSTRAINT "membership_payments_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "membership_payments" ADD CONSTRAINT "membership_payments_membership_fk" FOREIGN KEY ("tenant_id","patient_membership_id") REFERENCES "public"."patient_memberships"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "membership_plans" ADD CONSTRAINT "membership_plans_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "membership_plans" ADD CONSTRAINT "membership_plans_service_fk" FOREIGN KEY ("tenant_id","included_service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "membership_visits" ADD CONSTRAINT "membership_visits_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "membership_visits" ADD CONSTRAINT "membership_visits_membership_fk" FOREIGN KEY ("tenant_id","patient_membership_id") REFERENCES "public"."patient_memberships"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "membership_visits" ADD CONSTRAINT "membership_visits_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_memberships" ADD CONSTRAINT "patient_memberships_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_memberships" ADD CONSTRAINT "patient_memberships_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "patient_memberships" ADD CONSTRAINT "patient_memberships_plan_fk" FOREIGN KEY ("tenant_id","plan_id") REFERENCES "public"."membership_plans"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_memberships" ADD CONSTRAINT "patient_memberships_service_fk" FOREIGN KEY ("tenant_id","included_service_id") REFERENCES "public"."services"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patient_memberships" ADD CONSTRAINT "patient_memberships_renews_fk" FOREIGN KEY ("tenant_id","renews_id") REFERENCES "public"."patient_memberships"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+CREATE INDEX "membership_payments_created_idx" ON "membership_payments" USING btree ("tenant_id","created_at");
+CREATE INDEX "membership_visits_membership_idx" ON "membership_visits" USING btree ("tenant_id","patient_membership_id");
+CREATE INDEX "patient_memberships_patient_idx" ON "patient_memberships" USING btree ("tenant_id","patient_id","ends_on");
+CREATE INDEX "patient_memberships_ends_idx" ON "patient_memberships" USING btree ("tenant_id","ends_on");
+CREATE UNIQUE INDEX "patient_memberships_one_renewal" ON "patient_memberships" USING btree ("tenant_id","renews_id") WHERE "patient_memberships"."renews_id" is not null;
+ALTER TABLE "visit_checkouts" ADD CONSTRAINT "visit_checkouts_amounts" CHECK ("visit_checkouts"."due_halalas" >= 0 and "visit_checkouts"."discount_halalas" >= 0 and "visit_checkouts"."paid_halalas" >= 0 and ("visit_checkouts"."paid_halalas" = 0 or "visit_checkouts"."method" is not null));
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1322,6 +1403,28 @@ begin
   end loop;
   return d;
 end $$;
+
+-- ─── Memberships ────────────────────────────────────────────────────────────
+-- A sold membership period is never edited: only cancelling is allowed (column grants).
+-- Demo clinics alone may move its dates ("Refresh demo week" keeps them around today).
+create or replace function public.patient_memberships_guard() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if (new.starts_on, new.ends_on) is distinct from (old.starts_on, old.ends_on)
+     and not exists (select 1 from public.tenants t where t.id = new.tenant_id and t.is_demo) then
+    raise exception 'membership dates never change' using errcode = '42501';
+  end if;
+  if old.cancelled_at is not null and new.cancelled_at is distinct from old.cancelled_at then
+    raise exception 'a cancelled membership stays cancelled' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+
+create trigger patient_memberships_guard
+  before update on public.patient_memberships
+  for each row execute function public.patient_memberships_guard();
 
 
 -- ─── STEP 3: DEMO DATA (FAKE) ───────────────────────────────────────────────
@@ -1797,6 +1900,7 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'lab_ready', true, 'مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.', 'Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.', 'lab_work_ready', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'membership_renewal', true, 'مرحبًا {patient_first_name}، تنتهي عضويتك ({plan_name}) يوم {end_date}. جدّدها في زيارتك القادمة أو ردّ على هذه الرسالة وسنساعدك.', 'Hello {patient_first_name}, your {plan_name} membership ends on {end_date}. Renew it at your next visit, or reply to this message and we''ll help.', 'membership_renewal', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
@@ -1990,6 +2094,7 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'lab_ready', true, 'مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.', 'Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.', 'lab_work_ready', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'membership_renewal', true, 'مرحبًا {patient_first_name}، تنتهي عضويتك ({plan_name}) يوم {end_date}. جدّدها في زيارتك القادمة أو ردّ على هذه الرسالة وسنساعدك.', 'Hello {patient_first_name}, your {plan_name} membership ends on {end_date}. Renew it at your next visit, or reply to this message and we''ll help.', 'membership_renewal', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
@@ -2564,6 +2669,41 @@ insert into public.lab_cases (id, tenant_id, patient_id, appointment_id, practit
   ('27c3dbcb-558f-55e9-9ee4-df10aca9279f', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b6083414-377a-5ce3-b37d-5faaf2988ce4', null, '08e310c0-a3d8-5130-a29d-751ad096ff00', 'Smile Lab', 'bridge', '14–16', 'A2', current_date - 10, current_date + -1, 'sent', null, null, null, 'usr_derma-dr-nawaf'),
   ('41cee70c-0a64-5656-afff-a93fe1ff73f0', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'df796466-c642-5bad-a390-ce372c145876', null, '08e310c0-a3d8-5130-a29d-751ad096ff00', 'Smile Lab', 'night_guard', '', null, current_date - 7, current_date + 0, 'received', null, now() - interval '1 days', null, 'usr_derma-dr-nawaf');
 
+insert into public.membership_plans (id, tenant_id, name_ar, name_en, price_halalas, period_months, included_service_id, included_visits, discount_percent, is_active) values
+  ('45b9a40d-9554-55a9-ab45-00fc6f56a3af', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'عضوية النضارة الشهرية', 'Glow Monthly', 29900, 1, '238646ad-fa4b-5239-a04f-c948716feebd', 1, 10, true),
+  ('01842830-1bff-5892-b866-64eafa8ca0db', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'عضوية النضارة السنوية', 'Glow Yearly', 299000, 12, '238646ad-fa4b-5239-a04f-c948716feebd', 12, 15, true),
+  ('7f8e7708-fe53-54dd-94c6-e48d805a67d9', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'عضوية VIP الشهرية', 'VIP Monthly', 49900, 1, null, 0, 20, true);
+
+insert into public.patient_memberships (id, tenant_id, patient_id, plan_id, name_ar, name_en, price_halalas, period_months, included_service_id, included_visits, discount_percent, starts_on, ends_on, renews_id, sold_by_user_id, created_at) values
+  ('7893433f-1862-5a0d-8475-d871817f5ccd', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '45b9a40d-9554-55a9-ab45-00fc6f56a3af', 'عضوية النضارة الشهرية', 'Glow Monthly', 29900, 1, '238646ad-fa4b-5239-a04f-c948716feebd', 1, 10, ((select demo_anchor from pg_temp.setup_params) + 4 - interval '1 months')::date, (select demo_anchor from pg_temp.setup_params) + 3, null, 'usr_derma-rec-ruh1', now() - interval '27 days'),
+  ('a76aaaa1-e667-5f86-802e-ed9774b065da', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '8c6e4a92-5030-559e-a231-c336ddc2e409', '7f8e7708-fe53-54dd-94c6-e48d805a67d9', 'عضوية VIP الشهرية', 'VIP Monthly', 49900, 1, null, 0, 20, ((select demo_anchor from pg_temp.setup_params) + 11 - interval '1 months')::date, (select demo_anchor from pg_temp.setup_params) + 10, null, 'usr_derma-rec-ruh1', now() - interval '20 days'),
+  ('9cc840fe-ff2d-5487-90ac-232b36e0559d', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '2b1dac79-3fe4-5ae3-8511-f44af931068f', '01842830-1bff-5892-b866-64eafa8ca0db', 'عضوية النضارة السنوية', 'Glow Yearly', 299000, 12, '238646ad-fa4b-5239-a04f-c948716feebd', 12, 15, ((select demo_anchor from pg_temp.setup_params) + 266 - interval '12 months')::date, (select demo_anchor from pg_temp.setup_params) + 265, null, 'usr_derma-rec-ruh1', now() - interval '100 days'),
+  ('60319e8f-58c6-5097-9fd9-b3a4049fab2b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '00d9afe3-4897-52fd-b204-4ce81167c101', '45b9a40d-9554-55a9-ab45-00fc6f56a3af', 'عضوية النضارة الشهرية', 'Glow Monthly', 29900, 1, '238646ad-fa4b-5239-a04f-c948716feebd', 1, 10, ((select demo_anchor from pg_temp.setup_params) + -4 - interval '1 months')::date, (select demo_anchor from pg_temp.setup_params) + -5, null, 'usr_derma-rec-ruh1', now() - interval '35 days');
+
+insert into public.membership_payments (tenant_id, patient_membership_id, amount_halalas, method, invoice_number, recorded_by_user_id, created_at) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7893433f-1862-5a0d-8475-d871817f5ccd', 29900, 'card', 'INV-2026-0501', 'usr_derma-rec-ruh1', now() - interval '27 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'a76aaaa1-e667-5f86-802e-ed9774b065da', 20000, 'cash', 'INV-2026-0533', 'usr_derma-rec-ruh1', now() - interval '20 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '9cc840fe-ff2d-5487-90ac-232b36e0559d', 299000, 'transfer', 'INV-2026-0388', 'usr_derma-rec-ruh1', now() - interval '100 days'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '60319e8f-58c6-5097-9fd9-b3a4049fab2b', 29900, 'card', 'INV-2026-0470', 'usr_derma-rec-ruh1', now() - interval '35 days');
+
+insert into public.appointments (id, tenant_id, branch_id, patient_id, service_id, practitioner_id, room_id, device_id, starts_at, ends_at, blocked_until, status, reception_note, cancel_reason, demo_day_index, source, created_by) values
+  ('f6c61bc1-f110-5627-a69e-25704495dc97', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '476edfa8-32de-5660-8aad-64aef84f81c4', '7676bea7-643c-5867-af2b-a8d8c9fb95d8', '238646ad-fa4b-5239-a04f-c948716feebd', '56811db4-8b1a-522c-9015-7dce6ade7d82', 'b8e440d0-46dc-5708-9ead-6ad770085f3a', null, ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -16) + time '08:00') at time zone 'Asia/Riyadh'), ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -16) + time '08:00') at time zone 'Asia/Riyadh') + interval '60 minutes', ((public.demo_workday((select demo_anchor from pg_temp.setup_params), -16) + time '08:00') at time zone 'Asia/Riyadh') + interval '75 minutes', 'completed', null, null, -16, 'reception', 'usr_derma-rec-ruh1');
+
+insert into public.membership_visits (tenant_id, patient_membership_id, appointment_id) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '7893433f-1862-5a0d-8475-d871817f5ccd', 'f6c61bc1-f110-5627-a69e-25704495dc97');
+
+insert into public.membership_plans (id, tenant_id, name_ar, name_en, price_halalas, period_months, included_service_id, included_visits, discount_percent, is_active) values
+  ('98045214-2ca4-5a3c-8707-aeebb68c19a3', '55d937e8-cf0c-583b-871e-f90fbc8af348', 'عضوية لمسة', 'Lamsa Care', 19900, 1, 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 1, 10, true);
+
+insert into public.patient_memberships (id, tenant_id, patient_id, plan_id, name_ar, name_en, price_halalas, period_months, included_service_id, included_visits, discount_percent, starts_on, ends_on, renews_id, sold_by_user_id) values
+  ('f3dba5fb-7d2c-5808-90a7-d185c9dd30dc', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', '98045214-2ca4-5a3c-8707-aeebb68c19a3', 'عضوية لمسة', 'Lamsa Care', 19900, 1, 'dcb65889-a26a-5ec3-91a0-24f7df649c95', 1, 10, ((select demo_anchor from pg_temp.setup_params) + 16 - interval '1 months')::date, (select demo_anchor from pg_temp.setup_params) + 15, null, 'usr_lamsa-rec');
+
+insert into public.membership_payments (tenant_id, patient_membership_id, amount_halalas, method, invoice_number, recorded_by_user_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f3dba5fb-7d2c-5808-90a7-d185c9dd30dc', 19900, 'card', null, 'usr_lamsa-rec');
+
+insert into public.membership_visits (tenant_id, patient_membership_id, appointment_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f3dba5fb-7d2c-5808-90a7-d185c9dd30dc', 'c6f2f0b5-635c-5a2a-9b07-facbbe776047');
+
 insert into public.platform_statements (id, tenant_id, number, period_start, period_end, amount_halalas, vat_halalas, total_halalas, due_on, status, paid_at, note, created_by) values
   ('960d71fe-eec4-5a5b-851e-a09ce63d2333', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-1', (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date, (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date - 1), 100000, 15000, 115000, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 7), 'paid', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3)::timestamptz, 'Sample', 'usr_platform-owner'),
   ('9aa6cb6f-2bd3-5269-82f6-90213377f8c1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-2', date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date + interval '1 month')::date - 1), 100000, 15000, 115000, ((now() at time zone 'Asia/Riyadh')::date + 10), 'issued', null, 'Sample', 'usr_platform-owner');
@@ -2939,6 +3079,14 @@ grant select, insert on public.visit_checkouts to clinic_app;
 -- Dental chart: a history, never edited. Plan items and lab cases change status.
 grant select, insert on public.dental_chart_entries to clinic_app;
 grant select, insert, update on public.dental_plan_items, public.lab_cases to clinic_app;
+-- Memberships: plans are clinic set-up; a sold period is only ever cancelled (never edited);
+-- payments and used visits are append-only.
+grant select, insert, update on public.membership_plans to clinic_app;
+grant select, insert on public.patient_memberships to clinic_app;
+grant update (cancelled_at, cancelled_by_user_id) on public.patient_memberships to clinic_app;
+-- Dates: only demo clinics ("Refresh demo week"); a trigger refuses it elsewhere (db/booking.sql).
+grant update (starts_on, ends_on) on public.patient_memberships to clinic_app;
+grant select, insert on public.membership_payments, public.membership_visits to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -2967,7 +3115,8 @@ begin
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
-    'dental_chart_entries', 'dental_plan_items', 'lab_cases'
+    'dental_chart_entries', 'dental_plan_items', 'lab_cases',
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -3175,6 +3324,7 @@ create policy users_owner_lookup on public.users for select
 -- ─── Patient walls ──────────────────────────────────────────────────────────
 -- When a PATIENT is signed in (role "patient"), every table is limited further ("restrictive" = AND):
 --   * their own rows, and their family's (people they are guardian of) — nobody else's;
+--   * their membership (plan, dates, included visits);
 --   * their dental treatment plan (procedure + price = the estimate; never the chart or notes);
 --   * a few clinic reference tables (branches, services, …) read-only;
 --   * everything else (clinical notes, other patients, audit log, payments, staff logins…) invisible;
@@ -3197,11 +3347,12 @@ begin
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
-    'dental_chart_entries', 'dental_plan_items', 'lab_cases', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'dental_chart_entries', 'dental_plan_items', 'lab_cases',
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
-      when t in ('appointments', 'patient_packages', 'patient_consents', 'dental_plan_items') then 'public.app_patient_scope(patient_id)'
+      when t in ('appointments', 'patient_packages', 'patient_consents', 'dental_plan_items', 'patient_memberships') then 'public.app_patient_scope(patient_id)'
       when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'consent_rules', 'tenant_settings') then 'true'
       else 'false'
     end;

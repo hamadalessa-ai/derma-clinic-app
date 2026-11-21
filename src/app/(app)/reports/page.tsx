@@ -20,6 +20,7 @@ import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { isDay, riyadhDay } from "@/lib/booking/time";
+import { membershipStats } from "@/lib/memberships/memberships";
 import { formatSAR } from "@/lib/format";
 import {
   isMonth,
@@ -42,10 +43,14 @@ export default async function ReportsPage({
   const sp = await searchParams;
   const month = isMonth(sp.month) ? sp.month : thisMonth();
   const actor = actorOf(ctx);
-  const { report, branches } = await withActor(actor, async (tx) => {
+  const { report, branches, members } = await withActor(actor, async (tx) => {
     const branches = await reportBranches(tx);
     const branchId = branches.some((b) => b.id === sp.branch) ? sp.branch! : null;
-    return { branches, report: await ownerReport(tx, actor, month, branchId) };
+    return {
+      branches,
+      report: await ownerReport(tx, actor, month, branchId),
+      members: await membershipStats(tx),
+    };
   });
   const name = (x: { nameAr: string; nameEn: string }) => (locale === "ar" ? x.nameAr : x.nameEn);
   const sar = (h: number) => formatSAR(h, locale);
@@ -158,6 +163,12 @@ export default async function ReportsPage({
               label={t("newPatients")}
               value={now.newPatients}
               change={change(now, before, "newPatients")}
+            />
+            <Tile
+              label={t("members")}
+              value={members.members}
+              hint={t("membersMonthly", { amount: sar(members.monthlyHalalas) })}
+              gold
             />
           </>
         )}

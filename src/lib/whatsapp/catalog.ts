@@ -5,7 +5,7 @@
  *
  * Placeholders: {patient_first_name} {appointment} {service} {date} {time} {doctor} {branch}
  * {map_link} {my_link} {booking_link} {minutes} {instructions} {consent_note} {question} {code}
- * {care_link} {work}
+ * {care_link} {work} {plan_name} {end_date}
  * {appointment} is "موعد بوتوكس" / "your Botox appointment" — or just "موعدك" / "your appointment"
  * when the clinic switches "show service name in WhatsApp messages" off.
  */
@@ -19,6 +19,7 @@ export const TEMPLATE_KINDS = [
   "recall",
   "visit_instructions",
   "lab_ready",
+  "membership_renewal",
   "verification_code",
 ] as const;
 export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
@@ -178,6 +179,17 @@ export const TEMPLATES: Record<TemplateKind, TemplateDefinition> = {
       "مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.",
     bodyEn:
       "Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.",
+    buttons: [],
+    canDisable: true,
+  },
+  membership_renewal: {
+    kind: "membership_renewal",
+    metaName: "membership_renewal",
+    variables: ["patient_first_name", "plan_name", "end_date"],
+    bodyAr:
+      "مرحبًا {patient_first_name}، تنتهي عضويتك ({plan_name}) يوم {end_date}. جدّدها في زيارتك القادمة أو ردّ على هذه الرسالة وسنساعدك.",
+    bodyEn:
+      "Hello {patient_first_name}, your {plan_name} membership ends on {end_date}. Renew it at your next visit, or reply to this message and we'll help.",
     buttons: [],
     canDisable: true,
   },

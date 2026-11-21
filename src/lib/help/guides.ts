@@ -120,6 +120,26 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       ],
     },
     {
+      id: "memberships",
+      titleAr: "العضويات",
+      titleEn: "Memberships",
+      link: { href: "/memberships", permission: "memberships:sell" },
+      steps: [
+        s(
+          "من ملف المريض ← «الباقات» اختر الخطة في «بيع عضوية»، وسجّل المدفوع ورقم فاتورة العيادة.",
+          "In the patient file → Packages, choose the plan under Sell a membership, then record what was paid and the clinic invoice number.",
+        ),
+        s(
+          "عند تسجيل الوصول تُحتسب الزيارة المشمولة تلقائيًا، وعند الدفع يُخصم خصم الأعضاء من باقي البنود.",
+          "At check-in an included visit is used automatically; at checkout the member discount comes off the other lines.",
+        ),
+        s(
+          "صفحة «العضويات» تعرض من يحين تجديده. يصل العضوَ تذكير واتساب قبل 3 أيام؛ اضغط «تجديد» في ملفه.",
+          "The Memberships page lists who is due for renewal. Members get a WhatsApp reminder 3 days before; press Renew in their file.",
+        ),
+      ],
+    },
+    {
       id: "inbox",
       titleAr: "رسائل واتساب",
       titleEn: "WhatsApp messages",

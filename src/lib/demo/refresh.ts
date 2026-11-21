@@ -58,6 +58,13 @@ export async function refreshDemoWeek(tx: TenantTx, actor: Actor, today = riyadh
        set starts_at = ${newStart(today, "time_blocks")},
            ends_at = ${newStart(today, "time_blocks")} + (ends_at - starts_at)
      where demo_day_index is not null`);
+  // Memberships keep the same distance to "today" (one ending in 3 days still ends in 3 days).
+  await tx.execute(sql`
+    update public.patient_memberships m
+       set starts_on = m.starts_on + (${today}::date - s.demo_anchor_day),
+           ends_on = m.ends_on + (${today}::date - s.demo_anchor_day)
+      from public.tenant_settings s
+     where s.tenant_id = m.tenant_id and s.demo_anchor_day is not null`);
   await tx.execute(sql`update public.tenant_settings set demo_anchor_day = ${today}::date`);
 
   await audit(tx, {

@@ -337,6 +337,7 @@ describe("check-in: consent → package deduction → arrived", () => {
       deducted: true,
       packageId: pkg.id,
       remaining: 5,
+      membershipVisit: false,
     });
 
     // Double tap and simultaneous taps: no second deduction.
@@ -357,7 +358,13 @@ describe("check-in: consent → package deduction → arrived", () => {
   it("works without a package (nothing to deduct) and for services with no consent", async () => {
     const appt = await newAppointment("consultation", "D-0030");
     const r = await as(reception, (tx) => checkIn(tx, reception, appt.id));
-    expect(r).toEqual({ status: "checked_in", deducted: false, packageId: null, remaining: null });
+    expect(r).toEqual({
+      status: "checked_in",
+      deducted: false,
+      packageId: null,
+      remaining: null,
+      membershipVisit: false,
+    });
   });
 
   it("an expired package is not used", async () => {

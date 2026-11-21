@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DentalSection } from "@/components/clinic/dental-section";
+import { MembershipPanel } from "@/components/clinic/membership-panel";
 import { ContactButtons } from "@/components/clinic/contact-buttons";
 import { AlertBadge, BalanceBadge, StatusBadge } from "@/components/clinic/badges";
 import { ConcernCard } from "@/components/clinic/concern-card";
@@ -34,6 +35,7 @@ import { dentalEnabled } from "@/lib/dental/chart";
 import { pick } from "@/lib/brand";
 import { consentsForPatient, currentTemplates, isIntact } from "@/lib/consents/consents";
 import { formatDualDate, formatGregorian } from "@/lib/format";
+import { activePlans, membershipsForPatient, periodViews } from "@/lib/memberships/memberships";
 import { notesForPatient } from "@/lib/notes/notes";
 import {
   activeTemplates,
@@ -130,6 +132,10 @@ export default async function PatientProfilePage({
       highlight: concernId,
       locale,
     });
+    const [memberships, membershipPlans] = await Promise.all([
+      membershipsForPatient(tx, id),
+      activePlans(tx),
+    ]);
     const [convo] = await tx
       .select({ id: conversations.id })
       .from(conversations)
@@ -149,6 +155,8 @@ export default async function PatientProfilePage({
       consents,
       templates,
       pkgTemplates,
+      memberships,
+      membershipPlans,
       notes,
     };
   });
@@ -396,6 +404,20 @@ export default async function PatientProfilePage({
         </Card>
       )}
 
+      {tab === "packages" && (
+        <MembershipPanel
+          patientId={id}
+          periods={periodViews(data.memberships)}
+          plans={data.membershipPlans.map((x) => ({
+            id: x.id,
+            nameAr: x.nameAr,
+            nameEn: x.nameEn,
+            priceHalalas: x.priceHalalas,
+            periodMonths: x.periodMonths,
+          }))}
+          canSell={can(ctx.roles, "memberships:sell")}
+        />
+      )}
       {tab === "packages" && (
         <PackagesPanel
           patientId={id}

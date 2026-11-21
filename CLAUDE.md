@@ -156,6 +156,18 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   estimate on `/my` (patient wall allows `dental_plan_items`, never the chart).
   Rooms may belong to a department (`rooms.department_id`, Clinic set-up → Rooms): `roomsForService` in the engine keeps the dental room
   for dental services and sends dental services there. Patient file → Dental tab; dental visits show it too.
+- Memberships (`src/lib/memberships/memberships.ts`, plans: Clinic set-up → Memberships; sold / renewed / paid /
+  cancelled from the patient file → Packages; `/memberships` = members, monthly recurring income, renewals due;
+  permission `memberships:sell` = admin + reception): `membership_plans` (price per 1/3/6/12 months, included visits of
+  ONE service per period, discount % ≤ 50 on other lines). A sale COPIES the terms into `patient_memberships` (one row
+  per period; renewal = a new row with `renews_id`, at most once; never edited — only cancelled; the
+  `patient_memberships_guard` trigger blocks date changes except in demo clinics, which "Refresh demo week" shifts).
+  Payments (`membership_payments`) and used visits (`membership_visits`, unique per appointment) are append-only.
+  Check-in (`checkIn`/`videoCheckIn`) uses an included visit only when no package session covered it
+  (`takeIncludedVisit`); the invoice line is then `covered_by_package` + `covered_by_membership` (amount 0). Checkout
+  takes the member discount off the uncovered lines (`visit_checkouts.discount_halalas`, due = after discount), and the
+  daily file shows `membership_discount`, `membership_sale`, `membership_payment` rows. WhatsApp `membership_renewal`
+  3 days before a period ends (scheduler, key `membership_renewal:<id>`). Patients see their membership on `/my`.
 - Help centre (`/help`, permission `help:view`, content `src/lib/help/guides.ts`): short step guides per role in Arabic
   and English. When a screen, tab or button name changes, update the guide (a test checks the links exist).
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly

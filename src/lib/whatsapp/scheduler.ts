@@ -1,5 +1,6 @@
 /**
- * Scheduled WhatsApp messages: reminders, post-care check-ins, no-show follow-ups and recalls.
+ * Scheduled WhatsApp messages: reminders, post-care check-ins, no-show follow-ups, recalls and
+ * membership renewals (3 days before a period ends).
  * Called every hour by GitHub Actions (/api/cron/messages), once a day by Vercel Cron as a safety
  * net, and in demo mode by the admin's "Run scheduled messages now" button.
  *
@@ -14,11 +15,13 @@
  *  - Demo only: "fast-forward 24 hours" sends what would be due a day from now, and quiet hours
  *    can be ignored — so a live demo works at any time of day.
  */
-import { and, asc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm";
-import { appointments, messageDispatches, services } from "@/db/schema";
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { appointments, messageDispatches, patientMemberships, services } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
+import { addDays, riyadhDay } from "@/lib/booking/time";
 import {
   SCHEDULED_KEYS,
+  sendMembershipRenewal,
   sendNoShowFollowUp,
   sendPostCare,
   sendRecall,
@@ -129,7 +132,27 @@ export async function dueWork(tenantId: string, due: Date) {
           newer,
         ),
       );
-    return { reminders, postCare, noShows, recalls };
+    // Membership renewals: periods ending within 3 days (Riyadh), not cancelled, not renewed,
+    // and no newer membership since.
+    const dueDay = riyadhDay(due);
+    const memberships = await tx
+      .select({ id: patientMemberships.id })
+      .from(patientMemberships)
+      .where(
+        and(
+          isNull(patientMemberships.cancelledAt),
+          gte(patientMemberships.endsOn, dueDay),
+          lte(patientMemberships.endsOn, addDays(dueDay, 3)),
+          sql`not exists (
+            select 1 from ${patientMemberships} as n
+            where n.tenant_id = ${patientMemberships.tenantId}
+              and n.patient_id = ${patientMemberships.patientId}
+              and n.starts_on > ${patientMemberships.startsOn}
+              and n.cancelled_at is null
+          )`,
+        ),
+      );
+    return { reminders, postCare, noShows, recalls, memberships };
   });
 }
 
@@ -190,6 +213,11 @@ export async function runScheduledMessages(
       kind: "recall",
       key: SCHEDULED_KEYS.recall(a.id),
       send: () => sendRecall(tenant, a.id, env),
+    })),
+    ...work.memberships.map((m) => ({
+      kind: "membership_renewal",
+      key: SCHEDULED_KEYS.membership_renewal(m.id),
+      send: () => sendMembershipRenewal(tenant, m.id, env),
     })),
   ];
   const done = await alreadyDone(

@@ -6,6 +6,8 @@ import "server-only";
  * - package_sale: each package sold that day, at its price
  * - visit_payment: reception's checkout of each of those visits — what was paid and how
  * - package_payment: each package payment recorded that day (cash / card / transfer)
+ * - membership_discount: the member's discount taken off a visit at checkout (negative amount)
+ * - membership_sale / membership_payment: memberships sold or renewed that day, and their payments
  * clinic_invoice_no: the invoice number reception typed at checkout (from the clinic's own system),
  * on the visit's lines and its payment line, so the two can be matched.
  * The clinic's invoicing system issues the official (ZATCA) invoice; this file only feeds it.
@@ -15,6 +17,8 @@ import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
 import {
   appointments,
   branches,
+  membershipPayments,
+  patientMemberships,
   packagePayments,
   packageSessionEvents,
   patientPackages,
@@ -149,8 +153,35 @@ export async function dailyInvoicingCsv(
     const co = checkouts.get(v.id);
     const invoice = co?.invoiceNumber ?? null;
     // The payment line: what reception recorded at checkout (amount 0 = nothing to pay).
+    const discount =
+      co && co.discountHalalas > 0
+        ? [
+            [
+              "membership_discount",
+              day,
+              riyadhTime(co.createdAt),
+              v.id.slice(0, 8),
+              v.branch,
+              v.fileNumber,
+              v.patientAr,
+              v.patientEn,
+              v.phone,
+              v.idNumber,
+              "membership_discount",
+              "خصم العضوية",
+              "Membership discount",
+              1,
+              v.doctor,
+              sar(-co.discountHalalas),
+              sar(-co.discountHalalas),
+              "membership",
+              invoice,
+            ],
+          ]
+        : [];
     const payment = co
       ? [
+          ...discount,
           [
             "visit_payment",
             day,
@@ -198,7 +229,11 @@ export async function dailyInvoicingCsv(
           v.doctor,
           sar(c.unitPriceHalalas),
           c.coveredByPackage ? "0.00" : sar(c.quantity * c.unitPriceHalalas),
-          c.coveredByPackage ? `package: ${pkg ?? ""}`.trim() : "at_clinic",
+          c.coveredByMembership
+            ? "membership"
+            : c.coveredByPackage
+              ? `package: ${pkg ?? ""}`.trim()
+              : "at_clinic",
           invoice,
         ])
         .concat(payment);
@@ -304,6 +339,92 @@ export async function dailyInvoicingCsv(
         sar(p.amount),
         p.method,
         null,
+      ]);
+
+    const members = await tx
+      .select({
+        id: patientMemberships.id,
+        at: patientMemberships.createdAt,
+        fileNumber: patients.fileNumber,
+        patientAr: patients.fullNameAr,
+        patientEn: patients.fullNameEn,
+        phone: patients.phone,
+        idNumber: patients.idNumber,
+        nameAr: patientMemberships.nameAr,
+        nameEn: patientMemberships.nameEn,
+        price: patientMemberships.priceHalalas,
+      })
+      .from(patientMemberships)
+      .innerJoin(patients, eq(patients.id, patientMemberships.patientId))
+      .where(and(gte(patientMemberships.createdAt, from), lt(patientMemberships.createdAt, to)))
+      .orderBy(asc(patientMemberships.createdAt));
+    for (const m of members)
+      rows.push([
+        "membership_sale",
+        day,
+        riyadhTime(m.at),
+        m.id.slice(0, 8),
+        null,
+        m.fileNumber,
+        m.patientAr,
+        m.patientEn,
+        m.phone,
+        m.idNumber,
+        "membership",
+        m.nameAr,
+        m.nameEn,
+        1,
+        null,
+        sar(m.price),
+        sar(m.price),
+        null,
+        null,
+      ]);
+
+    const memberPaid = await tx
+      .select({
+        membershipId: patientMemberships.id,
+        at: membershipPayments.createdAt,
+        amount: membershipPayments.amountHalalas,
+        method: membershipPayments.method,
+        invoice: membershipPayments.invoiceNumber,
+        fileNumber: patients.fileNumber,
+        patientAr: patients.fullNameAr,
+        patientEn: patients.fullNameEn,
+        phone: patients.phone,
+        idNumber: patients.idNumber,
+        nameAr: patientMemberships.nameAr,
+        nameEn: patientMemberships.nameEn,
+      })
+      .from(membershipPayments)
+      .innerJoin(
+        patientMemberships,
+        eq(patientMemberships.id, membershipPayments.patientMembershipId),
+      )
+      .innerJoin(patients, eq(patients.id, patientMemberships.patientId))
+      .where(and(gte(membershipPayments.createdAt, from), lt(membershipPayments.createdAt, to)))
+      .orderBy(asc(membershipPayments.createdAt));
+    for (const p of memberPaid)
+      rows.push([
+        "membership_payment",
+        day,
+        riyadhTime(p.at),
+        p.membershipId.slice(0, 8),
+        null,
+        p.fileNumber,
+        p.patientAr,
+        p.patientEn,
+        p.phone,
+        p.idNumber,
+        "membership",
+        p.nameAr,
+        p.nameEn,
+        1,
+        null,
+        null,
+        sar(p.amount),
+        p.method,
+        p.invoice,
       ]);
   }
   return { csv: toCsv(DAILY_COLUMNS, rows), rows: rows.length, day: riyadhDay(from) };

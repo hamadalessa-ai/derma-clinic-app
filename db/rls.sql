@@ -332,6 +332,14 @@ grant select, insert on public.visit_checkouts to clinic_app;
 -- Dental chart: a history, never edited. Plan items and lab cases change status.
 grant select, insert on public.dental_chart_entries to clinic_app;
 grant select, insert, update on public.dental_plan_items, public.lab_cases to clinic_app;
+-- Memberships: plans are clinic set-up; a sold period is only ever cancelled (never edited);
+-- payments and used visits are append-only.
+grant select, insert, update on public.membership_plans to clinic_app;
+grant select, insert on public.patient_memberships to clinic_app;
+grant update (cancelled_at, cancelled_by_user_id) on public.patient_memberships to clinic_app;
+-- Dates: only demo clinics ("Refresh demo week"); a trigger refuses it elsewhere (db/booking.sql).
+grant update (starts_on, ends_on) on public.patient_memberships to clinic_app;
+grant select, insert on public.membership_payments, public.membership_visits to clinic_app;
 
 -- Supabase's Data API roles must never reach these tables (Data API is off; belt and braces).
 do $$
@@ -360,7 +368,8 @@ begin
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
-    'dental_chart_entries', 'dental_plan_items', 'lab_cases'
+    'dental_chart_entries', 'dental_plan_items', 'lab_cases',
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -568,6 +577,7 @@ create policy users_owner_lookup on public.users for select
 -- ─── Patient walls ──────────────────────────────────────────────────────────
 -- When a PATIENT is signed in (role "patient"), every table is limited further ("restrictive" = AND):
 --   * their own rows, and their family's (people they are guardian of) — nobody else's;
+--   * their membership (plan, dates, included visits);
 --   * their dental treatment plan (procedure + price = the estimate; never the chart or notes);
 --   * a few clinic reference tables (branches, services, …) read-only;
 --   * everything else (clinical notes, other patients, audit log, payments, staff logins…) invisible;
@@ -590,11 +600,12 @@ begin
     'push_subscriptions', 'notification_prefs', 'schedule_exceptions',
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
-    'dental_chart_entries', 'dental_plan_items', 'lab_cases', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'dental_chart_entries', 'dental_plan_items', 'lab_cases',
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
-      when t in ('appointments', 'patient_packages', 'patient_consents', 'dental_plan_items') then 'public.app_patient_scope(patient_id)'
+      when t in ('appointments', 'patient_packages', 'patient_consents', 'dental_plan_items', 'patient_memberships') then 'public.app_patient_scope(patient_id)'
       when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'consent_rules', 'tenant_settings') then 'true'
       else 'false'
     end;
