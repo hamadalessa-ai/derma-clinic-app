@@ -571,7 +571,11 @@ const memberPayment = z
   .nullish();
 const toPayment = (p: z.infer<typeof memberPayment>) =>
   p && p.paySar > 0
-    ? { amountHalalas: Math.round(p.paySar * 100), method: p.method, invoiceNumber: p.invoiceNumber }
+    ? {
+        amountHalalas: Math.round(p.paySar * 100),
+        method: p.method,
+        invoiceNumber: p.invoiceNumber,
+      }
     : null;
 function membershipsChanged(patientId: string) {
   revalidatePath(`/patients/${patientId}`);

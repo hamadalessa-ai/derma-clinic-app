@@ -92,7 +92,8 @@ export default async function MembershipsPage() {
                         {r.fileNumber}
                       </span>
                       <span className="text-muted-foreground block text-xs">
-                        {pick(locale, r.m.nameAr, r.m.nameEn)} · {t("endsOn", { date: date(r.m.endsOn) })}
+                        {pick(locale, r.m.nameAr, r.m.nameEn)} ·{" "}
+                        {t("endsOn", { date: date(r.m.endsOn) })}
                       </span>
                     </Link>
                     <Badge variant={left < 0 ? "destructive" : "gold"}>
@@ -115,7 +116,9 @@ export default async function MembershipsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("activeTitle", { n: stats.active.length })}</CardTitle>
+          <CardTitle className="text-base">
+            {t("activeTitle", { n: stats.active.length })}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {stats.active.length ? (
@@ -129,7 +132,9 @@ export default async function MembershipsPage() {
                       {a.fileNumber}
                     </span>
                   </Link>
-                  <span className="text-muted-foreground">{pick(locale, a.m.nameAr, a.m.nameEn)}</span>
+                  <span className="text-muted-foreground">
+                    {pick(locale, a.m.nameAr, a.m.nameEn)}
+                  </span>
                   <span className="text-muted-foreground text-xs">
                     {t("endsOn", { date: date(a.m.endsOn) })}
                   </span>

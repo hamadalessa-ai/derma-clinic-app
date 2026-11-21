@@ -46,7 +46,10 @@ export const dueOf = (lines: InvoiceLine[]) =>
  * What the patient pays: the uncovered lines, less the member's discount when the patient
  * was a member on the visit day.
  */
-async function amounts(tx: TenantTx, appt: { id: string; patientId: string; serviceId: string; startsAt: Date }) {
+async function amounts(
+  tx: TenantTx,
+  appt: { id: string; patientId: string; serviceId: string; startsAt: Date },
+) {
   const lines = await invoiceLines(tx, appt);
   const gross = dueOf(lines);
   const m = await membershipOn(tx, appt.patientId, riyadhDay(appt.startsAt));

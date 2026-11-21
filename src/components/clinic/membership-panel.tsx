@@ -99,9 +99,7 @@ export function MembershipPanel({
           history
             .filter((p) => p.state === "ended" && !p.renewed)
             .slice(0, 1)
-            .map((p) => (
-              <RenewRow key={p.id} p={p} canSell={canSell} lapsed />
-            ))}
+            .map((p) => <RenewRow key={p.id} p={p} canSell={canSell} lapsed />)}
         {canSell && !hasRunning && plans.length > 0 && (
           <SellMembership patientId={patientId} plans={plans} />
         )}
@@ -172,9 +170,7 @@ function PeriodCard({
             })}
           </span>
         )}
-        {p.discountPercent > 0 && (
-          <span>{t("discount", { percent: p.discountPercent })}</span>
-        )}
+        {p.discountPercent > 0 && <span>{t("discount", { percent: p.discountPercent })}</span>}
         <span className="text-muted-foreground">
           {t("price", { price: formatSAR(p.priceHalalas, locale), months: p.periodMonths })}
         </span>
@@ -297,7 +293,13 @@ function usePay() {
   return { pay, setPay, method, setMethod, invoice, setInvoice, payment, reset };
 }
 
-function SellMembership({ patientId, plans }: { patientId: string; plans: MembershipPlanOption[] }) {
+function SellMembership({
+  patientId,
+  plans,
+}: {
+  patientId: string;
+  plans: MembershipPlanOption[];
+}) {
   const t = useTranslations("memberships");
   const locale = useLocale() as Locale;
   const act = useAction();

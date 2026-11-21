@@ -115,10 +115,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       })
       .from(patientMemberships)
       .where(
-        and(
-          isNull(patientMemberships.cancelledAt),
-          gte(patientMemberships.endsOn, riyadhDay(now)),
-        ),
+        and(isNull(patientMemberships.cancelledAt), gte(patientMemberships.endsOn, riyadhDay(now))),
       )
       .orderBy(asc(patientMemberships.endsOn));
 

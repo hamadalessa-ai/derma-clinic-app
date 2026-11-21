@@ -58,8 +58,10 @@ export function periodEnd(start: string, months: number) {
 }
 
 /** Active on that day: not cancelled and the day is inside the period. */
-export const isActiveOn = (m: Pick<PatientMembership, "startsOn" | "endsOn" | "cancelledAt">, day: string) =>
-  !m.cancelledAt && m.startsOn <= day && day <= m.endsOn;
+export const isActiveOn = (
+  m: Pick<PatientMembership, "startsOn" | "endsOn" | "cancelledAt">,
+  day: string,
+) => !m.cancelledAt && m.startsOn <= day && day <= m.endsOn;
 
 /** Monthly recurring income of one period (a yearly plan counts 1/12 of its price). */
 export const monthlyValue = (m: { priceHalalas: number; periodMonths: number }) =>
@@ -189,7 +191,10 @@ export async function sellMembership(
   today = riyadhDay(new Date()),
 ) {
   assertCan(actor.roles, "memberships:sell");
-  const [plan] = await tx.select().from(membershipPlans).where(eq(membershipPlans.id, input.planId));
+  const [plan] = await tx
+    .select()
+    .from(membershipPlans)
+    .where(eq(membershipPlans.id, input.planId));
   if (!plan) throw new MembershipError("not_found");
   if (!plan.isActive) throw new MembershipError("plan_off");
   // Lock the patient row: two receptionists selling at once can't create two memberships.
@@ -281,7 +286,12 @@ export async function renewMembership(
 export async function recordMembershipPayment(
   tx: TenantTx,
   actor: Actor,
-  input: { membershipId: string; amountHalalas: number; method: Method; invoiceNumber?: string | null },
+  input: {
+    membershipId: string;
+    amountHalalas: number;
+    method: Method;
+    invoiceNumber?: string | null;
+  },
 ) {
   assertCan(actor.roles, "memberships:sell");
   if (!Number.isInteger(input.amountHalalas) || input.amountHalalas <= 0)
@@ -374,7 +384,8 @@ export async function takeIncludedVisit(
     );
   } catch (err) {
     const e = err as { code?: string; cause?: { code?: string } };
-    if ((e?.cause?.code ?? e?.code) === "23505") return { used: false, membershipId: m.id, left: null };
+    if ((e?.cause?.code ?? e?.code) === "23505")
+      return { used: false, membershipId: m.id, left: null };
     throw err;
   }
   await audit(tx, {

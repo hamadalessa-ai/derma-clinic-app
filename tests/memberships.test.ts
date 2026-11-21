@@ -223,16 +223,22 @@ describe("selling, a visit, the discount, renewing", () => {
     const next = await withActor(reception, (tx) =>
       renewMembership(tx, reception, { membershipId }, SOLD_ON),
     );
-    expect(next).toMatchObject({ startsOn: "2036-06-01", endsOn: "2036-06-30", renewsId: membershipId });
+    expect(next).toMatchObject({
+      startsOn: "2036-06-01",
+      endsOn: "2036-06-30",
+      renewsId: membershipId,
+    });
     expect(
-      await code(withActor(reception, (tx) => renewMembership(tx, reception, { membershipId }, SOLD_ON))),
+      await code(
+        withActor(reception, (tx) => renewMembership(tx, reception, { membershipId }, SOLD_ON)),
+      ),
     ).toBe("renewed");
     const due = await withActor(reception, (tx) => renewalsDue(tx, "2036-05-25"));
     expect(due.map((r) => r.m.id)).not.toContain(membershipId);
     await withActor(reception, (tx) => cancelMembership(tx, reception, next.id));
-    expect(
-      await code(withActor(reception, (tx) => cancelMembership(tx, reception, next.id))),
-    ).toBe("not_found");
+    expect(await code(withActor(reception, (tx) => cancelMembership(tx, reception, next.id)))).toBe(
+      "not_found",
+    );
     // The database keeps a cancelled period cancelled, and never lets the app edit its terms.
     await expect(
       withActor(admin, (tx) =>

@@ -155,7 +155,8 @@ export function PortalHome({ data }: { data: PortalData }) {
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{pick(m.nameAr, m.nameEn)}</div>
                 <div className="text-muted-foreground text-xs">
-                  {m.patientId !== me.id && `${t("forPerson", { name: personName(m.patientId) })} · `}
+                  {m.patientId !== me.id &&
+                    `${t("forPerson", { name: personName(m.patientId) })} · `}
                   {t("validUntil", { date: date(`${m.endsOn}T12:00:00+03:00`) })}
                   {m.discountPercent > 0 &&
                     ` · ${t("memberDiscount", { percent: m.discountPercent })}`}
