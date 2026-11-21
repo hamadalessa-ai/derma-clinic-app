@@ -568,6 +568,7 @@ create policy users_owner_lookup on public.users for select
 -- ─── Patient walls ──────────────────────────────────────────────────────────
 -- When a PATIENT is signed in (role "patient"), every table is limited further ("restrictive" = AND):
 --   * their own rows, and their family's (people they are guardian of) — nobody else's;
+--   * their dental treatment plan (procedure + price = the estimate; never the chart or notes);
 --   * a few clinic reference tables (branches, services, …) read-only;
 --   * everything else (clinical notes, other patients, audit log, payments, staff logins…) invisible;
 --   * NO writes at all: patient actions are checked by the app, then done by the booking engine.
@@ -593,7 +594,7 @@ begin
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
-      when t in ('appointments', 'patient_packages', 'patient_consents') then 'public.app_patient_scope(patient_id)'
+      when t in ('appointments', 'patient_packages', 'patient_consents', 'dental_plan_items') then 'public.app_patient_scope(patient_id)'
       when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'consent_rules', 'tenant_settings') then 'true'
       else 'false'
     end;

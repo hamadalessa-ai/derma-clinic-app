@@ -5,7 +5,7 @@
  *
  * Placeholders: {patient_first_name} {appointment} {service} {date} {time} {doctor} {branch}
  * {map_link} {my_link} {booking_link} {minutes} {instructions} {consent_note} {question} {code}
- * {care_link}
+ * {care_link} {work}
  * {appointment} is "موعد بوتوكس" / "your Botox appointment" — or just "موعدك" / "your appointment"
  * when the clinic switches "show service name in WhatsApp messages" off.
  */
@@ -18,6 +18,7 @@ export const TEMPLATE_KINDS = [
   "no_show",
   "recall",
   "visit_instructions",
+  "lab_ready",
   "verification_code",
 ] as const;
 export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
@@ -166,6 +167,17 @@ export const TEMPLATES: Record<TemplateKind, TemplateDefinition> = {
       "مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}",
     bodyEn:
       "Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}",
+    buttons: [],
+    canDisable: true,
+  },
+  lab_ready: {
+    kind: "lab_ready",
+    metaName: "lab_work_ready",
+    variables: ["patient_first_name", "work", "booking_link"],
+    bodyAr:
+      "مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.",
+    bodyEn:
+      "Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.",
     buttons: [],
     canDisable: true,
   },

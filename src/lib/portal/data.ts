@@ -8,6 +8,7 @@ import {
   appointments,
   branches,
   consentTemplates,
+  dentalPlanItems,
   patientConsents,
   patientPackages,
   patients,
@@ -84,6 +85,21 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       .from(patientConsents)
       .orderBy(desc(patientConsents.signedAt));
 
+    // The dental treatment plan still to do = the estimate (procedure, tooth, price). Never the
+    // chart: that is clinical (the database hides it from patients).
+    const dentalPlan = await tx
+      .select({
+        id: dentalPlanItems.id,
+        patientId: dentalPlanItems.patientId,
+        tooth: dentalPlanItems.tooth,
+        nameAr: dentalPlanItems.nameAr,
+        nameEn: dentalPlanItems.nameEn,
+        priceHalalas: dentalPlanItems.priceHalalas,
+      })
+      .from(dentalPlanItems)
+      .where(eq(dentalPlanItems.status, "planned"))
+      .orderBy(asc(dentalPlanItems.createdAt));
+
     const upcoming = appts.filter(
       (a) => a.startsAt > now && (MOVABLE_STATUSES as readonly string[]).includes(a.status),
     );
@@ -118,7 +134,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
         });
       }
     }
-    return { settings, family, appts, packages, signed, pendingConsents };
+    return { settings, family, appts, packages, signed, pendingConsents, dentalPlan };
   });
 
   // Doctors' names are public (they're on the booking page too); patients can't read staff logins.
@@ -175,6 +191,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       remaining: p.total - p.used,
       expiresAt: p.expiresAt.toISOString(),
     })),
+    dentalPlan: data.dentalPlan,
     signed: data.signed.map((c) => ({ ...c, signedAt: c.signedAt.toISOString() })),
     pendingConsents: data.pendingConsents.map((p) => ({
       patientId: p.patientId,

@@ -150,6 +150,24 @@ English:
 Hello {{1}}, thank you for your visit. Your after-visit instructions and next appointments are here: {{2}}
 ```
 
+## `lab_work_ready`
+
+- **Category:** UTILITY
+- **Languages:** Arabic (`ar`), English (`en`)
+- **Variables:** {{1}} = patient_first_name, {{2}} = work, {{3}} = booking_link
+
+Arabic:
+
+```text
+مرحبًا {{1}}، وصل {{2}} الخاص بك من المعمل. احجز موعد التركيب من هنا: {{3}} أو ردّ على هذه الرسالة.
+```
+
+English:
+
+```text
+Hello {{1}}, your {{2}} is back from the lab. Book your fitting here: {{3}} or reply to this message.
+```
+
 ## `verification_code`
 
 - **Category:** AUTHENTICATION

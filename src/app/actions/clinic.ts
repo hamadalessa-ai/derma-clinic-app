@@ -68,7 +68,11 @@ import {
   setWhatsappConsent,
   staffReply,
 } from "@/lib/whatsapp/staff";
-import { sendBookingConfirmation, sendVisitInstructions } from "@/lib/whatsapp/outbox";
+import {
+  sendBookingConfirmation,
+  sendLabReady,
+  sendVisitInstructions,
+} from "@/lib/whatsapp/outbox";
 import { checkOut } from "@/lib/visits/checkout";
 import { deskSearch, walkIn } from "@/lib/front-desk/desk";
 import { recordTooth } from "@/lib/dental/chart";
@@ -2133,6 +2137,7 @@ export async function saveRoomAction(input: unknown) {
         nameAr: label(),
         nameEn: label(),
         isVirtual: z.boolean().optional(),
+        departmentId: uuid.nullish(),
         isActive: z.boolean(),
       }),
       input,
@@ -2561,9 +2566,11 @@ export async function createLabCaseAction(input: {
 }
 
 export async function setLabStatusAction(input: { id: string; status: string; patientId: string }) {
-  return staffAction("lab:manage", async (_ctx, actor) => {
+  return staffAction("lab:manage", async (ctx, actor) => {
     const v = parse(z.object({ id: uuid, status: z.enum(LAB_STATUSES), patientId: uuid }), input);
     await withActor(actor, (tx) => setLabStatus(tx, actor, v));
+    // Back from the lab: the patient gets "book your fitting" on WhatsApp.
+    if (v.status === "received") whatsappLater(() => sendLabReady(ctx.tenant, v.id));
     dentalChanged(v.patientId);
     revalidatePath("/lab-cases");
     return null;

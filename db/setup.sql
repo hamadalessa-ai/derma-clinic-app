@@ -1796,6 +1796,7 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'no_show', true, 'مرحبًا {patient_first_name}، افتقدناك في موعدك اليوم. نتمنى أن تكون بخير. يمكنك حجز موعد جديد من هنا: {booking_link}', 'Hello {patient_first_name}, we missed you at your appointment today. We hope you''re well. You can book a new time here: {booking_link}', 'missed_appointment', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'lab_ready', true, 'مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.', 'Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.', 'lab_work_ready', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
@@ -1988,6 +1989,7 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'no_show', true, 'مرحبًا {patient_first_name}، افتقدناك في موعدك اليوم. نتمنى أن تكون بخير. يمكنك حجز موعد جديد من هنا: {booking_link}', 'Hello {patient_first_name}, we missed you at your appointment today. We hope you''re well. You can book a new time here: {booking_link}', 'missed_appointment', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'recall', true, 'مرحبًا {patient_first_name}، حان وقت {appointment} القادم. احجز بسهولة من هنا: {booking_link}', 'Hello {patient_first_name}, it''s time to book {appointment} again. Book easily here: {booking_link}', 'follow_up_recall', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'lab_ready', true, 'مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.', 'Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.', 'lab_work_ready', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
@@ -3173,6 +3175,7 @@ create policy users_owner_lookup on public.users for select
 -- ─── Patient walls ──────────────────────────────────────────────────────────
 -- When a PATIENT is signed in (role "patient"), every table is limited further ("restrictive" = AND):
 --   * their own rows, and their family's (people they are guardian of) — nobody else's;
+--   * their dental treatment plan (procedure + price = the estimate; never the chart or notes);
 --   * a few clinic reference tables (branches, services, …) read-only;
 --   * everything else (clinical notes, other patients, audit log, payments, staff logins…) invisible;
 --   * NO writes at all: patient actions are checked by the app, then done by the booking engine.
@@ -3198,7 +3201,7 @@ begin
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
-      when t in ('appointments', 'patient_packages', 'patient_consents') then 'public.app_patient_scope(patient_id)'
+      when t in ('appointments', 'patient_packages', 'patient_consents', 'dental_plan_items') then 'public.app_patient_scope(patient_id)'
       when t in ('branches', 'departments', 'services', 'rooms', 'tenant_members', 'consent_templates', 'consent_rules', 'tenant_settings') then 'true'
       else 'false'
     end;

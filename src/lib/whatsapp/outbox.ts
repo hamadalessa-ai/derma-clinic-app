@@ -2,6 +2,8 @@
  * The clinic's WhatsApp messages about appointments, each built from the appointment and sent
  * through sendMessage(). Each one has a dedupe key, so calling it twice never sends twice.
  */
+import { eq } from "drizzle-orm";
+import { labCases, patients } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { careUrl } from "@/lib/video/link";
 import { appBaseUrl } from "./config";
@@ -195,6 +197,52 @@ export async function sendRecall(
       appointmentId: lastAppointmentId,
       vars: appointmentVars(ctx, langOf(ctx.patient), appBaseUrl(tenant, env)),
       dedupeKey: SCHEDULED_KEYS.recall(lastAppointmentId),
+    },
+    env,
+  );
+}
+
+/** The lab work's name in the patient's language (WhatsApp; the screens use messages/*.json). */
+const LAB_WORK_NAME: Record<string, { ar: string; en: string }> = {
+  crown: { ar: "التاج", en: "crown" },
+  bridge: { ar: "الجسر", en: "bridge" },
+  veneer: { ar: "الفينير", en: "veneers" },
+  denture: { ar: "طقم الأسنان", en: "denture" },
+  aligner: { ar: "التقويم الشفاف", en: "aligners" },
+  night_guard: { ar: "الواقي الليلي", en: "night guard" },
+  implant_part: { ar: "قطعة الزراعة", en: "implant part" },
+  other: { ar: "العمل", en: "lab work" },
+};
+
+/**
+ * "Your crown is back from the lab — book your fitting": sent when reception marks a lab case
+ * received. Once per receipt (a remake received again sends again).
+ */
+export async function sendLabReady(tenant: Tenant, labCaseId: string, env: Env = process.env) {
+  const row = await withTenant(tenant.id, async (tx) => {
+    const [r] = await tx
+      .select({ c: labCases, p: patients })
+      .from(labCases)
+      .innerJoin(patients, eq(patients.id, labCases.patientId))
+      .where(eq(labCases.id, labCaseId));
+    return r ?? null;
+  });
+  if (!row) return skipped("not_found");
+  if (row.c.status !== "received" || !row.c.receivedAt) return skipped("not_received");
+  const lang = langOf(row.p);
+  const full = (lang === "en" && row.p.fullNameEn) || row.p.fullNameAr;
+  const work = LAB_WORK_NAME[row.c.work] ?? LAB_WORK_NAME.other;
+  return sendMessage(
+    tenant,
+    {
+      kind: "lab_ready",
+      patientId: row.p.id,
+      vars: {
+        patient_first_name: full.trim().split(/\s+/)[0] ?? "",
+        work: work[lang],
+        booking_link: `${appBaseUrl(tenant, env)}/book`,
+      },
+      dedupeKey: `lab_ready:${row.c.id}:${row.c.receivedAt.toISOString()}`,
     },
     env,
   );
