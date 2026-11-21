@@ -381,8 +381,7 @@ function Tile({
                   : "text-xs"
             }
           >
-            {change > 0 ? `+${change}` : change}
-            % <ChangeLabel />
+            {change > 0 ? `+${change}` : change}% <ChangeLabel />
           </span>
         )}
       </CardContent>
