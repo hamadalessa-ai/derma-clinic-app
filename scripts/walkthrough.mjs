@@ -209,5 +209,24 @@ if (await dentalStart.count()) {
 await desk.goto(`${BASE}/lab-cases`, { waitUntil: "networkidle" });
 await shot(desk, "lab-cases-reception");
 
+// ── 7. Memberships: the renewals page, a member's file, and the plans in Clinic set-up ──
+await desk.goto(`${BASE}/memberships`, { waitUntil: "networkidle" });
+await desk.getByTestId("memberships-page").waitFor({ timeout: 15000 });
+await shot(desk, "memberships-page", true);
+await desk.goto(`${BASE}/patients/${demoId("derma:patient:D-0038")}?tab=packages`, {
+  waitUntil: "networkidle",
+});
+await desk.getByTestId("membership-panel").waitFor({ timeout: 15000 });
+await shot(desk, "membership-member-file", true);
+await desk.goto(`${BASE}/patients/${demoId("derma:patient:D-0020")}?tab=packages`, {
+  waitUntil: "networkidle",
+});
+await shot(desk, "membership-lapsed-file", true);
+const owner = await signIn("admin@derma.demo");
+await owner.goto(`${BASE}/setup?tab=memberships`, { waitUntil: "networkidle" });
+await shot(owner, "membership-plans-setup");
+await owner.goto(`${BASE}/reports`, { waitUntil: "networkidle" });
+await shot(owner, "reports-members");
+
 await browser.close();
 console.log("walkthrough: OK");

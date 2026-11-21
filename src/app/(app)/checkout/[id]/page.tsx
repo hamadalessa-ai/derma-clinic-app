@@ -139,7 +139,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
                     <span className="min-w-0 flex-1">{pick(locale, l.nameAr, l.nameEn)}</span>
                     {l.coveredByPackage ? (
                       <span className="bg-gold text-gold-foreground rounded-md px-2 text-xs leading-6">
-                        {tv("package")}
+                        {l.coveredByMembership ? tv("membership") : tv("package")}
                       </span>
                     ) : (
                       <span className="text-muted-foreground text-xs tabular-nums" dir="ltr">
@@ -151,6 +151,22 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
                     </span>
                   </li>
                 ))}
+                {data.discount > 0 && data.membership && (
+                  <li
+                    className="flex items-center justify-between px-3 py-2 text-sm"
+                    data-testid="checkout-discount"
+                  >
+                    <span>
+                      {t("memberDiscount", {
+                        plan: pick(locale, data.membership.nameAr, data.membership.nameEn),
+                        percent: data.membership.discountPercent,
+                      })}
+                    </span>
+                    <span className="tabular-nums" dir="ltr">
+                      −{sar(data.discount)}
+                    </span>
+                  </li>
+                )}
                 <li className="flex items-center justify-between px-3 py-2 font-semibold">
                   <span>{t("due")}</span>
                   <span dir="ltr" data-testid="checkout-due">

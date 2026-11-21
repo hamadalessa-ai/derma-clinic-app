@@ -32,6 +32,7 @@ export interface ChargeView {
   quantity: number;
   unitPriceHalalas: number;
   coveredByPackage: boolean;
+  coveredByMembership?: boolean;
 }
 export interface OrderView {
   id: string;
@@ -528,7 +529,9 @@ function ChargesCard({
                 {c.quantity} × {sar(c.unitPriceHalalas)}
               </span>
               {c.coveredByPackage ? (
-                <Badge variant="gold">{t("package")}</Badge>
+                <Badge variant="gold">
+                  {c.coveredByMembership ? t("membership") : t("package")}
+                </Badge>
               ) : (
                 <span className="font-medium" dir="ltr">
                   {sar(c.quantity * c.unitPriceHalalas)}

@@ -12,6 +12,7 @@ import {
   consentTemplates,
   departments,
   devices,
+  membershipPlans,
   packageTemplates,
   rooms,
   servicePractitioners,
@@ -100,6 +101,7 @@ export async function loadSetup(tx: TenantTx) {
   const dv = await tx.select().from(devices).orderBy(asc(devices.createdAt));
   const p = await tx.select().from(packageTemplates).orderBy(asc(packageTemplates.createdAt));
   const bi = await tx.select().from(billingItems).orderBy(asc(billingItems.code));
+  const mp = await tx.select().from(membershipPlans).orderBy(asc(membershipPlans.createdAt));
   const c = await tx
     .select()
     .from(consentTemplates)
@@ -125,6 +127,7 @@ export async function loadSetup(tx: TenantTx) {
     rooms: r,
     devices: dv,
     packages: p,
+    memberships: mp,
     billingItems: bi,
     consents: c.map((x) => ({
       code: x.code,
@@ -458,6 +461,61 @@ export async function savePackage(tx: TenantTx, actor: Actor, v: PackageInput) {
     .values({ tenantId: actor.tenantId, ...values })
     .returning();
   await logChange(tx, actor, "package", row.id, true, values);
+  return row;
+}
+
+// ─── Membership plans ───────────────────────────────────────────────────────
+
+export interface MembershipPlanInput {
+  id?: string | null;
+  nameAr: string;
+  nameEn: string;
+  priceHalalas: number;
+  periodMonths: 1 | 3 | 6 | 12;
+  includedServiceId?: string | null;
+  includedVisits: number;
+  discountPercent: number;
+  isActive: boolean;
+}
+
+/** A membership plan. Changing it never changes memberships already sold (their terms are copied). */
+export async function saveMembershipPlan(tx: TenantTx, actor: Actor, v: MembershipPlanInput) {
+  assertCan(actor.roles, "setup:manage");
+  const serviceId = v.includedVisits > 0 ? (v.includedServiceId ?? null) : null;
+  if (v.includedVisits > 0 && !serviceId) throw new SetupError("bad_service");
+  if (serviceId) {
+    const [svc] = await tx
+      .select({ id: services.id })
+      .from(services)
+      .where(eq(services.id, serviceId));
+    if (!svc) throw new SetupError("bad_service");
+  }
+  const values = {
+    nameAr: tidy(v.nameAr),
+    nameEn: tidy(v.nameEn),
+    priceHalalas: v.priceHalalas,
+    periodMonths: v.periodMonths,
+    includedServiceId: serviceId,
+    includedVisits: serviceId ? v.includedVisits : 0,
+    discountPercent: v.discountPercent,
+    isActive: v.isActive,
+  };
+  if (!values.nameAr || !values.nameEn) throw new SetupError("empty_text");
+  if (v.id) {
+    const [row] = await tx
+      .update(membershipPlans)
+      .set(values)
+      .where(eq(membershipPlans.id, v.id))
+      .returning();
+    if (!row) throw new SetupError("not_found");
+    await logChange(tx, actor, "membership_plan", row.id, false, values);
+    return row;
+  }
+  const [row] = await tx
+    .insert(membershipPlans)
+    .values({ tenantId: actor.tenantId, ...values })
+    .returning();
+  await logChange(tx, actor, "membership_plan", row.id, true, values);
   return row;
 }
 

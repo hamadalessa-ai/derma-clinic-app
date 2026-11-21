@@ -12,6 +12,7 @@ const TABS = [
   "services",
   "rooms",
   "packages",
+  "memberships",
   "prices",
   "consents",
 ] as const;
@@ -46,6 +47,7 @@ export default async function SetupPage({
           rooms: data.rooms,
           devices: data.devices,
           packages: data.packages,
+          memberships: data.memberships,
           billingItems: data.billingItems,
           consents: data.consents,
           doctors: data.doctors,

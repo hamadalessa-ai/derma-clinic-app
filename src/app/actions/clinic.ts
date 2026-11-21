@@ -36,6 +36,12 @@ import {
   removeHoursException,
   saveWeeklyHours,
 } from "@/lib/booking/working-hours";
+import {
+  cancelMembership,
+  recordMembershipPayment,
+  renewMembership,
+  sellMembership,
+} from "@/lib/memberships/memberships";
 import { overrideSessions, recordPayment, sellPackage } from "@/lib/packages/packages";
 import { nextFileNumber, searchPatients } from "@/lib/patients/queries";
 import { notifyLater, sendTestPush } from "@/lib/push/notify";
@@ -96,6 +102,7 @@ import {
   saveBranch,
   saveDepartment,
   saveDevice,
+  saveMembershipPlan,
   savePackage,
   saveRoom,
   saveService,
@@ -554,6 +561,105 @@ export async function sellPackageAction(input: {
     );
     revalidatePath(`/patients/${v.patientId}`);
     return null;
+  });
+}
+
+// ─── Memberships ────────────────────────────────────────────────────────────
+
+const memberPayment = z
+  .object({ paySar: sar, method, invoiceNumber: z.string().trim().max(60).nullish() })
+  .nullish();
+const toPayment = (p: z.infer<typeof memberPayment>) =>
+  p && p.paySar > 0
+    ? { amountHalalas: Math.round(p.paySar * 100), method: p.method, invoiceNumber: p.invoiceNumber }
+    : null;
+function membershipsChanged(patientId: string) {
+  revalidatePath(`/patients/${patientId}`);
+  revalidatePath("/memberships");
+}
+
+export async function sellMembershipAction(input: unknown) {
+  return staffAction("memberships:sell", async (_ctx, actor) => {
+    const v = parse(z.object({ patientId: uuid, planId: uuid, payment: memberPayment }), input);
+    const row = await withActor(actor, (tx) =>
+      sellMembership(tx, actor, {
+        patientId: v.patientId,
+        planId: v.planId,
+        payment: toPayment(v.payment),
+      }),
+    );
+    membershipsChanged(v.patientId);
+    return { id: row.id };
+  });
+}
+
+export async function renewMembershipAction(input: unknown) {
+  return staffAction("memberships:sell", async (_ctx, actor) => {
+    const v = parse(z.object({ membershipId: uuid, payment: memberPayment }), input);
+    const row = await withActor(actor, (tx) =>
+      renewMembership(tx, actor, { membershipId: v.membershipId, payment: toPayment(v.payment) }),
+    );
+    membershipsChanged(row.patientId);
+    return { id: row.id };
+  });
+}
+
+export async function membershipPaymentAction(input: unknown) {
+  return staffAction("memberships:sell", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        membershipId: uuid,
+        patientId: uuid,
+        paySar: sar,
+        method,
+        invoiceNumber: z.string().trim().max(60).nullish(),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) =>
+      recordMembershipPayment(tx, actor, {
+        membershipId: v.membershipId,
+        amountHalalas: Math.round(v.paySar * 100),
+        method: v.method,
+        invoiceNumber: v.invoiceNumber,
+      }),
+    );
+    membershipsChanged(v.patientId);
+    return null;
+  });
+}
+
+export async function cancelMembershipAction(input: unknown) {
+  return staffAction("memberships:sell", async (_ctx, actor) => {
+    const v = parse(z.object({ membershipId: uuid }), input);
+    const row = await withActor(actor, (tx) => cancelMembership(tx, actor, v.membershipId));
+    membershipsChanged(row.patientId);
+    return null;
+  });
+}
+
+export async function saveMembershipPlanAction(input: unknown) {
+  return staffAction("setup:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        id: optId,
+        nameAr: label(),
+        nameEn: label(),
+        priceSar: z.number().min(0).max(1_000_000),
+        periodMonths: z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)]),
+        includedServiceId: uuid.nullish(),
+        includedVisits: z.number().int().min(0).max(100),
+        discountPercent: z.number().int().min(0).max(50),
+        isActive: z.boolean(),
+      }),
+      input,
+    );
+    const { priceSar, ...rest } = v;
+    const row = await withActor(actor, (tx) =>
+      saveMembershipPlan(tx, actor, { ...rest, priceHalalas: sarToHalalas(priceSar) }),
+    );
+    setupDone();
+    return { id: row.id };
   });
 }
 

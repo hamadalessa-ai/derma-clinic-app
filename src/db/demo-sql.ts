@@ -677,6 +677,7 @@ export function demoSql(): string {
     ]),
   );
   out.push(phase2bRows(week));
+  out.push(membershipRows());
   out.push(platformBillingRows());
   // Support access given once in each clinic, long expired (so the isolation tests cover the table).
   for (const slug of ["derma", "lamsa"] as const) {
@@ -1346,5 +1347,190 @@ function phase2bRows(week: ReturnType<typeof generateDemoWeek>): string {
     ]),
   );
 
+  return out.join("\n");
+}
+
+/**
+ * Memberships (FAKE): three Derma plans and four members — D-0011 ends in 3 days (the WhatsApp
+ * renewal reminder), D-0038 in 10 days with money still due, D-0030 yearly, D-0020 lapsed 5 days
+ * ago (on the renewals list). Lamsa gets one too (isolation tests).
+ */
+function membershipRows(): string {
+  const tenant = demoId("tenant:derma");
+  const ref = (kind: string, key: string) => demoId(`derma:${kind}:${key}`);
+  const lamsa = demoId("tenant:lamsa");
+  const lref = (kind: string, key: string) => demoId(`lamsa:${kind}:${key}`);
+  const day = (n: number) => raw(`${ANCHOR} + ${n}`);
+  // The period that ends on anchor + n: starts the day after the same date `months` earlier.
+  const startFor = (endIn: number, months: number) =>
+    raw(`(${ANCHOR} + ${endIn + 1} - interval '${months} months')::date`);
+  const out: string[] = [];
+
+  const plan = (
+    key: string,
+    nameAr: string,
+    nameEn: string,
+    sar: number,
+    months: number,
+    visits: number,
+    discount: number,
+  ) => ({
+    id: ref("membership_plan", key),
+    tenant_id: tenant,
+    name_ar: nameAr,
+    name_en: nameEn,
+    price_halalas: sar * 100,
+    period_months: months,
+    included_service_id: visits ? ref("service", "facial_treatment") : null,
+    included_visits: visits,
+    discount_percent: discount,
+    is_active: true,
+  });
+  const plans = [
+    plan("glow-m", "عضوية النضارة الشهرية", "Glow Monthly", 299, 1, 1, 10),
+    plan("glow-y", "عضوية النضارة السنوية", "Glow Yearly", 2990, 12, 12, 15),
+    plan("vip-m", "عضوية VIP الشهرية", "VIP Monthly", 499, 1, 0, 20),
+  ];
+  out.push(insert("membership_plans", plans));
+
+  const member = (key: string, file: string, planKey: string, endIn: number, soldAgo: number) => {
+    const p = plans.find((x) => x.id === ref("membership_plan", planKey))!;
+    return {
+      id: ref("patient_membership", key),
+      tenant_id: tenant,
+      patient_id: ref("patient", file),
+      plan_id: p.id,
+      name_ar: p.name_ar,
+      name_en: p.name_en,
+      price_halalas: p.price_halalas,
+      period_months: p.period_months,
+      included_service_id: p.included_service_id,
+      included_visits: p.included_visits,
+      discount_percent: p.discount_percent,
+      starts_on: startFor(endIn, p.period_months),
+      ends_on: day(endIn),
+      renews_id: null,
+      sold_by_user_id: "usr_derma-rec-ruh1",
+      created_at: daysAgo(soldAgo),
+    };
+  };
+  const members = [
+    member("d0011", "D-0011", "glow-m", 3, 27),
+    member("d0038", "D-0038", "vip-m", 10, 20),
+    member("d0030", "D-0030", "glow-y", 265, 100),
+    member("d0020", "D-0020", "glow-m", -5, 35),
+  ];
+  out.push(insert("patient_memberships", members));
+  const pay = (key: string, sar: number, method: string, invoice: string, ago: number) => ({
+    tenant_id: tenant,
+    patient_membership_id: ref("patient_membership", key),
+    amount_halalas: sar * 100,
+    method,
+    invoice_number: invoice,
+    recorded_by_user_id: "usr_derma-rec-ruh1",
+    created_at: daysAgo(ago),
+  });
+  out.push(
+    insert("membership_payments", [
+      pay("d0011", 299, "card", "INV-2026-0501", 27),
+      pay("d0038", 200, "cash", "INV-2026-0533", 20),
+      pay("d0030", 2990, "transfer", "INV-2026-0388", 100),
+      pay("d0020", 299, "card", "INV-2026-0470", 35),
+    ]),
+  );
+
+  // D-0011's included facial this period (a completed visit 16 working days ago).
+  out.push(
+    insert("appointments", [
+      {
+        id: ref("appointment", "d0011-facial-member"),
+        tenant_id: tenant,
+        branch_id: ref("branch", "riyadh"),
+        patient_id: ref("patient", "D-0011"),
+        service_id: ref("service", "facial_treatment"),
+        practitioner_id: ref("member", "derma-dr-sara"),
+        room_id: ref("room", "ruh-4"),
+        device_id: null,
+        starts_at: at(-16, "08:00"),
+        ends_at: at(-16, "08:00", 60),
+        blocked_until: at(-16, "08:00", 75),
+        status: "completed",
+        reception_note: null,
+        cancel_reason: null,
+        demo_day_index: -16,
+        source: "reception",
+        created_by: "usr_derma-rec-ruh1",
+      },
+    ]),
+  );
+  out.push(
+    insert("membership_visits", [
+      {
+        tenant_id: tenant,
+        patient_membership_id: ref("patient_membership", "d0011"),
+        appointment_id: ref("appointment", "d0011-facial-member"),
+      },
+    ]),
+  );
+
+  // Lamsa: one plan, one member, one included visit.
+  out.push(
+    insert("membership_plans", [
+      {
+        id: lref("membership_plan", "care"),
+        tenant_id: lamsa,
+        name_ar: "عضوية لمسة",
+        name_en: "Lamsa Care",
+        price_halalas: 19900,
+        period_months: 1,
+        included_service_id: lref("service", "facial_treatment"),
+        included_visits: 1,
+        discount_percent: 10,
+        is_active: true,
+      },
+    ]),
+  );
+  out.push(
+    insert("patient_memberships", [
+      {
+        id: lref("patient_membership", "l0002"),
+        tenant_id: lamsa,
+        patient_id: lref("patient", "L-0002"),
+        plan_id: lref("membership_plan", "care"),
+        name_ar: "عضوية لمسة",
+        name_en: "Lamsa Care",
+        price_halalas: 19900,
+        period_months: 1,
+        included_service_id: lref("service", "facial_treatment"),
+        included_visits: 1,
+        discount_percent: 10,
+        starts_on: startFor(15, 1),
+        ends_on: day(15),
+        renews_id: null,
+        sold_by_user_id: "usr_lamsa-rec",
+      },
+    ]),
+  );
+  out.push(
+    insert("membership_payments", [
+      {
+        tenant_id: lamsa,
+        patient_membership_id: lref("patient_membership", "l0002"),
+        amount_halalas: 19900,
+        method: "card",
+        invoice_number: null,
+        recorded_by_user_id: "usr_lamsa-rec",
+      },
+    ]),
+  );
+  out.push(
+    insert("membership_visits", [
+      {
+        tenant_id: lamsa,
+        patient_membership_id: lref("patient_membership", "l0002"),
+        appointment_id: lref("appointment", "past-1"),
+      },
+    ]),
+  );
   return out.join("\n");
 }

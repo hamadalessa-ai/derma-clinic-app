@@ -673,6 +673,10 @@ export const TENANT_TABLES = [
   "dental_chart_entries",
   "dental_plan_items",
   "lab_cases",
+  "membership_plans",
+  "patient_memberships",
+  "membership_payments",
+  "membership_visits",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1382,6 +1386,8 @@ export const visitCharges = pgTable(
     unitPriceHalalas: integer("unit_price_halalas").notNull(),
     /** A package session pays for it (the booked service, deducted at check-in): amount 0. */
     coveredByPackage: boolean("covered_by_package").notNull().default(false),
+    /** An included membership visit (also at 0). */
+    coveredByMembership: boolean("covered_by_membership").notNull().default(false),
     addedByUserId: text("added_by_user_id").notNull(),
     createdAt: createdAt(),
   },
@@ -1482,6 +1488,8 @@ export const visitCheckouts = pgTable(
     patientId: uuid("patient_id").notNull(),
     /** The visit's invoice lines not covered by a package, at the copied prices. */
     dueHalalas: integer("due_halalas").notNull(),
+    /** Membership discount already taken off due_halalas. */
+    discountHalalas: integer("discount_halalas").notNull().default(0),
     paidHalalas: integer("paid_halalas").notNull(),
     method: paymentMethod("method"),
     invoiceNumber: text("invoice_number"),
@@ -1495,7 +1503,7 @@ export const visitCheckouts = pgTable(
     index("visit_checkouts_created_idx").on(t.tenantId, t.createdAt),
     check(
       "visit_checkouts_amounts",
-      sql`${t.dueHalalas} >= 0 and ${t.paidHalalas} >= 0 and (${t.paidHalalas} = 0 or ${t.method} is not null)`,
+      sql`${t.dueHalalas} >= 0 and ${t.discountHalalas} >= 0 and ${t.paidHalalas} >= 0 and (${t.paidHalalas} = 0 or ${t.method} is not null)`,
     ),
     foreignKey({
       name: "visit_checkouts_appointment_fk",
@@ -2206,5 +2214,159 @@ export const labCases = pgTable(
       columns: [t.tenantId, t.practitionerId],
       foreignColumns: [tenantMembers.tenantId, tenantMembers.id],
     }),
+  ],
+);
+
+// ─── Memberships (monthly / yearly plans) ───────────────────────────────────
+
+/**
+ * A membership the clinic sells (Clinic set-up → Memberships): a price per period, some
+ * included visits of one service per period, and a discount on everything else.
+ */
+export const membershipPlans = pgTable(
+  "membership_plans",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en").notNull(),
+    priceHalalas: integer("price_halalas").notNull(),
+    /** 1, 3, 6 or 12 months. */
+    periodMonths: smallint("period_months").notNull(),
+    includedServiceId: uuid("included_service_id"),
+    /** Included visits of that service in each period (0 = none). */
+    includedVisits: smallint("included_visits").notNull().default(0),
+    /** Discount on the other invoice lines of a member's visit, in percent. */
+    discountPercent: smallint("discount_percent").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("membership_plans_tenant_id_id_key").on(t.tenantId, t.id),
+    check(
+      "membership_plans_values",
+      sql`${t.priceHalalas} >= 0 and ${t.periodMonths} in (1, 3, 6, 12)
+        and ${t.includedVisits} between 0 and 100 and ${t.discountPercent} between 0 and 50
+        and ((${t.includedServiceId} is null) = (${t.includedVisits} = 0))`,
+    ),
+    foreignKey({
+      name: "membership_plans_service_fk",
+      columns: [t.tenantId, t.includedServiceId],
+      foreignColumns: [services.tenantId, services.id],
+    }),
+  ],
+);
+
+/**
+ * One period of a patient's membership. The plan's terms are COPIED when sold; a renewal is a
+ * new row (renews_id = the period it continues), so the history stays. Only cancelling changes a row.
+ */
+export const patientMemberships = pgTable(
+  "patient_memberships",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    planId: uuid("plan_id").notNull(),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en").notNull(),
+    priceHalalas: integer("price_halalas").notNull(),
+    periodMonths: smallint("period_months").notNull(),
+    includedServiceId: uuid("included_service_id"),
+    includedVisits: smallint("included_visits").notNull().default(0),
+    discountPercent: smallint("discount_percent").notNull().default(0),
+    /** First and last day (Riyadh), both included. */
+    startsOn: date("starts_on").notNull(),
+    endsOn: date("ends_on").notNull(),
+    renewsId: uuid("renews_id"),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelledByUserId: text("cancelled_by_user_id"),
+    soldByUserId: text("sold_by_user_id"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("patient_memberships_tenant_id_id_key").on(t.tenantId, t.id),
+    index("patient_memberships_patient_idx").on(t.tenantId, t.patientId, t.endsOn),
+    index("patient_memberships_ends_idx").on(t.tenantId, t.endsOn),
+    // A period is renewed at most once.
+    uniqueIndex("patient_memberships_one_renewal")
+      .on(t.tenantId, t.renewsId)
+      .where(sql`${t.renewsId} is not null`),
+    check(
+      "patient_memberships_values",
+      sql`${t.endsOn} >= ${t.startsOn} and ${t.priceHalalas} >= 0
+        and ${t.includedVisits} between 0 and 100 and ${t.discountPercent} between 0 and 50`,
+    ),
+    foreignKey({
+      name: "patient_memberships_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "patient_memberships_plan_fk",
+      columns: [t.tenantId, t.planId],
+      foreignColumns: [membershipPlans.tenantId, membershipPlans.id],
+    }),
+    foreignKey({
+      name: "patient_memberships_service_fk",
+      columns: [t.tenantId, t.includedServiceId],
+      foreignColumns: [services.tenantId, services.id],
+    }),
+    foreignKey({
+      name: "patient_memberships_renews_fk",
+      columns: [t.tenantId, t.renewsId],
+      foreignColumns: [t.tenantId, t.id],
+    }),
+  ],
+);
+
+/** Money received for a membership period. Append-only. */
+export const membershipPayments = pgTable(
+  "membership_payments",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientMembershipId: uuid("patient_membership_id").notNull(),
+    amountHalalas: integer("amount_halalas").notNull(),
+    method: paymentMethod("method").notNull(),
+    /** The clinic's own (ZATCA) invoice number. */
+    invoiceNumber: text("invoice_number"),
+    recordedByUserId: text("recorded_by_user_id"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("membership_payments_created_idx").on(t.tenantId, t.createdAt),
+    check("membership_payments_positive", sql`${t.amountHalalas} > 0`),
+    foreignKey({
+      name: "membership_payments_membership_fk",
+      columns: [t.tenantId, t.patientMembershipId],
+      foreignColumns: [patientMemberships.tenantId, patientMemberships.id],
+    }).onDelete("cascade"),
+  ],
+);
+
+/** An included visit used at check-in. Append-only; one per appointment, ever. */
+export const membershipVisits = pgTable(
+  "membership_visits",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientMembershipId: uuid("patient_membership_id").notNull(),
+    appointmentId: uuid("appointment_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("membership_visits_one_per_appointment").on(t.tenantId, t.appointmentId),
+    index("membership_visits_membership_idx").on(t.tenantId, t.patientMembershipId),
+    foreignKey({
+      name: "membership_visits_membership_fk",
+      columns: [t.tenantId, t.patientMembershipId],
+      foreignColumns: [patientMemberships.tenantId, patientMemberships.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "membership_visits_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }).onDelete("cascade"),
   ],
 );

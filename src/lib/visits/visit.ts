@@ -26,6 +26,7 @@ import {
   markDoctorWithPatient,
 } from "@/lib/booking/engine";
 import { assistsMember, doctorOf } from "@/lib/care-team/care-team";
+import { coveredByMembership } from "@/lib/memberships/memberships";
 import { NoteError, openDraft, postNote } from "@/lib/notes/notes";
 
 export class VisitError extends Error {
@@ -204,6 +205,7 @@ export async function ensureServiceCharge(
       ),
     )
     .limit(1);
+  const member = !deduction && (await coveredByMembership(tx, appt.id));
   await tx.insert(visitCharges).values({
     tenantId: actor.tenantId,
     appointmentId: appt.id,
@@ -214,7 +216,9 @@ export async function ensureServiceCharge(
     nameEn: svc.nameEn,
     quantity: 1,
     unitPriceHalalas: svc.priceHalalas,
-    coveredByPackage: !!deduction,
+    // "Covered" = prepaid (amount 0): a package session, or an included membership visit.
+    coveredByPackage: !!deduction || member,
+    coveredByMembership: !deduction && member,
     addedByUserId: actor.userId,
   });
 }

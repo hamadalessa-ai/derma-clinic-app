@@ -51,6 +51,8 @@ export const PERMISSIONS = {
   "patients:edit": ["clinic_admin", "receptionist"],
   "packages:sell": ["clinic_admin", "receptionist"],
   "packages:override": ["clinic_admin", "receptionist"],
+  /** Memberships: sell, renew, take payments, cancel; the renewals list. */
+  "memberships:sell": ["clinic_admin", "receptionist"],
   "consents:collect": ["clinic_admin", "receptionist", "practitioner", "assistant"],
   "consents:templates": ["clinic_admin"],
   "notes:write": ["practitioner", "assistant"],
@@ -155,6 +157,7 @@ export const NAV_ITEMS = [
   },
   { href: "/account", key: "account", permission: "account:manage" },
   { href: "/lab-cases", key: "labCases", permission: "lab:view", dentalOnly: true },
+  { href: "/memberships", key: "memberships", permission: "memberships:sell" },
   { href: "/help", key: "help", permission: "help:view" },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly {
@@ -181,6 +184,7 @@ export const MOBILE_PRIORITY = [
   "simulator",
   "account",
   "labCases",
+  "memberships",
   "help",
 ] as const;
 

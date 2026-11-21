@@ -197,3 +197,25 @@ begin
   end loop;
   return d;
 end $$;
+
+-- ─── Memberships ────────────────────────────────────────────────────────────
+-- A sold membership period is never edited: only cancelling is allowed (column grants).
+-- Demo clinics alone may move its dates ("Refresh demo week" keeps them around today).
+create or replace function public.patient_memberships_guard() returns trigger
+  language plpgsql
+  set search_path = ''
+as $$
+begin
+  if (new.starts_on, new.ends_on) is distinct from (old.starts_on, old.ends_on)
+     and not exists (select 1 from public.tenants t where t.id = new.tenant_id and t.is_demo) then
+    raise exception 'membership dates never change' using errcode = '42501';
+  end if;
+  if old.cancelled_at is not null and new.cancelled_at is distinct from old.cancelled_at then
+    raise exception 'a cancelled membership stays cancelled' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+
+create trigger patient_memberships_guard
+  before update on public.patient_memberships
+  for each row execute function public.patient_memberships_guard();

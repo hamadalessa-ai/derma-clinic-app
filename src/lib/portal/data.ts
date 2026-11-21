@@ -3,13 +3,14 @@
  * + app.patient_id), so the database itself limits it to their own and their family's rows.
  * Clinical notes are never loaded here (and the database would refuse them anyway).
  */
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull } from "drizzle-orm";
 import {
   appointments,
   branches,
   consentTemplates,
   dentalPlanItems,
   patientConsents,
+  patientMemberships,
   patientPackages,
   patients,
   services,
@@ -18,6 +19,7 @@ import {
 } from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { getSettings } from "@/lib/booking/engine";
+import { riyadhDay } from "@/lib/booking/time";
 import { MOVABLE_STATUSES } from "@/lib/booking/status";
 import { consentStatusFor } from "@/lib/consents/consents";
 import { reasonView, type ConsentReasonView } from "@/lib/consents/rules";
@@ -100,6 +102,26 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       .where(eq(dentalPlanItems.status, "planned"))
       .orderBy(asc(dentalPlanItems.createdAt));
 
+    // Memberships still running (or starting soon): plan, dates, included visits, discount.
+    const memberships = await tx
+      .select({
+        id: patientMemberships.id,
+        patientId: patientMemberships.patientId,
+        nameAr: patientMemberships.nameAr,
+        nameEn: patientMemberships.nameEn,
+        endsOn: patientMemberships.endsOn,
+        includedVisits: patientMemberships.includedVisits,
+        discountPercent: patientMemberships.discountPercent,
+      })
+      .from(patientMemberships)
+      .where(
+        and(
+          isNull(patientMemberships.cancelledAt),
+          gte(patientMemberships.endsOn, riyadhDay(now)),
+        ),
+      )
+      .orderBy(asc(patientMemberships.endsOn));
+
     const upcoming = appts.filter(
       (a) => a.startsAt > now && (MOVABLE_STATUSES as readonly string[]).includes(a.status),
     );
@@ -134,7 +156,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
         });
       }
     }
-    return { settings, family, appts, packages, signed, pendingConsents, dentalPlan };
+    return { settings, family, appts, packages, signed, pendingConsents, dentalPlan, memberships };
   });
 
   // Doctors' names are public (they're on the booking page too); patients can't read staff logins.
@@ -192,6 +214,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       expiresAt: p.expiresAt.toISOString(),
     })),
     dentalPlan: data.dentalPlan,
+    memberships: data.memberships,
     signed: data.signed.map((c) => ({ ...c, signedAt: c.signedAt.toISOString() })),
     pendingConsents: data.pendingConsents.map((p) => ({
       patientId: p.patientId,
