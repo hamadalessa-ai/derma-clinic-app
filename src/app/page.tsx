@@ -24,23 +24,18 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * The clinic's public website, built from the clinic's own data (Settings → Website).
- * Signed-in staff go to their work screens instead; `?preview` shows them the website.
+ * Everyone sees it, signed-in staff too: for them the top bar's "Staff sign-in" becomes "Open app".
  */
-export default async function ClinicHome({
-  searchParams,
-}: {
-  searchParams: Promise<{ preview?: string }>;
-}) {
+export default async function ClinicHome() {
   const tenant = await getCurrentTenant();
   if (!tenant) redirect("/clinic-not-found");
   if (!publicPagesOpen(tenant)) redirect("/unavailable");
-  const { preview } = await searchParams;
-  if (preview === undefined && (await getStaffContext())) redirect("/home");
+  const staff = !!(await getStaffContext());
   const locale = (await getLocale()) as Locale;
   const data = await loadClinicSite(tenant.id);
   return (
     <div style={brandStyle(tenant.brandColor)}>
-      <ClinicSite clinic={tenant} data={data} locale={locale} />
+      <ClinicSite clinic={tenant} data={data} locale={locale} staff={staff} />
     </div>
   );
 }

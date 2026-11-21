@@ -1363,7 +1363,8 @@
     "conceptShort": "Concept demo. Not the official website.",
     "prev": "Previous doctor",
     "next": "Next doctor",
-    "callShort": "Call"
+    "callShort": "Call",
+    "openApp": "Open app"
   },
   "team": {
     "intro": "Everyone who signs in to the clinic. New people get an invitation link to set their own password. Link a doctor to their website profile so the website's Book button books them.",

@@ -29,12 +29,15 @@ export async function SiteHeader({
   site,
   canBook,
   hasOffers,
+  staff = false,
 }: {
   locale: Locale;
   name: string;
   site: SiteContent;
   canBook: boolean;
   hasOffers: boolean;
+  /** Signed-in staff: "Open app" instead of "Staff sign-in". */
+  staff?: boolean;
 }) {
   const t = await getTranslations("site");
   const L = (a?: string, e?: string) => (locale === "ar" ? a || e : e || a) ?? "";
@@ -103,12 +106,12 @@ export async function SiteHeader({
               {t("utilityPortal")}
             </Link>
             <Link
-              href="/login"
+              href={staff ? "/home" : "/login"}
               className="hover:text-site-ivory hidden items-center gap-1.5 sm:flex"
               data-testid="utility-staff"
             >
               <BriefcaseMedical className="size-3.5" aria-hidden />
-              {t("staff")}
+              {staff ? t("openApp") : t("staff")}
             </Link>
             {canBook && (
               <Link
@@ -249,7 +252,9 @@ export async function SiteHeader({
                 ...(hasOffers ? [{ label: t("navOffers"), href: "#offers" }] : []),
                 { label: t("navContact"), href: "#contact" },
                 { label: t("utilityPortal"), href: "/my" },
-                { label: t("staff"), href: "/login" },
+                staff
+                  ? { label: t("openApp"), href: "/home" }
+                  : { label: t("staff"), href: "/login" },
               ]}
               book={canBook ? { label: t("book"), href: "/book" } : null}
               labels={{ open: t("menuOpen"), close: t("menuClose") }}
