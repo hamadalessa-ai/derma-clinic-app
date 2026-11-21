@@ -33,10 +33,13 @@ export async function ClinicSite({
   clinic,
   data,
   locale,
+  staff = false,
 }: {
   clinic: { nameAr: string; nameEn: string; isDemo: boolean; status?: ClinicStatus };
   data: ClinicSiteData;
   locale: Locale;
+  /** A signed-in staff member is looking: "Staff sign-in" becomes "Open app". */
+  staff?: boolean;
 }) {
   const t = await getTranslations("site");
   const name = pick(locale, clinic.nameAr, clinic.nameEn);
@@ -181,6 +184,7 @@ export async function ClinicSite({
       </div>
 
       <SiteHeader
+        staff={staff}
         locale={locale}
         name={name}
         site={s}
@@ -635,8 +639,8 @@ export async function ClinicSite({
             <Link href="/my" className="hover:text-site-ivory w-fit">
               {t("utilityPortal")}
             </Link>
-            <Link href="/login" className="hover:text-site-ivory w-fit">
-              {t("staff")}
+            <Link href={staff ? "/home" : "/login"} className="hover:text-site-ivory w-fit">
+              {staff ? t("openApp") : t("staff")}
             </Link>
           </div>
         </div>

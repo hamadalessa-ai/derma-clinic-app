@@ -74,7 +74,7 @@ export function SiteSettingsForm({ initial }: { initial: SiteContent }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-muted-foreground text-sm">{t("siteIntro")}</p>
         <a
-          href="/?preview"
+          href="/"
           target="_blank"
           className={buttonVariants({ variant: "outline", size: "sm" })}
           data-testid="site-preview"
