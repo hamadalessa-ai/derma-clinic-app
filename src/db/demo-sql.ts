@@ -678,6 +678,7 @@ export function demoSql(): string {
   );
   out.push(phase2bRows(week));
   out.push(membershipRows());
+  out.push(labRows());
   out.push(platformBillingRows());
   // Support access given once in each clinic, long expired (so the isolation tests cover the table).
   for (const slug of ["derma", "lamsa"] as const) {
@@ -1529,6 +1530,128 @@ function membershipRows(): string {
         tenant_id: lamsa,
         patient_membership_id: lref("patient_membership", "l0002"),
         appointment_id: lref("appointment", "past-1"),
+      },
+    ]),
+  );
+  return out.join("\n");
+}
+
+/**
+ * Lab results (FAKE): D-0012 on an acne course — liver and lipids 2 months ago (triglycerides
+ * high), ferritin and vitamin D 10 days ago (both low), a repeat of ALT + triglycerides due soon
+ * and a vitamin B12 repeat already overdue. Lamsa has one report (isolation tests).
+ */
+function labRows(): string {
+  const tenant = demoId("tenant:derma");
+  const ref = (kind: string, key: string) => demoId(`derma:${kind}:${key}`);
+  const lamsa = demoId("tenant:lamsa");
+  const lref = (kind: string, key: string) => demoId(`lamsa:${kind}:${key}`);
+  const day = (n: number) => raw(`${ANCHOR} + ${n}`);
+  const out: string[] = [];
+  const report = (key: string, ago: number, lab: string) => ({
+    id: ref("lab_report", key),
+    tenant_id: tenant,
+    patient_id: ref("patient", "D-0012"),
+    appointment_id: null,
+    taken_on: day(-ago),
+    lab_name: lab,
+    note: null,
+    file_id: null,
+    entered_by_user_id: "usr_derma-dr-sara",
+  });
+  out.push(
+    insert("lab_reports", [report("d12-a", 60, "Al Borg Lab"), report("d12-b", 10, "Al Borg Lab")]),
+  );
+  const value = (
+    key: string,
+    pos: number,
+    test: string,
+    text: string,
+    unit: string,
+    low: number | null,
+    high: number | null,
+    flag: string,
+  ) => ({
+    tenant_id: tenant,
+    report_id: ref("lab_report", key),
+    position: pos,
+    test_name: test,
+    value_text: text,
+    value_num: Number(text),
+    unit,
+    ref_low: low,
+    ref_high: high,
+    flag,
+  });
+  out.push(
+    insert("lab_values", [
+      value("d12-a", 0, "ALT", "38", "U/L", 7, 56, "normal"),
+      value("d12-a", 1, "AST", "29", "U/L", 10, 40, "normal"),
+      value("d12-a", 2, "Triglycerides", "182", "mg/dL", null, 150, "high"),
+      value("d12-a", 3, "Total cholesterol", "176", "mg/dL", null, 200, "normal"),
+      value("d12-b", 0, "Ferritin", "14", "ng/mL", 30, 400, "low"),
+      value("d12-b", 1, "Vitamin D (25-OH)", "19", "ng/mL", 30, 100, "low"),
+      value("d12-b", 2, "Hemoglobin", "12.9", "g/dL", 12, 17.5, "normal"),
+    ]),
+  );
+  const request = (test: string, due: number, reason: string | null) => ({
+    tenant_id: tenant,
+    patient_id: ref("patient", "D-0012"),
+    appointment_id: null,
+    test_name: test,
+    due_on: day(due),
+    reason,
+    requested_by_user_id: "usr_derma-dr-sara",
+  });
+  out.push(
+    insert("lab_requests", [
+      request("ALT", 20, "Monthly on the acne course"),
+      request("Triglycerides", 20, "Monthly on the acne course"),
+      request("Vitamin B12", -3, null),
+    ]),
+  );
+
+  out.push(
+    insert("lab_reports", [
+      {
+        id: lref("lab_report", "l2"),
+        tenant_id: lamsa,
+        patient_id: lref("patient", "L-0002"),
+        appointment_id: null,
+        taken_on: day(-7),
+        lab_name: null,
+        note: null,
+        file_id: null,
+        entered_by_user_id: "usr_lamsa-dr-mona",
+      },
+    ]),
+  );
+  out.push(
+    insert("lab_values", [
+      {
+        tenant_id: lamsa,
+        report_id: lref("lab_report", "l2"),
+        position: 0,
+        test_name: "TSH",
+        value_text: "2.1",
+        value_num: 2.1,
+        unit: "mIU/L",
+        ref_low: 0.4,
+        ref_high: 4,
+        flag: "normal",
+      },
+    ]),
+  );
+  out.push(
+    insert("lab_requests", [
+      {
+        tenant_id: lamsa,
+        patient_id: lref("patient", "L-0002"),
+        appointment_id: null,
+        test_name: "TSH",
+        due_on: day(90),
+        reason: null,
+        requested_by_user_id: "usr_lamsa-dr-mona",
       },
     ]),
   );

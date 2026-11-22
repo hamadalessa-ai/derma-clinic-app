@@ -17,6 +17,9 @@ export const PERMISSIONS = {
   "dashboard:view": ["platform_owner", ...ALL_CLINIC_STAFF],
   /** Dental chart (clinical): doctors and nurses only. */
   "dental:chart": ["practitioner", "assistant"],
+  /** Lab results (clinical): read, enter, void, request repeat tests. Doctors and nurses only. */
+  "labs:view": ["practitioner", "assistant"],
+  "labs:manage": ["practitioner", "assistant"],
   /** Dental treatment plan: doctors and nurses change it (everyone reads it). */
   "dental:plan": ["practitioner", "assistant"],
   /** Lab cases: everyone follows them and updates where the work is. */

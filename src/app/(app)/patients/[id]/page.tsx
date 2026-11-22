@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DentalSection } from "@/components/clinic/dental-section";
+import { LabSection } from "@/components/clinic/lab-section";
 import { MembershipPanel } from "@/components/clinic/membership-panel";
 import { ContactButtons } from "@/components/clinic/contact-buttons";
 import { AlertBadge, BalanceBadge, StatusBadge } from "@/components/clinic/badges";
@@ -54,7 +55,7 @@ import type { Locale } from "@/i18n/config";
 /** The AI scribe may take a while to draft a long note. */
 export const maxDuration = 60;
 
-const TABS = ["overview", "visits", "packages", "consents", "dental", "notes"] as const;
+const TABS = ["overview", "visits", "packages", "consents", "labs", "dental", "notes"] as const;
 type Tab = (typeof TABS)[number];
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -79,7 +80,10 @@ export default async function PatientProfilePage({
   const canNotes = can(ctx.roles, "clinical_notes:read");
   // Dental tab only in clinics with a dental department.
   const dental = await withActor(actorOf(ctx), (tx) => dentalEnabled(tx));
-  const tabs = TABS.filter((x) => (x !== "notes" || canNotes) && (x !== "dental" || dental));
+  const canLabs = can(ctx.roles, "labs:view");
+  const tabs = TABS.filter(
+    (x) => (x !== "notes" || canNotes) && (x !== "dental" || dental) && (x !== "labs" || canLabs),
+  );
   const tab: Tab = (tabs as readonly string[]).includes(sp.tab ?? "")
     ? (sp.tab as Tab)
     : "overview";
@@ -457,6 +461,8 @@ export default async function PatientProfilePage({
           canCollect={can(ctx.roles, "consents:collect")}
         />
       )}
+
+      {tab === "labs" && canLabs && <LabSection actor={actor} patientId={id} />}
 
       {tab === "dental" && dental && <DentalSection actor={actor} patientId={id} />}
 

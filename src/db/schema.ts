@@ -13,6 +13,7 @@ import {
   check,
   customType,
   date,
+  doublePrecision,
   foreignKey,
   index,
   integer,
@@ -677,6 +678,9 @@ export const TENANT_TABLES = [
   "patient_memberships",
   "membership_payments",
   "membership_visits",
+  "lab_reports",
+  "lab_values",
+  "lab_requests",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2368,5 +2372,122 @@ export const membershipVisits = pgTable(
       columns: [t.tenantId, t.appointmentId],
       foreignColumns: [appointments.tenantId, appointments.id],
     }).onDelete("cascade"),
+  ],
+);
+
+// ─── Lab results (clinical: doctors and nurses only) ────────────────────────
+
+/** How a value compares with its reference range (worked out when it is entered). */
+export const labFlag = pgEnum("lab_flag", ["low", "normal", "high", "abnormal", "none"]);
+
+/**
+ * One set of results from a lab (blood test, swab, biopsy…), entered by a doctor or nurse, with
+ * the lab's report attached when there is one. Never edited: a mistake is voided (with a reason)
+ * and entered again, so what a doctor once saw stays on record.
+ */
+export const labReports = pgTable(
+  "lab_reports",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    /** The visit it was entered in, when there was one. */
+    appointmentId: uuid("appointment_id"),
+    /** The day the sample was taken. */
+    takenOn: date("taken_on").notNull(),
+    labName: text("lab_name"),
+    note: text("note"),
+    /** The lab's own report (PDF or photo) in the file store. */
+    fileId: uuid("file_id"),
+    enteredByUserId: text("entered_by_user_id").notNull(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedByUserId: text("voided_by_user_id"),
+    voidReason: text("void_reason"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("lab_reports_tenant_id_id_key").on(t.tenantId, t.id),
+    index("lab_reports_patient_idx").on(t.tenantId, t.patientId, t.takenOn),
+    check("lab_reports_void_reason", sql`(${t.voidedAt} is null) = (${t.voidReason} is null)`),
+    foreignKey({
+      name: "lab_reports_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "lab_reports_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+    foreignKey({
+      name: "lab_reports_file_fk",
+      columns: [t.tenantId, t.fileId],
+      foreignColumns: [files.tenantId, files.id],
+    }),
+  ],
+);
+
+/** One value in a report (e.g. Ferritin 12 ng/mL, range 30–400 → low). Append-only. */
+export const labValues = pgTable(
+  "lab_values",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    reportId: uuid("report_id").notNull(),
+    position: smallint("position").notNull().default(0),
+    testName: text("test_name").notNull(),
+    /** As written on the report ("12.4", "Negative", "<0.5"). */
+    valueText: text("value_text").notNull(),
+    /** The number in it, when there is one (for flags and trends). */
+    valueNum: doublePrecision("value_num"),
+    unit: text("unit"),
+    refLow: doublePrecision("ref_low"),
+    refHigh: doublePrecision("ref_high"),
+    flag: labFlag("flag").notNull().default("none"),
+  },
+  (t) => [
+    index("lab_values_report_idx").on(t.tenantId, t.reportId),
+    foreignKey({
+      name: "lab_values_report_fk",
+      columns: [t.tenantId, t.reportId],
+      foreignColumns: [labReports.tenantId, labReports.id],
+    }).onDelete("cascade"),
+  ],
+);
+
+/** "Repeat this test by …": a request with a due date; done when matching results are entered. */
+export const labRequests = pgTable(
+  "lab_requests",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    appointmentId: uuid("appointment_id"),
+    testName: text("test_name").notNull(),
+    dueOn: date("due_on").notNull(),
+    reason: text("reason"),
+    requestedByUserId: text("requested_by_user_id").notNull(),
+    doneReportId: uuid("done_report_id"),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("lab_requests_patient_idx").on(t.tenantId, t.patientId, t.dueOn),
+    foreignKey({
+      name: "lab_requests_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "lab_requests_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+    foreignKey({
+      name: "lab_requests_report_fk",
+      columns: [t.tenantId, t.doneReportId],
+      foreignColumns: [labReports.tenantId, labReports.id],
+    }),
   ],
 );

@@ -1202,6 +1202,65 @@ CREATE INDEX "patient_memberships_patient_idx" ON "patient_memberships" USING bt
 CREATE INDEX "patient_memberships_ends_idx" ON "patient_memberships" USING btree ("tenant_id","ends_on");
 CREATE UNIQUE INDEX "patient_memberships_one_renewal" ON "patient_memberships" USING btree ("tenant_id","renews_id") WHERE "patient_memberships"."renews_id" is not null;
 ALTER TABLE "visit_checkouts" ADD CONSTRAINT "visit_checkouts_amounts" CHECK ("visit_checkouts"."due_halalas" >= 0 and "visit_checkouts"."discount_halalas" >= 0 and "visit_checkouts"."paid_halalas" >= 0 and ("visit_checkouts"."paid_halalas" = 0 or "visit_checkouts"."method" is not null));
+-- 0022_colorful_luminals.sql
+CREATE TYPE "public"."lab_flag" AS ENUM('low', 'normal', 'high', 'abnormal', 'none');
+CREATE TABLE "lab_reports" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"appointment_id" uuid,
+	"taken_on" date NOT NULL,
+	"lab_name" text,
+	"note" text,
+	"file_id" uuid,
+	"entered_by_user_id" text NOT NULL,
+	"voided_at" timestamp with time zone,
+	"voided_by_user_id" text,
+	"void_reason" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "lab_reports_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "lab_reports_void_reason" CHECK (("lab_reports"."voided_at" is null) = ("lab_reports"."void_reason" is null))
+);
+CREATE TABLE "lab_requests" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"patient_id" uuid NOT NULL,
+	"appointment_id" uuid,
+	"test_name" text NOT NULL,
+	"due_on" date NOT NULL,
+	"reason" text,
+	"requested_by_user_id" text NOT NULL,
+	"done_report_id" uuid,
+	"done_at" timestamp with time zone,
+	"cancelled_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "lab_values" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"report_id" uuid NOT NULL,
+	"position" smallint DEFAULT 0 NOT NULL,
+	"test_name" text NOT NULL,
+	"value_text" text NOT NULL,
+	"value_num" double precision,
+	"unit" text,
+	"ref_low" double precision,
+	"ref_high" double precision,
+	"flag" "lab_flag" DEFAULT 'none' NOT NULL
+);
+ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_file_fk" FOREIGN KEY ("tenant_id","file_id") REFERENCES "public"."files"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "lab_requests" ADD CONSTRAINT "lab_requests_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "lab_requests" ADD CONSTRAINT "lab_requests_patient_fk" FOREIGN KEY ("tenant_id","patient_id") REFERENCES "public"."patients"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "lab_requests" ADD CONSTRAINT "lab_requests_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "lab_requests" ADD CONSTRAINT "lab_requests_report_fk" FOREIGN KEY ("tenant_id","done_report_id") REFERENCES "public"."lab_reports"("tenant_id","id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "lab_values" ADD CONSTRAINT "lab_values_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "lab_values" ADD CONSTRAINT "lab_values_report_fk" FOREIGN KEY ("tenant_id","report_id") REFERENCES "public"."lab_reports"("tenant_id","id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "lab_reports_patient_idx" ON "lab_reports" USING btree ("tenant_id","patient_id","taken_on");
+CREATE INDEX "lab_requests_patient_idx" ON "lab_requests" USING btree ("tenant_id","patient_id","due_on");
+CREATE INDEX "lab_values_report_idx" ON "lab_values" USING btree ("tenant_id","report_id");
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -2704,6 +2763,33 @@ insert into public.membership_payments (tenant_id, patient_membership_id, amount
 insert into public.membership_visits (tenant_id, patient_membership_id, appointment_id) values
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'f3dba5fb-7d2c-5808-90a7-d185c9dd30dc', 'c6f2f0b5-635c-5a2a-9b07-facbbe776047');
 
+insert into public.lab_reports (id, tenant_id, patient_id, appointment_id, taken_on, lab_name, note, file_id, entered_by_user_id) values
+  ('b3337f84-f3a3-5c35-85a9-33133222253b', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', null, (select demo_anchor from pg_temp.setup_params) + -60, 'Al Borg Lab', null, null, 'usr_derma-dr-sara'),
+  ('1bd7b2df-ad03-5c98-9e72-ea3af01b2249', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', null, (select demo_anchor from pg_temp.setup_params) + -10, 'Al Borg Lab', null, null, 'usr_derma-dr-sara');
+
+insert into public.lab_values (tenant_id, report_id, position, test_name, value_text, value_num, unit, ref_low, ref_high, flag) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b3337f84-f3a3-5c35-85a9-33133222253b', 0, 'ALT', '38', 38, 'U/L', 7, 56, 'normal'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b3337f84-f3a3-5c35-85a9-33133222253b', 1, 'AST', '29', 29, 'U/L', 10, 40, 'normal'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b3337f84-f3a3-5c35-85a9-33133222253b', 2, 'Triglycerides', '182', 182, 'mg/dL', null, 150, 'high'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'b3337f84-f3a3-5c35-85a9-33133222253b', 3, 'Total cholesterol', '176', 176, 'mg/dL', null, 200, 'normal'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1bd7b2df-ad03-5c98-9e72-ea3af01b2249', 0, 'Ferritin', '14', 14, 'ng/mL', 30, 400, 'low'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1bd7b2df-ad03-5c98-9e72-ea3af01b2249', 1, 'Vitamin D (25-OH)', '19', 19, 'ng/mL', 30, 100, 'low'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', '1bd7b2df-ad03-5c98-9e72-ea3af01b2249', 2, 'Hemoglobin', '12.9', 12.9, 'g/dL', 12, 17.5, 'normal');
+
+insert into public.lab_requests (tenant_id, patient_id, appointment_id, test_name, due_on, reason, requested_by_user_id) values
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', null, 'ALT', (select demo_anchor from pg_temp.setup_params) + 20, 'Monthly on the acne course', 'usr_derma-dr-sara'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', null, 'Triglycerides', (select demo_anchor from pg_temp.setup_params) + 20, 'Monthly on the acne course', 'usr_derma-dr-sara'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'e19c3a44-59bc-5ca8-95c9-16e765e672fb', null, 'Vitamin B12', (select demo_anchor from pg_temp.setup_params) + -3, null, 'usr_derma-dr-sara');
+
+insert into public.lab_reports (id, tenant_id, patient_id, appointment_id, taken_on, lab_name, note, file_id, entered_by_user_id) values
+  ('277cd904-5d01-5d12-a390-fae8a22ef4f9', '55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', null, (select demo_anchor from pg_temp.setup_params) + -7, null, null, null, 'usr_lamsa-dr-mona');
+
+insert into public.lab_values (tenant_id, report_id, position, test_name, value_text, value_num, unit, ref_low, ref_high, flag) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '277cd904-5d01-5d12-a390-fae8a22ef4f9', 0, 'TSH', '2.1', 2.1, 'mIU/L', 0.4, 4, 'normal');
+
+insert into public.lab_requests (tenant_id, patient_id, appointment_id, test_name, due_on, reason, requested_by_user_id) values
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', '8b3cfb23-e56f-5ba5-bde4-1cc6fb74cea0', null, 'TSH', (select demo_anchor from pg_temp.setup_params) + 90, null, 'usr_lamsa-dr-mona');
+
 insert into public.platform_statements (id, tenant_id, number, period_start, period_end, amount_halalas, vat_halalas, total_halalas, due_on, status, paid_at, note, created_by) values
   ('960d71fe-eec4-5a5b-851e-a09ce63d2333', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-1', (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date, (date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date - 1), 100000, 15000, 115000, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 7), 'paid', ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date) - interval '1 month')::date + 3)::timestamptz, 'Sample', 'usr_platform-owner'),
   ('9aa6cb6f-2bd3-5269-82f6-90213377f8c1', '98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'DERMA-DEMO-2', date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date, ((date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)::date + interval '1 month')::date - 1), 100000, 15000, 115000, ((now() at time zone 'Asia/Riyadh')::date + 10), 'issued', null, 'Sample', 'usr_platform-owner');
@@ -3082,6 +3168,11 @@ grant select, insert, update on public.dental_plan_items, public.lab_cases to cl
 -- Memberships: plans are clinic set-up; a sold period is only ever cancelled (never edited);
 -- payments and used visits are append-only.
 grant select, insert, update on public.membership_plans to clinic_app;
+-- Lab results: a report is never edited, only voided (with a reason); values are append-only;
+-- a repeat-test request is marked done or cancelled.
+grant select, insert on public.lab_reports, public.lab_values, public.lab_requests to clinic_app;
+grant update (voided_at, voided_by_user_id, void_reason) on public.lab_reports to clinic_app;
+grant update (done_report_id, done_at, cancelled_at) on public.lab_requests to clinic_app;
 grant select, insert on public.patient_memberships to clinic_app;
 grant update (cancelled_at, cancelled_by_user_id) on public.patient_memberships to clinic_app;
 -- Dates: only demo clinics ("Refresh demo week"); a trigger refuses it elsewhere (db/booking.sql).
@@ -3116,7 +3207,8 @@ begin
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
     'dental_chart_entries', 'dental_plan_items', 'lab_cases',
-    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits'
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits',
+    'lab_reports', 'lab_values', 'lab_requests'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -3224,6 +3316,20 @@ create policy visit_checkouts_completed_insert on public.visit_checkouts as rest
 
 -- Dental chart = clinical: only doctors and nurses read or add to it.
 create policy dental_chart_entries_clinical_only on public.dental_chart_entries as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+-- Lab results are clinical: only doctors and nurses read or add them (never reception or an
+-- admin alone).
+create policy lab_reports_clinical_only on public.lab_reports as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+create policy lab_values_clinical_only on public.lab_values as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+create policy lab_requests_clinical_only on public.lab_requests as restrictive
   for all to clinic_app
   using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
   with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
@@ -3348,7 +3454,8 @@ begin
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
     'dental_chart_entries', 'dental_plan_items', 'lab_cases',
-    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits',
+    'lab_reports', 'lab_values', 'lab_requests', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
