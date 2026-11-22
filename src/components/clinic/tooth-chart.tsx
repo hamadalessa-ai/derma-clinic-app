@@ -17,6 +17,7 @@ import {
   type ToothCondition,
 } from "@/lib/dental/teeth";
 import { cn } from "@/lib/utils";
+import { DentalDictation } from "./dental-dictation";
 import { FormError } from "./form-message";
 import { useAction } from "./use-action";
 
@@ -124,6 +125,10 @@ export function ToothChart({
             {t("cond.watch")}
           </span>
         </div>
+
+        {editable && (
+          <DentalDictation patientId={patientId} appointmentId={appointmentId ?? null} />
+        )}
 
         {selected !== null && (
           <ToothPanel

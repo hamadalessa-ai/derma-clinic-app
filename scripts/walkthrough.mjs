@@ -198,6 +198,11 @@ await dentist.getByTestId("tooth-chart").waitFor({ timeout: 15000 });
 await dentist.locator("[data-testid=tooth][data-tooth='25']").click();
 await dentist.getByTestId("tooth-panel").waitFor({ timeout: 5000 });
 await shot(dentist, "dental-patient-file", true);
+// Voice charting: what the dentist said, read into a checked list (not saved in the walkthrough).
+await dentist.getByTestId("dictation-text").fill("17 MO caries, 26 crown, 37 root canal");
+await dentist.getByTestId("dictation-items").waitFor({ timeout: 5000 });
+await dentist.getByTestId("dental-dictation").scrollIntoViewIfNeeded();
+await shot(dentist, "dental-voice-charting", false);
 await dentist.goto(`${BASE}/my-day?date=${DAY}`, { waitUntil: "networkidle" });
 const dentalStart = dentist.getByTestId("start-visit").first();
 if (await dentalStart.count()) {

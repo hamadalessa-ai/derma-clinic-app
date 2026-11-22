@@ -150,7 +150,8 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   `/whatsapp/open/<patientId>` (the clinic inbox chat, else wa.me on the device; inbox staff only).
 - Dental (`src/lib/dental/`, shown only when the clinic's `dental` department is active — `dentalEnabled`):
   chart `dental_chart_entries` (FDI 11–48, a history: a change = a new row; clinical → `dental:chart` = doctors and
-  nurses only, database policy), treatment plan `dental_plan_items` (service + tooth, price COPIED; everyone reads,
+  nurses only, database policy), voice charting (`DentalDictation` under the chart: browser speech → text read by FIXED
+  RULES in `src/lib/dental/voice.ts`, no AI → a checked list saved by `recordTeeth`, all or nothing), treatment plan `dental_plan_items` (service + tooth, price COPIED; everyone reads,
   doctors/nurses change — database policy; "Done in this visit" = `markPlanDone` → `addCharge` on the open visit),
   lab cases `lab_cases` (sent → received → fitted / remake / cancelled, overdue after the due day; `/lab-cases`;
   "received" sends WhatsApp `lab_ready` with the booking link, once per receipt). Patients see their PLANNED items + the

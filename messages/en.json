@@ -267,7 +267,8 @@
     "labs_empty": "Enter at least one test with its value, or attach the report.",
     "labs_bad_date": "Check the date.",
     "labs_voided": "This report was voided.",
-    "labs_bad_file": "The attached report was not found. Attach it again."
+    "labs_bad_file": "The attached report was not found. Attach it again.",
+    "dental_empty": "Nothing to save."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -2087,7 +2088,19 @@
     "labTitle": "Lab cases",
     "labSubtitle": "Work at dental labs: due dates and where each case is.",
     "labOpen": "Open",
-    "labAll": "All"
+    "labAll": "All",
+    "voiceTitle": "Dictate findings",
+    "voiceHint": "Say or type the tooth and the finding, e.g. \"16 MO caries, 26 crown, 36 missing\". Check the list, then save.",
+    "voiceLanguage": "Language",
+    "voiceStart": "Dictate",
+    "voiceStop": "Stop",
+    "voicePlaceholder": "16 MO caries, 26 crown, 36 missing",
+    "voiceNone": "No tooth and finding recognised yet.",
+    "voiceNoFinding": "No finding heard for: {teeth}",
+    "voiceSave": "Save to chart ({n})",
+    "voiceSaved": "Saved to the chart.",
+    "voiceMicBlocked": "The microphone is blocked. Allow it in the browser, or type instead.",
+    "voiceNoMic": "Dictation isn't available in this browser; type instead."
   },
   "memberships": {
     "title": "Membership",

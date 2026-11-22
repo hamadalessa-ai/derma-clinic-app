@@ -82,7 +82,7 @@ import {
 } from "@/lib/whatsapp/outbox";
 import { checkOut } from "@/lib/visits/checkout";
 import { deskSearch, walkIn } from "@/lib/front-desk/desk";
-import { recordTooth } from "@/lib/dental/chart";
+import { recordTeeth, recordTooth } from "@/lib/dental/chart";
 import { addPlanItem, cancelPlanItem, markPlanDone } from "@/lib/dental/plan";
 import { createLabCase, LAB_STATUSES, LAB_WORK, setLabStatus } from "@/lib/dental/lab";
 import { TOOTH_CONDITIONS } from "@/lib/dental/teeth";
@@ -2581,6 +2581,36 @@ export async function recordToothAction(input: {
       input,
     );
     await withActor(actor, (tx) => recordTooth(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+/** Voice charting: the teeth the dentist checked and saved, in one go. */
+export async function recordTeethAction(input: {
+  patientId: string;
+  appointmentId?: string | null;
+  items: { tooth: number; condition: string; surfaces?: string }[];
+}) {
+  return staffAction("dental:chart", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        patientId: uuid,
+        appointmentId: uuid.nullish(),
+        items: z
+          .array(
+            z.object({
+              tooth: z.number().int().min(11).max(48),
+              condition: z.enum(TOOTH_CONDITIONS),
+              surfaces: text(5).optional(),
+            }),
+          )
+          .min(1)
+          .max(32),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => recordTeeth(tx, actor, v));
     dentalChanged(v.patientId, v.appointmentId);
     return null;
   });
