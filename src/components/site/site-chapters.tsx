@@ -18,7 +18,7 @@ export interface Chapter {
 /**
  * Procedures & Services as a magazine: one spread per specialty, all built the same way —
  * a large photograph with a second one laid over its corner, the chapter number, the clinic's
- * own introduction, and the treatments set as a typographic list. Spreads alternate sides.
+ * own introduction, and its main treatments as a plain list. Spreads alternate sides.
  */
 export function SiteChapters({
   chapters,
@@ -76,39 +76,29 @@ export function SiteChapters({
                 {c.intro && <p className="text-[16px] leading-[1.8]">{c.intro}</p>}
               </div>
 
-              {/* Treatments as flowing text, one line per group: short, like a magazine index. */}
-              <dl className="border-site-line flex flex-col border-t">
-                {c.groups.map((g) => (
-                  <div
-                    key={g.name}
-                    className="border-site-line grid gap-1 border-b py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-6"
-                  >
-                    <dt className="text-site-primary text-sm font-semibold">{g.name}</dt>
-                    <dd className="text-site-slate text-[15px] leading-[1.9]">
-                      {g.items.map((it, n) => (
-                        <span key={it.name}>
-                          {it.href ? (
-                            <Link
-                              href={it.href}
-                              title={labels.bookable}
-                              className="text-site-ink decoration-site-champagne hover:text-site-primary underline decoration-1 underline-offset-4"
-                            >
-                              {it.name}
-                            </Link>
-                          ) : (
-                            it.name
-                          )}
-                          {n < g.items.length - 1 && (
-                            <span className="text-site-champagne mx-2" aria-hidden>
-                              ·
-                            </span>
-                          )}
-                        </span>
-                      ))}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              {/* The department's main treatments: a plain two-column list. */}
+              <ul className="border-site-line grid border-t sm:grid-cols-2 sm:gap-x-10">
+                {c.groups
+                  .flatMap((g) => g.items)
+                  .map((it) => (
+                    <li
+                      key={it.name}
+                      className="border-site-line text-site-ink border-b py-3.5 text-[15px]"
+                    >
+                      {it.href ? (
+                        <Link
+                          href={it.href}
+                          title={labels.bookable}
+                          className="decoration-site-champagne hover:text-site-primary underline decoration-1 underline-offset-4"
+                        >
+                          {it.name}
+                        </Link>
+                      ) : (
+                        it.name
+                      )}
+                    </li>
+                  ))}
+              </ul>
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                 {c.cta.external ? (
