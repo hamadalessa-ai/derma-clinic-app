@@ -111,7 +111,12 @@ export function SiteChapters({
 
               <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
                 {c.cta.external ? (
-                  <a href={c.cta.href} target="_blank" rel="noopener noreferrer" className="site-link">
+                  <a
+                    href={c.cta.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="site-link"
+                  >
                     {c.cta.label}
                   </a>
                 ) : (

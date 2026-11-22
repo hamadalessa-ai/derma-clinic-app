@@ -556,14 +556,11 @@ export const DERMA_SITE = {
     "Derma Clinics opened in Riyadh in 1996, among the first practices in the Kingdom devoted to skin, hair and aesthetic medicine. The method has not changed: an unhurried consultation, a plan written for one person, and treatment by specialists in the discipline. Today the practice spans four disciplines in two cities.",
   quoteAr: "النتيجة الجيدة هي التي لا يستطيع أحد أن يشير إليها.",
   quoteEn: "A good result is one no one can point to.",
-  clinicsAr:
-    "أربعة تخصصات، عيادة واحدة. لكل تخصص أطباؤه وغرفه، ويتنقّل المريض بينها بملف واحد.",
+  clinicsAr: "أربعة تخصصات، عيادة واحدة. لكل تخصص أطباؤه وغرفه، ويتنقّل المريض بينها بملف واحد.",
   clinicsEn:
     "Four disciplines, one practice. Each keeps its own physicians and rooms; patients move between them with one file.",
-  doctorsAr:
-    "استشاريون وأخصائيون في الجلدية والجراحة والشعر والأسنان.",
-  doctorsEn:
-    "Consultants and specialists in dermatology, surgery, hair and dentistry.",
+  doctorsAr: "استشاريون وأخصائيون في الجلدية والجراحة والشعر والأسنان.",
+  doctorsEn: "Consultants and specialists in dermatology, surgery, hair and dentistry.",
   findAr: "الرياض وجدة، بموعد مسبق.",
   findEn: "Riyadh and Jeddah, by appointment.",
   footerAr:
@@ -601,8 +598,7 @@ export const DERMA_SITE = {
       key: "plastic",
       nameAr: "جراحة التجميل",
       nameEn: "Plastic Surgery",
-      textAr:
-        "جراحات الوجه والجسم والجراحات الترميمية على يد استشاريين، بقرارات تُتخذ بتأنٍّ.",
+      textAr: "جراحات الوجه والجسم والجراحات الترميمية على يد استشاريين، بقرارات تُتخذ بتأنٍّ.",
       textEn:
         "Facial, body and reconstructive surgery by consultant surgeons, with decisions taken slowly.",
       specialties: ["plastic"],

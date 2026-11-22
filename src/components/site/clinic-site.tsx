@@ -208,7 +208,10 @@ export async function ClinicSite({
               {facts.length > 0 && (
                 <dl className="border-site-line grid grid-cols-2 border-t lg:grid-cols-1">
                   {facts.map((f) => (
-                    <div key={f.label} className="border-site-line flex flex-col gap-1 border-b py-5">
+                    <div
+                      key={f.label}
+                      className="border-site-line flex flex-col gap-1 border-b py-5"
+                    >
                       <dd className="font-display text-site-ink text-4xl font-normal" dir="ltr">
                         {f.value}
                       </dd>
@@ -490,14 +493,21 @@ export async function ClinicSite({
                 </div>
               ))}
               <div className="flex flex-col gap-4 py-8 md:ps-8">
-                <h3 className="font-display text-site-ink text-2xl font-normal">{t("contactUs")}</h3>
+                <h3 className="font-display text-site-ink text-2xl font-normal">
+                  {t("contactUs")}
+                </h3>
                 {tel && (
                   <a href={tel} className="text-site-ink text-lg" dir="ltr">
                     {s.phone}
                   </a>
                 )}
                 {wa && (
-                  <a href={wa} target="_blank" rel="noopener noreferrer" className="site-link w-fit">
+                  <a
+                    href={wa}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="site-link w-fit"
+                  >
                     {t("utilityWhatsapp")}
                   </a>
                 )}
