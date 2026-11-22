@@ -76,6 +76,8 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     a[:, :, 3] = np.where(keep, solid, 0)
     person = Image.fromarray(a)
     ys, xs = np.where(a[:, :, 3] > 0)
+    # Where the card itself cut the person off (its left/right edge), soften later.
+    cut_l, cut_r = xs.min() <= 2, xs.max() >= a.shape[1] - 3
     person = person.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
     # One studio-style crop for everyone, as on hospital websites: the face is found and every
     # portrait gets the same head size and eye line (head and shoulders, centred).
@@ -90,22 +92,25 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
         print("no face found, estimating:", d["slug"], file=sys.stderr)
         fw = fh = int(pw * 0.32)
         fx, fy = (pw - fw) // 2, int(ph * 0.08)
-    FACE_W, FACE_CX, FACE_TOP = W * 0.34, W * 0.5, H * 0.17
-    scale = FACE_W / fw
+    FACE_W, FACE_CX, FACE_TOP = W * 0.36, W * 0.5, H * 0.16
+    # Same face size for all, but never so small that the shoulders stop above the frame's
+    # bottom edge: then the photo is enlarged until they reach it.
+    scale = max(FACE_W / fw, (H - FACE_TOP) / max(ph - fy, 1) * 1.02)
     person = person.resize((max(1, int(pw * scale)), max(1, int(ph * scale))), Image.LANCZOS)
     ox = int(FACE_CX - (fx + fw / 2) * scale)
     oy = int(FACE_TOP - fy * scale)
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     canvas.paste(person, (ox, oy), person)
-    # Where the published card cut the person off (left side), fade softly instead of a hard
-    # edge; the bottom of the frame stays full.
+    # A side the card cut off fades out softly instead of ending in a hard line.
     c = np.array(canvas).astype(np.float32)
     al = c[:, :, 3]
-    cut_x = ox + int(2 * scale)
-    if cut_x > 0:
-        xs_ = np.arange(W, dtype=np.float32)
-        fade = np.clip((xs_ - cut_x) / (W * 0.12), 0, 1)
-        al *= fade[None, :]
+    xs_ = np.arange(W, dtype=np.float32)
+    band = W * 0.12
+    if cut_l and ox > 0:
+        al *= np.clip((xs_ - ox) / band, 0, 1)[None, :]
+    right = ox + person.width
+    if cut_r and right < W:
+        al *= np.clip((right - xs_) / band, 0, 1)[None, :]
     c[:, :, 3] = al
     canvas = Image.fromarray(c.clip(0, 255).astype(np.uint8))
     canvas.save(OUT / f"{d['slug']}.webp", "WEBP", quality=88, method=6)
