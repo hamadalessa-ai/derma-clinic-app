@@ -1,0 +1,21 @@
+# Downloads the clinic's current team photos (dermaclinics.net/pages/team) for review.
+name: Fetch team photos
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir out
+          while read slug file; do
+            curl -sfL -o "out/$slug.${file##*.}" "https://cdn.rekaz.io/themes/70671aac-e9fd-4b6e-bd8b-5f623a28dd43/1.0.9/assets/$file" || echo "missing $file"
+          done < scripts/cutouts/team-v2.txt
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: team
+          path: out
