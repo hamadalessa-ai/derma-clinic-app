@@ -703,6 +703,12 @@ export interface SiteContent {
   taglineEn?: string;
   aboutAr?: string;
   aboutEn?: string;
+  /** Short editorial headline over the About text ("Thirty years of quiet work."). */
+  aboutTitleAr?: string;
+  aboutTitleEn?: string;
+  /** A line from the practice's philosophy, set as a pull quote (never attributed to a person). */
+  quoteAr?: string;
+  quoteEn?: string;
   /** Year the clinic opened (e.g. 1996). */
   since?: number;
   phone?: string;
@@ -778,6 +784,9 @@ export interface SiteContent {
     nameEn: string;
     textAr: string;
     textEn: string;
+    /** A short headline for the specialty's chapter ("Skin, read closely."). */
+    leadAr?: string;
+    leadEn?: string;
     items?: { ar: string; en: string }[];
     bookable?: boolean;
   }[];

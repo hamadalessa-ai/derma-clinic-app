@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CalendarCheck, MessageCircle, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Locale } from "@/i18n/config";
 import { SiteImage } from "./site-image";
@@ -9,6 +8,8 @@ export interface Chapter {
   /** Anchor ids for the menu (#dept-skin, …). */
   anchor: string;
   title: string;
+  /** A short editorial headline ("Skin, read closely."); the title is used when missing. */
+  lead?: string;
   intro: string;
   images: { slot: string; src?: string | undefined }[];
   groups: { name: string; items: { name: string; href: string | null }[] }[];
@@ -16,9 +17,9 @@ export interface Chapter {
 }
 
 /**
- * Procedures & Services as a magazine: one spread per specialty, all built the same way —
- * a large photograph with a second one laid over its corner, the chapter number, the clinic's
- * own introduction, and the treatments set as a typographic list. Spreads alternate sides.
+ * The disciplines as magazine chapters: a tall photograph to one side, the chapter number and
+ * name as a small label, a short headline, a restrained paragraph, then the treatments as a
+ * numbered index between fine rules. Chapters alternate sides.
  */
 export function SiteChapters({
   chapters,
@@ -32,19 +33,23 @@ export function SiteChapters({
   labels: { call: string; bookable: string };
 }) {
   return (
-    <div className="flex flex-col gap-20 lg:gap-28">
+    <div className="flex flex-col">
       {chapters.map((c, i) => {
         const flip = i % 2 === 1;
+        const number = String(i + 1).padStart(2, "0");
+        // Treatments are numbered through the whole chapter (01, 02, … across its groups).
+        const starts = c.groups.map((_, gi) =>
+          c.groups.slice(0, gi).reduce((sum, x) => sum + x.items.length, 0),
+        );
         return (
           <article
             key={c.key}
             id={c.anchor}
-            className="grid scroll-mt-28 items-center gap-12 lg:grid-cols-12 lg:gap-16"
+            className="border-site-line grid scroll-mt-28 gap-10 border-t py-16 lg:grid-cols-12 lg:gap-16 lg:py-24"
             data-testid="site-chapter"
           >
-            {/* Photographs */}
-            <div className={cn("relative lg:col-span-5", flip && "lg:order-2")}>
-              <div className="aspect-[5/4] overflow-hidden rounded-2xl lg:aspect-[4/5] lg:max-h-[34rem] lg:w-full">
+            <div className={cn("lg:col-span-5", flip && "lg:order-2")}>
+              <div className="bg-site-mist aspect-[4/5] overflow-hidden lg:sticky lg:top-28">
                 <SiteImage
                   slot={c.images[0].slot}
                   src={c.images[0].src}
@@ -52,90 +57,75 @@ export function SiteChapters({
                   priority={i === 0}
                 />
               </div>
-              {c.images[1] && (
-                <div
-                  className={cn(
-                    "border-site-mist absolute -bottom-10 hidden aspect-square w-[42%] overflow-hidden rounded-2xl border-8 sm:block",
-                    flip ? "-start-8" : "-end-8",
-                  )}
-                >
-                  <SiteImage slot={c.images[1].slot} src={c.images[1].src} locale={locale} />
-                </div>
-              )}
             </div>
 
-            {/* Text */}
-            <div className={cn("flex flex-col gap-7 lg:col-span-7", flip && "lg:order-1")}>
-              <div className="flex flex-col gap-4">
-                <span className="font-display text-site-champagne text-4xl leading-none" dir="ltr">
-                  {String(i + 1).padStart(2, "0")}
+            <div className={cn("flex flex-col gap-8 lg:col-span-7", flip && "lg:order-1")}>
+              <div className="flex flex-col gap-5">
+                <span className="site-label">
+                  <span dir="ltr">{number}</span> / {c.title}
                 </span>
-                <h3 className="font-display text-site-ink text-3xl leading-tight font-semibold lg:text-[2.6rem]">
-                  {c.title}
+                <h3 className="font-display text-site-ink text-[2rem] leading-[1.15] font-normal text-balance lg:text-[2.75rem]">
+                  {c.lead || c.title}
                 </h3>
-                {c.intro && <p className="text-[16px] leading-[1.8]">{c.intro}</p>}
+                {c.intro && (
+                  <p className="text-site-slate max-w-xl text-[16px] leading-[1.85]">{c.intro}</p>
+                )}
               </div>
 
-              {/* Treatments as flowing text, one line per group: short, like a magazine index. */}
-              <dl className="border-site-line flex flex-col border-t">
-                {c.groups.map((g) => (
-                  <div
-                    key={g.name}
-                    className="border-site-line grid gap-1 border-b py-4 sm:grid-cols-[9.5rem_1fr] sm:gap-6"
-                  >
-                    <dt className="text-site-primary text-sm font-semibold">{g.name}</dt>
-                    <dd className="text-site-slate text-[15px] leading-[1.9]">
-                      {g.items.map((it, n) => (
-                        <span key={it.name}>
-                          {it.href ? (
-                            <Link
-                              href={it.href}
-                              title={labels.bookable}
-                              className="text-site-ink decoration-site-champagne hover:text-site-primary underline decoration-1 underline-offset-4"
+              <div className="flex flex-col gap-6">
+                {c.groups.map((g, gi) => (
+                  <div key={g.name} className="flex flex-col gap-2">
+                    <span className="text-site-subtle text-xs">{g.name}</span>
+                    <ol className="border-site-line grid border-t sm:grid-cols-2 sm:gap-x-8">
+                      {g.items.map((it, ii) => {
+                        const n = starts[gi] + ii + 1;
+                        return (
+                          <li
+                            key={it.name}
+                            className="border-site-line flex items-baseline gap-4 border-b py-2.5 text-[15px]"
+                          >
+                            <span
+                              className="text-site-champagne-ink w-6 shrink-0 text-xs tabular-nums"
+                              dir="ltr"
                             >
-                              {it.name}
-                            </Link>
-                          ) : (
-                            it.name
-                          )}
-                          {n < g.items.length - 1 && (
-                            <span className="text-site-champagne mx-2" aria-hidden>
-                              ·
+                              {String(n).padStart(2, "0")}
                             </span>
-                          )}
-                        </span>
-                      ))}
-                    </dd>
+                            {it.href ? (
+                              <Link
+                                href={it.href}
+                                title={labels.bookable}
+                                className="text-site-ink decoration-site-champagne underline decoration-1 underline-offset-4"
+                              >
+                                {it.name}
+                              </Link>
+                            ) : (
+                              <span className="text-site-slate">{it.name}</span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ol>
                   </div>
                 ))}
-              </dl>
+              </div>
 
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
                 {c.cta.external ? (
                   <a
                     href={c.cta.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-site-primary text-site-ivory hover:bg-site-primary-hover inline-flex h-12 items-center gap-2 rounded-xl px-6 text-sm font-semibold transition-colors"
+                    className="site-link"
                   >
-                    <MessageCircle className="size-4" aria-hidden />
                     {c.cta.label}
                   </a>
                 ) : (
-                  <Link
-                    href={c.cta.href}
-                    className="bg-site-primary text-site-ivory hover:bg-site-primary-hover inline-flex h-12 items-center gap-2 rounded-xl px-6 text-sm font-semibold transition-colors"
-                  >
-                    <CalendarCheck className="size-4" aria-hidden />
+                  <Link href={c.cta.href} className="site-link">
                     {c.cta.label}
                   </Link>
                 )}
                 {phone && (
-                  <a
-                    href={phone.href}
-                    className="text-site-ink hover:text-site-primary inline-flex items-center gap-2 text-sm font-semibold"
-                  >
-                    <Phone className="size-4" aria-hidden />
+                  <a href={phone.href} className="text-site-subtle text-sm">
                     {labels.call} <span dir="ltr">{phone.label}</span>
                   </a>
                 )}

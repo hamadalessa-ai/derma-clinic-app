@@ -78,9 +78,9 @@ export const DERMA_DOCTORS: Doc[] = [
     {
       founder: true,
       bioAr:
-        "أسس العيادات عام 1996 برؤية رائدة جعلتها من أوائل المراكز المتخصصة في الجلدية والتجميل وزراعة الشعر في المملكة، وساهم في إدخال تقنيات البوتوكس، والفيلر، والليزر إلى المملكة العربية السعودية.",
+        "أسّس د. عبدالله العيسى العيادة عام ١٩٩٦، وأسهم في إدخال البوتوكس والفيلر وطب الليزر إلى المملكة العربية السعودية.",
       bioEn:
-        "He founded the clinics in 1996 with a pioneering vision that made them among the first specialised centres for dermatology, aesthetics and hair transplantation in the Kingdom, and helped introduce Botox, fillers and laser technologies to Saudi Arabia.",
+        "Dr. Abdullah Aleisa founded the practice in 1996 and helped bring Botox, fillers and laser medicine to Saudi Arabia.",
     },
   ),
   doc(
@@ -540,29 +540,33 @@ export const DERMA_SILOS = [
 ];
 
 export const DERMA_SITE = {
-  eyebrowAr: "نحن نبتكر المستقبل",
-  eyebrowEn: "We Innovate the Future",
-  headlineAr: "وجهتك المتكاملة للجلدية وجراحة التجميل وزراعة الشعر وطب الأسنان في الرياض",
-  headlineEn:
-    "Your Complete Destination for Dermatology, Plastic Surgery, Hair Transplant & Dental Care in Riyadh",
+  eyebrowAr: "العيادة · منذ ١٩٩٦",
+  eyebrowEn: "The Practice · Since 1996",
+  headlineAr: "البشرة والشعر والأسنان، بعناية واحدة.",
+  headlineEn: "Skin, hair and teeth, considered together.",
+  taglineAr:
+    "عيادة طبية في الرياض وجدة. الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان، تحت سقف واحد منذ عام ١٩٩٦.",
+  taglineEn:
+    "A medical practice in Riyadh and Jeddah. Dermatology, plastic surgery, hair restoration and dentistry, under one roof since 1996.",
+  aboutTitleAr: "ثلاثون عامًا من العمل الهادئ.",
+  aboutTitleEn: "Thirty years of quiet work.",
   aboutAr:
-    "أسست عيادات ديرما عام 1996، وتُعد من أبرز الوجهات الطبية المتخصصة في المملكة العربية السعودية في طب الجلدية، والطب التجميلي، وجراحة التجميل، وزراعة الشعر، وطب الأسنان. وبخبرة تمتد لأكثر من ثلاثة عقود، نجمع بين أحدث التقنيات الطبية، ونخبة من الأطباء والاستشاريين، وخطط علاجية مصممة وفق احتياجات كل مريض، لنقدم رعاية آمنة ونتائج طبيعية ومتميزة. وتواصل عيادات ديرما التزامها بتقديم خدمات صحية وتجميلية متكاملة، لتكون وجهة موثوقة للمرضى في الرياض ومختلف أنحاء المملكة.",
+    "افتتحت عيادات ديرما أبوابها في الرياض عام ١٩٩٦، من أوائل العيادات في المملكة المتخصصة في البشرة والشعر والطب التجميلي. ولم يتغيّر النهج منذ ذلك الحين: استشارة متأنية، وخطة تُكتب لشخص واحد، وعلاج يقوم عليه أطباء التخصص. وتضم العيادة اليوم أربعة تخصصات في مدينتين.",
   aboutEn:
-    "Established in 1996, Derma Clinics is one of Saudi Arabia's leading destinations for dermatology, aesthetic medicine, plastic surgery, hair transplantation, and dental care. With decades of experience, we combine advanced medical technology, highly qualified specialists, and personalized treatment plans to deliver safe, effective, and natural-looking results. Our commitment to excellence has made Derma Clinics a trusted choice for patients seeking comprehensive healthcare and aesthetic services in Riyadh and across Saudi Arabia.",
-  clinicsAr:
-    "اكتشف عياداتنا المتخصصة، حيث تجتمع الخبرة الطبية، وأحدث التقنيات، والخطط العلاجية المخصصة لتقديم أفضل مستويات الرعاية. نقدم خدمات الجلدية والطب التجميلي، وجراحة التجميل، وطب الأسنان، وزراعة واستعادة الشعر، وعلاجات الليزر من خلال فريق متعدد التخصصات، لنمنح مرضانا تجربة علاجية متكاملة في الرياض.",
+    "Derma Clinics opened in Riyadh in 1996, among the first practices in the Kingdom devoted to skin, hair and aesthetic medicine. The method has not changed: an unhurried consultation, a plan written for one person, and treatment by specialists in the discipline. Today the practice spans four disciplines in two cities.",
+  quoteAr: "النتيجة الجيدة هي التي لا يستطيع أحد أن يشير إليها.",
+  quoteEn: "A good result is one no one can point to.",
+  clinicsAr: "أربعة تخصصات، عيادة واحدة. لكل تخصص أطباؤه وغرفه، ويتنقّل المريض بينها بملف واحد.",
   clinicsEn:
-    "Discover our specialized clinics, where expert care, advanced technology, and personalized treatments come together. From dermatology and aesthetic medicine to plastic surgery, dental care, hair restoration, and laser treatments, our multidisciplinary team is dedicated to delivering comprehensive healthcare and exceptional patient experiences in Riyadh.",
-  doctorsAr:
-    "تعرّف على نخبة من أطبائنا واستشاريينا المتخصصين، الذين يجمعون بين الخبرة الطبية وأحدث التقنيات لتقديم رعاية صحية وتجميلية متكاملة. يلتزم فريقنا بتقديم خطط علاجية مخصصة ونتائج متميزة تلبي احتياجات كل مريض.",
-  doctorsEn:
-    "Meet our team of highly qualified specialists dedicated to providing exceptional medical and aesthetic care. With extensive experience across multiple specialties, our doctors combine expertise, innovation, and compassion to deliver personalized treatments and outstanding patient outcomes.",
-  findAr: "اكتشف مواقع عياداتنا واستمتع برعاية متخصصة في بيئة عصرية ومريحة",
-  findEn:
-    "Explore our clinic locations and receive personalized care in a comfortable, modern environment",
-  footerAr: "عيادات ديرما | أفضل عيادات جلدية وتجميل بالرياض بخبرة +30 عاماً",
+    "Four disciplines, one practice. Each keeps its own physicians and rooms; patients move between them with one file.",
+  doctorsAr: "استشاريون وأخصائيون في الجلدية والجراحة والشعر والأسنان.",
+  doctorsEn: "Consultants and specialists in dermatology, surgery, hair and dentistry.",
+  findAr: "الرياض وجدة، بموعد مسبق.",
+  findEn: "Riyadh and Jeddah, by appointment.",
+  footerAr:
+    "عيادات ديرما. الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان. الرياض وجدة، منذ ١٩٩٦.",
   footerEn:
-    "Leading dermatology and aesthetic clinic in Riyadh, offering plastic surgery, hair transplant, dental care, laser treatments and advanced cosmetic procedures.",
+    "Derma Clinics. Dermatology, plastic surgery, hair restoration and dentistry. Riyadh and Jeddah, since 1996.",
   since: 1996,
   phone: "9200 33055",
   whatsapp: "+966550883080",
@@ -575,9 +579,9 @@ export const DERMA_SITE = {
       nameAr: "طب الجلدية والطب التجميلي وزراعة الشعر",
       nameEn: "Dermatology, Aesthetic Medicine & Hair Transplantation",
       textAr:
-        "يقدم قسم طب الجلدية والطب التجميلي وزراعة الشعر في عيادات ديرما رعاية طبية متكاملة تهدف إلى الحفاظ على صحة البشرة والشعر وفروة الرأس، مع توفير أحدث الحلول العلاجية والتجميلية وفق أعلى المعايير الطبية العالمية.",
+        "طب الجلدية العلاجي والتجميلي وطب الليزر. يبدأ كل علاج بفحص، وبحديث عمّا ينبغي أن يبقى كما هو.",
       textEn:
-        "At Derma Clinics, our Department of Dermatology, Aesthetic Medicine & Hair Transplantation is dedicated to delivering comprehensive, patient-centered care for healthy skin, hair, and scalp.",
+        "Medical and aesthetic dermatology and laser medicine. Every course of treatment begins with an examination, and with a conversation about what should stay the same.",
       specialties: ["skin", "hair"],
     },
     {
@@ -585,19 +589,18 @@ export const DERMA_SITE = {
       nameAr: "طب الأسنان",
       nameEn: "Dental Care",
       textAr:
-        "تبدأ الابتسامة الصحية برعاية متخصصة. يقدم أطباء الأسنان لدينا خدمات وقائية وترميمية وتجميلية شاملة باستخدام أحدث التقنيات.",
+        "طب الأسنان العام والترميمي والتجميلي، من رعاية الأطفال إلى الزراعة والتقويم. تُرسم كل خطة سنًّا بسنّ، وتُشرح قبل أن تبدأ.",
       textEn:
-        "Healthy smiles begin with expert care. Our dental specialists provide comprehensive preventive, restorative, and cosmetic treatments using advanced technology.",
+        "General, restorative and cosmetic dentistry, from children's care to implants and orthodontics. Each plan is drawn tooth by tooth and explained before it begins.",
       specialties: ["dental"],
     },
     {
       key: "plastic",
       nameAr: "جراحة التجميل",
       nameEn: "Plastic Surgery",
-      textAr:
-        "اكتشف خدمات جراحة التجميل في عيادات ديرما، بما يشمل تجميل الوجه ونحت الجسم والجراحات الترميمية، مع رعاية مخصصة ونتائج طبيعية وآمنة.",
+      textAr: "جراحات الوجه والجسم والجراحات الترميمية على يد استشاريين، بقرارات تُتخذ بتأنٍّ.",
       textEn:
-        "Explore expert plastic surgery at Derma Clinics, offering facial and body contouring, reconstructive procedures, and personalized care for natural-looking results.",
+        "Facial, body and reconstructive surgery by consultant surgeons, with decisions taken slowly.",
       specialties: ["plastic"],
     },
   ],
@@ -606,33 +609,39 @@ export const DERMA_SITE = {
       key: "skin",
       nameAr: "الجلدية والطب التجميلي",
       nameEn: "Dermatology & Aesthetic Medicine",
-      textAr: "علاجات متقدمة لبشرة صحية، نضرة، وجمال طبيعي",
-      textEn: "Advanced treatments for healthy, radiant, naturally beautiful skin",
+      leadAr: "البشرة، بقراءة متأنية.",
+      leadEn: "Skin, read closely.",
+      textAr: "طب الجلدية العلاجي والتجميلي وطب الليزر.",
+      textEn: "Medical and aesthetic dermatology and laser medicine.",
       bookable: true,
     },
     {
       key: "dental",
       nameAr: "طب الأسنان التجميلي والعام",
       nameEn: "Cosmetic & General Dentistry",
-      textAr: "رعاية شاملة للأسنان وعلاجات تجميلية متقدمة تمنحك ابتسامة صحية وواثقة",
-      textEn:
-        "Comprehensive dental care and cosmetic treatments designed to give you a healthy, confident smile",
+      leadAr: "عمارة الابتسامة الهادئة.",
+      leadEn: "The quiet architecture of a smile.",
+      textAr: "طب الأسنان العام والترميمي والتجميلي.",
+      textEn: "General, restorative and cosmetic dentistry.",
     },
     {
       key: "hair",
       nameAr: "زراعة واستعادة الشعر",
       nameEn: "Hair Restoration & Transplantation",
-      textAr: "استعد كثافة شعرك مع أحدث تقنيات زراعة الشعر لنتائج طبيعية تدوم",
+      leadAr: "كثافة تعود بتأنٍّ.",
+      leadEn: "Density, returned slowly.",
+      textAr: "زراعة الشعر والعلاج الطبي لتساقطه، بخطة تحترم خط الشعر الذي يناسب الوجه.",
       textEn:
-        "Restore natural hair growth with advanced hair transplant solutions for fuller, lasting results",
+        "Transplantation and medical therapy for thinning hair, planned around the hairline a face already has.",
     },
     {
       key: "plastic",
       nameAr: "جراحة التجميل",
       nameEn: "Plastic Surgery",
-      textAr: "عزز جمالك الطبيعي مع إجراءات جراحية متخصصة تمنحك نتائج متناسقة وطبيعية",
-      textEn:
-        "Enhance your natural beauty with personalized surgical procedures for balanced, refined results",
+      leadAr: "تناسق، لا تغيير.",
+      leadEn: "Proportion, not change.",
+      textAr: "جراحات الوجه والجسم والجراحات الترميمية على يد استشاريين.",
+      textEn: "Facial, body and reconstructive surgery by consultant surgeons.",
     },
   ],
   silos: DERMA_SILOS,

@@ -2,11 +2,9 @@ import type { ReactNode } from "react";
 import { clinicIsActive, type ClinicStatus } from "@/lib/tenant/status";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { CalendarCheck, MapPin, MessageCircle, Phone, ShieldCheck, Video } from "lucide-react";
 import { pick } from "@/lib/brand";
 import { formatSAR } from "@/lib/format";
 import type { ClinicSiteData } from "@/lib/site/data";
-import { cn } from "@/lib/utils";
 import type { Locale } from "@/i18n/config";
 import { BeforeAfter } from "./site-before-after";
 import { SiteDoctors, type DoctorCard } from "./site-doctors";
@@ -24,10 +22,10 @@ type TreatmentSilo = {
 };
 
 /**
- * The clinic's public website ("/") — "clinical luxury": true white and soft clinical gray,
- * deep slate text, deep emerald for the main action, matte gold accents, Playfair Display
- * headings. Content is the clinic's own (Settings → Website); booking is our booking platform:
- * every Book button opens /book (mobile code first), pre-selecting what the visitor chose.
+ * The clinic's public website ("/"), set like a print magazine: warm paper, charcoal ink, one
+ * bronze accent, serif headlines, numbered sections divided by fine rules — no cards, shadows or
+ * selling. Content is the clinic's own (Settings → Website); every invitation opens /book
+ * (mobile code first), pre-selecting what the visitor chose.
  */
 export async function ClinicSite({
   clinic,
@@ -113,6 +111,7 @@ export async function ClinicSite({
         key: k,
         anchor: dep ? `dept-${k}` : `chapter-${k}`,
         title: sp ? L(sp.nameAr, sp.nameEn) : dep ? L(dep.nameAr, dep.nameEn) : k,
+        lead: sp ? L(sp.leadAr, sp.leadEn) || undefined : undefined,
         intro: (dep && L(dep.textAr, dep.textEn)) || (sp ? L(sp.textAr, sp.textEn) : ""),
         images: (CHAPTER_IMAGES[k] ?? []).map((slot) => ({ slot, src: s.images?.[slot] })),
         groups: groups.map((g) => ({ name: g.name, items: g.items })),
@@ -142,16 +141,18 @@ export async function ClinicSite({
     name: deptName(k),
   }));
 
-  // Offers fill complete rows (no gaps): 4 per row when that divides evenly, else 3.
-  const n = data.offers.length;
-  const offerCols: 1 | 2 | 3 | 4 = n <= 1 ? 1 : n === 2 ? 2 : n % 4 === 0 || n === 7 ? 4 : 3;
-  const offerSlack = (offerCols - (n % offerCols)) % offerCols;
   const years = s.since ? new Date().getFullYear() - s.since : null;
   const facts = [
     s.since ? { value: String(s.since), label: t("factFounded") } : null,
     years ? { value: `${years}+`, label: t("factYears") } : null,
     doctors.length ? { value: String(doctors.length), label: t("factDoctors") } : null,
-    departments.length ? { value: String(departments.length), label: t("factDepartments") } : null,
+    // Disciplines: the specialties when the clinic lists them (hair has no department of its own).
+    Math.max(departments.length, s.specialties?.length ?? 0)
+      ? {
+          value: String(Math.max(departments.length, s.specialties?.length ?? 0)),
+          label: t("factDepartments"),
+        }
+      : null,
   ].filter((f): f is { value: string; label: string } => !!f);
 
   const cities = [...new Set(data.branches.map((b) => pick(locale, b.cityAr, b.cityEn)))];
@@ -172,10 +173,14 @@ export async function ClinicSite({
     { q: t("faq5q", { name }), a: t("faq5a", { cities: cities.join(ar ? " و" : " and ") }) },
   ];
 
+  // Section numbers, like a magazine's contents: 00 the practice, 01–0n the disciplines, then on.
+  const num = (k: number) => String(k).padStart(2, "0");
+  const after = chapters.length;
+
   return (
-    <div className="font-site text-site-slate bg-card flex min-h-screen flex-col pb-20 sm:pb-0">
+    <div className="font-site text-site-slate bg-site-ivory flex min-h-screen flex-col pb-16 sm:pb-0">
       <div
-        className="bg-site-champagne-soft text-site-champagne-ink px-4 py-1.5 text-center text-[11px]"
+        className="text-site-subtle border-site-line border-b px-4 py-1.5 text-center text-[11px]"
         role="note"
         data-testid="site-concept"
       >
@@ -198,72 +203,84 @@ export async function ClinicSite({
           name={name}
           site={s}
           canBook={canBook}
-          doctorCount={doctors.length}
+          nextFree={data.nextFree[0] ?? null}
         />
 
-        {/* ── About + Our Clinics ─────────────────────────────────────────── */}
-        <section id="about" className="scroll-mt-28 pt-24 pb-24 lg:pt-32 lg:pb-32">
-          <div className="mx-auto grid max-w-7xl gap-16 px-5 lg:grid-cols-12 lg:px-8">
-            <div className="flex flex-col gap-8 lg:col-span-7">
-              <Heading title={t("aboutEyebrow")} />
-              {L(s.aboutAr, s.aboutEn) && (
-                <p className="text-[17px] leading-[1.9]">{L(s.aboutAr, s.aboutEn)}</p>
-              )}
+        {/* ── 00 / The practice ───────────────────────────────────────────── */}
+        <section id="about" className="border-site-line scroll-mt-28 border-t">
+          <div className="mx-auto grid max-w-7xl gap-14 px-5 py-20 lg:grid-cols-12 lg:px-8 lg:py-28">
+            <div className="flex flex-col gap-10 lg:col-span-4">
+              <SectionLabel n={num(0)} title={t("aboutEyebrow")} />
               {facts.length > 0 && (
-                <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <dl className="border-site-line grid grid-cols-2 border-t lg:grid-cols-1">
                   {facts.map((f) => (
-                    <div key={f.label} className="bg-site-mist rounded-2xl p-5">
-                      <dd
-                        className="font-display text-site-primary text-3xl font-semibold"
-                        dir="ltr"
-                      >
+                    <div
+                      key={f.label}
+                      className="border-site-line flex flex-col gap-1 border-b py-5"
+                    >
+                      <dd className="font-display text-site-ink text-4xl font-normal" dir="ltr">
                         {f.value}
                       </dd>
-                      <dt className="text-site-subtle mt-1 text-sm">{f.label}</dt>
+                      <dt className="text-site-subtle text-sm">{f.label}</dt>
                     </div>
                   ))}
                 </dl>
               )}
             </div>
-            <div
-              className="bg-site-mist flex flex-col gap-6 rounded-2xl p-7 lg:col-span-5 lg:p-9"
-              id="clinics"
-            >
-              <h3 className="font-display text-site-ink text-2xl font-semibold">
-                {t("clinicsTitle")}
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-8 lg:col-span-7 lg:col-start-6">
+              <h2 className="font-display text-site-ink text-[2.1rem] leading-[1.15] font-normal text-balance lg:text-5xl">
+                {L(s.aboutTitleAr, s.aboutTitleEn) || t("aboutTitle", { name })}
+              </h2>
+              {L(s.aboutAr, s.aboutEn) && (
+                <p className="text-[17px] leading-[1.9]">{L(s.aboutAr, s.aboutEn)}</p>
+              )}
+              {L(s.quoteAr, s.quoteEn) && (
+                <figure className="border-site-champagne mt-6 border-s ps-8">
+                  <blockquote className="font-display text-site-ink text-[1.75rem] leading-[1.35] font-normal lg:text-[2.25rem] ltr:italic">
+                    {L(s.quoteAr, s.quoteEn)}
+                  </blockquote>
+                  <figcaption className="site-label mt-5">{t("quoteBy")}</figcaption>
+                </figure>
+              )}
+            </div>
+          </div>
+
+          {/* The houses: the clinic's own marks in one quiet row */}
+          <div id="clinics" className="border-site-line border-t">
+            <div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-14 lg:flex-row lg:items-center lg:gap-16 lg:px-8">
+              <div className="flex flex-col gap-3 lg:w-1/3">
+                <span className="site-label">{t("clinicsTitle")}</span>
+                {L(s.clinicsAr, s.clinicsEn) && (
+                  <p className="text-[15px] leading-relaxed">{L(s.clinicsAr, s.clinicsEn)}</p>
+                )}
+              </div>
+              <ul className="grid flex-1 grid-cols-2 gap-x-10 gap-y-6 sm:grid-cols-4">
                 {(["brand-clinics", "brand-dental", "brand-light", "brand-hair"] as const).map(
                   (slot) => (
-                    <div
-                      key={slot}
-                      className="bg-card flex aspect-[3/2] items-center justify-center rounded-xl shadow-sm"
-                    >
+                    <li key={slot} className="flex aspect-[3/2] items-center justify-center">
                       <SiteImage
                         slot={slot}
                         src={s.images?.[slot]}
                         locale={locale}
                         fit="contain"
-                        className="p-5"
+                        className="p-2 opacity-80 grayscale"
                         showSpec={false}
                       />
-                    </div>
+                    </li>
                   ),
                 )}
-              </div>
-              {L(s.clinicsAr, s.clinicsEn) && (
-                <p className="text-[15px] leading-relaxed">{L(s.clinicsAr, s.clinicsEn)}</p>
-              )}
+              </ul>
             </div>
           </div>
         </section>
 
-        {/* ── Procedures & Services: one magazine spread per specialty ───── */}
+        {/* ── 01–0n / The disciplines ─────────────────────────────────────── */}
         {chapters.length > 0 && (
-          <section id="departments" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
+          <section id="departments" className="bg-site-mist scroll-mt-28">
             <span id="treatments" className="block scroll-mt-28" aria-hidden />
-            <div className="mx-auto flex max-w-7xl flex-col gap-16 px-5 lg:gap-24 lg:px-8">
-              <Heading title={t("treatEyebrow")} />
+            <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 pt-20 lg:px-8 lg:pt-28">
+              <span className="site-label">{t("treatEyebrow")}</span>
+              <p className="text-site-subtle max-w-xl text-sm">{t("treatText")}</p>
               <SiteChapters
                 chapters={chapters}
                 locale={locale}
@@ -274,45 +291,38 @@ export async function ClinicSite({
           </section>
         )}
 
-        {/* ── Our doctors ─────────────────────────────────────────────────── */}
+        {/* ── Physicians ──────────────────────────────────────────────────── */}
         {doctors.length > 0 && (
-          <section id="doctors" className="scroll-mt-28 py-24 lg:py-32">
-            <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
-              <Heading
-                title={t("doctorsEyebrow")}
-                text={L(s.doctorsAr, s.doctorsEn) || undefined}
-              />
+          <section id="doctors" className="border-site-line scroll-mt-28 border-t">
+            <div className="mx-auto flex max-w-7xl flex-col gap-14 px-5 py-20 lg:px-8 lg:py-28">
+              <div className="flex flex-col gap-5">
+                <SectionLabel n={num(after + 1)} title={t("doctorsEyebrow")} />
+                {L(s.doctorsAr, s.doctorsEn) && (
+                  <p className="max-w-xl text-[17px] leading-relaxed">
+                    {L(s.doctorsAr, s.doctorsEn)}
+                  </p>
+                )}
+              </div>
               {founder && (
-                <article className="bg-card shadow-soft grid overflow-hidden rounded-2xl lg:grid-cols-12">
-                  <div className="from-site-primary to-site-night relative bg-linear-to-b lg:col-span-5">
-                    <div
-                      className="border-site-champagne/40 absolute inset-6 rounded-[1.25rem] border"
-                      aria-hidden
-                    />
+                <article className="border-site-line grid gap-10 border-y py-12 lg:grid-cols-12 lg:gap-16">
+                  <div className="bg-site-mist lg:col-span-4">
                     {/* eslint-disable-next-line @next/next/no-img-element -- the clinic's own photo */}
                     <img
                       src={founder.portrait ?? founder.photo}
                       alt={L(founder.nameAr, founder.nameEn)}
-                      className={cn(
-                        "relative mx-auto block w-full",
-                        founder.portrait
-                          ? "aspect-[4/5] max-w-md object-contain object-bottom pt-8"
-                          : "h-full object-contain",
-                      )}
+                      className="mx-auto block aspect-[4/5] w-full object-contain object-bottom pt-6"
                     />
                   </div>
-                  <div className="flex flex-col justify-center gap-5 p-8 lg:col-span-7 lg:p-14">
-                    <span className="text-site-champagne-ink text-sm font-semibold">
-                      {t("founder")}
-                    </span>
-                    <h3 className="font-display text-site-ink text-3xl font-semibold lg:text-4xl">
+                  <div className="flex flex-col justify-center gap-5 lg:col-span-7 lg:col-start-6">
+                    <span className="site-label">{t("founder")}</span>
+                    <h3 className="font-display text-site-ink text-3xl font-normal lg:text-[2.5rem]">
                       {L(founder.nameAr, founder.nameEn)}
                     </h3>
-                    <p className="text-site-primary text-lg font-medium">
+                    <p className="text-site-subtle text-[15px]">
                       {L(founder.titleAr, founder.titleEn)}
                     </p>
                     {L(founder.bioAr, founder.bioEn) && (
-                      <p className="border-site-champagne text-site-slate border-s-2 ps-5 text-[17px] leading-relaxed">
+                      <p className="max-w-xl text-[17px] leading-[1.85]">
                         {L(founder.bioAr, founder.bioEn)}
                       </p>
                     )}
@@ -328,110 +338,79 @@ export async function ClinicSite({
           </section>
         )}
 
-        {/* ── Offers ──────────────────────────────────────────────────────── */}
+        {/* ── Courses of treatment ────────────────────────────────────────── */}
         {data.offers.length > 0 && (
-          <section id="offers" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
-            <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
-              <Heading title={t("offersEyebrow")} />
-              {clinic.isDemo && (
-                <p className="text-site-champagne-ink -mt-8 text-sm" data-testid="sample-prices">
-                  {t("samplePrices")}
-                </p>
-              )}
-              <ul className={cn("grid gap-6 md:grid-cols-2", OFFER_COLS[offerCols])}>
-                {data.offers.map((o, i) => {
-                  const full = o.servicePrice !== null ? o.servicePrice * o.sessions : null;
-                  const save =
-                    full && o.priceHalalas !== null && full > o.priceHalalas
-                      ? Math.round(((full - o.priceHalalas) / full) * 100)
-                      : null;
-                  return (
-                    <li
-                      key={o.id}
-                      className={cn(
-                        "bg-card shadow-soft border-site-champagne/30 relative flex flex-col gap-5 overflow-hidden rounded-2xl border p-7",
-                        // No empty cells: the first offers widen to fill the last row.
-                        n % 2 === 1 && i === 0 && "md:col-span-2",
-                        i < offerSlack ? "lg:col-span-2" : "lg:col-span-1",
-                      )}
-                      data-testid="site-offer"
-                    >
-                      <span
-                        className="bg-site-champagne absolute inset-x-0 top-0 h-1"
-                        aria-hidden
-                      />
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="text-site-champagne-ink text-xs font-semibold">
-                          {t("offerSessions", { n: o.sessions })}
-                        </span>
-                        {save !== null && save > 0 && (
-                          <span className="bg-site-primary-soft text-site-primary rounded-full px-2.5 py-1 text-xs font-semibold">
-                            {t("offerSave", { n: save })}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-display text-site-ink text-xl leading-snug font-semibold">
-                        {pick(locale, o.nameAr, o.nameEn)}
-                      </h3>
-                      {o.priceHalalas !== null && (
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-site-ink text-2xl font-semibold">
-                            {formatSAR(o.priceHalalas, locale)}
-                          </span>
-                          {full !== null && full > o.priceHalalas && (
-                            <span className="text-site-subtle text-sm line-through">
-                              {formatSAR(full, locale)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <p className="text-site-subtle text-sm">
-                        {t("offerValid", { n: Math.round(o.validityDays / 30) })}
-                      </p>
-                      {o.bookable && canBook ? (
-                        <Link
-                          href={`/book?mode=clinic&service=${o.serviceId}`}
-                          className="bg-site-primary text-site-ivory hover:bg-site-primary-hover mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors"
-                        >
-                          <CalendarCheck className="size-4" aria-hidden />
-                          {t("offerBook")}
-                        </Link>
-                      ) : (
-                        wa && (
-                          <a
-                            href={wa}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="border-site-primary/30 text-site-primary mt-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-semibold"
-                          >
-                            <MessageCircle className="size-4" aria-hidden />
-                            {t("bookWhatsapp")}
-                          </a>
-                        )
-                      )}
-                    </li>
-                  );
-                })}
+          <section id="offers" className="bg-site-mist scroll-mt-28">
+            <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 lg:grid-cols-12 lg:px-8 lg:py-28">
+              <div className="flex flex-col gap-5 lg:col-span-4">
+                <SectionLabel n={num(after + 2)} title={t("offersEyebrow")} />
+                <p className="text-[15px] leading-relaxed">{t("offersText")}</p>
+                {clinic.isDemo && (
+                  <p className="text-site-subtle text-xs" data-testid="sample-prices">
+                    {t("samplePrices")}
+                  </p>
+                )}
+              </div>
+              <ul className="border-site-line border-t lg:col-span-7 lg:col-start-6">
+                {data.offers.map((o) => (
+                  <li
+                    key={o.id}
+                    className="border-site-line grid grid-cols-[1fr_auto] items-baseline gap-x-6 gap-y-1 border-b py-5"
+                    data-testid="site-offer"
+                  >
+                    <span className="font-display text-site-ink text-xl font-normal">
+                      {pick(locale, o.nameAr, o.nameEn)}
+                    </span>
+                    {o.priceHalalas !== null ? (
+                      <span className="text-site-ink text-[15px] tabular-nums">
+                        {formatSAR(o.priceHalalas, locale)}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="text-site-subtle text-sm">
+                      {t("offerSessions", { n: o.sessions })} ·{" "}
+                      {t("offerValid", { n: Math.round(o.validityDays / 30) })}
+                    </span>
+                    {o.bookable && canBook ? (
+                      <Link
+                        href={`/book?mode=clinic&service=${o.serviceId}`}
+                        className="site-link justify-self-end"
+                      >
+                        {t("offerBook")}
+                      </Link>
+                    ) : wa ? (
+                      <a
+                        href={wa}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="site-link justify-self-end"
+                      >
+                        {t("bookWhatsapp")}
+                      </a>
+                    ) : (
+                      <span />
+                    )}
+                  </li>
+                ))}
               </ul>
             </div>
           </section>
         )}
 
-        {/* ── Results ─────────────────────────────────────────────────────── */}
+        {/* ── Before and after ────────────────────────────────────────────── */}
         {s.images?.["result-before"] && s.images?.["result-after"] && (
-          <section id="results" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
-            <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 lg:grid-cols-12 lg:px-8">
-              <div className="flex flex-col gap-6 lg:col-span-5">
-                <Heading title={t("resultsTitle")} text={t("resultsText")} />
-                <p className="text-site-subtle flex items-start gap-2 text-sm">
-                  <ShieldCheck
-                    className="text-site-champagne-ink mt-0.5 size-4 shrink-0"
-                    aria-hidden
-                  />
-                  {t("resultsConsent")}
-                </p>
+          <section id="results" className="border-site-line scroll-mt-28 border-t">
+            <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 lg:grid-cols-12 lg:px-8 lg:py-28">
+              <div className="flex flex-col gap-5 lg:col-span-4">
+                <span className="site-label">{t("resultsEyebrow")}</span>
+                <h2 className="font-display text-site-ink text-4xl font-normal">
+                  {t("resultsTitle")}
+                </h2>
+                <p className="text-[15px] leading-relaxed">{t("resultsText")}</p>
+                <p className="text-site-subtle text-sm">{t("resultsConsent")}</p>
               </div>
-              <div className="lg:col-span-7">
+              <div className="lg:col-span-7 lg:col-start-6">
                 <BeforeAfter
                   before={s.images?.["result-before"]}
                   after={s.images?.["result-after"]}
@@ -447,46 +426,53 @@ export async function ClinicSite({
           </section>
         )}
 
-        {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-        <section id="faq" className="scroll-mt-28 py-24 lg:py-32">
-          <div className="mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-12 lg:px-8">
+        {/* ── Before your first visit ─────────────────────────────────────── */}
+        <section id="faq" className="border-site-line scroll-mt-28 border-t">
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 lg:grid-cols-12 lg:px-8 lg:py-28">
             <div className="lg:col-span-4">
-              <Heading title={t("faqEyebrow")} />
+              <SectionLabel n={num(after + 3)} title={t("faqEyebrow")} />
             </div>
-            <div className="flex flex-col gap-3 lg:col-span-8">
+            <div className="border-site-line border-t lg:col-span-7 lg:col-start-6">
               {faqs.map((f) => (
-                <details key={f.q} className="bg-site-mist group rounded-2xl px-6 py-5">
-                  <summary className="text-site-ink flex cursor-pointer list-none items-center justify-between gap-6 text-[17px] font-semibold [&::-webkit-details-marker]:hidden">
+                <details key={f.q} className="border-site-line group border-b py-6">
+                  <summary className="text-site-ink flex cursor-pointer list-none items-baseline justify-between gap-6 text-[17px] [&::-webkit-details-marker]:hidden">
                     {f.q}
                     <span
-                      className="bg-card text-site-primary flex size-9 shrink-0 items-center justify-center rounded-full text-lg shadow-sm transition-transform group-open:rotate-45"
+                      className="text-site-champagne-ink text-xl font-light transition-transform group-open:rotate-45"
                       aria-hidden
                     >
                       +
                     </span>
                   </summary>
-                  <p className="mt-3 max-w-2xl text-[15px] leading-relaxed">{f.a}</p>
+                  <p className="mt-4 max-w-2xl text-[15px] leading-relaxed">{f.a}</p>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── Contact ─────────────────────────────────────────────────────── */}
-        <section id="contact" className="bg-site-mist scroll-mt-28 py-24 lg:py-32">
-          <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 lg:px-8">
-            <Heading title={t("contactEyebrow")} text={L(s.findAr, s.findEn) || undefined} />
-            <div className="grid gap-6 lg:grid-cols-3">
+        {/* ── Visit the practice ──────────────────────────────────────────── */}
+        <section id="contact" className="bg-site-mist scroll-mt-28">
+          <div className="mx-auto flex max-w-7xl flex-col gap-12 px-5 py-20 lg:px-8 lg:py-28">
+            <div className="flex flex-col gap-5">
+              <SectionLabel n={num(after + 4)} title={t("contactEyebrow")} />
+              {L(s.findAr, s.findEn) && (
+                <p className="font-display text-site-ink text-3xl font-normal lg:text-4xl">
+                  {L(s.findAr, s.findEn)}
+                </p>
+              )}
+            </div>
+            <div className="border-site-line grid border-t md:grid-cols-2 lg:grid-cols-3">
               {data.branches.map((b) => (
-                <div key={b.id} className="bg-card shadow-soft flex flex-col gap-5 rounded-2xl p-7">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-display text-site-ink text-2xl font-semibold">
-                        {pick(locale, b.cityAr, b.cityEn)}
-                      </h3>
-                      <p className="text-site-subtle text-sm">{pick(locale, b.nameAr, b.nameEn)}</p>
-                    </div>
-                    <MapPin className="text-site-champagne-ink size-5" aria-hidden />
+                <div
+                  key={b.id}
+                  className="border-site-line flex flex-col gap-4 border-b py-8 md:border-e md:pe-8 md:[&:not(:first-child)]:ps-8"
+                >
+                  <div>
+                    <h3 className="font-display text-site-ink text-2xl font-normal">
+                      {pick(locale, b.cityAr, b.cityEn)}
+                    </h3>
+                    <p className="text-site-subtle text-sm">{pick(locale, b.nameAr, b.nameEn)}</p>
                   </div>
                   <dl className="grid grid-cols-[5rem_1fr] gap-y-2 text-sm">
                     <dt className="text-site-subtle">{t("days")}</dt>
@@ -494,7 +480,7 @@ export async function ClinicSite({
                     {b.from && b.to && (
                       <>
                         <dt className="text-site-subtle">{t("hours")}</dt>
-                        <dd className="text-site-ink font-medium" dir="ltr">
+                        <dd className="text-site-ink" dir="ltr">
                           {b.from} – {b.to}
                         </dd>
                       </>
@@ -505,19 +491,20 @@ export async function ClinicSite({
                       href={b.mapUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-site-primary mt-auto text-sm font-semibold hover:underline"
+                      className="site-link mt-auto w-fit"
                     >
                       {t("directions")}
                     </a>
                   )}
                 </div>
               ))}
-              <div className="bg-site-primary text-site-ivory flex flex-col gap-5 rounded-2xl p-7">
-                <h3 className="font-display text-2xl font-semibold">{t("contactUs")}</h3>
+              <div className="flex flex-col gap-4 py-8 md:ps-8">
+                <h3 className="font-display text-site-ink text-2xl font-normal">
+                  {t("contactUs")}
+                </h3>
                 {tel && (
-                  <a href={tel} className="flex items-center gap-3 text-lg font-semibold">
-                    <Phone className="size-5" aria-hidden />
-                    <span dir="ltr">{s.phone}</span>
+                  <a href={tel} className="text-site-ink text-lg" dir="ltr">
+                    {s.phone}
                   </a>
                 )}
                 {wa && (
@@ -525,28 +512,18 @@ export async function ClinicSite({
                     href={wa}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 text-lg font-semibold"
+                    className="site-link w-fit"
                   >
-                    <MessageCircle className="size-5" aria-hidden />
                     {t("utilityWhatsapp")}
                   </a>
                 )}
                 {data.videoService && canBook && (
-                  <Link
-                    href={videoHref}
-                    className="text-site-ivory/85 flex items-center gap-3 text-sm hover:underline"
-                  >
-                    <Video className="size-4" aria-hidden />
+                  <Link href={videoHref} className="site-link w-fit">
                     {t("videoCta")}
                   </Link>
                 )}
                 {canBook && (
-                  <Link
-                    href="/book"
-                    className="bg-site-ivory text-site-night mt-auto inline-flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold"
-                    data-testid="final-book"
-                  >
-                    <CalendarCheck className="size-4" aria-hidden />
+                  <Link href="/book" className="site-button mt-auto w-fit" data-testid="final-book">
                     {t("book")}
                   </Link>
                 )}
@@ -554,56 +531,52 @@ export async function ClinicSite({
             </div>
           </div>
         </section>
+      </main>
 
-        {/* ── Partners & accreditations (pre-footer) ─────────────────────── */}
+      <footer className="border-site-line border-t">
         {(s.partners?.length || s.licence || clinic.isDemo) && (
-          <section className="border-site-line border-t py-16" aria-labelledby="partners-title">
-            <div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 lg:px-8">
-              <p id="partners-title" className="text-site-ink text-center text-base font-semibold">
+          <div className="border-site-line border-b" aria-labelledby="partners-title">
+            <div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-14 lg:px-8">
+              <p id="partners-title" className="site-label">
                 {t("partnersTitle")}
               </p>
-              <ul className="flex flex-wrap justify-center gap-3 text-sm">
-                <Badge>{s.licence ? t("licence", { n: s.licence }) : t("licencePending")}</Badge>
-                {s.credentials?.map((c) => (
-                  <Badge key={c.en}>{L(c.ar, c.en)}</Badge>
-                ))}
-              </ul>
               {s.partners && s.partners.length > 0 && (
-                <ul className="grid grid-cols-3 gap-x-6 gap-y-8 sm:grid-cols-5 lg:grid-cols-10">
+                <ul className="grid grid-cols-3 gap-x-8 gap-y-8 sm:grid-cols-5 lg:grid-cols-10">
                   {s.partners.map((p) => (
-                    <li key={p.nameEn} className="flex h-14 items-center justify-center">
+                    <li key={p.nameEn} className="flex h-12 items-center justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element -- partner logos as published by the clinic */}
                       <img
                         src={p.logo}
                         alt={L(p.nameAr, p.nameEn)}
                         title={L(p.nameAr, p.nameEn)}
                         loading="lazy"
-                        className="max-h-14 w-auto max-w-full object-contain opacity-90 grayscale-[35%] transition hover:opacity-100 hover:grayscale-0"
+                        className="max-h-12 w-auto max-w-full object-contain opacity-60 grayscale transition hover:opacity-100"
                       />
                     </li>
                   ))}
                 </ul>
               )}
+              <ul className="text-site-subtle flex flex-wrap gap-x-6 gap-y-2 text-xs">
+                <li>{s.licence ? t("licence", { n: s.licence }) : t("licencePending")}</li>
+                {s.credentials?.map((c) => (
+                  <li key={c.en}>{L(c.ar, c.en)}</li>
+                ))}
+              </ul>
             </div>
-          </section>
+          </div>
         )}
-      </main>
-
-      <footer className="bg-site-night text-site-ivory/70">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 text-sm md:grid-cols-12 lg:px-8">
           <div className="flex flex-col gap-5 md:col-span-5">
             {s.images?.logo ? (
-              <span className="bg-card w-fit rounded-xl px-4 py-3">
-                {/* eslint-disable-next-line @next/next/no-img-element -- the clinic's own logo */}
-                <img src={s.images.logo} alt={name} className="h-9 w-auto" />
-              </span>
+              // eslint-disable-next-line @next/next/no-img-element -- the clinic's own logo
+              <img src={s.images.logo} alt={name} className="h-9 w-fit" />
             ) : (
-              <span className="font-display text-site-ivory text-2xl">{name}</span>
+              <span className="font-display text-site-ink text-2xl">{name}</span>
             )}
             {L(s.footerAr, s.footerEn) && (
               <p className="max-w-md leading-relaxed">{L(s.footerAr, s.footerEn)}</p>
             )}
-            <div className="flex gap-4">
+            <div className="flex gap-5">
               {s.x && <Social href={`https://x.com/${s.x}`}>X</Social>}
               {s.instagram && (
                 <Social href={`https://www.instagram.com/${s.instagram}`}>Instagram</Social>
@@ -612,17 +585,17 @@ export async function ClinicSite({
             </div>
           </div>
           <div className="flex flex-col gap-3 md:col-span-3">
-            <span className="text-site-ivory font-semibold">{t("navDepartments")}</span>
+            <span className="site-label">{t("navDepartments")}</span>
             {departments.map((d) => (
-              <a key={d.key} href={`#dept-${d.key}`} className="hover:text-site-ivory">
+              <a key={d.key} href={`#dept-${d.key}`} className="hover:text-site-ink">
                 {L(d.nameAr, d.nameEn)}
               </a>
             ))}
           </div>
           <div className="flex flex-col gap-3 md:col-span-4">
-            <span className="text-site-ivory font-semibold">{t("navContact")}</span>
+            <span className="site-label">{t("navContact")}</span>
             {tel && (
-              <a href={tel} className="hover:text-site-ivory w-fit" dir="ltr">
+              <a href={tel} className="hover:text-site-ink w-fit" dir="ltr">
                 {s.phone}
               </a>
             )}
@@ -631,79 +604,48 @@ export async function ClinicSite({
                 href={wa}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-site-ivory w-fit"
+                className="hover:text-site-ink w-fit"
               >
                 {t("utilityWhatsapp")}
               </a>
             )}
-            <Link href="/my" className="hover:text-site-ivory w-fit">
+            <Link href="/my" className="hover:text-site-ink w-fit">
               {t("utilityPortal")}
             </Link>
-            <Link href={staff ? "/home" : "/login"} className="hover:text-site-ivory w-fit">
+            <Link href={staff ? "/home" : "/login"} className="hover:text-site-ink w-fit">
               {staff ? t("openApp") : t("staff")}
             </Link>
           </div>
         </div>
-        <div className="border-site-ivory/10 border-t">
-          <div className="text-site-ivory/50 mx-auto flex max-w-7xl flex-col gap-2 px-5 py-6 text-xs md:flex-row md:justify-between lg:px-8">
+        <div className="border-site-line border-t">
+          <div className="text-site-subtle mx-auto flex max-w-7xl flex-col gap-2 px-5 py-6 text-xs md:flex-row md:justify-between lg:px-8">
             <span>{t("rights", { name, year: new Date().getFullYear() })}</span>
             <span>{t("concept", { name })}</span>
           </div>
         </div>
       </footer>
 
-      {/* Phones: Book stays under the thumb. */}
+      {/* Phones: one thin bar with the invitation, under the thumb. */}
       {canBook && (
-        <div className="bg-card/95 shadow-float fixed inset-x-0 bottom-0 z-40 flex gap-2 p-3 backdrop-blur-md sm:hidden">
+        <div className="bg-site-ivory/95 border-site-line fixed inset-x-0 bottom-0 z-40 border-t p-2.5 backdrop-blur-md sm:hidden">
           <Link
             href="/book"
-            className="bg-site-primary text-site-ivory flex h-12 flex-1 items-center justify-center gap-2 rounded-xl font-semibold"
+            className="bg-site-ink text-site-ivory flex h-11 items-center justify-center text-sm tracking-wide"
             data-testid="sticky-book"
           >
-            <CalendarCheck className="size-4" aria-hidden />
             {t("book")}
           </Link>
-          {wa && (
-            <a
-              href={wa}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("utilityWhatsapp")}
-              className="border-site-line text-site-primary flex size-12 items-center justify-center rounded-xl border"
-            >
-              <MessageCircle className="size-5" />
-            </a>
-          )}
         </div>
       )}
     </div>
   );
 }
 
-const OFFER_COLS = {
-  1: "lg:grid-cols-1 lg:max-w-md",
-  2: "lg:grid-cols-2",
-  3: "lg:grid-cols-3",
-  4: "lg:grid-cols-4",
-} as const;
-
-function Heading({ title, text }: { title: string; text?: string }) {
+function SectionLabel({ n, title }: { n: string; title: string }) {
   return (
-    <div className="flex max-w-3xl flex-col gap-4">
-      <h2 className="font-display text-site-ink text-3xl leading-tight font-semibold text-balance lg:text-[2.75rem]">
-        {title}
-      </h2>
-      {text && <p className="text-[17px] leading-relaxed">{text}</p>}
-    </div>
-  );
-}
-
-function Badge({ children }: { children: ReactNode }) {
-  return (
-    <li className="bg-site-mist text-site-ink flex items-center gap-2 rounded-full px-4 py-2">
-      <ShieldCheck className="text-site-champagne-ink size-4" aria-hidden />
-      {children}
-    </li>
+    <span className="site-label">
+      <span dir="ltr">{n}</span> / {title}
+    </span>
   );
 }
 
@@ -713,7 +655,7 @@ function Social({ href, children }: { href: string; children: ReactNode }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="border-site-ivory/20 hover:border-site-ivory/60 hover:text-site-ivory rounded-full border px-3 py-1.5 text-xs"
+      className="hover:text-site-ink text-xs tracking-wide underline decoration-1 underline-offset-4"
     >
       {children}
     </a>

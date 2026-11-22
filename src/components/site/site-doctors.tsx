@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useLocale } from "next-intl";
-import { CalendarCheck, ChevronLeft, ChevronRight, MapPin, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface DoctorCard {
@@ -47,11 +47,11 @@ export function SiteDoctors({
   };
 
   const arrow =
-    "bg-card text-site-ink shadow-soft hover:text-site-primary absolute top-[42%] z-20 flex size-12 -translate-y-1/2 items-center justify-center rounded-full transition-colors";
+    "bg-site-ivory text-site-ink border-site-line hover:border-site-ink absolute top-[42%] z-20 flex size-11 -translate-y-1/2 items-center justify-center border transition-colors";
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap justify-center gap-2" role="tablist">
+      <div className="flex flex-wrap justify-center gap-x-7 gap-y-2" role="tablist">
         {[{ key: "all", name: labels.all }, ...depts].map((d) => (
           <button
             key={d.key}
@@ -63,10 +63,10 @@ export function SiteDoctors({
               setCenter(0);
             }}
             className={cn(
-              "h-11 rounded-full px-5 text-sm font-semibold transition-colors",
+              "h-10 border-b text-sm tracking-wide transition-colors",
               dept === d.key
-                ? "bg-site-primary text-site-ivory shadow-sm"
-                : "bg-card text-site-slate hover:text-site-primary shadow-sm",
+                ? "border-site-ink text-site-ink"
+                : "text-site-subtle hover:text-site-ink border-transparent",
             )}
           >
             {d.name}
@@ -111,13 +111,13 @@ export function SiteDoctors({
             >
               <article
                 className={cn(
-                  "bg-card flex flex-col overflow-hidden rounded-2xl transition-shadow",
-                  focus ? "shadow-float" : "shadow-soft cursor-pointer",
+                  "bg-site-ivory flex flex-col overflow-hidden",
+                  !focus && "cursor-pointer",
                 )}
                 onClick={() => !focus && setCenter(i)}
                 data-testid={focus ? "site-doctor" : undefined}
               >
-                <div className="from-site-mist to-site-primary-soft aspect-[4/5] overflow-hidden bg-linear-to-b">
+                <div className="bg-site-mist aspect-[4/5] overflow-hidden">
                   {d.photo ? (
                     // eslint-disable-next-line @next/next/no-img-element -- the clinic's own photos
                     <img
@@ -129,17 +129,17 @@ export function SiteDoctors({
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center" aria-hidden>
-                      <span className="font-display text-site-primary/40 text-7xl">
+                      <span className="font-display text-site-subtle text-7xl">
                         {d.name.replace(/^(د\.|Dr\.?|Prof\.\s*Dr\.?)\s*/i, "").charAt(0)}
                       </span>
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col gap-2 p-5 text-center">
-                  <h3 className="font-display text-site-ink text-lg leading-snug font-semibold">
+                <div className="flex flex-col gap-2 px-2 py-5 text-center">
+                  <h3 className="font-display text-site-ink text-xl leading-snug font-normal">
                     {d.name}
                   </h3>
-                  <p className="text-site-primary text-sm leading-snug">{d.title}</p>
+                  <p className="text-site-subtle text-[13px] leading-snug">{d.title}</p>
                   <div className={cn("flex flex-col gap-3 pt-1", !focus && "invisible")}>
                     {d.branch && (
                       <p className="text-site-subtle flex items-center justify-center gap-1 text-xs">
@@ -153,19 +153,17 @@ export function SiteDoctors({
                         target="_blank"
                         rel="noopener noreferrer"
                         tabIndex={focus ? 0 : -1}
-                        className="border-site-primary/30 text-site-primary hover:bg-site-primary hover:text-site-ivory inline-flex h-11 items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition-colors"
+                        className="site-link self-center"
                       >
-                        <MessageCircle className="size-4" aria-hidden />
                         {d.book.label}
                       </a>
                     ) : (
                       <Link
                         href={d.book.href}
                         tabIndex={focus ? 0 : -1}
-                        className="bg-site-primary text-site-ivory hover:bg-site-primary-hover inline-flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors"
+                        className="site-link self-center"
                         data-testid="doctor-book"
                       >
-                        <CalendarCheck className="size-4" aria-hidden />
                         {d.book.label}
                       </Link>
                     )}
