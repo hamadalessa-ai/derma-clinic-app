@@ -180,8 +180,21 @@ describe("post-care, no-show and recall", () => {
       if (new Date(`${day}T12:00:00+03:00`).getUTCDay() === 5) day = addDays(day, -1);
       const a = await book("D-0010", day, "consultation", { allowPast: true });
       await complete(a);
-      const r = await runScheduledMessages(derma, { env: ENV, ignoreQuietHours: true });
-      expect(r.sent.post_care ?? 0).toBeGreaterThanOrEqual(1);
+      // Real time: the whole demo week may be due at once, so keep calling while the run says
+      // "more" (as the hourly workflow does) until this visit's turn comes.
+      let postCare = 0;
+      for (let i = 0; i < 10; i++) {
+        // Run as of 25 hours after the visit ended: going back past a Friday can put the visit
+        // outside the 3-day window when the test runs late in the day.
+        const r = await runScheduledMessages(derma, {
+          now: new Date(a.endsAt.getTime() + 25 * 3600_000),
+          env: ENV,
+          ignoreQuietHours: true,
+        });
+        postCare += r.sent.post_care ?? 0;
+        if (!r.more) break;
+      }
+      expect(postCare).toBeGreaterThanOrEqual(1);
       const [m] = await sentFor(a.id, "post_care");
       expect(m.body).toContain("كيف حالك بعد الاستشارة؟");
       expect(m.buttons?.map((b) => b.title)).toEqual(["كل شيء جيد", "لدي استفسار/قلق"]);
@@ -196,7 +209,14 @@ describe("post-care, no-show and recall", () => {
       await complete(early);
       await runScheduledMessages(derma, { env: ENV, ignoreQuietHours: true });
       expect(await sentFor(early.id, "post_care")).toHaveLength(0);
-      await runScheduledMessages(derma, { env: ENV, ignoreQuietHours: true, fastForwardHours: 24 });
+      for (let i = 0; i < 10; i++) {
+        const r = await runScheduledMessages(derma, {
+          env: ENV,
+          ignoreQuietHours: true,
+          fastForwardHours: 24,
+        });
+        if (!r.more) break;
+      }
       expect(await sentFor(early.id, "post_care")).toHaveLength(1);
     } finally {
       await system((tx) =>
