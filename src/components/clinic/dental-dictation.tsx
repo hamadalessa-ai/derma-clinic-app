@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Mic, Square } from "lucide-react";
 import { recordTeethAction } from "@/app/actions/clinic";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,8 @@ export function DentalDictation({
     () => !!recognitionCtor(),
     () => true,
   );
-  const [lang, setLang] = useState<"ar-SA" | "en-US">("ar-SA");
+  // Dictation starts in the screen's language (the dentist can switch).
+  const [lang, setLang] = useState<"ar-SA" | "en-US">(useLocale() === "en" ? "en-US" : "ar-SA");
   const [text, setText] = useState("");
   const [interim, setInterim] = useState("");
   const [listening, setListening] = useState(false);
