@@ -87,13 +87,15 @@ const EXPECTED: Record<Permission, Record<Role, boolean>> = {
     practitioner: true,
     receptionist: false,
     assistant: true,
-  },  "labs:view": {
+  },
+  "labs:view": {
     platform_owner: false,
     clinic_admin: false,
     practitioner: true,
     receptionist: false,
     assistant: true,
-  },  "labs:manage": {
+  },
+  "labs:manage": {
     platform_owner: false,
     clinic_admin: false,
     practitioner: true,

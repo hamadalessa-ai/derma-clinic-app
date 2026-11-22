@@ -324,7 +324,9 @@ function ReportCard({
         )}
       </div>
       {r.voided && (
-        <p className="text-muted-foreground text-xs">{t("voided", { reason: r.voidReason ?? "" })}</p>
+        <p className="text-muted-foreground text-xs">
+          {t("voided", { reason: r.voidReason ?? "" })}
+        </p>
       )}
       {r.values.length > 0 && (
         <table className="w-full text-sm">

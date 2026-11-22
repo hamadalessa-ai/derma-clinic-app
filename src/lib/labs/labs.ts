@@ -27,7 +27,6 @@ export class LabError extends Error {
 
 export type LabFlag = "low" | "normal" | "high" | "abnormal" | "none";
 
-
 const ARABIC_DIGITS = /[٠-٩]/g;
 
 /** The number in a written value ("12.4", "١٢٫٤", "12,4"); null for "<0.5", "Negative"… */
@@ -87,10 +86,7 @@ export async function addLabReport(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.takenOn) || input.takenOn > today)
     throw new LabError("bad_date");
   if (input.fileId) {
-    const [f] = await tx
-      .select({ kind: files.kind })
-      .from(files)
-      .where(eq(files.id, input.fileId));
+    const [f] = await tx.select({ kind: files.kind }).from(files).where(eq(files.id, input.fileId));
     if (f?.kind !== "lab_report") throw new LabError("bad_file");
   }
   const [report] = await tx

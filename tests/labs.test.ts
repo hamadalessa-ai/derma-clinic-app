@@ -208,7 +208,10 @@ describe("who sees lab results", () => {
         "not_allowed",
       );
       const rows = await withActor(who, (tx) =>
-        tx.select().from(labReports).where(eq(labReports.patientId, patient(FILE))),
+        tx
+          .select()
+          .from(labReports)
+          .where(eq(labReports.patientId, patient(FILE))),
       );
       expect(rows).toHaveLength(0);
     }

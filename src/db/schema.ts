@@ -2408,10 +2408,7 @@ export const labReports = pgTable(
   (t) => [
     unique("lab_reports_tenant_id_id_key").on(t.tenantId, t.id),
     index("lab_reports_patient_idx").on(t.tenantId, t.patientId, t.takenOn),
-    check(
-      "lab_reports_void_reason",
-      sql`(${t.voidedAt} is null) = (${t.voidReason} is null)`,
-    ),
+    check("lab_reports_void_reason", sql`(${t.voidedAt} is null) = (${t.voidReason} is null)`),
     foreignKey({
       name: "lab_reports_patient_fk",
       columns: [t.tenantId, t.patientId],

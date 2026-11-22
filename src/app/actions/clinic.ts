@@ -36,12 +36,7 @@ import {
   removeHoursException,
   saveWeeklyHours,
 } from "@/lib/booking/working-hours";
-import {
-  addLabReport,
-  cancelRequest,
-  requestRepeat,
-  voidLabReport,
-} from "@/lib/labs/labs";
+import { addLabReport, cancelRequest, requestRepeat, voidLabReport } from "@/lib/labs/labs";
 import {
   cancelMembership,
   recordMembershipPayment,
@@ -2731,7 +2726,12 @@ export async function addLabReportAction(input: unknown) {
 export async function voidLabReportAction(input: unknown) {
   return staffAction("labs:manage", async (_ctx, actor) => {
     const v = parse(
-      z.object({ reportId: uuid, reason: text(300), patientId: uuid, appointmentId: uuid.nullish() }),
+      z.object({
+        reportId: uuid,
+        reason: text(300),
+        patientId: uuid,
+        appointmentId: uuid.nullish(),
+      }),
       input,
     );
     await withActor(actor, (tx) => voidLabReport(tx, actor, v));

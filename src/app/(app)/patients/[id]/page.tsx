@@ -82,8 +82,7 @@ export default async function PatientProfilePage({
   const dental = await withActor(actorOf(ctx), (tx) => dentalEnabled(tx));
   const canLabs = can(ctx.roles, "labs:view");
   const tabs = TABS.filter(
-    (x) =>
-      (x !== "notes" || canNotes) && (x !== "dental" || dental) && (x !== "labs" || canLabs),
+    (x) => (x !== "notes" || canNotes) && (x !== "dental" || dental) && (x !== "labs" || canLabs),
   );
   const tab: Tab = (tabs as readonly string[]).includes(sp.tab ?? "")
     ? (sp.tab as Tab)

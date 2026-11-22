@@ -26,8 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const actor = actorOf(ctx);
   const file = await withActor(actor, async (tx) => {
     const [row] = await tx.select({ kind: files.kind }).from(files).where(eq(files.id, id));
-    const ok =
-      (row?.kind === "patient_photo" && photos) || (row?.kind === "lab_report" && labs);
+    const ok = (row?.kind === "patient_photo" && photos) || (row?.kind === "lab_report" && labs);
     if (!ok) return null;
     const f = await getFileStore().get({ tx }, id);
     if (f) {
