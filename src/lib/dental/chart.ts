@@ -11,7 +11,7 @@ import { assertCan } from "@/lib/auth/permissions";
 import { isTooth, normalizeSurfaces, type ToothCondition } from "./teeth";
 
 export class DentalError extends Error {
-  constructor(public code: "bad_tooth" | "not_found" | "not_planned" | "bad_status") {
+  constructor(public code: "bad_tooth" | "empty" | "not_found" | "not_planned" | "bad_status") {
     super(code);
   }
 }
@@ -72,4 +72,36 @@ export async function recordTooth(
     metadata: { tooth: input.tooth },
   });
   return row;
+}
+
+/**
+ * Several teeth at once (voice charting: the dentist checked the list and tapped Save). One row
+ * per tooth, in one transaction — all saved or none. At most a full mouth (32 teeth).
+ */
+export async function recordTeeth(
+  tx: TenantTx,
+  actor: Actor,
+  input: {
+    patientId: string;
+    appointmentId?: string | null;
+    items: { tooth: number; condition: ToothCondition; surfaces?: string }[];
+  },
+) {
+  assertCan(actor.roles, "dental:chart");
+  if (!input.items.length) throw new DentalError("empty");
+  if (input.items.length > 32 || new Set(input.items.map((i) => i.tooth)).size !== input.items.length)
+    throw new DentalError("bad_tooth");
+  const rows = [];
+  for (const item of input.items) {
+    rows.push(
+      await recordTooth(tx, actor, {
+        patientId: input.patientId,
+        appointmentId: input.appointmentId ?? null,
+        tooth: item.tooth,
+        condition: item.condition,
+        surfaces: item.surfaces,
+      }),
+    );
+  }
+  return rows;
 }
