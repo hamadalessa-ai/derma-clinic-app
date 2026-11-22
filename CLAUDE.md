@@ -168,6 +168,13 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   takes the member discount off the uncovered lines (`visit_checkouts.discount_halalas`, due = after discount), and the
   daily file shows `membership_discount`, `membership_sale`, `membership_payment` rows. WhatsApp `membership_renewal`
   3 days before a period ends (scheduler, key `membership_renewal:<id>`). Patients see their membership on `/my`.
+- Lab results (`src/lib/labs/labs.ts`, UI `lab-results.tsx` via `LabSection`: patient file → Labs tab, compact card on the
+  visit screen; permissions `labs:view` / `labs:manage` = doctors + nurses ONLY, plus restrictive database policies
+  `lab_*_clinical_only`; patients never see them). `lab_reports` (sample date, lab, optional file `kind = lab_report`
+  uploaded through `/api/labs/upload` — server actions take ≤ 1 MB — and served by `/api/files/<id>`, audited) are never
+  edited, only voided with a reason; `lab_values` append-only, flagged low / normal / high / abnormal by `flagOf` against
+  the range written with them (`LAB_PRESETS` only suggest units and ranges). `lab_requests` = "repeat this test by …";
+  entering a result with the same test name marks it done. Never put result values in audit metadata.
 - Help centre (`/help`, permission `help:view`, content `src/lib/help/guides.ts`): short step guides per role in Arabic
   and English. When a screen, tab or button name changes, update the guide (a test checks the links exist).
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly

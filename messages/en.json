@@ -262,7 +262,12 @@
     "membership_overpaid": "The amount is more than what's still to pay.",
     "membership_cancelled": "This membership was cancelled.",
     "membership_renewed": "This membership was already renewed.",
-    "membership_plan_off": "This plan is no longer on sale."
+    "membership_plan_off": "This plan is no longer on sale.",
+    "labs_not_found": "Not found, or already changed.",
+    "labs_empty": "Enter at least one test with its value, or attach the report.",
+    "labs_bad_date": "Check the date.",
+    "labs_voided": "This report was voided.",
+    "labs_bad_file": "The attached report was not found. Attach it again."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -473,7 +478,8 @@
     "guardianFile": "Guardian's file number (optional)",
     "relationAr": "Relationship",
     "import": "Import",
-    "dental": "Dental"
+    "dental": "Dental",
+    "labs": "Labs"
   },
   "packages": {
     "title": "Packages",
@@ -2134,5 +2140,47 @@
     "noRenewals": "Nobody is due for renewal.",
     "activeTitle": "Active members ({n})",
     "noMembers": "No members yet."
+  },
+  "labs": {
+    "title": "Lab results",
+    "none": "No lab results yet.",
+    "add": "Add results",
+    "test": "Test",
+    "value": "Value",
+    "unit": "Unit",
+    "low": "Low",
+    "high": "High",
+    "range": "Range",
+    "takenOn": "Sample taken",
+    "lab": "Lab",
+    "note": "Note",
+    "attach": "Attach the lab's report (PDF or photo)",
+    "rangeHint": "Use the range printed on the lab's report. Low and high values are marked automatically.",
+    "save": "Save results",
+    "close": "Cancel",
+    "addRow": "Add a test",
+    "removeRow": "Remove this test",
+    "uploadFailed": "The report could not be uploaded (PDF or photo, up to 4 MB).",
+    "enteredBy": "entered by {name}",
+    "viewReport": "Lab report",
+    "voidOpen": "Entered by mistake",
+    "voidReason": "Why is this wrong?",
+    "void": "Void",
+    "voided": "Voided: {reason}",
+    "flag": {
+      "low": "Low",
+      "high": "High",
+      "abnormal": "Abnormal",
+      "normal": "Normal"
+    },
+    "repeat": "Repeat {test}",
+    "dueOn": "due {date}",
+    "overdueOn": "overdue since {date}",
+    "cancelRequest": "Cancel this request",
+    "requestRepeat": "Request repeat test",
+    "due": "Due by",
+    "inMonths": "{n, plural, =1 {1 month} other {# months}}",
+    "request": "Request",
+    "requested": "Repeat test requested."
   }
 }

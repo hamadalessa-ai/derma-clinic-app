@@ -10,25 +10,30 @@ import { eq } from "drizzle-orm";
 const UUID = /^[0-9a-f-]{36}$/i;
 
 /**
- * A photo a patient sent (WhatsApp). Medical: only doctors and admins of this clinic
- * ("photos:view"); RLS keeps other clinics out. Never cached; every view is audited.
+ * A photo a patient sent (WhatsApp; "photos:view": doctors and admins) or a lab's report
+ * ("labs:view": doctors and nurses). RLS keeps other clinics out. Never cached; every view is
+ * audited.
  */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getStaffContext();
   if (!ctx) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (!can(ctx.roles, "photos:view") || !UUID.test(id)) {
+  const photos = can(ctx.roles, "photos:view");
+  const labs = can(ctx.roles, "labs:view");
+  if ((!photos && !labs) || !UUID.test(id)) {
     return NextResponse.json({ error: "not allowed" }, { status: 403 });
   }
   const actor = actorOf(ctx);
   const file = await withActor(actor, async (tx) => {
     const [row] = await tx.select({ kind: files.kind }).from(files).where(eq(files.id, id));
-    if (row?.kind !== "patient_photo") return null;
+    const ok =
+      (row?.kind === "patient_photo" && photos) || (row?.kind === "lab_report" && labs);
+    if (!ok) return null;
     const f = await getFileStore().get({ tx }, id);
     if (f) {
       await audit(tx, {
         actorUserId: actor.userId,
-        action: "patient_photo.view",
+        action: `${row!.kind}.view`,
         entityType: "file",
         entityId: id,
       });

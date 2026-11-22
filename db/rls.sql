@@ -335,6 +335,11 @@ grant select, insert, update on public.dental_plan_items, public.lab_cases to cl
 -- Memberships: plans are clinic set-up; a sold period is only ever cancelled (never edited);
 -- payments and used visits are append-only.
 grant select, insert, update on public.membership_plans to clinic_app;
+-- Lab results: a report is never edited, only voided (with a reason); values are append-only;
+-- a repeat-test request is marked done or cancelled.
+grant select, insert on public.lab_reports, public.lab_values, public.lab_requests to clinic_app;
+grant update (voided_at, voided_by_user_id, void_reason) on public.lab_reports to clinic_app;
+grant update (done_report_id, done_at, cancelled_at) on public.lab_requests to clinic_app;
 grant select, insert on public.patient_memberships to clinic_app;
 grant update (cancelled_at, cancelled_by_user_id) on public.patient_memberships to clinic_app;
 -- Dates: only demo clinics ("Refresh demo week"); a trigger refuses it elsewhere (db/booking.sql).
@@ -369,7 +374,8 @@ begin
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
     'dental_chart_entries', 'dental_plan_items', 'lab_cases',
-    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits'
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits',
+    'lab_reports', 'lab_values', 'lab_requests'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -477,6 +483,20 @@ create policy visit_checkouts_completed_insert on public.visit_checkouts as rest
 
 -- Dental chart = clinical: only doctors and nurses read or add to it.
 create policy dental_chart_entries_clinical_only on public.dental_chart_entries as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+-- Lab results are clinical: only doctors and nurses read or add them (never reception or an
+-- admin alone).
+create policy lab_reports_clinical_only on public.lab_reports as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+create policy lab_values_clinical_only on public.lab_values as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+create policy lab_requests_clinical_only on public.lab_requests as restrictive
   for all to clinic_app
   using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
   with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
@@ -601,7 +621,8 @@ begin
     'platform_statements', 'platform_payments', 'support_grants', 'service_practitioners',
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
     'dental_chart_entries', 'dental_plan_items', 'lab_cases',
-    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits',
+    'lab_reports', 'lab_values', 'lab_requests', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'

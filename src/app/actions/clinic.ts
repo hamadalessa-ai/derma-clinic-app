@@ -37,6 +37,12 @@ import {
   saveWeeklyHours,
 } from "@/lib/booking/working-hours";
 import {
+  addLabReport,
+  cancelRequest,
+  requestRepeat,
+  voidLabReport,
+} from "@/lib/labs/labs";
+import {
   cancelMembership,
   recordMembershipPayment,
   renewMembership,
@@ -2683,6 +2689,83 @@ export async function setLabStatusAction(input: { id: string; status: string; pa
     if (v.status === "received") whatsappLater(() => sendLabReady(ctx.tenant, v.id));
     dentalChanged(v.patientId);
     revalidatePath("/lab-cases");
+    return null;
+  });
+}
+
+// ─── Lab results (doctors and nurses) ───────────────────────────────────────
+
+const labNumber = z.number().finite().nullish();
+
+export async function addLabReportAction(input: unknown) {
+  return staffAction("labs:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        patientId: uuid,
+        appointmentId: uuid.nullish(),
+        takenOn: day,
+        labName: text(120).nullish(),
+        note: text(1000).nullish(),
+        fileId: uuid.nullish(),
+        values: z
+          .array(
+            z.object({
+              testName: text(120),
+              valueText: text(60),
+              unit: text(30).nullish(),
+              refLow: labNumber,
+              refHigh: labNumber,
+              abnormal: z.boolean().optional(),
+            }),
+          )
+          .max(60),
+      }),
+      input,
+    );
+    const r = await withActor(actor, (tx) => addLabReport(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    return { requestsDone: r.requestsDone };
+  });
+}
+
+export async function voidLabReportAction(input: unknown) {
+  return staffAction("labs:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ reportId: uuid, reason: text(300), patientId: uuid, appointmentId: uuid.nullish() }),
+      input,
+    );
+    await withActor(actor, (tx) => voidLabReport(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+export async function requestLabRepeatAction(input: unknown) {
+  return staffAction("labs:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({
+        patientId: uuid,
+        testName: text(120),
+        dueOn: day,
+        reason: text(300).nullish(),
+        appointmentId: uuid.nullish(),
+      }),
+      input,
+    );
+    await withActor(actor, (tx) => requestRepeat(tx, actor, v));
+    dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+export async function cancelLabRequestAction(input: unknown) {
+  return staffAction("labs:manage", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ requestId: uuid, patientId: uuid, appointmentId: uuid.nullish() }),
+      input,
+    );
+    await withActor(actor, (tx) => cancelRequest(tx, actor, v.requestId));
+    dentalChanged(v.patientId, v.appointmentId);
     return null;
   });
 }

@@ -274,6 +274,25 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       ],
     },
     {
+      id: "labs",
+      titleAr: "نتائج التحاليل",
+      titleEn: "Lab results",
+      steps: [
+        s(
+          "ملف المريض ← «التحاليل» (أو بطاقة التحاليل في شاشة الزيارة): «إضافة نتائج»، اكتب اسم التحليل والقيمة؛ الوحدة والمعدل الطبيعي يُملآن للتحاليل المعروفة، والمعدل المطبوع في تقرير المعمل هو الأصح.",
+          "Patient file → Labs (or the Labs card on the visit screen): Add results, type the test and value; unit and range fill in for known tests, but the range printed on the lab's report is the one to use.",
+        ),
+        s(
+          "أرفق تقرير المعمل (PDF أو صورة). القيم المنخفضة والمرتفعة تُعلَّم تلقائيًا. الخطأ يُلغى مع ذكر السبب ثم يُدخل من جديد.",
+          "Attach the lab's report (PDF or photo). Low and high values are marked automatically. A mistake is voided with a reason, then entered again.",
+        ),
+        s(
+          "«طلب إعادة تحليل» بموعد استحقاق؛ يظهر في الملف والزيارة حتى تُدخل نتيجته. النتائج للأطباء والممرضات فقط.",
+          "Request repeat test with a due date; it shows on the file and visit until its result is entered. Results are for doctors and nurses only.",
+        ),
+      ],
+    },
+    {
       id: "video",
       titleAr: "الاستشارات بالفيديو",
       titleEn: "Video consultations",
