@@ -706,7 +706,12 @@ function NoteCard({
                     } else {
                       run(
                         () =>
-                          signNoteAction({ patientId, noteId: note.id, body, aiReviewed: reviewed }),
+                          signNoteAction({
+                            patientId,
+                            noteId: note.id,
+                            body,
+                            aiReviewed: reviewed,
+                          }),
                         () => setMsg(t("signedOk")),
                       );
                     }
