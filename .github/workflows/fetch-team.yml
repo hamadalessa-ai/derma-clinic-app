@@ -2,6 +2,9 @@
 name: Fetch team photos
 on:
   workflow_dispatch: {}
+  push:
+    branches: ["claude/team-photos"]
+    paths: [".github/workflows/fetch-team.yml", "scripts/cutouts/team-v2.txt"]
 permissions:
   contents: read
 jobs:
