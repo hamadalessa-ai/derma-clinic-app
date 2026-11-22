@@ -60,11 +60,6 @@
     "founder": false
   },
   {
-    "slug": "basl-khwree",
-    "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226dfc-b35f-f29a-1eb6-8fb2c25b2c34ce1d1303-7a5d-44b9-8675-fb0c319cc022-src_ar..jpg?v=0",
-    "founder": false
-  },
-  {
     "slug": "anas-ghazal",
     "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226dfc-b35f-f29a-1eb6-8fb2c25b2c3428dffe43-0457-447e-9ef0-ec5f88c5ebfe-src_ar..jpg?v=0",
     "founder": false
@@ -72,11 +67,6 @@
   {
     "slug": "marwan-assad",
     "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226dfc-b35f-f29a-1eb6-8fb2c25b2c34e3255fd9-a2e8-460b-8560-23bfa4370b50-src_ar..jpg?v=0",
-    "founder": false
-  },
-  {
-    "slug": "bassam-jibaii",
-    "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226dfc-b35f-f29a-1eb6-8fb2c25b2c34e87b2355-c5d5-4e09-ba2b-d3fb0af45ea3-src_ar..jpg",
     "founder": false
   },
   {
@@ -105,11 +95,6 @@
     "founder": false
   },
   {
-    "slug": "saleh-alassaf",
-    "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226d6f-a4de-37d4-105d-18b169df9c50619f625e-7bc3-4e0e-bd2d-ada337f02050-src_ar..jpg?v=0",
-    "founder": false
-  },
-  {
     "slug": "maali-alabdali",
     "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226d6f-a4de-37d4-105d-18b169df9c50c08fc530-b888-4247-a1be-9557232439fb-src_ar..jpg?v=0",
     "founder": false
@@ -125,11 +110,6 @@
     "founder": false
   },
   {
-    "slug": "bassam-alawirdhi",
-    "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226d6f-a4de-37d4-105d-18b169df9c50bc4edbe2-f168-4f43-bd75-5369239e21c5-src_ar..jpg?v=0",
-    "founder": false
-  },
-  {
     "slug": "abbas-yassin",
     "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226d6f-a4de-37d4-105d-18b169df9c5096b55afa-d9d1-4391-a961-978e5186ae3e-src_ar..jpg?v=0",
     "founder": false
@@ -137,6 +117,8 @@
   {
     "slug": "hassan-abusalih",
     "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226e19-97ef-6817-c4df-91d10c9be369394998f9-9545-45b7-b7d5-15810ce6b05e-src_ar..jpg?v=0",
-    "founder": false
+    "founder": false,
+    "x0": 0.5,
+    "clean": false
   }
 ]

@@ -47,9 +47,12 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     card = Image.open(io.BytesIO(urllib.request.urlopen(req, timeout=60).read())).convert("RGB")
     w, h = card.size
     # The person stands on the right of the card; the logo and name text are on the left.
-    x0 = int(w * (0.5 if d["founder"] else 0.38))
+    x0 = int(w * d.get("x0", 0.5 if d["founder"] else 0.38))
     part = card.crop((x0, 0, w, h))
-    part = clean_text(part)
+    # A patterned shemagh looks like text to the cleaner, so such cards are cropped past the
+    # text instead ("x0") and not cleaned.
+    if d.get("clean", True):
+        part = clean_text(part)
     cut = remove(part, session=session)
     a = np.array(cut)
     alpha = a[:, :, 3] > 40
@@ -76,25 +79,41 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     a[:, :, 3] = np.where(keep, solid, 0)
     person = Image.fromarray(a)
     ys, xs = np.where(a[:, :, 3] > 0)
+    # Where the card itself cut the person off (its left/right edge), soften later.
+    cut_l, cut_r = xs.min() <= 2, xs.max() >= a.shape[1] - 3
     person = person.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
+    # One studio-style crop for everyone, as on hospital websites: the face is found and every
+    # portrait gets the same head size and eye line (head and shoulders, centred).
+    rgb = np.array(person.convert("RGB"))
+    gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+    det = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    faces = det.detectMultiScale(gray, 1.1, 5, minSize=(gray.shape[1] // 8, gray.shape[1] // 8))
     pw, ph = person.size
-    # Head near the top, shoulders to the bottom edge, centred.
-    scale = min(W * 0.96 / pw, H * 0.94 / ph)
+    if len(faces):
+        fx, fy, fw, fh = max(faces, key=lambda f: f[2] * f[3])
+    else:
+        print("no face found, estimating:", d["slug"], file=sys.stderr)
+        fw = fh = int(pw * 0.32)
+        fx, fy = (pw - fw) // 2, int(ph * 0.08)
+    FACE_W, FACE_CX, FACE_TOP = W * 0.36, W * 0.5, H * 0.16
+    # Same face size for all, but never so small that the shoulders stop above the frame's
+    # bottom edge: then the photo is enlarged until they reach it.
+    scale = max(FACE_W / fw, (H - FACE_TOP) / max(ph - fy, 1) * 1.02)
     person = person.resize((max(1, int(pw * scale)), max(1, int(ph * scale))), Image.LANCZOS)
+    ox = int(FACE_CX - (fx + fw / 2) * scale)
+    oy = int(FACE_TOP - fy * scale)
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    canvas.paste(person, ((W - person.width) // 2, H - person.height), person)
-    # Soften the frame edges: semi-transparent leftovers of the card on the left go, and the
-    # left edge (where the card's text met the coat) and the bottom fade out gently.
+    canvas.paste(person, (ox, oy), person)
+    # A side the card cut off fades out softly instead of ending in a hard line.
     c = np.array(canvas).astype(np.float32)
     al = c[:, :, 3]
-    left = np.zeros_like(al, dtype=bool)
-    left[:, : int(W * 0.4)] = True
-    al[left & (al < 200)] = 0
     xs_ = np.arange(W, dtype=np.float32)
-    ys_ = np.arange(H, dtype=np.float32)
-    fade_x = np.clip((xs_ - W * 0.02) / (W * 0.16), 0, 1)
-    fade_y = np.clip((H - ys_) / (H * 0.08), 0, 1)
-    al *= fade_x[None, :] * fade_y[:, None]
+    band = W * 0.12
+    if cut_l and ox > 0:
+        al *= np.clip((xs_ - ox) / band, 0, 1)[None, :]
+    right = ox + person.width
+    if cut_r and right < W:
+        al *= np.clip((right - xs_) / band, 0, 1)[None, :]
     c[:, :, 3] = al
     canvas = Image.fromarray(c.clip(0, 255).astype(np.uint8))
     canvas.save(OUT / f"{d['slug']}.webp", "WEBP", quality=88, method=6)
