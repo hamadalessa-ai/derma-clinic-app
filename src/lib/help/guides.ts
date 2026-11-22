@@ -265,7 +265,7 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
         ),
         s(
           "أسرع: «إملاء» تحت المخطط، ثم قل «16 MO تسوس، 26 تاج، 36 مفقود» (أو اكتبها). راجع القائمة وأزل أي خطأ، ثم «حفظ في المخطط».",
-          "Faster: Dictate under the chart and say \"16 MO caries, 26 crown, 36 missing\" (or type it). Check the list, untick any mistake, then Save to chart.",
+          'Faster: Dictate under the chart and say "16 MO caries, 26 crown, 36 missing" (or type it). Check the list, untick any mistake, then Save to chart.',
         ),
         s(
           "خطة العلاج: أضف الإجراء لكل سن بسعره. «تم في هذه الزيارة» يضيفه لرموز فاتورة الزيارة.",

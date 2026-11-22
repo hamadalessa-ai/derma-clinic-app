@@ -14,7 +14,9 @@ import { drNawaf, nurse, patient, reception } from "./fixtures";
 afterAll(closeDb);
 
 const read = (text: string) =>
-  parseDictation(text).items.map((i) => `${i.tooth}:${i.condition}${i.surfaces ? `:${i.surfaces}` : ""}`);
+  parseDictation(text).items.map(
+    (i) => `${i.tooth}:${i.condition}${i.surfaces ? `:${i.surfaces}` : ""}`,
+  );
 
 describe("reading the dictation (pure)", () => {
   it("finding after the teeth, with surfaces", () => {

@@ -89,7 +89,10 @@ export async function recordTeeth(
 ) {
   assertCan(actor.roles, "dental:chart");
   if (!input.items.length) throw new DentalError("empty");
-  if (input.items.length > 32 || new Set(input.items.map((i) => i.tooth)).size !== input.items.length)
+  if (
+    input.items.length > 32 ||
+    new Set(input.items.map((i) => i.tooth)).size !== input.items.length
+  )
     throw new DentalError("bad_tooth");
   const rows = [];
   for (const item of input.items) {

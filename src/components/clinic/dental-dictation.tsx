@@ -97,7 +97,8 @@ export function DentalDictation({
         else pendingText += res[0].transcript;
       }
       // Each pause starts a new finding: a comma keeps "16 caries" and "26 crown" apart.
-      if (finals) setText((old) => (old.trim() ? `${old.trim()}، ${finals.trim()}` : finals.trim()));
+      if (finals)
+        setText((old) => (old.trim() ? `${old.trim()}، ${finals.trim()}` : finals.trim()));
       setInterim(pendingText);
     };
     r.onerror = (e) => {
