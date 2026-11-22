@@ -146,7 +146,13 @@ export async function ClinicSite({
     s.since ? { value: String(s.since), label: t("factFounded") } : null,
     years ? { value: `${years}+`, label: t("factYears") } : null,
     doctors.length ? { value: String(doctors.length), label: t("factDoctors") } : null,
-    departments.length ? { value: String(departments.length), label: t("factDepartments") } : null,
+    // Disciplines: the specialties when the clinic lists them (hair has no department of its own).
+    Math.max(departments.length, s.specialties?.length ?? 0)
+      ? {
+          value: String(Math.max(departments.length, s.specialties?.length ?? 0)),
+          label: t("factDepartments"),
+        }
+      : null,
   ].filter((f): f is { value: string; label: string } => !!f);
 
   const cities = [...new Set(data.branches.map((b) => pick(locale, b.cityAr, b.cityEn)))];
@@ -230,7 +236,7 @@ export async function ClinicSite({
               )}
               {L(s.quoteAr, s.quoteEn) && (
                 <figure className="border-site-champagne mt-6 border-s ps-8">
-                  <blockquote className="font-display text-site-ink text-[1.75rem] leading-[1.35] font-normal italic lg:text-[2.25rem]">
+                  <blockquote className="font-display text-site-ink text-[1.75rem] leading-[1.35] font-normal ltr:italic lg:text-[2.25rem]">
                     {L(s.quoteAr, s.quoteEn)}
                   </blockquote>
                   <figcaption className="site-label mt-5">{t("quoteBy")}</figcaption>

@@ -39,8 +39,12 @@ export async function SiteHero({
 
   return (
     <section className="flex flex-col" aria-labelledby="site-title">
-      <div className="bg-site-mist relative h-[22rem] overflow-hidden sm:h-[30rem] lg:h-[38rem]">
-        <SiteImage slot="hero" src={site.images?.hero} locale={locale} priority />
+      <div className="bg-site-mist relative h-[18rem] overflow-hidden sm:h-[26rem] lg:h-[34rem]">
+        {/* Taller than its frame, anchored to the top: the bottom of the clinic's banner (a strip
+            of thumbnails on some sites) stays out of view. */}
+        <div className="absolute inset-x-0 top-0 h-[122%]">
+          <SiteImage slot="hero" src={site.images?.hero} locale={locale} priority />
+        </div>
       </div>
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 pt-14 pb-20 lg:grid-cols-12 lg:px-8 lg:pt-20 lg:pb-28">
         <div className="flex flex-col gap-7 lg:col-span-8">
