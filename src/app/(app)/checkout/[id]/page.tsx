@@ -278,7 +278,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
                       {data.checkedOutBy
                         ? pick(locale, data.checkedOutBy.name, data.checkedOutBy.nameEn)
                         : "—"}
-                    </bdi> ·{" "}
+                    </bdi>{" "}
+                    ·{" "}
                     <bdi>
                       {formatGregorian(data.checkout.createdAt, locale, "medium")}{" "}
                       {formatTime(data.checkout.createdAt, locale)}
