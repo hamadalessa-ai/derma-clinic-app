@@ -70,7 +70,10 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
         continue
     keep = alpha & ndimage.binary_dilation(largest, structure=disk(10))
     keep = ndimage.binary_fill_holes(keep)
-    a[:, :, 3] = np.where(keep, a[:, :, 3], 0)
+    # Inside the person, a half-sure pixel (a patterned shemagh, a pale coat) counts as solid;
+    # only the faintest edge (fine hair) stays soft.
+    solid = np.where(a[:, :, 3] > 60, 255, a[:, :, 3])
+    a[:, :, 3] = np.where(keep, solid, 0)
     person = Image.fromarray(a)
     ys, xs = np.where(a[:, :, 3] > 0)
     person = person.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
