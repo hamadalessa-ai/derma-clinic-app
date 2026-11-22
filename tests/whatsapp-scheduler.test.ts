@@ -184,7 +184,13 @@ describe("post-care, no-show and recall", () => {
       // "more" (as the hourly workflow does) until this visit's turn comes.
       let postCare = 0;
       for (let i = 0; i < 10; i++) {
-        const r = await runScheduledMessages(derma, { env: ENV, ignoreQuietHours: true });
+        // Run as of 25 hours after the visit ended: going back past a Friday can put the visit
+        // outside the 3-day window when the test runs late in the day.
+        const r = await runScheduledMessages(derma, {
+          now: new Date(a.endsAt.getTime() + 25 * 3600_000),
+          env: ENV,
+          ignoreQuietHours: true,
+        });
         postCare += r.sent.post_care ?? 0;
         if (!r.more) break;
       }
