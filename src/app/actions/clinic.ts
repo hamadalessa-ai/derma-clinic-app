@@ -828,13 +828,23 @@ export async function saveDraftAction(input: { patientId: string; noteId: string
   });
 }
 
-export async function signNoteAction(input: { patientId: string; noteId: string; body: string }) {
+export async function signNoteAction(input: {
+  patientId: string;
+  noteId: string;
+  body: string;
+  aiReviewed?: boolean;
+}) {
   return staffAction("notes:write", async (_ctx, actor) => {
     const v = parse(
-      z.object({ patientId: uuid, noteId: uuid, body: z.string().max(20000) }),
+      z.object({
+        patientId: uuid,
+        noteId: uuid,
+        body: z.string().max(20000),
+        aiReviewed: z.boolean().optional(),
+      }),
       input,
     );
-    await withActor(actor, (tx) => signNote(tx, actor, v.noteId, v.body));
+    await withActor(actor, (tx) => signNote(tx, actor, v.noteId, v.body, v.aiReviewed ?? false));
     revalidatePath(`/patients/${v.patientId}`);
     revalidatePath("/clinical-notes");
     return null;
@@ -857,10 +867,16 @@ export async function signAndCompleteAction(input: {
   appointmentId: string;
   noteId: string;
   body: string;
+  aiReviewed?: boolean;
 }) {
   return staffAction("notes:write", async (_ctx, actor) => {
     const v = parse(
-      z.object({ appointmentId: uuid, noteId: uuid, body: z.string().max(20000) }),
+      z.object({
+        appointmentId: uuid,
+        noteId: uuid,
+        body: z.string().max(20000),
+        aiReviewed: z.boolean().optional(),
+      }),
       input,
     );
     const r = await withActor(actor, (tx) => signAndComplete(tx, actor, v));
@@ -882,10 +898,16 @@ export async function postVisitAction(input: {
   appointmentId: string;
   noteId: string;
   body: string;
+  aiReviewed?: boolean;
 }) {
   return staffAction("notes:write", async (_ctx, actor) => {
     const v = parse(
-      z.object({ appointmentId: uuid, noteId: uuid, body: z.string().max(20000) }),
+      z.object({
+        appointmentId: uuid,
+        noteId: uuid,
+        body: z.string().max(20000),
+        aiReviewed: z.boolean().optional(),
+      }),
       input,
     );
     const r = await withActor(actor, (tx) => postVisit(tx, actor, v));

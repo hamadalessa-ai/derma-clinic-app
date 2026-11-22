@@ -123,10 +123,10 @@ export async function readyForDoctor(tx: TenantTx, actor: Actor, appointmentId: 
 export async function postVisit(
   tx: TenantTx,
   actor: Actor,
-  input: { appointmentId: string; noteId: string; body: string },
+  input: { appointmentId: string; noteId: string; body: string; aiReviewed?: boolean },
 ): Promise<{ completed: boolean }> {
   const { appt } = await ownAppointment(tx, actor, input.appointmentId);
-  const note = await postNote(tx, actor, input.noteId, input.body);
+  const note = await postNote(tx, actor, input.noteId, input.body, input.aiReviewed ?? false);
   if (note.appointmentId !== appt.id) throw new NoteError("not_found");
   let status = appt.status;
   if (status === "arrived") {

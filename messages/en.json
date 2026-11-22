@@ -268,7 +268,8 @@
     "labs_bad_date": "Check the date.",
     "labs_voided": "This report was voided.",
     "labs_bad_file": "The attached report was not found. Attach it again.",
-    "dental_empty": "Nothing to save."
+    "dental_empty": "Nothing to save.",
+    "ai_not_reviewed": "This note has an AI draft: tick “I’ve checked the AI draft” first."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -1142,7 +1143,8 @@
     "tidyOffer": "The new part was added below, so nothing was removed. The AI also wrote a tidier, shorter version of the whole note (repeated text merged). Use it instead?",
     "useTidy": "Use the tidy version",
     "keepAll": "Keep everything",
-    "tidyUsed": "The note now has the tidy version. Review it before signing."
+    "tidyUsed": "The note now has the tidy version. Review it before signing.",
+    "reviewedTick": "I’ve checked the AI draft against the visit and corrected it"
   },
   "video": {
     "join": "Join video consultation",

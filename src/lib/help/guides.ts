@@ -241,8 +241,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       titleEn: "The visit: note, orders, post",
       steps: [
         s(
-          "اضغط «بدء الزيارة». اكتب الملاحظة أو أملِها: الذكاء الاصطناعي يكتب مسودة بالإنجليزية فقط، ولا يضيف تشخيصاً أو جرعات من عنده، ولا يوقّع أبداً.",
-          "Press Start visit. Type or dictate the note: the AI only writes an English draft, adds no diagnosis or doses of its own, and never signs.",
+          "اضغط «بدء الزيارة». اكتب الملاحظة أو أملِها: الذكاء الاصطناعي يكتب مسودة بالإنجليزية فقط، ولا يضيف تشخيصاً أو جرعات من عنده، ولا يوقّع أبداً. قبل النشر ضع علامة «راجعت مسودة الذكاء الاصطناعي».",
+          "Press Start visit. Type or dictate the note: the AI only writes an English draft, adds no diagnosis or doses of its own, and never signs. Before posting, tick \"I've checked the AI draft\".",
         ),
         s(
           "أضف الأدوية وخطة العلاج (عدد الجلسات وكل كم أسبوع) ورموز الفاتورة.",

@@ -15,7 +15,7 @@ export type ClinicalNote = typeof clinicalNotes.$inferSelect;
 export type Addendum = typeof clinicalNoteAddenda.$inferSelect;
 
 export class NoteError extends Error {
-  constructor(public code: "not_found" | "empty" | "signed" | "not_author") {
+  constructor(public code: "not_found" | "empty" | "signed" | "not_author" | "ai_not_reviewed") {
     super(code);
     this.name = "NoteError";
   }
@@ -104,6 +104,14 @@ function enteredBy(actor: Actor, note: { authorUserId: string }) {
     : { enteredByUserId: actor.userId, enteredByName: actor.name ?? actor.userId };
 }
 
+/**
+ * A note the AI scribe wrote into is final only after the doctor (or the nurse posting it in his
+ * name) confirms they checked it against the visit — the "I've checked the AI draft" tick.
+ */
+function assertAiReviewed(draft: { aiDraftedAt: Date | null }, aiReviewed: boolean) {
+  if (draft.aiDraftedAt && !aiReviewed) throw new NoteError("ai_not_reviewed");
+}
+
 export async function saveDraft(tx: TenantTx, actor: Actor, id: string, body: string) {
   assertCan(actor.roles, "notes:write");
   const draft = await loadOwnDraft(tx, actor, id);
@@ -127,11 +135,18 @@ export async function saveDraft(tx: TenantTx, actor: Actor, id: string, body: st
  * Posts a visit's note: final, in the doctor's (author's) name. Unlike signNote, the doctor's
  * nurse / assistant may post it too (recorded as entered by her). Corrections = addenda.
  */
-export async function postNote(tx: TenantTx, actor: Actor, id: string, body: string) {
+export async function postNote(
+  tx: TenantTx,
+  actor: Actor,
+  id: string,
+  body: string,
+  aiReviewed = false,
+) {
   assertCan(actor.roles, "notes:write");
   const draft = await loadOwnDraft(tx, actor, id);
   const finalBody = body.slice(0, MAX);
   if (!finalBody.trim()) throw new NoteError("empty");
+  assertAiReviewed(draft, aiReviewed);
   const [note] = await tx
     .update(clinicalNotes)
     .set({ body: finalBody, status: "signed", signedAt: new Date(), ...enteredBy(actor, draft) })
@@ -142,17 +157,28 @@ export async function postNote(tx: TenantTx, actor: Actor, id: string, body: str
     action: "note.post",
     entityType: "clinical_note",
     entityId: id,
-    metadata: { length: note.body.length, forDoctor: draft.authorUserId !== actor.userId },
+    metadata: {
+      length: note.body.length,
+      forDoctor: draft.authorUserId !== actor.userId,
+      ...(draft.aiDraftedAt ? { aiReviewed: true } : {}),
+    },
   });
   return note;
 }
 
-export async function signNote(tx: TenantTx, actor: Actor, id: string, body?: string) {
+export async function signNote(
+  tx: TenantTx,
+  actor: Actor,
+  id: string,
+  body?: string,
+  aiReviewed = false,
+) {
   assertCan(actor.roles, "notes:write");
   // Only the author signs: a nurse / assistant prepares, the doctor signs.
   const draft = await loadOwnDraft(tx, actor, id, true);
   const finalBody = (body ?? draft.body).slice(0, MAX);
   if (!finalBody.trim()) throw new NoteError("empty");
+  assertAiReviewed(draft, aiReviewed);
   const [note] = await tx
     .update(clinicalNotes)
     .set({ body: finalBody, status: "signed", signedAt: new Date() })
@@ -163,6 +189,7 @@ export async function signNote(tx: TenantTx, actor: Actor, id: string, body?: st
     action: "note.sign",
     entityType: "clinical_note",
     entityId: id,
+    ...(draft.aiDraftedAt ? { metadata: { aiReviewed: true } } : {}),
   });
   return note;
 }
