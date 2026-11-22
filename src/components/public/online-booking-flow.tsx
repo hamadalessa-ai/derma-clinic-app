@@ -33,8 +33,9 @@ export interface BookingIdentity {
 }
 
 /**
- * Online booking. Step 1 is the patient's mobile + a code (OTP); after that they choose the visit
- * type, service, doctor and time, and confirm with one tap (no second code).
+ * Online booking, times first: the patient chooses the visit type, service, doctor and time
+ * without any code, then confirms with their mobile + a code (OTP) at the last step. A mobile
+ * already verified in this browser (pass cookie or signed-in patient) needs no code.
  */
 export function OnlineBookingFlow({
   catalog,
@@ -234,27 +235,9 @@ export function OnlineBookingFlow({
     });
   };
 
-  /** …then the code: the mobile is verified for this booking (no second code later). */
-  const verifyCode = () => {
-    setError(null);
-    start(async () => {
-      const r = await verifyBookingPhoneAction({ phone: phoneInput, code });
-      if (!r.ok) return setError(errorText(r.error));
-      setVerified(r.data);
-      setCodeStage(null);
-      setDetails((d) => ({
-        ...d,
-        phone: r.data.phone,
-        fullName: r.data.known?.fullName ?? d.fullName,
-        patientGender: r.data.known?.gender ?? d.patientGender,
-      }));
-    });
-  };
-
-  const confirm = () => {
-    setError(null);
-    start(async () => {
-      const r = await confirmBookingAction(request());
+  /** Books the chosen time for a verified mobile. */
+  const book = async (phone: string) => {
+    const r = await confirmBookingAction({ ...request(), phone });
       if (!r.ok) {
         setError(errorText(r.error));
         // The time was taken meanwhile: pick another one (the code still works).
@@ -266,6 +249,19 @@ export function OnlineBookingFlow({
         return;
       }
       setDone(r.data);
+  };
+
+  /** Confirm: a verified mobile books straight away; otherwise the code is checked first. */
+  const confirm = () => {
+    setError(null);
+    start(async () => {
+      if (verified) return book(verified.phone);
+      const r = await verifyBookingPhoneAction({ phone: phoneInput, code });
+      if (!r.ok) return setError(errorText(r.error));
+      setVerified(r.data);
+      setCodeStage(null);
+      setDetails((d) => ({ ...d, phone: r.data.phone }));
+      await book(r.data.phone);
     });
   };
 
@@ -319,135 +315,10 @@ export function OnlineBookingFlow({
     );
   }
 
-  // Step 1 (before anything else): the mobile number and its code.
-  if (!verified) {
-    return (
-      <div className="flex flex-col gap-3" data-testid="online-booking">
-        <Step
-          n={1}
-          title={t("stepMobile")}
-          done={false}
-          changeLabel={t("change")}
-          testId="step-mobile"
-        >
-          <form
-            className="flex flex-col gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (codeStage) verifyCode();
-              else sendCode();
-            }}
-          >
-            <p className="text-muted-foreground text-sm">{t("mobileFirst")}</p>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="phone">{t("mobile")}</Label>
-              <Input
-                id="phone"
-                required
-                inputMode="tel"
-                autoComplete="tel"
-                dir="ltr"
-                placeholder={t("mobileHint")}
-                value={phoneInput}
-                disabled={!!codeStage}
-                onChange={(e) => setPhoneInput(e.target.value)}
-              />
-            </div>
-            {/* Honeypot: invisible to people, bots fill it in. */}
-            <div aria-hidden className="absolute -start-[9999px] h-0 w-0 overflow-hidden">
-              <label htmlFor="website">{t("website")}</label>
-              <input
-                id="website"
-                name="website"
-                tabIndex={-1}
-                autoComplete="off"
-                value={details.website}
-                onChange={(e) => setDetails({ ...details, website: e.target.value })}
-              />
-            </div>
-            {codeStage && (
-              <div className="flex flex-col gap-1.5" data-testid="code-step">
-                <p className="text-sm">{t("codeSent")}</p>
-                {codeStage.demoCode && (
-                  <Notice tone="info" data-testid="demo-code">
-                    {t("demoCode", { code: codeStage.demoCode })}
-                  </Notice>
-                )}
-                <Label htmlFor="code">{t("code")}</Label>
-                <Input
-                  id="code"
-                  required
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  dir="ltr"
-                  maxLength={6}
-                  pattern="[0-9٠-٩]{6}"
-                  className="font-mono tracking-[0.3em]"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            )}
-            <FormError message={error} />
-            <Button
-              type="submit"
-              size="lg"
-              loading={pending}
-              data-testid={codeStage ? "verify-code" : "send-code"}
-            >
-              {codeStage ? t("verifyCode") : t("sendCode")}
-            </Button>
-            {codeStage && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending}
-                  onClick={sendCode}
-                >
-                  {t("resend")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setCodeStage(null);
-                    setCode("");
-                  }}
-                >
-                  {t("changeMobile")}
-                </Button>
-              </div>
-            )}
-          </form>
-        </Step>
-      </div>
-    );
-  }
-
-  let n = 1;
+  let n = 0;
   const pickService = mode === "video" ? true : !!branch;
   return (
     <div className="flex flex-col gap-3" data-testid="online-booking">
-      <Step
-        n={1}
-        title={t("stepMobile")}
-        done
-        summary={
-          <span dir="ltr" className="font-mono">
-            {verified.phone}
-          </span>
-        }
-        changeLabel={t("change")}
-        onChange={() => {
-          setVerified(null);
-          setPhoneInput("");
-        }}
-        testId="step-mobile"
-      />
       {offersVideo && (
         <Step
           n={++n}
@@ -696,7 +567,8 @@ export function OnlineBookingFlow({
             className="flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              confirm();
+              if (verified || codeStage) confirm();
+              else sendCode();
             }}
           >
             <Notice tone="info" className="flex items-start gap-2">
@@ -723,16 +595,44 @@ export function OnlineBookingFlow({
                 onChange={(e) => setDetails({ ...details, fullName: e.target.value })}
               />
             </div>
-            <p
-              className="text-muted-foreground flex items-center gap-1.5 text-sm"
-              data-testid="verified-phone"
-            >
-              <CheckCircle2 className="text-success-foreground size-4" />
-              {t("verifiedMobile")}{" "}
-              <span dir="ltr" className="font-mono">
-                {details.phone}
-              </span>
-            </p>
+            {verified ? (
+              <p
+                className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm"
+                data-testid="verified-phone"
+              >
+                <CheckCircle2 className="text-success-foreground size-4" />
+                {t("verifiedMobile")}{" "}
+                <span dir="ltr" className="font-mono">
+                  {verified.phone}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setVerified(null);
+                    setPhoneInput("");
+                  }}
+                >
+                  {t("changeMobile")}
+                </Button>
+              </p>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="phone">{t("mobile")}</Label>
+                <Input
+                  id="phone"
+                  required
+                  inputMode="tel"
+                  autoComplete="tel"
+                  dir="ltr"
+                  placeholder={t("mobileHint")}
+                  value={phoneInput}
+                  disabled={!!codeStage}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                />
+              </div>
+            )}
             <fieldset className="flex flex-col gap-1.5">
               <legend className="mb-1.5 text-sm font-medium">{t("yourGender")}</legend>
               <div className="grid grid-cols-2 gap-2">
@@ -777,10 +677,63 @@ export function OnlineBookingFlow({
               />
             </div>
 
+            {!verified && codeStage && (
+              <div className="flex flex-col gap-1.5" data-testid="code-step">
+                <p className="text-sm">{t("codeSent")}</p>
+                {codeStage.demoCode && (
+                  <Notice tone="info" data-testid="demo-code">
+                    {t("demoCode", { code: codeStage.demoCode })}
+                  </Notice>
+                )}
+                <Label htmlFor="code">{t("code")}</Label>
+                <Input
+                  id="code"
+                  required
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  dir="ltr"
+                  maxLength={6}
+                  pattern="[0-9٠-٩]{6}"
+                  className="font-mono tracking-[0.3em]"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  autoFocus
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending}
+                    onClick={sendCode}
+                  >
+                    {t("resend")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setCodeStage(null);
+                      setCode("");
+                    }}
+                  >
+                    {t("changeMobile")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <FormError message={error} />
-            <Button type="submit" size="lg" loading={pending} data-testid="confirm">
-              {t("confirm")}
-            </Button>
+            {verified || codeStage ? (
+              <Button type="submit" size="lg" loading={pending} data-testid="confirm">
+                {t("confirm")}
+              </Button>
+            ) : (
+              <Button type="submit" size="lg" loading={pending} data-testid="send-code">
+                {t("sendCode")}
+              </Button>
+            )}
           </form>
         </Step>
       )}

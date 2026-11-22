@@ -79,9 +79,10 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   Public pages (`/book`, `/my`) use `src/app/actions/patient.ts` + `publicAction()`: a verified mobile code
   or a patient session (`src/lib/portal/session.ts`) decides what the visitor may do; patient reads run with
   role `patient` + `app.patient_id` (RLS patient walls: own + family rows only, never notes, no writes).
-- Online booking is OTP-first: step 1 mobile + code (`verifyBookingPhoneAction`) sets a signed 30-minute
-  `booking_pass` cookie (`src/lib/verify/pass.ts`); confirming then needs no second code, only for THAT mobile
-  (`src/lib/verify/identity.ts`; a signed-in patient counts as verified). `/book?service=<id>&mode=clinic|video`
+- Online booking is times-first: service → doctor → time without a code (free times only, no patient data),
+  then the LAST step asks for the mobile + code (`verifyBookingPhoneAction`, which sets a signed 30-minute
+  `booking_pass` cookie, `src/lib/verify/pass.ts`) and books. Booking still always needs a verified mobile, only
+  THAT mobile (`src/lib/verify/identity.ts`; a signed-in patient or a valid pass counts as verified, no code). `/book?service=<id>&mode=clinic|video`
   pre-selects from the clinic website.
 - Consent links (`/sign/<appointmentId>.<sig>`, `consentToken` in `src/lib/video/link.ts`): WhatsApp messages link
   straight to the consent THIS visit needs; `signConsentByLink` records it as the patient's (no code). Only while

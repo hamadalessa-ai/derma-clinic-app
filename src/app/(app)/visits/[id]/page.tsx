@@ -298,15 +298,6 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
             </section>
           )}
 
-          {can(ctx.roles, "labs:view") && (
-            <LabSection
-              actor={actor}
-              patientId={visit.patientId}
-              appointmentId={visit.appointmentId}
-              compact
-            />
-          )}
-
           <section className="flex flex-col gap-3" aria-labelledby="visit-note">
             <h2 id="visit-note" className="text-[17px] leading-[26px] font-semibold">
               {t("note")}
@@ -429,6 +420,15 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
               ))}
             </CardContent>
           </Card>
+          {/* Lab results beside the note, not above it: the note is the visit's main work. */}
+          {can(ctx.roles, "labs:view") && (
+            <LabSection
+              actor={actor}
+              patientId={visit.patientId}
+              appointmentId={visit.appointmentId}
+              compact
+            />
+          )}
         </aside>
       </div>
     </div>
