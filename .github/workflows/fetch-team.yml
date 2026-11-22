@@ -6,19 +6,19 @@ on:
     branches: ["claude/team-photos"]
     paths: [".github/workflows/fetch-team.yml", "scripts/cutouts/team-v2.txt"]
 permissions:
-  contents: read
+  contents: write
 jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: |
-          mkdir out
+          mkdir -p scripts/cutouts/team-v2; cd scripts/cutouts/team-v2
           while read slug file; do
-            curl -sfL -o "out/$slug.${file##*.}" "https://cdn.rekaz.io/themes/70671aac-e9fd-4b6e-bd8b-5f623a28dd43/1.0.9/assets/$file" || echo "missing $file"
-          done < scripts/cutouts/team-v2.txt
-          ls -la out
-      - uses: actions/upload-artifact@v4
-        with:
-          name: team
-          path: out
+            curl -sfL -o "$slug.${file##*.}" "https://cdn.rekaz.io/themes/70671aac-e9fd-4b6e-bd8b-5f623a28dd43/1.0.9/assets/$file" || echo "missing $file"
+          done < ../team-v2.txt
+          ls -la
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/cutouts/team-v2 && git commit -m "Team photos (source)" && git push
