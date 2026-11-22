@@ -70,6 +70,7 @@ export interface OwnerReport {
   byDoctor: {
     id: string;
     name: string;
+    nameEn: string | null;
     bookings: number;
     completed: number;
     noShow: number;
@@ -199,18 +200,19 @@ export async function ownerReport(
   const doctorIds = [...new Set(rows.map((r) => r.practitionerId))];
   const names = doctorIds.length
     ? await tx
-        .select({ id: tenantMembers.id, name: users.name })
+        .select({ id: tenantMembers.id, name: users.name, nameEn: users.nameEn })
         .from(tenantMembers)
         .innerJoin(users, eq(users.id, tenantMembers.userId))
         .where(inArray(tenantMembers.id, doctorIds))
     : [];
-  const nameOf = new Map(names.map((n) => [n.id, n.name]));
+  const nameOf = new Map(names.map((n) => [n.id, n]));
   const byDoctor = doctorIds
     .map((id) => {
       const mine = rows.filter((r) => r.practitionerId === id);
       return {
         id,
-        name: nameOf.get(id) ?? "—",
+        name: nameOf.get(id)?.name ?? "—",
+        nameEn: nameOf.get(id)?.nameEn ?? null,
         bookings: mine.filter(counted).length,
         completed: mine.filter((r) => r.status === "completed").length,
         noShow: mine.filter((r) => r.status === "no_show").length,

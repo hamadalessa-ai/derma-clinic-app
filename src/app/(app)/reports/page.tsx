@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Locale } from "@/i18n/config";
+import { pick } from "@/lib/brand";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
 import { actorOf, requirePermission } from "@/lib/auth/session";
@@ -235,7 +236,7 @@ export default async function ReportsPage({
                   <TableBody>
                     {report.byDoctor.map((d) => (
                       <TableRow key={d.id}>
-                        <TableCell>{d.name}</TableCell>
+                        <TableCell>{pick(locale, d.name, d.nameEn)}</TableCell>
                         <TableCell>{d.bookings}</TableCell>
                         <TableCell>{d.completed}</TableCell>
                         <TableCell>{d.noShow}</TableCell>

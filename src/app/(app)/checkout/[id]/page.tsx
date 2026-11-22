@@ -70,7 +70,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
         .limit(1),
       d.checkout
         ? tx
-            .select({ name: users.name })
+            .select({ name: users.name, nameEn: users.nameEn })
             .from(users)
             .where(eq(users.id, d.checkout.checkedOutByUserId))
         : [],
@@ -81,7 +81,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
       svcRows,
       docRows,
       sentAt: sent[0]?.createdAt.toISOString() ?? null,
-      checkedOutBy: checkedOutBy[0]?.name ?? null,
+      checkedOutBy: checkedOutBy[0] ?? null,
     };
   });
   if (!data) notFound();
@@ -274,7 +274,12 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
                   )}
                   <dt className="text-muted-foreground">{t("by")}</dt>
                   <dd>
-                    <bdi>{data.checkedOutBy ?? "—"}</bdi> ·{" "}
+                    <bdi>
+                      {data.checkedOutBy
+                        ? pick(locale, data.checkedOutBy.name, data.checkedOutBy.nameEn)
+                        : "—"}
+                    </bdi>{" "}
+                    ·{" "}
                     <bdi>
                       {formatGregorian(data.checkout.createdAt, locale, "medium")}{" "}
                       {formatTime(data.checkout.createdAt, locale)}
