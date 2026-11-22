@@ -65,22 +65,22 @@
   --status-blocked: #eef2f1;
   --status-blocked-foreground: #5b6866;
 
-  /* Clinic website (editorial): warm alabaster paper, charcoal ink, stone greys and ONE accent
-     (muted bronze). No medical blue-green, no gradients. */
-  --site-ivory: #f6f3ee;
-  --site-mist: #efeae2;
-  --site-ink: #1f1d1a;
-  --site-slate: #3a3631;
-  --site-subtle: #7d766c;
-  --site-line: #ddd6cb;
-  --site-primary: #2a2724;
-  --site-primary-hover: #1f1d1a;
-  --site-primary-soft: #efeae2;
-  --site-night: #24211e;
-  --site-champagne: #8a6b3e;
-  --site-champagne-ink: #7a5e36;
-  --site-champagne-soft: #f1eadf;
-  --site-photo-to: #e4dccf;
+  /* Clinic website ("clinical luxury"): true white + soft clinical gray, deep slate text,
+     deep emerald for the main action, matte gold for quiet accents. */
+  --site-ivory: #f8fafc;
+  --site-mist: #f8fafc;
+  --site-ink: #1e293b;
+  --site-slate: #334155;
+  --site-subtle: #64748b;
+  --site-line: #e2e8f0;
+  --site-primary: #0b5d4c;
+  --site-primary-hover: #084a3c;
+  --site-primary-soft: #eaf4f0;
+  --site-night: #082c25;
+  --site-champagne: #b08d57;
+  --site-champagne-ink: #87683a;
+  --site-champagne-soft: #f7f1e6;
+  --site-photo-to: #e9dcc6;
   --shadow-float: 0 30px 60px -24px rgb(15 23 42 / 0.22), 0 2px 6px rgb(15 23 42 / 0.05);
   --shadow-soft: 0 12px 32px -16px rgb(15 23 42 / 0.1), 0 2px 6px rgb(15 23 42 / 0.04);
   /* Website type: Playfair Display headings, Inter text; Arabic in Tajawal. */
@@ -266,50 +266,5 @@ html[lang="ar"] {
   ::after {
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
-  }
-}
-
-/* Clinic website, editorial pieces: section micro-labels, the one outlined invitation, and
-   quiet underlined links. */
-@utility site-label {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--site-champagne-ink);
-  &:where(:lang(ar), :lang(ar) *) {
-    font-size: 13px;
-    letter-spacing: 0;
-    text-transform: none;
-  }
-}
-@utility site-button {
-  display: inline-flex;
-  height: 3rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: 1px solid var(--site-ink);
-  padding-inline: 1.75rem;
-  font-size: 14px;
-  letter-spacing: 0.03em;
-  color: var(--site-ink);
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-  &:hover {
-    background-color: var(--site-ink);
-    color: var(--site-ivory);
-  }
-}
-@utility site-link {
-  font-size: 14px;
-  color: var(--site-ink);
-  text-decoration-line: underline;
-  text-decoration-thickness: 1px;
-  text-decoration-color: var(--site-champagne);
-  text-underline-offset: 6px;
-  &:hover {
-    text-decoration-color: var(--site-ink);
   }
 }

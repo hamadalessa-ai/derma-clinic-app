@@ -36,8 +36,13 @@ for (const locale of ["ar", "en"]) {
       // The first screen as a visitor sees it.
       await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-fold.png` });
       if (name === "site") {
-        // The full menu on phones (desktop has plain text links, no drop-downs).
-        if (view !== "desktop") {
+        // The menus: the "Medical Services" mega menu on desktop, the full menu on phones.
+        if (view === "desktop") {
+          await page.locator("header nav [aria-haspopup]").first().hover();
+          await page.waitForTimeout(400);
+          await page.screenshot({ path: `screenshots/${name}-${locale}-${view}-menu.png` });
+          await page.mouse.move(5, 600);
+        } else {
           await page.getByTestId("site-menu").click();
           await page
             .locator("details")
