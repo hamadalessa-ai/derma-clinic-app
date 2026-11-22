@@ -542,7 +542,8 @@ export const DERMA_SITE = {
       nameAr: "طب الجلدية والطب التجميلي وزراعة الشعر",
       nameEn: "Dermatology, Aesthetic Medicine & Hair Transplantation",
       textAr: "تشخيص وعلاج أمراض الجلد والشعر والأظافر، والطب التجميلي والليزر.",
-      textEn: "Diagnosis and treatment of skin, hair and nail conditions, aesthetic medicine and laser.",
+      textEn:
+        "Diagnosis and treatment of skin, hair and nail conditions, aesthetic medicine and laser.",
       specialties: ["skin", "hair"],
     },
     {
@@ -582,10 +583,8 @@ export const DERMA_SITE = {
       key: "hair",
       nameAr: "زراعة واستعادة الشعر",
       nameEn: "Hair Restoration & Transplantation",
-      textAr:
-        "العلاج الطبي لتساقط الشعر، وزراعة الشعر.",
-      textEn:
-        "Medical treatment of hair loss, and hair transplantation.",
+      textAr: "العلاج الطبي لتساقط الشعر، وزراعة الشعر.",
+      textEn: "Medical treatment of hair loss, and hair transplantation.",
     },
     {
       key: "plastic",
