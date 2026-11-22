@@ -236,7 +236,7 @@ export async function ClinicSite({
               )}
               {L(s.quoteAr, s.quoteEn) && (
                 <figure className="border-site-champagne mt-6 border-s ps-8">
-                  <blockquote className="font-display text-site-ink text-[1.75rem] leading-[1.35] font-normal ltr:italic lg:text-[2.25rem]">
+                  <blockquote className="font-display text-site-ink text-[1.75rem] leading-[1.35] font-normal lg:text-[2.25rem] ltr:italic">
                     {L(s.quoteAr, s.quoteEn)}
                   </blockquote>
                   <figcaption className="site-label mt-5">{t("quoteBy")}</figcaption>
