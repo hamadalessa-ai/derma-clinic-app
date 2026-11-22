@@ -22,9 +22,10 @@ describe("clinic website", () => {
     expect(ids).toContain(service("consultation"));
     expect(site.videoService?.id).toBe(service("video_consultation"));
     expect(site.doctors.length).toBeGreaterThan(0);
-    // The clinic's published medical team (from its own website), founder first.
-    expect(site.site.doctors?.length).toBeGreaterThan(20);
-    expect(site.site.doctors?.[0].founder).toBe(true);
+    // The clinic's published medical team (its own team page, same order), no one set apart.
+    expect(site.site.doctors?.length).toBe(24);
+    expect(site.site.doctors?.[0].nameEn).toBe("Dr. Abdullah Aleisa");
+    expect(site.site.doctors?.some((d) => d.founder)).toBe(false);
     // Doctor profiles for the website (specialty, credentials, languages).
     const sara = site.doctors.find((d) => d.nameEn === "Dr. Sarah Al-Otaibi");
     expect(sara?.profile?.credentials?.length).toBeGreaterThan(0);
