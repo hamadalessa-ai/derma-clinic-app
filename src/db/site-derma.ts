@@ -544,8 +544,7 @@ export const DERMA_SITE = {
   eyebrowEn: "The Practice · Since 1996",
   headlineAr: "رعاية جلدية وتجميلية وطب أسنان على أيدي أطباء متخصصين في الرياض وجدة",
   headlineEn: "Specialist dermatology, aesthetic and dental care in Riyadh and Jeddah",
-  taglineAr:
-    "الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان، تحت سقف واحد منذ عام ١٩٩٦.",
+  taglineAr: "الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان، تحت سقف واحد منذ عام ١٩٩٦.",
   taglineEn:
     "Dermatology, plastic surgery, hair restoration and dentistry, under one roof since 1996.",
   aboutTitleAr: "ثلاثون عامًا من العمل الهادئ.",
