@@ -22,8 +22,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install "rembg[cpu]" pillow numpy scipy
-      # rembg may pull a second OpenCV build; keep exactly one (with face detection).
-      - run: pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python || true; pip install opencv-python-headless; python -c "import cv2; cv2.CascadeClassifier"
+      # rembg may pull a second OpenCV build; keep exactly one, before 5.0 (5.0 dropped the face detector).
+      - run: pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python || true; pip install "opencv-python-headless<5"; python -c "import cv2; cv2.CascadeClassifier"
       - run: python scripts/cutouts/cutouts.py
       - name: Commit the portraits
         run: |
