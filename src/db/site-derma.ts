@@ -542,12 +542,12 @@ export const DERMA_SILOS = [
 export const DERMA_SITE = {
   eyebrowAr: "العيادة · منذ ١٩٩٦",
   eyebrowEn: "The Practice · Since 1996",
-  headlineAr: "البشرة والشعر والأسنان، بعناية واحدة.",
-  headlineEn: "Skin, hair and teeth, considered together.",
+  headlineAr: "رعاية جلدية وتجميلية وطب أسنان على أيدي أطباء متخصصين في الرياض وجدة",
+  headlineEn: "Specialist dermatology, aesthetic and dental care in Riyadh and Jeddah",
   taglineAr:
-    "عيادة طبية في الرياض وجدة. الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان، تحت سقف واحد منذ عام ١٩٩٦.",
+    "الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان، تحت سقف واحد منذ عام ١٩٩٦.",
   taglineEn:
-    "A medical practice in Riyadh and Jeddah. Dermatology, plastic surgery, hair restoration and dentistry, under one roof since 1996.",
+    "Dermatology, plastic surgery, hair restoration and dentistry, under one roof since 1996.",
   aboutTitleAr: "ثلاثون عامًا من العمل الهادئ.",
   aboutTitleEn: "Thirty years of quiet work.",
   aboutAr:
