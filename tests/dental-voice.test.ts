@@ -7,7 +7,6 @@ import { closeDb } from "@/db/client";
 import { withActor } from "@/lib/auth/db";
 import { PermissionError } from "@/lib/auth/permissions";
 import { chartHistory, DentalError, recordTeeth } from "@/lib/dental/chart";
-import { currentChart } from "@/lib/dental/teeth";
 import { parseDictation } from "@/lib/dental/voice";
 import { drNawaf, nurse, patient, reception } from "./fixtures";
 
@@ -75,12 +74,12 @@ describe("saving the checked list", () => {
         items: parseDictation("15 caries DO, 25 crown").items,
       }),
     );
-    expect(rows).toHaveLength(2);
-    const now = currentChart(
-      await withActor(drNawaf, (tx) => chartHistory(tx, drNawaf, patient("D-0016"))),
-    );
-    expect(now.get(15)).toMatchObject({ condition: "caries", surfaces: "OD" });
-    expect(now.get(25)?.condition).toBe("crown");
+    expect(rows.map((r) => [r.tooth, r.condition, r.surfaces])).toEqual([
+      [15, "caries", "OD"],
+      [25, "crown", ""],
+    ]);
+    const history = await withActor(drNawaf, (tx) => chartHistory(tx, drNawaf, patient("D-0016")));
+    expect(history.filter((h) => rows.some((r) => r.id === h.id))).toHaveLength(2);
   });
 
   it("all or nothing; reception may not", async () => {
@@ -95,10 +94,9 @@ describe("saving the checked list", () => {
         }),
       ),
     ).rejects.toThrow(DentalError);
-    const now = currentChart(
-      await withActor(drNawaf, (tx) => chartHistory(tx, drNawaf, patient("D-0016"))),
-    );
-    expect(now.get(14)).toBeUndefined();
+    // Nothing from the failed save is in the chart.
+    const after = await withActor(drNawaf, (tx) => chartHistory(tx, drNawaf, patient("D-0016")));
+    expect(after.some((h) => h.tooth === 14)).toBe(false);
     await expect(
       withActor(reception, (tx) =>
         recordTeeth(tx, reception, {
