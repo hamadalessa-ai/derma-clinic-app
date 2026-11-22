@@ -121,6 +121,8 @@ export function LabResults({
               />
             ))}
           </ul>
+        ) : compact ? (
+          <p className="text-muted-foreground text-sm">{t("none")}</p>
         ) : (
           <EmptyState icon={<FlaskRound />} title={t("none")} />
         )}

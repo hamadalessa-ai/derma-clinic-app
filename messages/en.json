@@ -706,8 +706,6 @@
     "modeVideo": "Video consultation from home",
     "modeVideoHint": "Talk to the doctor by video on your phone. No app needed.",
     "videoDone": "By video: the join link comes on WhatsApp.",
-    "stepMobile": "Your mobile number",
-    "mobileFirst": "We'll send you a code to confirm it's you. Then choose your treatment and time.",
     "verifyCode": "Continue",
     "changeMobile": "Change number",
     "verifiedMobile": "Verified mobile:"
