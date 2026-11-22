@@ -238,17 +238,17 @@ export function OnlineBookingFlow({
   /** Books the chosen time for a verified mobile. */
   const book = async (phone: string) => {
     const r = await confirmBookingAction({ ...request(), phone });
-      if (!r.ok) {
-        setError(errorText(r.error));
-        // The time was taken meanwhile: pick another one (the code still works).
-        if (["slot_taken", "already_booked", "too_soon"].includes(r.error)) {
-          setSlot(null);
-          setSlots(null);
-          setReload((x) => x + 1);
-        }
-        return;
+    if (!r.ok) {
+      setError(errorText(r.error));
+      // The time was taken meanwhile: pick another one (the code still works).
+      if (["slot_taken", "already_booked", "too_soon"].includes(r.error)) {
+        setSlot(null);
+        setSlots(null);
+        setReload((x) => x + 1);
       }
-      setDone(r.data);
+      return;
+    }
+    setDone(r.data);
   };
 
   /** Confirm: a verified mobile books straight away; otherwise the code is checked first. */
