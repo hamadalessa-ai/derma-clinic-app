@@ -703,7 +703,7 @@ export interface SiteContent {
   taglineEn?: string;
   aboutAr?: string;
   aboutEn?: string;
-  /** Short editorial headline over the About text ("Thirty years of quiet work."). */
+  /** Short editorial headline over the About text ("About Derma Clinics"). */
   aboutTitleAr?: string;
   aboutTitleEn?: string;
   /** A line from the practice's philosophy, set as a pull quote (never attributed to a person). */

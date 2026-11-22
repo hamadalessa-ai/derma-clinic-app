@@ -542,27 +542,29 @@ export const DERMA_SILOS = [
 export const DERMA_SITE = {
   eyebrowAr: "العيادة · منذ ١٩٩٦",
   eyebrowEn: "The Practice · Since 1996",
-  headlineAr: "البشرة والشعر والأسنان، بعناية واحدة.",
-  headlineEn: "Skin, hair and teeth, considered together.",
-  taglineAr:
-    "عيادة طبية في الرياض وجدة. الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان، تحت سقف واحد منذ عام ١٩٩٦.",
+  headlineAr: "رعاية جلدية وتجميلية وطب أسنان على أيدي أطباء متخصصين في الرياض وجدة",
+  headlineEn: "Specialist dermatology, aesthetic and dental care in Riyadh and Jeddah",
+  taglineAr: "الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان، تحت سقف واحد منذ عام ١٩٩٦.",
   taglineEn:
-    "A medical practice in Riyadh and Jeddah. Dermatology, plastic surgery, hair restoration and dentistry, under one roof since 1996.",
-  aboutTitleAr: "ثلاثون عامًا من العمل الهادئ.",
-  aboutTitleEn: "Thirty years of quiet work.",
+    "Dermatology, plastic surgery, hair restoration and dentistry, under one roof since 1996.",
+  aboutTitleAr: "عن عيادات ديرما",
+  aboutTitleEn: "About Derma Clinics",
   aboutAr:
-    "افتتحت عيادات ديرما أبوابها في الرياض عام ١٩٩٦، من أوائل العيادات في المملكة المتخصصة في البشرة والشعر والطب التجميلي. ولم يتغيّر النهج منذ ذلك الحين: استشارة متأنية، وخطة تُكتب لشخص واحد، وعلاج يقوم عليه أطباء التخصص. وتضم العيادة اليوم أربعة تخصصات في مدينتين.",
+    "تأسست عيادات ديرما في الرياض عام ١٩٩٦ على يد د. عبدالله العيسى، استشاري الأمراض الجلدية والطب التجميلي. وتضم اليوم أربعة أقسام في الرياض وجدة: الأمراض الجلدية والطب التجميلي، وزراعة الشعر، وجراحة التجميل، وطب الأسنان. يبدأ كل علاج بكشف لدى طبيب القسم، يشرح فيه التشخيص والخيارات المتاحة وعدد الجلسات والتكلفة قبل أن يتخذ المريض قراره.",
   aboutEn:
-    "Derma Clinics opened in Riyadh in 1996, among the first practices in the Kingdom devoted to skin, hair and aesthetic medicine. The method has not changed: an unhurried consultation, a plan written for one person, and treatment by specialists in the discipline. Today the practice spans four disciplines in two cities.",
-  quoteAr: "النتيجة الجيدة هي التي لا يستطيع أحد أن يشير إليها.",
-  quoteEn: "A good result is one no one can point to.",
-  clinicsAr: "أربعة تخصصات، عيادة واحدة. لكل تخصص أطباؤه وغرفه، ويتنقّل المريض بينها بملف واحد.",
+    "Derma Clinics was founded in Riyadh in 1996 by Dr. Abdullah Aleisa, consultant in dermatology and aesthetic medicine. Today it has four departments in Riyadh and Jeddah: dermatology and aesthetic medicine, hair restoration, plastic surgery, and dentistry. Every treatment begins with an examination by a doctor in that department, who explains the diagnosis, the options, the number of sessions and the cost before the patient decides.",
+  quoteAr: "نشرح لكل مريض التشخيص والخيارات قبل أي علاج، ولا نوصي إلا بما يحتاجه.",
+  quoteEn:
+    "Every patient hears the diagnosis and the options before any treatment, and is advised only what they need.",
+  clinicsAr:
+    "أربعة أقسام، لكل قسم أطباؤه وغرفه، ولكل مريض ملف طبي واحد تطّلع عليه الأقسام التي يراجعها.",
   clinicsEn:
-    "Four disciplines, one practice. Each keeps its own physicians and rooms; patients move between them with one file.",
-  doctorsAr: "استشاريون وأخصائيون في الجلدية والجراحة والشعر والأسنان.",
-  doctorsEn: "Consultants and specialists in dermatology, surgery, hair and dentistry.",
-  findAr: "الرياض وجدة، بموعد مسبق.",
-  findEn: "Riyadh and Jeddah, by appointment.",
+    "Four departments, each with its own doctors and rooms. Each patient has one medical record, shared by the departments they visit.",
+  doctorsAr: "استشاريون وأخصائيون في الأمراض الجلدية وزراعة الشعر وجراحة التجميل وطب الأسنان.",
+  doctorsEn:
+    "Consultants and specialists in dermatology, hair restoration, plastic surgery and dentistry.",
+  findAr: "الرياض وجدة. الزيارة بموعد مسبق.",
+  findEn: "Riyadh and Jeddah. Visits by appointment.",
   footerAr:
     "عيادات ديرما. الجلدية وجراحة التجميل واستعادة الشعر وطب الأسنان. الرياض وجدة، منذ ١٩٩٦.",
   footerEn:
@@ -579,9 +581,9 @@ export const DERMA_SITE = {
       nameAr: "طب الجلدية والطب التجميلي وزراعة الشعر",
       nameEn: "Dermatology, Aesthetic Medicine & Hair Transplantation",
       textAr:
-        "طب الجلدية العلاجي والتجميلي وطب الليزر. يبدأ كل علاج بفحص، وبحديث عمّا ينبغي أن يبقى كما هو.",
+        "تشخيص وعلاج أمراض الجلد والشعر والأظافر، مثل حب الشباب والإكزيما والصدفية والبهاق والتصبغات، إلى جانب الطب التجميلي وعلاجات الليزر وزراعة الشعر.",
       textEn:
-        "Medical and aesthetic dermatology and laser medicine. Every course of treatment begins with an examination, and with a conversation about what should stay the same.",
+        "Diagnosis and treatment of skin, hair and nail conditions such as acne, eczema, psoriasis, vitiligo and pigmentation, alongside aesthetic medicine, laser treatment and hair transplantation.",
       specialties: ["skin", "hair"],
     },
     {
@@ -589,18 +591,19 @@ export const DERMA_SITE = {
       nameAr: "طب الأسنان",
       nameEn: "Dental Care",
       textAr:
-        "طب الأسنان العام والترميمي والتجميلي، من رعاية الأطفال إلى الزراعة والتقويم. تُرسم كل خطة سنًّا بسنّ، وتُشرح قبل أن تبدأ.",
+        "الفحص والأشعة، والحشوات وعلاج العصب واللثة، والتركيبات وزراعة الأسنان والتقويم، وطب أسنان الأطفال. تُكتب خطة العلاج وتكلفتها قبل البدء.",
       textEn:
-        "General, restorative and cosmetic dentistry, from children's care to implants and orthodontics. Each plan is drawn tooth by tooth and explained before it begins.",
+        "Examinations and X-rays, fillings, root canal and gum treatment, crowns and bridges, implants, orthodontics and children's dentistry. The treatment plan and its cost are written down before treatment starts.",
       specialties: ["dental"],
     },
     {
       key: "plastic",
       nameAr: "جراحة التجميل",
       nameEn: "Plastic Surgery",
-      textAr: "جراحات الوجه والجسم والجراحات الترميمية على يد استشاريين، بقرارات تُتخذ بتأنٍّ.",
+      textAr:
+        "جراحات الوجه والجسم، مثل تجميل الأنف والجفون وشد الوجه وشفط الدهون وجراحات الثدي وشد البطن، بعد استشارة وفحص لدى الجرّاح.",
       textEn:
-        "Facial, body and reconstructive surgery by consultant surgeons, with decisions taken slowly.",
+        "Facial and body surgery, including rhinoplasty, eyelid surgery, facelift, liposuction, breast surgery and tummy tuck, after a consultation and examination with the surgeon.",
       specialties: ["plastic"],
     },
   ],
@@ -609,8 +612,8 @@ export const DERMA_SITE = {
       key: "skin",
       nameAr: "الجلدية والطب التجميلي",
       nameEn: "Dermatology & Aesthetic Medicine",
-      leadAr: "البشرة، بقراءة متأنية.",
-      leadEn: "Skin, read closely.",
+      leadAr: "لأمراض الجلد والتصبغات وعلامات التقدم في العمر.",
+      leadEn: "For skin conditions, pigmentation and signs of ageing.",
       textAr: "طب الجلدية العلاجي والتجميلي وطب الليزر.",
       textEn: "Medical and aesthetic dermatology and laser medicine.",
       bookable: true,
@@ -619,8 +622,8 @@ export const DERMA_SITE = {
       key: "dental",
       nameAr: "طب الأسنان التجميلي والعام",
       nameEn: "Cosmetic & General Dentistry",
-      leadAr: "عمارة الابتسامة الهادئة.",
-      leadEn: "The quiet architecture of a smile.",
+      leadAr: "لصحة الفم والأسنان، للكبار والأطفال.",
+      leadEn: "Oral and dental care for adults and children.",
       textAr: "طب الأسنان العام والترميمي والتجميلي.",
       textEn: "General, restorative and cosmetic dentistry.",
     },
@@ -628,20 +631,21 @@ export const DERMA_SITE = {
       key: "hair",
       nameAr: "زراعة واستعادة الشعر",
       nameEn: "Hair Restoration & Transplantation",
-      leadAr: "كثافة تعود بتأنٍّ.",
-      leadEn: "Density, returned slowly.",
-      textAr: "زراعة الشعر والعلاج الطبي لتساقطه، بخطة تحترم خط الشعر الذي يناسب الوجه.",
+      leadAr: "لتساقط الشعر وفقدانه في فروة الرأس والوجه.",
+      leadEn: "For thinning and hair loss on the scalp and face.",
+      textAr:
+        "يُحدَّد سبب التساقط أولًا، ثم يكون العلاج طبيًا (البلازما، الميزوثيرابي، الليزر) أو بالزراعة بتقنية الاقتطاف FUE لفروة الرأس واللحية والحواجب.",
       textEn:
-        "Transplantation and medical therapy for thinning hair, planned around the hairline a face already has.",
+        "The cause of hair loss is found first. Treatment is then medical (PRP, mesotherapy, laser) or by FUE transplantation for the scalp, beard and eyebrows.",
     },
     {
       key: "plastic",
       nameAr: "جراحة التجميل",
       nameEn: "Plastic Surgery",
-      leadAr: "تناسق، لا تغيير.",
-      leadEn: "Proportion, not change.",
-      textAr: "جراحات الوجه والجسم والجراحات الترميمية على يد استشاريين.",
-      textEn: "Facial, body and reconstructive surgery by consultant surgeons.",
+      leadAr: "لجراحات الوجه والجسم.",
+      leadEn: "Facial and body surgery.",
+      textAr: "جراحات الوجه والجسم على يد جرّاحي تجميل استشاريين.",
+      textEn: "Facial and body surgery by consultant plastic surgeons.",
     },
   ],
   silos: DERMA_SILOS,
