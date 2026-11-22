@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AiReviewTick } from "./ai-review-tick";
 import { AiScribe } from "./ai-scribe";
 import { FormError, FormSuccess } from "./form-message";
 import { useAction } from "./use-action";
@@ -108,6 +109,10 @@ export function VisitWorkspace({
   const router = useRouter();
   const [body, setBody] = useState(note.body);
   const [msg, setMsg] = useState<string | null>(null);
+  /** The AI scribe wrote into this note (before, or just now): posting needs the review tick. */
+  const [aiHere, setAiHere] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
+  const aiUsed = note.aiDrafted || aiHere;
   const save = useAction();
   const post = useAction();
 
@@ -124,7 +129,17 @@ export function VisitWorkspace({
           )}
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {scribe && <AiScribe patientId={patientId} noteId={note.id} onDrafted={setBody} />}
+          {scribe && (
+            <AiScribe
+              patientId={patientId}
+              noteId={note.id}
+              onDrafted={(b) => {
+                setBody(b);
+                setAiHere(true);
+                setReviewed(false);
+              }}
+            />
+          )}
           <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -171,15 +186,17 @@ export function VisitWorkspace({
           <p className="text-muted-foreground text-sm">
             {preparingFor ? t("postHintFor", { name: preparingFor }) : t("postHint")}
           </p>
+          {aiUsed && <AiReviewTick checked={reviewed} onChange={setReviewed} />}
           <Button
             className="self-start"
-            disabled={!body.trim()}
+            disabled={!body.trim() || (aiUsed && !reviewed)}
             loading={post.pending}
             data-testid="post-visit"
             onClick={() => {
               if (!window.confirm(t("postConfirm"))) return;
               post.run(
-                () => postVisitAction({ appointmentId, noteId: note.id, body }),
+                () =>
+                  postVisitAction({ appointmentId, noteId: note.id, body, aiReviewed: reviewed }),
                 () => router.push(`/my-day?date=${visitDay}`),
               );
             }}

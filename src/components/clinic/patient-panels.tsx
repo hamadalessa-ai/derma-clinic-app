@@ -26,6 +26,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDualDate, formatSAR } from "@/lib/format";
 import type { Locale } from "@/i18n/config";
+import { AiReviewTick } from "./ai-review-tick";
 import { AiScribe } from "./ai-scribe";
 import { ConsentSignDialog, type ConsentTemplateView } from "./consent-sign-dialog";
 import { FormError, FormSuccess } from "./form-message";
@@ -609,6 +610,10 @@ function NoteCard({
   const ts = useTranslations("scribe");
   const locale = useLocale() as Locale;
   const [body, setBody] = useState(note.body);
+  /** The AI scribe wrote into this note (before, or just now): signing needs the review tick. */
+  const [aiHere, setAiHere] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
+  const aiUsed = !!note.aiDrafted || aiHere;
   const [addendum, setAddendum] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const { run, pending, error } = useAction();
@@ -635,7 +640,17 @@ function NoteCard({
       <CardContent className="flex flex-col gap-3">
         {editable ? (
           <>
-            {scribe && <AiScribe patientId={patientId} noteId={note.id} onDrafted={setBody} />}
+            {scribe && (
+              <AiScribe
+                patientId={patientId}
+                noteId={note.id}
+                onDrafted={(b) => {
+                  setBody(b);
+                  setAiHere(true);
+                  setReviewed(false);
+                }}
+              />
+            )}
             <Textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -643,6 +658,9 @@ function NoteCard({
               className="min-h-40"
               aria-label={t("draft")}
             />
+            {aiUsed && !(preparing && !mine) && (
+              <AiReviewTick checked={reviewed} onChange={setReviewed} />
+            )}
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 variant="outline"
@@ -665,7 +683,7 @@ function NoteCard({
                 </span>
               ) : (
                 <Button
-                  disabled={!body.trim()}
+                  disabled={!body.trim() || (aiUsed && !reviewed)}
                   loading={pending}
                   data-testid={completes ? "sign-complete" : "sign-note"}
                   onClick={() => {
@@ -678,6 +696,7 @@ function NoteCard({
                             appointmentId: completes,
                             noteId: note.id,
                             body,
+                            aiReviewed: reviewed,
                           }),
                         (r) => {
                           setMsg(t(r.completed ? "signedCompleted" : "signedOk"));
@@ -686,7 +705,13 @@ function NoteCard({
                       );
                     } else {
                       run(
-                        () => signNoteAction({ patientId, noteId: note.id, body }),
+                        () =>
+                          signNoteAction({
+                            patientId,
+                            noteId: note.id,
+                            body,
+                            aiReviewed: reviewed,
+                          }),
                         () => setMsg(t("signedOk")),
                       );
                     }

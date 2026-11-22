@@ -10,7 +10,7 @@ import { withTenant } from "@/db/tenant";
 import { withActor } from "@/lib/auth/db";
 import type { ClaudeClient, ClaudeRequest } from "@/lib/ai/claude";
 import { SCRIBE_SYSTEM, scribeDraft, ScribeError } from "@/lib/ai/scribe";
-import { openDraft, saveDraft, signNote } from "@/lib/notes/notes";
+import { NoteError, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { DERMA, drFaisal, drSara, patient, reception } from "./fixtures";
 
 afterAll(closeDb);
@@ -162,6 +162,26 @@ describe("AI scribe", () => {
       await code(scribeDraft(drSara, { noteId: note.id, transcript: "hello there" }, off)),
     ).toBe("disabled");
     expect(off.calls).toHaveLength(0);
+  });
+
+  it("a note with an AI draft is signed only after the doctor ticks that they checked it", async () => {
+    const note = await newNote("D-0010");
+    await scribeDraft(drSara, { noteId: note.id, transcript: "laser session four" }, fake());
+    const err = await withActor(drSara, (tx) => signNote(tx, drSara, note.id, DRAFT)).catch(
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(NoteError);
+    expect((err as NoteError).code).toBe("ai_not_reviewed");
+    expect((await noteRow(note.id)).status).toBe("draft");
+    await withActor(drSara, (tx) => signNote(tx, drSara, note.id, DRAFT, true));
+    expect((await noteRow(note.id)).status).toBe("signed");
+    const [log] = await system((tx) =>
+      tx
+        .select()
+        .from(auditLogs)
+        .where(and(eq(auditLogs.entityId, note.id), eq(auditLogs.action, "note.sign"))),
+    );
+    expect(log.metadata).toMatchObject({ aiReviewed: true });
   });
 
   it("a model failure changes nothing", async () => {

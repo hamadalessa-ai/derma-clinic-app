@@ -112,7 +112,8 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   Opening hours given to the AI come from `hours.ts` by date (holidays and day-offs included).
 - AI scribe (`src/lib/ai/scribe.ts`, UI `src/components/clinic/ai-scribe.tsx`): browser dictation (Web Speech
   API; audio never reaches us) → Claude → English draft appended to the AUTHOR's own UNSIGNED note, marked
-  `clinical_notes.ai_drafted_at`. Never signs, never adds diagnoses/codes/doses of its own; the spoken text is
+  `clinical_notes.ai_drafted_at`. A note with an AI draft is signed / posted only with `aiReviewed`
+  (the "I've checked the AI draft" tick, `assertAiReviewed` in `notes.ts`). Never signs, never adds diagnoses/codes/doses of its own; the spoken text is
   never stored or audited. Needs `tenant_settings.ai_scribe_enabled` + `ANTHROPIC_API_KEY`.
 - Video consultations (`src/lib/video/`): services with `is_virtual` are booked in the branch's video room
   (`rooms.is_virtual`, never reserved by the trigger; the doctor still is). Patients join from a SIGNED link
