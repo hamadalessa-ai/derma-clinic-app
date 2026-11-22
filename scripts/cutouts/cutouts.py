@@ -10,17 +10,37 @@ import sys
 import urllib.request
 from pathlib import Path
 
+import cv2
 import numpy as np
 from PIL import Image
 from rembg import new_session, remove
 from scipy import ndimage
+
+def clean_text(img: Image.Image) -> Image.Image:
+    """
+    The cards print the doctor's name and title partly over the coat (lower left). Thin, high-
+    contrast strokes there (letters) are painted over from their surroundings; buttons, pens and
+    stethoscopes are wider and stay.
+    """
+    rgb = np.array(img)
+    g = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+    h, w = g.shape
+    k = cv2.getStructuringElement(cv2.MORPH_RECT, (max(5, w // 90), max(5, w // 90)))
+    strokes = cv2.morphologyEx(g, cv2.MORPH_TOPHAT, k) + cv2.morphologyEx(g, cv2.MORPH_BLACKHAT, k)
+    mask = (strokes > 60).astype(np.uint8)
+    zone = np.zeros_like(mask)
+    zone[int(h * 0.55) :, : int(w * 0.45)] = 1
+    mask = cv2.dilate(mask * zone, np.ones((3, 3), np.uint8), iterations=2)
+    return Image.fromarray(cv2.inpaint(rgb, mask * 255, 5, cv2.INPAINT_TELEA))
+
 
 OUT = Path("public/site/derma/doctors")
 OUT.mkdir(parents=True, exist_ok=True)
 for old in OUT.glob("*.webp"):
     old.unlink()
 W, H = 900, 1125  # 4:5
-session = new_session("isnet-general-use")
+# BiRefNet's portrait model keeps hair, coats and shoulders whole (the general model left holes).
+session = new_session("birefnet-portrait")
 
 for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     req = urllib.request.Request(d["url"], headers={"User-Agent": "Mozilla/5.0"})
@@ -29,6 +49,7 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     # The person stands on the right of the card; the logo and name text are on the left.
     x0 = int(w * (0.5 if d["founder"] else 0.38))
     part = card.crop((x0, 0, w, h))
+    part = clean_text(part)
     cut = remove(part, session=session)
     a = np.array(cut)
     alpha = a[:, :, 3] > 40
@@ -49,7 +70,10 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
         continue
     keep = alpha & ndimage.binary_dilation(largest, structure=disk(10))
     keep = ndimage.binary_fill_holes(keep)
-    a[:, :, 3] = np.where(keep, a[:, :, 3], 0)
+    # Inside the person, a half-sure pixel (a patterned shemagh, a pale coat) counts as solid;
+    # only the faintest edge (fine hair) stays soft.
+    solid = np.where(a[:, :, 3] > 60, 255, a[:, :, 3])
+    a[:, :, 3] = np.where(keep, solid, 0)
     person = Image.fromarray(a)
     ys, xs = np.where(a[:, :, 3] > 0)
     person = person.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
@@ -75,3 +99,16 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     canvas = Image.fromarray(c.clip(0, 255).astype(np.uint8))
     canvas.save(OUT / f"{d['slug']}.webp", "WEBP", quality=88, method=6)
     print("ok", d["slug"])
+
+# A contact sheet to review all portraits at a glance (not used by the website).
+sheet_files = sorted(OUT.glob("*.webp"))
+if sheet_files:
+    tw, th, cols = 225, 281, 7
+    rows = (len(sheet_files) + cols - 1) // cols
+    sheet = Image.new("RGB", (cols * tw, rows * th), (236, 240, 238))
+    for i, f in enumerate(sheet_files):
+        im = Image.open(f).convert("RGBA").resize((tw, th))
+        bg = Image.new("RGBA", (tw, th), (236, 240, 238, 255))
+        bg.alpha_composite(im)
+        sheet.paste(bg.convert("RGB"), ((i % cols) * tw, (i // cols) * th))
+    sheet.save("scripts/cutouts/preview.png")
