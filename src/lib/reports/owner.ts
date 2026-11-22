@@ -70,6 +70,7 @@ export interface OwnerReport {
   byDoctor: {
     id: string;
     name: string;
+    nameEn: string | null;
     bookings: number;
     completed: number;
     noShow: number;
