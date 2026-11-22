@@ -554,12 +554,15 @@ export const DERMA_SITE = {
   aboutEn:
     "Derma Clinics was founded in Riyadh in 1996 by Dr. Abdullah Aleisa, consultant in dermatology and aesthetic medicine. Today it has four departments in Riyadh and Jeddah: dermatology and aesthetic medicine, hair restoration, plastic surgery, and dentistry. Every treatment begins with an examination by a doctor in that department, who explains the diagnosis, the options, the number of sessions and the cost before the patient decides.",
   quoteAr: "نشرح لكل مريض التشخيص والخيارات قبل أي علاج، ولا نوصي إلا بما يحتاجه.",
-  quoteEn: "Every patient hears the diagnosis and the options before any treatment, and is advised only what they need.",
-  clinicsAr: "أربعة أقسام، لكل قسم أطباؤه وغرفه، ولكل مريض ملف طبي واحد تطّلع عليه الأقسام التي يراجعها.",
+  quoteEn:
+    "Every patient hears the diagnosis and the options before any treatment, and is advised only what they need.",
+  clinicsAr:
+    "أربعة أقسام، لكل قسم أطباؤه وغرفه، ولكل مريض ملف طبي واحد تطّلع عليه الأقسام التي يراجعها.",
   clinicsEn:
     "Four departments, each with its own doctors and rooms. Each patient has one medical record, shared by the departments they visit.",
   doctorsAr: "استشاريون وأخصائيون في الأمراض الجلدية وزراعة الشعر وجراحة التجميل وطب الأسنان.",
-  doctorsEn: "Consultants and specialists in dermatology, hair restoration, plastic surgery and dentistry.",
+  doctorsEn:
+    "Consultants and specialists in dermatology, hair restoration, plastic surgery and dentistry.",
   findAr: "الرياض وجدة. الزيارة بموعد مسبق.",
   findEn: "Riyadh and Jeddah. Visits by appointment.",
   footerAr:
@@ -597,7 +600,8 @@ export const DERMA_SITE = {
       key: "plastic",
       nameAr: "جراحة التجميل",
       nameEn: "Plastic Surgery",
-      textAr: "جراحات الوجه والجسم، مثل تجميل الأنف والجفون وشد الوجه وشفط الدهون وجراحات الثدي وشد البطن، بعد استشارة وفحص لدى الجرّاح.",
+      textAr:
+        "جراحات الوجه والجسم، مثل تجميل الأنف والجفون وشد الوجه وشفط الدهون وجراحات الثدي وشد البطن، بعد استشارة وفحص لدى الجرّاح.",
       textEn:
         "Facial and body surgery, including rhinoplasty, eyelid surgery, facelift, liposuction, breast surgery and tummy tuck, after a consultation and examination with the surgeon.",
       specialties: ["plastic"],
@@ -629,7 +633,8 @@ export const DERMA_SITE = {
       nameEn: "Hair Restoration & Transplantation",
       leadAr: "لتساقط الشعر وفقدانه في فروة الرأس والوجه.",
       leadEn: "For thinning and hair loss on the scalp and face.",
-      textAr: "يُحدَّد سبب التساقط أولًا، ثم يكون العلاج طبيًا (البلازما، الميزوثيرابي، الليزر) أو بالزراعة بتقنية الاقتطاف FUE لفروة الرأس واللحية والحواجب.",
+      textAr:
+        "يُحدَّد سبب التساقط أولًا، ثم يكون العلاج طبيًا (البلازما، الميزوثيرابي، الليزر) أو بالزراعة بتقنية الاقتطاف FUE لفروة الرأس واللحية والحواجب.",
       textEn:
         "The cause of hair loss is found first. Treatment is then medical (PRP, mesotherapy, laser) or by FUE transplantation for the scalp, beard and eyebrows.",
     },
