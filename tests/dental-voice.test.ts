@@ -63,6 +63,7 @@ describe("reading the dictation (pure)", () => {
     expect(read("19 caries, 2026 crown")).toEqual([]);
     expect(read("16 old filling")).toEqual(["16:filled"]);
     expect(read("36 missing MO")).toEqual(["36:missing"]);
+    expect(read("15 caries DO")).toEqual(["15:caries:OD"]);
   });
 });
 

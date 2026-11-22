@@ -24,7 +24,7 @@ export interface Dictation {
   withoutFinding: number[];
 }
 
-/** Lower case, Latin digits, one form of each Arabic letter, no diacritics. */
+/** Latin digits, one form of each Arabic letter, no diacritics (case kept: "DO" ≠ "do"). */
 function normalize(text: string): string {
   return text
     .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
@@ -32,8 +32,7 @@ function normalize(text: string): string {
     .replace(/[ً-ْـ]/g, "")
     .replace(/[أإآ]/g, "ا")
     .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي")
-    .toLowerCase();
+    .replace(/ى/g, "ي");
 }
 
 /** Phrases first (longest match wins), then single words. Arabic in normalized spelling. */
@@ -127,9 +126,10 @@ type Token =
   | { kind: "surfaces"; s: string };
 
 function tokenize(text: string): Token[] {
-  const words = normalize(text)
+  const raw = normalize(text)
     .split(/[\s,،.;؛:/\-–—()]+/)
     .filter(Boolean);
+  const words = raw.map((w) => w.toLowerCase());
   const out: Token[] = [];
   for (let i = 0; i < words.length; i++) {
     // Phrases of up to three words, longest first.
@@ -163,8 +163,14 @@ function tokenize(text: string): Token[] {
       out.push({ kind: "surfaces", s: surfaceWord });
       continue;
     }
-    // Surface letters said together: "MO", "MOD", "DOL" … (not English words such as "do", "old").
-    if (/^[modbl]{1,5}$/.test(w) && !NOT_SURFACES.has(w) && new Set(w).size === w.length) {
+    // Surface letters said together: "MO", "MOD", "DOL" … English words made of the same letters
+    // ("do", "old") count only in capitals ("DO").
+    const capitals = raw[i] === raw[i].toUpperCase();
+    if (
+      /^[modbl]{1,5}$/.test(w) &&
+      (capitals || !NOT_SURFACES.has(w)) &&
+      new Set(w).size === w.length
+    ) {
       out.push({ kind: "surfaces", s: w });
     }
   }
