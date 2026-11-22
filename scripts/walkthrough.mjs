@@ -228,5 +228,16 @@ await shot(owner, "membership-plans-setup");
 await owner.goto(`${BASE}/reports`, { waitUntil: "networkidle" });
 await shot(owner, "reports-members");
 
+// ── 8. Lab results: a patient's Labs tab (flags, repeat tests) and the add form ──
+const doctorLabs = await signIn("dr.sara@derma.demo");
+await doctorLabs.goto(`${BASE}/patients/${demoId("derma:patient:D-0012")}?tab=labs`, {
+  waitUntil: "networkidle",
+});
+await doctorLabs.getByTestId("lab-results").waitFor({ timeout: 15000 });
+await shot(doctorLabs, "labs-tab", true);
+await doctorLabs.getByTestId("lab-add-open").click();
+await doctorLabs.getByTestId("lab-add").waitFor();
+await shot(doctorLabs, "labs-add-form");
+
 await browser.close();
 console.log("walkthrough: OK");
