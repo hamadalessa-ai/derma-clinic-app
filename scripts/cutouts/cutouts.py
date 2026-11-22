@@ -47,9 +47,12 @@ for d in json.loads(Path("scripts/cutouts/doctors.json").read_text()):
     card = Image.open(io.BytesIO(urllib.request.urlopen(req, timeout=60).read())).convert("RGB")
     w, h = card.size
     # The person stands on the right of the card; the logo and name text are on the left.
-    x0 = int(w * (0.5 if d["founder"] else 0.38))
+    x0 = int(w * d.get("x0", 0.5 if d["founder"] else 0.38))
     part = card.crop((x0, 0, w, h))
-    part = clean_text(part)
+    # A patterned shemagh looks like text to the cleaner, so such cards are cropped past the
+    # text instead ("x0") and not cleaned.
+    if d.get("clean", True):
+        part = clean_text(part)
     cut = remove(part, session=session)
     a = np.array(cut)
     alpha = a[:, :, 3] > 40

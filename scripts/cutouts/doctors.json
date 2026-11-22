@@ -117,6 +117,8 @@
   {
     "slug": "hassan-abusalih",
     "url": "https://img.rekaz.io/cdn-cgi/image/quality=85,fit=scale-down,width=1600,f=auto/https://cdn.rekaz.io/tenants/3a210100-f494-af5e-f3a8-2769280512c2/3a226e19-97ef-6817-c4df-91d10c9be369394998f9-9545-45b7-b7d5-15810ce6b05e-src_ar..jpg?v=0",
-    "founder": false
+    "founder": false,
+    "x0": 0.5,
+    "clean": false
   }
 ]
