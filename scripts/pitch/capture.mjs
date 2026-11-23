@@ -222,7 +222,9 @@ await scene("video-booking", async () => {
   const branch = page.getByTestId("step-branch").getByRole("button").first();
   if (await branch.isVisible().catch(() => false)) await branch.click();
   await page.waitForTimeout(600);
-  await page.locator("[data-service]").first().click();
+  // One video service: it is chosen already.
+  const svc = page.locator("[data-service]").first();
+  if (await svc.isVisible().catch(() => false)) await svc.click();
   await page.waitForTimeout(800);
   // Dr. Sarah if she offers it (she films the doctor's side), else any doctor.
   const sara = page.locator("[data-doctor]", { hasText: /سارة/ }).first();
@@ -337,40 +339,37 @@ await scene("video", async () => {
   } else note("video visit not on Dr. Sarah's day");
 });
 
-// ── 6. The doctor's day ──────────────────────────────────────────────────────
+// ── 6. The doctor: starts a waiting patient's visit and dictates; the AI writes the draft ──
 await scene("doctor", async () => {
   const ctx = await context("phone");
   const page = await ctx.newPage();
   await login(page, "dr.sara@derma.demo");
-  await page.goto(BASE + "/my-day", { waitUntil: "networkidle" });
+  const TODAY = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+  await page.goto(`${BASE}/my-day?date=${TODAY}`, { waitUntil: "networkidle" });
   await shot(page, "dr-1-myday", { wait: 1000 });
-  await shot(page, "dr-1-myday-full", { full: true });
-  const open = page.getByTestId("open-visit").first();
-  if (await open.isVisible().catch(() => false)) {
-    await open.click();
-    await page.getByTestId("visit-screen").waitFor({ timeout: 20000 });
-    await shot(page, "dr-2-visit", { wait: 800 });
-    if (await page.getByTestId("start-visit").isVisible().catch(() => false)) {
-      await page.getByTestId("start-visit").click();
-      await page.waitForTimeout(3000);
-    }
-    const text = page.getByTestId("scribe-text");
-    if (await text.isVisible().catch(() => false)) {
-      await text.scrollIntoViewIfNeeded();
-      await text.fill(
-        "المريضة جاية لجلسة ليزر إزالة شعر، الجلسة الثالثة. البشرة النوع الثالث، ما فيه تهيج من الجلسة السابقة. سوينا الجلسة على الساقين بنفس الإعدادات. نصحتها بواقي شمس وتبعد عن الشمس أسبوع، والجلسة الجاية بعد ست أسابيع.",
-      );
-      await shot(page, "dr-3-dictation");
-      await page.getByTestId("scribe-write").click();
-      await page.waitForTimeout(15000);
-      await shot(page, "dr-4-draft", { full: true });
-      // The note with the AI draft, on screen.
-      const noteBox = page.locator("textarea").last();
-      await noteBox.evaluate((e) => e.scrollIntoView({ block: "start" }));
-      await page.evaluate(() => window.scrollBy(0, -150));
-      await shot(page, "dr-5-note", { wait: 600 });
-    } else note("scribe not visible");
-  } else note("no visit to open");
+  const start = page.locator("[data-testid=my-day-card][data-status=arrived]").getByTestId("start-visit").first();
+  if (!(await start.count())) return note("no arrived patient for Dr. Sarah");
+  await start.click();
+  await page.getByTestId("visit-workspace").waitFor({ timeout: 20000 });
+  await page.waitForTimeout(1500);
+  const text = page.getByTestId("scribe-text");
+  if (!(await text.isVisible().catch(() => false))) return note("scribe not visible");
+  await text.scrollIntoViewIfNeeded();
+  await text.fill(
+    "المريضة جاية لجلسة ليزر إزالة شعر، الجلسة الثالثة. البشرة النوع الثالث، ما فيه تهيج من الجلسة السابقة. سوينا الجلسة على الساقين بنفس الإعدادات. نصحتها بواقي شمس وتبعد عن الشمس أسبوع، والجلسة الجاية بعد ست أسابيع.",
+  );
+  await shot(page, "dr-3-dictation");
+  await page.getByTestId("scribe-write").click();
+  // Wait for the AI's draft in the note.
+  const noteBox = page.getByTestId("visit-note");
+  for (let i = 0; i < 30; i++) {
+    await page.waitForTimeout(1500);
+    if (((await noteBox.inputValue().catch(() => "")) || "").length > 40) break;
+  }
+  await page.waitForTimeout(800);
+  await noteBox.evaluate((e) => e.scrollIntoView({ block: "start" }));
+  await page.evaluate(() => window.scrollBy(0, -170));
+  await shot(page, "dr-5-note", { wait: 600 });
 });
 
 // ── 6a. Before / after photos: D-0013's laser course, two cheek photos compared ──

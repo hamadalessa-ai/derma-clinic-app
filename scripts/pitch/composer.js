@@ -156,7 +156,7 @@
   const T_OUT = (dur) => dur - 0.5;
 
   // 0. Hook: what the clinic gains, over a quick montage of the app
-  scene(7, (g) => {
+  scene(10, (g) => {
     const t1 = el("div", "center", g, "عيادتك كاملة<br/><span style='color:var(--emerald)'>في تطبيقٍ واحد</span>");
     t1.style.cssText += ";top:300px;font-family:'Noto Naskh Arabic',serif;font-weight:700;font-size:84px;line-height:1.3";
     const ph = device(
@@ -164,23 +164,24 @@
       "phone",
       [
         { img: "site-hero", from: 0 },
-        { img: "book-4-times", from: 1.3 },
-        { img: "wa-2-reminder", from: 2.6 },
-        { img: "dr-5-note", from: 3.9 },
+        { img: "book-4-times", from: 1.8 },
+        { img: "wa-2-reminder", from: 3.6 },
+        { img: "dr-5-note", from: 5.4 },
+        { img: "own-4-report", from: 7.2 },
       ],
-      { top: 620, scale: 0.78 },
+      { top: 860, scale: 0.7 },
     );
     const items = ["غيابٌ أقل عن المواعيد", "استقبالٌ أسرع", "وقتٌ أطول مع المرضى"];
     const cs = items.map((txt) => el("div", "chip", g, `<i></i>${txt}`));
     return (t) => {
       const a = ease(prog(t, 0.1, 0.9));
-      t1.style.opacity = a * (1 - inOut(prog(t, 6.4, 7)));
+      t1.style.opacity = a * (1 - inOut(prog(t, 9.4, 10)));
       t1.style.transform = `translateY(${(1 - a) * 40}px)`;
-      ph.show(t, 0.3, 6.4);
+      ph.show(t, 0.3, 9.4);
       cs.forEach((c, i) => {
-        const p = ease(prog(t, 4.6 + i * 0.45, 5.2 + i * 0.45)) * (1 - inOut(prog(t, 6.4, 7)));
+        const p = ease(prog(t, 3.4 + i * 1.2, 4 + i * 1.2)) * (1 - inOut(prog(t, 9.4, 10)));
         c.style.opacity = p;
-        c.style.top = 1560 + i * 104 + "px";
+        c.style.top = 545 + i * 96 + "px";
         c.style.left = "50%";
         c.style.transform = `translateX(-50%) translateY(${(1 - p) * 30}px)`;
       });
@@ -188,20 +189,20 @@
   });
 
   // 1. The clinic's own website (online presence)
-  scene(10, (g) => {
+  scene(11, (g) => {
     const cap = caption(g, {
       kicker: "١ · حضوركم على الإنترنت",
       title: "موقع <em>عيادات ديرما</em>",
       sub: "الأقسام والعلاجات والأطباء والباقات بأسعارها… وزر «حجز موعد» في كل صفحة",
     });
-    const ph = device(g, "phone", [{ img: "site-full", from: 0, pan: [0, 0.62], panAt: 1.2, panTo: 9.2 }], {
+    const ph = device(g, "phone", [{ img: "site-full", from: 0, pan: [0, 0.62], panAt: 1.2, panTo: 10.2 }], {
       top: 560,
       scale: 0.95,
     });
     return (t) => {
       cap.place();
-      cap.show(t, 0.1, T_OUT(10));
-      ph.show(t, 0.3, T_OUT(10) - 0.1);
+      cap.show(t, 0.1, T_OUT(11));
+      ph.show(t, 0.3, T_OUT(11) - 0.1);
     };
   });
 
@@ -355,7 +356,7 @@
   });
 
   // 7. Owner: the monthly report
-  scene(8, (g) => {
+  scene(9, (g) => {
     const cap = caption(g, {
       kicker: "٧ · الإدارة",
       title: "أرقام العيادة<br/><em>في شاشة واحدة</em>",
@@ -364,13 +365,13 @@
     const lap = device(
       g,
       "laptop",
-      [{ img: "own-4-report", from: 0, zoom: [1, 1.45], focus: [0.5, 0.25], focus2: [0.45, 0.45], zoomTo: 7 }],
+      [{ img: "own-4-report", from: 0, zoom: [1, 1.45], focus: [0.5, 0.25], focus2: [0.45, 0.45], zoomTo: 8 }],
       { top: 760, scale: 1 },
     );
     return (t) => {
       cap.place();
-      cap.show(t, 0.1, T_OUT(8));
-      lap.show(t, 0.3, T_OUT(8) - 0.1);
+      cap.show(t, 0.1, T_OUT(9));
+      lap.show(t, 0.3, T_OUT(9) - 0.1);
     };
   });
 
