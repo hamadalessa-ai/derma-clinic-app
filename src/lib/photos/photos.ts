@@ -26,8 +26,10 @@ export class PhotoError extends Error {
   }
 }
 
-export const isPhotoArea = (a: string): a is PhotoArea => (PHOTO_AREAS as readonly string[]).includes(a);
-export const isPhotoView = (v: string): v is PhotoView => (PHOTO_VIEWS as readonly string[]).includes(v);
+export const isPhotoArea = (a: string): a is PhotoArea =>
+  (PHOTO_AREAS as readonly string[]).includes(a);
+export const isPhotoView = (v: string): v is PhotoView =>
+  (PHOTO_VIEWS as readonly string[]).includes(v);
 
 /** Records a photo already saved in the file store (kind `clinical_photo`). */
 export async function addPhoto(

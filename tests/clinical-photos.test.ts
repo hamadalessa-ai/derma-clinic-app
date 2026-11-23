@@ -59,7 +59,13 @@ describe("adding and comparing photos", () => {
       addPhoto(
         tx,
         nurse,
-        { patientId: patient(FILE), fileId: after.id, area: "cheeks", view: "front", note: "after 3" },
+        {
+          patientId: patient(FILE),
+          fileId: after.id,
+          area: "cheeks",
+          view: "front",
+          note: "after 3",
+        },
         "2036-03-10",
       ),
     );
@@ -75,7 +81,12 @@ describe("adding and comparing photos", () => {
     expect(
       await code(
         withActor(nurse, (tx) =>
-          addPhoto(tx, nurse, { patientId: patient(FILE), fileId: f.id, area: "elbow", view: "front" }),
+          addPhoto(tx, nurse, {
+            patientId: patient(FILE),
+            fileId: f.id,
+            area: "elbow",
+            view: "front",
+          }),
         ),
       ),
     ).toBe("bad_area");
@@ -83,7 +94,12 @@ describe("adding and comparing photos", () => {
     expect(
       await code(
         withActor(nurse, (tx) =>
-          addPhoto(tx, nurse, { patientId: patient(FILE), fileId: sig.id, area: "face", view: "front" }),
+          addPhoto(tx, nurse, {
+            patientId: patient(FILE),
+            fileId: sig.id,
+            area: "face",
+            view: "front",
+          }),
         ),
       ),
     ).toBe("bad_file");
@@ -112,7 +128,12 @@ describe("who sees photos", () => {
     expect(
       await code(
         withActor(admin, (tx) =>
-          addPhoto(tx, admin, { patientId: patient(FILE), fileId: f.id, area: "face", view: "front" }),
+          addPhoto(tx, admin, {
+            patientId: patient(FILE),
+            fileId: f.id,
+            area: "face",
+            view: "front",
+          }),
         ),
       ),
     ).toBe("not_allowed");
@@ -120,7 +141,10 @@ describe("who sees photos", () => {
       await code(withActor(reception, (tx) => photosForPatient(tx, reception, patient("D-0013")))),
     ).toBe("not_allowed");
     const rows = await withActor(reception, (tx) =>
-      tx.select().from(clinicalPhotos).where(eq(clinicalPhotos.patientId, patient("D-0013"))),
+      tx
+        .select()
+        .from(clinicalPhotos)
+        .where(eq(clinicalPhotos.patientId, patient("D-0013"))),
     );
     expect(rows).toHaveLength(0);
   });

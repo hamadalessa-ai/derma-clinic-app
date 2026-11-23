@@ -2824,7 +2824,11 @@ export async function cancelLabRequestAction(input: unknown) {
 }
 
 /** A wrong before / after photo: hidden with a reason (never deleted). */
-export async function voidPhotoAction(input: { patientId: string; photoId: string; reason: string }) {
+export async function voidPhotoAction(input: {
+  patientId: string;
+  photoId: string;
+  reason: string;
+}) {
   return staffAction("photos:manage", async (_ctx, actor) => {
     const v = parse(z.object({ patientId: uuid, photoId: uuid, reason: text(300) }), input);
     await withActor(actor, (tx) => voidPhoto(tx, actor, { photoId: v.photoId, reason: v.reason }));

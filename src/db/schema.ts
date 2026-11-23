@@ -2505,7 +2505,6 @@ export const labRequests = pgTable(
 
 // ─── Clinical photos (before / after) ───────────────────────────────────────
 
-
 /**
  * A clinical photo (before / after): taken by a doctor or nurse, linked to the visit it was taken
  * in. Clinical: doctors, nurses and the clinic admin only (database policy); never patients or
