@@ -24,15 +24,15 @@
     "@hookform/resolvers": "^5.9.2",
     "@react-pdf/renderer": "^4.9.0",
     "bcryptjs": "^3.0.3",
-    "better-auth": "^1.7.25",
+    "better-auth": "^1.7.26",
     "bidi-js": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",
     "fontkit": "^2.0.4",
-    "lucide-react": "^1.74.0",
+    "lucide-react": "^1.76.0",
     "next": "16.4.6",
-    "next-intl": "^4.15.1",
+    "next-intl": "^4.15.3",
     "postgres": "^3.4.9",
     "qrcode": "^1.5.4",
     "react": "19.3.1",
@@ -40,7 +40,7 @@
     "react-hook-form": "^7.92.0",
     "server-only": "^0.0.1",
     "sharp": "0.35.5",
-    "tailwind-merge": "^3.7.0",
+    "tailwind-merge": "^3.7.1",
     "web-push": "^3.6.7",
     "zod": "^4.6.7"
   },
@@ -63,7 +63,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "packageManager": "pnpm@10.28.0"
 }
