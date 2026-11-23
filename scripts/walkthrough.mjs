@@ -244,5 +244,18 @@ await doctorLabs.getByTestId("lab-add-open").click();
 await doctorLabs.getByTestId("lab-add").waitFor();
 await shot(doctorLabs, "labs-add-form");
 
+// ── 9. Before / after photos: D-0013's laser course, then two cheek photos compared ──
+await doctorLabs.goto(`${BASE}/patients/${demoId("derma:patient:D-0013")}?tab=photos`, {
+  waitUntil: "networkidle",
+});
+await doctorLabs.getByTestId("clinical-photos").waitFor({ timeout: 15000 });
+await shot(doctorLabs, "photos-tab", true);
+const thumbs = doctorLabs.getByTestId("photo-thumb");
+await thumbs.nth(2).click();
+await thumbs.nth(3).click();
+await doctorLabs.getByTestId("photo-compare").waitFor();
+await doctorLabs.waitForTimeout(500);
+await shot(doctorLabs, "photos-compare");
+
 await browser.close();
 console.log("walkthrough: OK");

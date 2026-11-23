@@ -5,6 +5,7 @@
  */
 import { createHash } from "node:crypto";
 import { contentFingerprint } from "../lib/consents/fingerprint";
+import { DEMO_SKIN_PHOTOS } from "./demo-photos";
 import { DEMO_SIGNATURE_PNG_BASE64, DEMO_TIME_BLOCKS, generateDemoWeek } from "./demo-week";
 import { CONSENT_TEMPLATES, DERMA, demoId, LAMSA, PACKAGE_TEMPLATES } from "./seed-data";
 import { DEMO_PUSH_HOST } from "../lib/push/payload";
@@ -679,6 +680,7 @@ export function demoSql(): string {
   out.push(phase2bRows(week));
   out.push(membershipRows());
   out.push(labRows());
+  out.push(photoRows());
   out.push(platformBillingRows());
   // Support access given once in each clinic, long expired (so the isolation tests cover the table).
   for (const slug of ["derma", "lamsa"] as const) {
@@ -1656,4 +1658,69 @@ function labRows(): string {
     ]),
   );
   return out.join("\n");
+}
+
+/**
+ * Before / after photos (FAKE: drawn skin textures, not real people): D-0013 on a laser
+ * pigmentation course with Dr. Faisal — cheeks and forehead 12 weeks ago and 3 days ago, the
+ * patches lighter after. Lamsa has one photo (isolation tests).
+ */
+function photoRows(): string {
+  const tenant = demoId("tenant:derma");
+  const lamsa = demoId("tenant:lamsa");
+  const ref = (kind: string, key: string) => demoId(`derma:${kind}:${key}`);
+  const lref = (kind: string, key: string) => demoId(`lamsa:${kind}:${key}`);
+  const day = (n: number) => raw(`${ANCHOR} + ${n}`);
+  const file = (id: string, tenantId: string, key: keyof typeof DEMO_SKIN_PHOTOS, by: string) => {
+    const data = Buffer.from(DEMO_SKIN_PHOTOS[key], "base64");
+    return {
+      id,
+      tenant_id: tenantId,
+      kind: "clinical_photo",
+      mime_type: "image/jpeg",
+      size_bytes: data.length,
+      sha256: createHash("sha256").update(data).digest("hex"),
+      data: raw(`decode('${DEMO_SKIN_PHOTOS[key]}', 'base64')`),
+      created_by: by,
+    };
+  };
+  const shots: { key: keyof typeof DEMO_SKIN_PHOTOS; area: string; ago: number }[] = [
+    { key: "cheek-before", area: "cheeks", ago: 84 },
+    { key: "forehead-before", area: "forehead", ago: 84 },
+    { key: "cheek-after", area: "cheeks", ago: 3 },
+    { key: "forehead-after", area: "forehead", ago: 3 },
+  ];
+  const by = "usr_derma-dr-faisal";
+  return [
+    insert("files", [
+      ...shots.map((p) => file(ref("file", `photo-${p.key}`), tenant, p.key, by)),
+      file(lref("file", "photo-l1"), lamsa, "cheek-before", "usr_lamsa-dr-mona"),
+    ]),
+    insert("clinical_photos", [
+      ...shots.map((p) => ({
+        id: ref("clinical_photo", p.key),
+        tenant_id: tenant,
+        patient_id: ref("patient", "D-0013"),
+        appointment_id: null,
+        file_id: ref("file", `photo-${p.key}`),
+        area: p.area,
+        view: "front",
+        taken_on: day(-p.ago),
+        note: p.ago > 30 ? "Before session 1" : "After session 4",
+        taken_by_user_id: by,
+      })),
+      {
+        id: lref("clinical_photo", "l1"),
+        tenant_id: lamsa,
+        patient_id: lref("patient", "L-0002"),
+        appointment_id: null,
+        file_id: lref("file", "photo-l1"),
+        area: "face",
+        view: "front",
+        taken_on: day(-5),
+        note: null,
+        taken_by_user_id: "usr_lamsa-dr-mona",
+      },
+    ]),
+  ].join("\n");
 }

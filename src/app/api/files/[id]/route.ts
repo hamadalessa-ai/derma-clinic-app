@@ -10,8 +10,8 @@ import { eq } from "drizzle-orm";
 const UUID = /^[0-9a-f-]{36}$/i;
 
 /**
- * A photo a patient sent (WhatsApp; "photos:view": doctors and admins) or a lab's report
- * ("labs:view": doctors and nurses). RLS keeps other clinics out. Never cached; every view is
+ * A photo a patient sent (WhatsApp) or a before / after photo taken in a visit ("photos:view":
+ * doctors, nurses and admins), or a lab's report ("labs:view": doctors and nurses). RLS keeps other clinics out. Never cached; every view is
  * audited.
  */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +26,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const actor = actorOf(ctx);
   const file = await withActor(actor, async (tx) => {
     const [row] = await tx.select({ kind: files.kind }).from(files).where(eq(files.id, id));
-    const ok = (row?.kind === "patient_photo" && photos) || (row?.kind === "lab_report" && labs);
+    const ok =
+      ((row?.kind === "patient_photo" || row?.kind === "clinical_photo") && photos) ||
+      (row?.kind === "lab_report" && labs);
     if (!ok) return null;
     const f = await getFileStore().get({ tx }, id);
     if (f) {

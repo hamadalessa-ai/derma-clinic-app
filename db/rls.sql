@@ -340,6 +340,9 @@ grant select, insert, update on public.membership_plans to clinic_app;
 grant select, insert on public.lab_reports, public.lab_values, public.lab_requests to clinic_app;
 grant update (voided_at, voided_by_user_id, void_reason) on public.lab_reports to clinic_app;
 grant update (done_report_id, done_at, cancelled_at) on public.lab_requests to clinic_app;
+-- Clinical photos: added, never edited; a wrong one is only voided.
+grant select, insert on public.clinical_photos to clinic_app;
+grant update (voided_at, voided_by_user_id, void_reason) on public.clinical_photos to clinic_app;
 grant select, insert on public.patient_memberships to clinic_app;
 grant update (cancelled_at, cancelled_by_user_id) on public.patient_memberships to clinic_app;
 -- Dates: only demo clinics ("Refresh demo week"); a trigger refuses it elsewhere (db/booking.sql).
@@ -375,7 +378,7 @@ begin
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
     'dental_chart_entries', 'dental_plan_items', 'lab_cases',
     'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits',
-    'lab_reports', 'lab_values', 'lab_requests'
+    'lab_reports', 'lab_values', 'lab_requests', 'clinical_photos'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('alter table public.%I force row level security', t);
@@ -500,6 +503,19 @@ create policy lab_requests_clinical_only on public.lab_requests as restrictive
   for all to clinic_app
   using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
   with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+-- Clinical photos (before / after): doctors, nurses and the clinic admin see them; only doctors
+-- and nurses add or void them. Never reception, never patients (patient wall: not listed).
+create policy clinical_photos_clinical_read on public.clinical_photos as restrictive
+  for select to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant')
+         or public.app_has_role('clinic_admin'));
+create policy clinical_photos_clinical_insert on public.clinical_photos as restrictive
+  for insert to clinic_app
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
+create policy clinical_photos_clinical_update on public.clinical_photos as restrictive
+  for update to clinic_app
+  using (public.app_has_role('practitioner') or public.app_has_role('assistant'))
+  with check (public.app_has_role('practitioner') or public.app_has_role('assistant'));
 -- Treatment plan: everyone in the clinic reads it (booking, estimates); doctors and nurses change it.
 create policy dental_plan_items_clinical_insert on public.dental_plan_items as restrictive
   for insert to clinic_app
@@ -622,7 +638,7 @@ begin
     'care_team', 'billing_items', 'visit_charges', 'visit_orders', 'visit_checkouts',
     'dental_chart_entries', 'dental_plan_items', 'lab_cases',
     'membership_plans', 'patient_memberships', 'membership_payments', 'membership_visits',
-    'lab_reports', 'lab_values', 'lab_requests', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
+    'lab_reports', 'lab_values', 'lab_requests', 'clinical_photos', 'users', 'sessions', 'accounts', 'verifications', 'two_factors', 'global_rate_hits'
   ] loop
     rule := case
       when t = 'patients' then 'id = public.app_patient() or guardian_id = public.app_patient()'
