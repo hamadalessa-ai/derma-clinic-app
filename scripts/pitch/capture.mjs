@@ -347,9 +347,14 @@ await scene("doctor", async () => {
   const TODAY = new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
   await page.goto(`${BASE}/my-day?date=${TODAY}`, { waitUntil: "networkidle" });
   await shot(page, "dr-1-myday", { wait: 1000 });
+  // A waiting patient (start the visit), else a visit already in progress (open it).
   const start = page.locator("[data-testid=my-day-card][data-status=arrived]").getByTestId("start-visit").first();
-  if (!(await start.count())) return note("no arrived patient for Dr. Sarah");
-  await start.click();
+  const open = page.locator("[data-testid=my-day-card][data-status=in_session]").getByTestId("open-visit").first();
+  const statuses = await page.getByTestId("my-day-card").evaluateAll((c) => c.map((x) => x.dataset.status));
+  note(`Dr. Sarah's day: ${statuses.join(", ")}`);
+  if (await start.count()) await start.click();
+  else if (await open.count()) await open.click();
+  else return note("no arrived or in-session patient for Dr. Sarah");
   await page.getByTestId("visit-workspace").waitFor({ timeout: 20000 });
   await page.waitForTimeout(1500);
   const text = page.getByTestId("scribe-text");
