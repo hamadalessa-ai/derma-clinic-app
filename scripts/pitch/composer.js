@@ -167,7 +167,7 @@
         { img: "book-4-times", from: 1.8 },
         { img: "wa-2-reminder", from: 3.6 },
         { img: "dr-5-note", from: 5.4 },
-        { img: "own-4-report", from: 7.2 },
+        { img: "book-5-done", from: 7.2 },
       ],
       { top: 860, scale: 0.7 },
     );

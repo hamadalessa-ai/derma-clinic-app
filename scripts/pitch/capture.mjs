@@ -365,8 +365,10 @@ await scene("doctor", async () => {
   if (!(await text.isVisible().catch(() => false))) return note("scribe not visible");
   await text.scrollIntoViewIfNeeded();
   // What the doctor says matches the booked service (the AI checks they agree).
-  const header = await page.getByTestId("visit-screen").innerText().catch(() => "");
-  const said = /بلازما|PRP/.test(header)
+  const header = (await page.getByTestId("visit-screen").innerText().catch(() => "")).slice(0, 300);
+  const said = /فيلر/.test(header)
+    ? "المريض جاي لحقن فيلر. ما فيه حساسية سابقة، وشرحنا له النتيجة المتوقعة. حقنّا واحد مل بالتساوي. نصحناه بكمادات باردة اليوم، والمتابعة بعد أسبوعين."
+    : /بلازما|PRP/.test(header)
     ? "المريض جاي لجلسة بلازما للشعر، الجلسة الثانية. فروة الرأس سليمة وما فيه التهاب. سوينا الحقن على المقدمة ومنطقة التاج. نصحته ما يغسل شعره يوم كامل، والجلسة الجاية بعد شهر."
     : /ليزر/.test(header)
       ? "المريضة جاية لجلسة ليزر، الجلسة الثالثة. البشرة النوع الثالث، ما فيه تهيج من الجلسة السابقة. سوينا الجلسة بنفس الإعدادات. نصحتها بواقي شمس، والجلسة الجاية بعد ست أسابيع."
