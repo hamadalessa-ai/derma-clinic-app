@@ -269,7 +269,11 @@
     "labs_voided": "This report was voided.",
     "labs_bad_file": "The attached report was not found. Attach it again.",
     "dental_empty": "Nothing to save.",
-    "ai_not_reviewed": "This note has an AI draft: tick “I’ve checked the AI draft” first."
+    "ai_not_reviewed": "This note has an AI draft: tick “I’ve checked the AI draft” first.",
+    "photos_not_found": "Not found, or already changed.",
+    "photos_empty": "Write the reason.",
+    "photos_bad_file": "Choose a photo (JPEG, PNG or HEIC, up to 10 MB).",
+    "photos_bad_area": "Choose the area and the angle."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -481,7 +485,8 @@
     "relationAr": "Relationship",
     "import": "Import",
     "dental": "Dental",
-    "labs": "Labs"
+    "labs": "Labs",
+    "photos": "Photos"
   },
   "packages": {
     "title": "Packages",
@@ -2196,5 +2201,56 @@
     "inMonths": "{n, plural, =1 {1 month} other {# months}}",
     "request": "Request",
     "requested": "Repeat test requested."
+  },
+  "photos": {
+    "title": "Before & after photos",
+    "hint": "Only doctors, nurses and the clinic admin see these photos.",
+    "add": "Add photo",
+    "take": "Take photo",
+    "area": "Area",
+    "view": "Angle",
+    "note": "Note (optional)",
+    "save": "Save photo",
+    "uploading": "Saving…",
+    "saved": "Photo saved.",
+    "uploadFailed": "The photo could not be saved. Try again.",
+    "none": "No photos yet.",
+    "compare": "Compare",
+    "compareHint": "Tap two photos of the same area to see them side by side.",
+    "before": "Before",
+    "after": "After",
+    "closeCompare": "Close",
+    "photos": "{n, plural, one {# photo} other {# photos}}",
+    "void": "Hide photo",
+    "voidReason": "Why hide it? (e.g. wrong patient)",
+    "voidConfirm": "Hide",
+    "voided": "Photo hidden.",
+    "takenBy": "by {name}",
+    "thisVisit": "This visit",
+    "more": "All photos",
+    "areas": {
+      "face": "Face",
+      "forehead": "Forehead",
+      "cheeks": "Cheeks",
+      "nose": "Nose",
+      "chin": "Chin",
+      "eyes": "Around the eyes",
+      "lips": "Lips",
+      "neck": "Neck",
+      "scalp": "Scalp",
+      "chest": "Chest",
+      "back": "Back",
+      "abdomen": "Abdomen",
+      "arms": "Arms",
+      "hands": "Hands",
+      "legs": "Legs",
+      "other": "Other"
+    },
+    "views": {
+      "front": "Front",
+      "left": "Left side",
+      "right": "Right side",
+      "close_up": "Close-up"
+    }
   }
 }

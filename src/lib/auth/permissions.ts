@@ -103,6 +103,8 @@ export const PERMISSIONS = {
   "concerns:handle": ["clinic_admin", "practitioner", "receptionist"],
   /** Photos patients send (medical): doctors and admins. Reception sees "photo received". */
   "photos:view": ["clinic_admin", "practitioner", "assistant"],
+  /** Take before / after photos in a visit, or void a wrong one: doctors and nurses. */
+  "photos:manage": ["practitioner", "assistant"],
 
   // ── Video consultations ──
   /** Join a video consultation (the appointment's own doctor only — checked in lib/video). */

@@ -83,6 +83,7 @@ import {
 import { checkOut } from "@/lib/visits/checkout";
 import { deskSearch, walkIn } from "@/lib/front-desk/desk";
 import { recordTeeth, recordTooth } from "@/lib/dental/chart";
+import { voidPhoto } from "@/lib/photos/photos";
 import { addPlanItem, cancelPlanItem, markPlanDone } from "@/lib/dental/plan";
 import { createLabCase, LAB_STATUSES, LAB_WORK, setLabStatus } from "@/lib/dental/lab";
 import { TOOTH_CONDITIONS } from "@/lib/dental/teeth";
@@ -2818,6 +2819,16 @@ export async function cancelLabRequestAction(input: unknown) {
     );
     await withActor(actor, (tx) => cancelRequest(tx, actor, v.requestId));
     dentalChanged(v.patientId, v.appointmentId);
+    return null;
+  });
+}
+
+/** A wrong before / after photo: hidden with a reason (never deleted). */
+export async function voidPhotoAction(input: { patientId: string; photoId: string; reason: string }) {
+  return staffAction("photos:manage", async (_ctx, actor) => {
+    const v = parse(z.object({ patientId: uuid, photoId: uuid, reason: text(300) }), input);
+    await withActor(actor, (tx) => voidPhoto(tx, actor, { photoId: v.photoId, reason: v.reason }));
+    revalidatePath(`/patients/${v.patientId}`);
     return null;
   });
 }

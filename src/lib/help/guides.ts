@@ -278,6 +278,25 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       ],
     },
     {
+      id: "photos",
+      titleAr: "صور قبل وبعد",
+      titleEn: "Before & after photos",
+      steps: [
+        s(
+          "في شاشة الزيارة: «التقاط صورة»، اختر المنطقة (مثل الخدّين) والزاوية، ثم «حفظ الصورة». تُربط الصورة بالزيارة.",
+          "On the visit screen: Take photo, choose the area (e.g. Cheeks) and the angle, then Save photo. The photo is linked to the visit.",
+        ),
+        s(
+          "ملف المريض ← «الصور»: الصور مرتبة حسب المنطقة والتاريخ. اضغط صورتين لنفس المنطقة لمقارنتهما جنبًا إلى جنب (قبل / بعد).",
+          "Patient file → Photos: grouped by area and date. Tap two photos of the same area to compare them side by side (before / after).",
+        ),
+        s(
+          "الصورة الخاطئة تُخفى مع ذكر السبب ولا تُحذف. يراها الأطباء والممرضات ومدير العيادة فقط، وكل فتح لها يُسجَّل.",
+          "A wrong photo is hidden with a reason, never deleted. Only doctors, nurses and the clinic admin see photos, and every view is logged.",
+        ),
+      ],
+    },
+    {
       id: "labs",
       titleAr: "نتائج التحاليل",
       titleEn: "Lab results",

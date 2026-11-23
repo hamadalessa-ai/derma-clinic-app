@@ -26,6 +26,7 @@ import { doctorOf } from "@/lib/care-team/care-team";
 import { mayWorkOnVisit, visitExtras } from "@/lib/visits/visit";
 import { DentalSection } from "@/components/clinic/dental-section";
 import { LabSection } from "@/components/clinic/lab-section";
+import { PhotoSection } from "@/components/clinic/photo-section";
 import { VisitExtras, VisitWorkspace } from "@/components/clinic/visit-workspace";
 import { getSettings } from "@/lib/booking/engine";
 import type { AppointmentStatus } from "@/lib/booking/status";
@@ -420,6 +421,15 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
               ))}
             </CardContent>
           </Card>
+          {/* Before / after photos for this visit (doctors and nurses take them here). */}
+          {can(ctx.roles, "photos:view") && (
+            <PhotoSection
+              actor={actor}
+              patientId={visit.patientId}
+              appointmentId={visit.appointmentId}
+              compact
+            />
+          )}
           {/* Lab results beside the note, not above it: the note is the visit's main work. */}
           {can(ctx.roles, "labs:view") && (
             <LabSection

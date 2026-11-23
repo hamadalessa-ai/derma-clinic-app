@@ -178,6 +178,12 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   edited, only voided with a reason; `lab_values` append-only, flagged low / normal / high / abnormal by `flagOf` against
   the range written with them (`LAB_PRESETS` only suggest units and ranges). `lab_requests` = "repeat this test by …";
   entering a result with the same test name marks it done. Never put result values in audit metadata.
+- Before / after photos (`src/lib/photos/photos.ts`, UI `clinical-photos.tsx` via `PhotoSection`: patient file → Photos
+  tab, compact card on the visit screen): `clinical_photos` (area + angle from `src/lib/photos/areas.ts`, taken_on,
+  optional visit) with the image in the file store (`kind = clinical_photo`, uploaded through `/api/photos/upload`,
+  served + audited by `/api/files/<id>`). `photos:view` = doctors, nurses, clinic admin; `photos:manage` (add / void)
+  = doctors and nurses; restrictive database policies `clinical_photos_clinical_*`; never reception or patients. Never
+  edited or deleted, only voided with a reason. Demo photos are DRAWN textures (`src/db/demo-photos.ts`), never real people.
 - Help centre (`/help`, permission `help:view`, content `src/lib/help/guides.ts`): short step guides per role in Arabic
   and English. When a screen, tab or button name changes, update the guide (a test checks the links exist).
 - Working hours: ONE place decides when a doctor works on a date (`src/lib/booking/hours.ts`): the weekly

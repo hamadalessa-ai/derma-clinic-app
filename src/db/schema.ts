@@ -8,6 +8,7 @@
  * - Row-Level Security policies live in db/rls.sql (Drizzle cannot express FORCE RLS).
  */
 import { sql } from "drizzle-orm";
+import { PHOTO_AREAS, PHOTO_VIEWS } from "../lib/photos/areas";
 import {
   boolean,
   check,
@@ -681,6 +682,7 @@ export const TENANT_TABLES = [
   "lab_reports",
   "lab_values",
   "lab_requests",
+  "clinical_photos",
 ] as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2497,6 +2499,62 @@ export const labRequests = pgTable(
       name: "lab_requests_report_fk",
       columns: [t.tenantId, t.doneReportId],
       foreignColumns: [labReports.tenantId, labReports.id],
+    }),
+  ],
+);
+
+// ─── Clinical photos (before / after) ───────────────────────────────────────
+
+
+/**
+ * A clinical photo (before / after): taken by a doctor or nurse, linked to the visit it was taken
+ * in. Clinical: doctors, nurses and the clinic admin only (database policy); never patients or
+ * reception. Never edited or deleted — a wrong one is voided with a reason.
+ */
+export const clinicalPhotos = pgTable(
+  "clinical_photos",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    patientId: uuid("patient_id").notNull(),
+    appointmentId: uuid("appointment_id"),
+    fileId: uuid("file_id").notNull(),
+    area: text("area").notNull(),
+    view: text("view").notNull(),
+    takenOn: date("taken_on").notNull(),
+    note: text("note"),
+    takenByUserId: text("taken_by_user_id").notNull(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedByUserId: text("voided_by_user_id"),
+    voidReason: text("void_reason"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("clinical_photos_tenant_id_id_key").on(t.tenantId, t.id),
+    index("clinical_photos_patient_idx").on(t.tenantId, t.patientId, t.area, t.takenOn),
+    check("clinical_photos_void_reason", sql`(${t.voidedAt} is null) = (${t.voidReason} is null)`),
+    check(
+      "clinical_photos_area",
+      sql.raw(`area in (${PHOTO_AREAS.map((a) => `'${a}'`).join(", ")})`),
+    ),
+    check(
+      "clinical_photos_view",
+      sql.raw(`view in (${PHOTO_VIEWS.map((v) => `'${v}'`).join(", ")})`),
+    ),
+    foreignKey({
+      name: "clinical_photos_patient_fk",
+      columns: [t.tenantId, t.patientId],
+      foreignColumns: [patients.tenantId, patients.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "clinical_photos_appointment_fk",
+      columns: [t.tenantId, t.appointmentId],
+      foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+    foreignKey({
+      name: "clinical_photos_file_fk",
+      columns: [t.tenantId, t.fileId],
+      foreignColumns: [files.tenantId, files.id],
     }),
   ],
 );

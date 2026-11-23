@@ -29,6 +29,8 @@ const MAX_BYTES: Record<string, number> = {
   patient_photo: 10 * 1024 * 1024,
   // A lab's report: a PDF, or a phone photo of the paper (shrunk like a patient photo).
   lab_report: 4 * 1024 * 1024,
+  // Before / after photos taken in a visit (phone or tablet camera).
+  clinical_photo: 10 * 1024 * 1024,
 };
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/heic"]);
@@ -39,7 +41,7 @@ const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/hei
  */
 export async function compressImage(data: Buffer, mimeType: string, kind = "signature") {
   if (!IMAGE_TYPES.has(mimeType)) return { data, mimeType };
-  if (kind === "patient_photo" || kind === "lab_report") {
+  if (kind === "patient_photo" || kind === "lab_report" || kind === "clinical_photo") {
     const out = await sharp(data)
       .rotate()
       .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
