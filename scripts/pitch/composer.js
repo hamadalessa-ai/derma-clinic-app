@@ -155,54 +155,63 @@
   }
   const T_OUT = (dur) => dur - 0.5;
 
-  // 0. Hook: what the clinic gains, over a quick montage of the app
-  scene(10, (g) => {
+  // 0. Hook: the promise (logo + one line, centred like an opening card), then the three
+  //    gains, each with the screen that delivers it. Timed to the voice.
+  scene(11.5, (g) => {
+    const logo = el("img", "logo", g);
+    logo.src = src("logo.png");
+    logo.style.top = "620px";
+    logo.style.height = "150px";
     const t1 = el("div", "center", g, "عيادتك كاملة<br/><span style='color:var(--emerald)'>في تطبيقٍ واحد</span>");
-    t1.style.cssText += ";top:300px;font-family:'Noto Naskh Arabic',serif;font-weight:700;font-size:84px;line-height:1.3";
+    t1.style.cssText += ";top:840px;font-family:'Noto Naskh Arabic',serif;font-weight:700;font-size:92px;line-height:1.3";
+    const gains = [
+      { kicker: "مواعيد", title: "مواعيد <em>ما تضيع</em>", at: 4.3 },
+      { kicker: "استقبال", title: "استقبالٌ <em>أسرع</em>", at: 6.6 },
+      { kicker: "وقت", title: "وقتٌ أكثر <em>مع مرضاك</em>", at: 8.6 },
+    ].map((x) => ({ ...x, cap: caption(g, { kicker: "", title: x.title }) }));
     const ph = device(
       g,
       "phone",
       [
-        { img: "site-hero", from: 0 },
-        { img: "book-4-times", from: 1.8 },
-        { img: "wa-2-reminder", from: 3.6 },
-        { img: "dr-5-note", from: 5.4 },
-        { img: "book-5-done", from: 7.2 },
+        { img: "wa-2-reminder", from: 4.3 },
+        { img: "book-5-done", from: 6.6 },
+        { img: "dr-5-note", from: 8.6 },
       ],
-      { top: 860, scale: 0.7 },
+      { top: 600, scale: 0.92 },
     );
-    const items = ["غيابٌ أقل عن المواعيد", "استقبالٌ أسرع", "وقتٌ أطول مع المرضى"];
-    const cs = items.map((txt) => el("div", "chip", g, `<i></i>${txt}`));
     return (t) => {
-      const a = ease(prog(t, 0.1, 0.9));
-      t1.style.opacity = a * (1 - inOut(prog(t, 9.4, 10)));
-      t1.style.transform = `translateY(${(1 - a) * 40}px)`;
-      ph.show(t, 0.3, 9.4);
-      cs.forEach((c, i) => {
-        const p = ease(prog(t, 3.4 + i * 1.2, 4 + i * 1.2)) * (1 - inOut(prog(t, 9.4, 10)));
-        c.style.opacity = p;
-        c.style.top = 545 + i * 96 + "px";
-        c.style.left = "50%";
-        c.style.transform = `translateX(-50%) translateY(${(1 - p) * 30}px)`;
+      const a = ease(prog(t, 0.15, 1));
+      const out = inOut(prog(t, 3.6, 4.2));
+      logo.style.opacity = a * (1 - out);
+      logo.style.transform = `translateX(-50%) scale(${0.9 + 0.1 * a})`;
+      const b = ease(prog(t, 0.7, 1.6));
+      t1.style.opacity = b * (1 - out);
+      t1.style.transform = `translateY(${(1 - b) * 40 - out * 40}px)`;
+      gains.forEach((x, i) => {
+        x.cap.place();
+        const end = i < gains.length - 1 ? gains[i + 1].at - 0.3 : 10.9;
+        if (t < x.at - 0.2 || t > end + 0.5) x.cap.els.forEach((e) => (e.style.opacity = 0));
+        else x.cap.show(t, x.at, end);
       });
+      ph.show(t, 4.1, 10.9);
     };
   });
 
   // 1. The clinic's own website (online presence)
-  scene(11, (g) => {
+  scene(13, (g) => {
     const cap = caption(g, {
       kicker: "١ · حضوركم على الإنترنت",
       title: "موقع <em>عيادات ديرما</em>",
-      sub: "الأقسام والعلاجات والأطباء والباقات بأسعارها… وزر «حجز موعد» في كل صفحة",
+      sub: "أقسامكم، أطباؤكم، أسعاركم… وزر الحجز في كل صفحة",
     });
-    const ph = device(g, "phone", [{ img: "site-full", from: 0, pan: [0, 0.62], panAt: 1.2, panTo: 10.2 }], {
+    const ph = device(g, "phone", [{ img: "site-full", from: 0, pan: [0, 0.62], panAt: 1.2, panTo: 12.2 }], {
       top: 560,
       scale: 0.95,
     });
     return (t) => {
       cap.place();
-      cap.show(t, 0.1, T_OUT(11));
-      ph.show(t, 0.3, T_OUT(11) - 0.1);
+      cap.show(t, 0.1, T_OUT(13));
+      ph.show(t, 0.3, T_OUT(13) - 0.1);
     };
   });
 
@@ -211,7 +220,7 @@
     const cap = caption(g, {
       kicker: "٢ · الحجز",
       title: "من الموقع…<br/><em>إلى موعدٍ مؤكد</em>",
-      sub: "العلاج، الطبيب، الوقت… ثم رقم الجوال ورمز التحقق",
+      sub: "العلاج، الطبيب، الوقت… وتأكيد برقم الجوال",
     });
     const ph = device(
       g,
@@ -239,7 +248,7 @@
     const cap = caption(g, {
       kicker: "٣ · واتساب",
       title: "تأكيدٌ وتذكير<br/><em>تلقائيًا على واتساب</em>",
-      sub: "مع الموقع وتعليمات الجلسة… فلا يُنسى الموعد",
+      sub: "التأكيد والتذكير يصلان وحدهما",
     });
     const ph = device(
       g,
@@ -262,7 +271,7 @@
     const cap = caption(g, {
       kicker: "٤ · الاستشارة عن بُعد",
       title: "استشارة بالفيديو<br/><em>برابطٍ آمن</em>",
-      sub: "تُحجز من الموقع، ويصل الرابط على واتساب، والطبيب ينضم من شاشة الزيارة",
+      sub: "الرابط على واتساب، والطبيب من شاشة الزيارة",
     });
     const ph = device(
       g,
@@ -287,7 +296,7 @@
     const cap = caption(g, {
       kicker: "٥ · الاستقبال",
       title: "استقبالٌ <em>أسرع</em>",
-      sub: "بحث برقم الجوال، تسجيل حضور بضغطة، وكل مريض في مكانه حتى المحاسبة",
+      sub: "بحث بالجوال، حضور بضغطة، ومحاسبة سريعة",
     });
     const lap = device(
       g,
@@ -297,7 +306,7 @@
         { img: "day-2-board", from: 4, zoom: [1, 1.35], focus: [0.5, 0.45], focus2: [0.6, 0.5], zoomTo: 7.8 },
         { img: "day-3-checkout", from: 8, zoom: [1.1, 1.4], focus: [0.45, 0.35], focus2: [0.55, 0.45], zoomTo: 11.5 },
       ],
-      { top: 700, scale: 1 },
+      { top: 640, scale: 1.08 },
     );
     const items = ["الانتظار الطويل يظهر فورًا", "المحاسبة برقم فاتورة نظامكم"];
     const cs = items.map((txt) => el("div", "chip", g, `<i></i>${txt}`));
@@ -308,7 +317,7 @@
       cs.forEach((c, i) => {
         const p = ease(prog(t, 4.4 + i * 4, 5.1 + i * 4)) * (1 - inOut(prog(t, 11.3, 11.8)));
         c.style.opacity = p;
-        c.style.top = 1460 + i * 110 + "px";
+        c.style.top = 1430 + i * 110 + "px";
         c.style.right = "90px";
         c.style.transform = `translateX(${(1 - p) * -60}px)`;
       });
@@ -320,12 +329,12 @@
     const cap1 = caption(g, {
       kicker: "٦ · الطبيب",
       title: "الطبيب يتكلم…<br/><em>والملاحظة تُكتب</em>",
-      sub: "مسودة بالذكاء الاصطناعي، يراجعها الطبيب ويعتمدها بنفسه",
+      sub: "مسودة ذكية يراجعها الطبيب ويعتمدها",
     });
     const cap2 = caption(g, {
       kicker: "٦ · الطبيب",
       title: "صور قبل وبعد<br/><em>جنبًا إلى جنب</em>",
-      sub: "لكل منطقة وتاريخ… يراها الطبيب والممرضة فقط",
+      sub: "لكل منطقة وتاريخ، بخصوصية تامة",
     });
     const ph = device(
       g,
@@ -343,7 +352,7 @@
         { img: "ph-1-tab", from: 0, zoom: [1, 1.3], focus: [0.45, 0.35], zoomTo: 2.8 },
         { img: "ph-2-compare", from: 2.8, zoom: [1.05, 1.25], focus: [0.5, 0.5], zoomTo: 6 },
       ],
-      { top: 760, scale: 1 },
+      { top: 640, scale: 1.08 },
     );
     return (t) => {
       cap1.place();
@@ -360,13 +369,13 @@
     const cap = caption(g, {
       kicker: "٧ · الإدارة",
       title: "أرقام العيادة<br/><em>في شاشة واحدة</em>",
-      sub: "الحجوزات والإيرادات الفعلية لكل طبيب وخدمة وفرع",
+      sub: "الحجوزات والإيرادات لكل طبيب وفرع",
     });
     const lap = device(
       g,
       "laptop",
       [{ img: "own-4-report", from: 0, zoom: [1, 1.45], focus: [0.5, 0.25], focus2: [0.45, 0.45], zoomTo: 8 }],
-      { top: 760, scale: 1 },
+      { top: 640, scale: 1.08 },
     );
     return (t) => {
       cap.place();

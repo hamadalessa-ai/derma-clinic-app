@@ -1,8 +1,10 @@
 """Sound for the pitch video: two versions of pitch/out/derma-pitch.mp4.
 
   derma-pitch-music.mp4  the composed music only (scripts/pitch/music.m4a)
-  derma-pitch-voice.mp4  an Arabic voiceover (scripts/pitch/voiceover.json, one line per scene,
-                         spoken by Piper's Arabic voice) over the music, turned down under the voice
+  derma-pitch-voice.mp4  an Arabic voiceover (scripts/pitch/voiceover.json, one line per scene)
+                         over the music, turned down under the voice. The lines recorded with
+                         ElevenLabs (voice/line-N.mp3, Saudi voice "Mansour") are used when present,
+                         else Piper's Arabic voice reads them.
 
 Each line starts 0.4 s into its scene and is sped up a little (at most 1.18x) if it would run
 past the scene. The video picture is copied, never encoded again.
@@ -41,10 +43,18 @@ inputs, filters, start = [], [], 0.0
 for i, (dur, text) in enumerate(zip(durs, lines)):
     if text:
         raw = tmp / f"line-{i}.wav"
-        subprocess.run(["piper", "-m", MODEL, "-f", str(raw), "--sentence_silence", "0.25"],
-                       input=text.encode(), check=True)
+        recorded = Path(f"voice/line-{i}.mp3")
+        if recorded.exists():
+            # Trim the silence at both ends of the recording.
+            run("ffmpeg", "-y", "-loglevel", "error", "-i", str(recorded), "-af",
+                "silenceremove=start_periods=1:start_threshold=-45dB,areverse,"
+                "silenceremove=start_periods=1:start_threshold=-45dB,areverse",
+                "-ar", "44100", str(raw))
+        else:
+            subprocess.run(["piper", "-m", MODEL, "-f", str(raw), "--sentence_silence", "0.25"],
+                           input=text.encode(), check=True)
         room = dur - 0.6
-        speed = min(1.18, max(1.0, length(raw) / room))
+        speed = min(1.12, max(1.0, length(raw) / room))
         print(f"scene {i}: {length(raw):.1f}s of speech in {dur}s (speed {speed:.2f})")
         inputs += ["-i", str(raw)]
         n = len(inputs) // 2 - 1
