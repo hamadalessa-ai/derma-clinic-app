@@ -355,6 +355,10 @@ await scene("doctor", async () => {
   if (await start.count()) await start.click();
   else if (await open.count()) await open.click();
   else return note("no arrived or in-session patient for Dr. Sarah");
+  await page.getByTestId("visit-screen").waitFor({ timeout: 20000 });
+  // A visit without its note yet: "Prepare the note" opens it.
+  const prepare = page.getByTestId("visit-screen").getByTestId("start-visit");
+  if (await prepare.isVisible().catch(() => false)) await prepare.click();
   await page.getByTestId("visit-workspace").waitFor({ timeout: 20000 });
   await page.waitForTimeout(1500);
   const text = page.getByTestId("scribe-text");
