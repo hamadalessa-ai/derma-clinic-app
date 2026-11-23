@@ -1,0 +1,69 @@
+"""Sound for the pitch video: two versions of pitch/out/derma-pitch.mp4.
+
+  derma-pitch-music.mp4  the composed music only (scripts/pitch/music.m4a)
+  derma-pitch-voice.mp4  an Arabic voiceover (scripts/pitch/voiceover.json, one line per scene,
+                         spoken by Piper's Arabic voice) over the music, turned down under the voice
+
+Each line starts 0.4 s into its scene and is sped up a little (at most 1.18x) if it would run
+past the scene. The video picture is copied, never encoded again.
+"""
+import json, subprocess, sys, wave
+from pathlib import Path
+
+OUT = Path("pitch/out")
+VIDEO = OUT / "derma-pitch.mp4"
+MUSIC = Path("scripts/pitch/music.m4a")
+MODEL = sys.argv[1] if len(sys.argv) > 1 else "voice/ar_JO-kareem-medium.onnx"
+durs = json.loads((OUT / "scenes.json").read_text())
+lines = json.loads(Path("scripts/pitch/voiceover.json").read_text())
+total = sum(durs)
+tmp = OUT / "voice"
+tmp.mkdir(parents=True, exist_ok=True)
+
+
+def run(*args):
+    subprocess.run(args, check=True)
+
+
+def length(path):
+    with wave.open(str(path)) as w:
+        return w.getnframes() / w.getframerate()
+
+
+# Music only.
+run("ffmpeg", "-y", "-loglevel", "error", "-i", str(VIDEO), "-i", str(MUSIC),
+    "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
+    "-af", f"afade=t=out:st={total - 2.5}:d=2.5", "-t", str(total),
+    "-movflags", "+faststart", str(OUT / "derma-pitch-music.mp4"))
+
+# Voice lines, placed at their scenes.
+inputs, filters, start = [], [], 0.0
+for i, (dur, text) in enumerate(zip(durs, lines)):
+    if text:
+        raw = tmp / f"line-{i}.wav"
+        subprocess.run(["piper", "-m", MODEL, "-f", str(raw), "--sentence_silence", "0.25"],
+                       input=text.encode(), check=True)
+        room = dur - 0.6
+        speed = min(1.18, max(1.0, length(raw) / room))
+        print(f"scene {i}: {length(raw):.1f}s of speech in {dur}s (speed {speed:.2f})")
+        inputs += ["-i", str(raw)]
+        n = len(inputs) // 2 - 1
+        delay = int((start + 0.4) * 1000)
+        filters.append(f"[{n}:a]atempo={speed:.3f},aresample=44100,adelay={delay}|{delay}[v{n}]")
+    start += dur
+n = len(inputs) // 2
+mix = "".join(f"[v{i}]" for i in range(n))
+filters.append(f"{mix}amix=inputs={n}:normalize=0,volume=1.6,apad=whole_dur={total}[voice]")
+run("ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filters),
+    "-map", "[voice]", "-t", str(total), "-ac", "2", str(tmp / "voice.wav"))
+
+# Voice over the music (music turned down while the voice speaks).
+run("ffmpeg", "-y", "-loglevel", "error", "-i", str(VIDEO), "-i", str(tmp / "voice.wav"), "-i", str(MUSIC),
+    "-filter_complex",
+    f"[2:a]volume=0.55,afade=t=out:st={total - 2.5}:d=2.5[m];"
+    "[1:a]asplit=2[sc][vo];"
+    "[m][sc]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=400[duck];"
+    "[duck][vo]amix=inputs=2:normalize=0[a]",
+    "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-t", str(total),
+    "-movflags", "+faststart", str(OUT / "derma-pitch-voice.mp4"))
+print("sound ready")
