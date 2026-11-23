@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import type { Locale } from "@/i18n/config";
 import { pick } from "@/lib/brand";
 import { PHOTO_AREAS, PHOTO_VIEWS } from "@/lib/photos/areas";
 import type { PhotoItem } from "@/lib/photos/photos";
@@ -44,7 +45,7 @@ export function ClinicalPhotos({
   compact?: boolean;
 }) {
   const t = useTranslations("photos");
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
   const [adding, setAdding] = useState(false);
   const [picked, setPicked] = useState<PhotoItem[]>([]);
   const [comparing, setComparing] = useState(false);
