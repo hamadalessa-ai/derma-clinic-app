@@ -49,23 +49,40 @@ async function say(phone: string, text: string): Promise<Turn> {
   const { client, turn } = recorder();
   await handleInbound(
     derma,
-    [{ type: "message", eventId: `live-${Date.now()}-${n++}`, from: phone, kind: "text", text, profileName: "Test" }],
+    [
+      {
+        type: "message",
+        eventId: `live-${Date.now()}-${n++}`,
+        from: phone,
+        kind: "text",
+        text,
+        profileName: "Test",
+      },
+    ],
     { env: ENV, now: NOW, ai: client, notify: async () => {} },
   );
-  console.log(`\n> ${text}\n  tools: ${turn.tools.join(", ") || "—"}\n  reply: ${turn.reply.trim()}`);
+  console.log(
+    `\n> ${text}\n  tools: ${turn.tools.join(", ") || "—"}\n  reply: ${turn.reply.trim()}`,
+  );
   return turn;
 }
 
 const arabic = (s: string) => /[؀-ۿ]/.test(s);
 const bookingsOf = async (phone: string) => {
-  const [c] = await system((tx) => tx.select().from(conversations).where(eq(conversations.phone, phone)));
+  const [c] = await system((tx) =>
+    tx.select().from(conversations).where(eq(conversations.phone, phone)),
+  );
   if (!c?.patientId) return 0;
-  return (await system((tx) => tx.select().from(appointments).where(eq(appointments.patientId, c.patientId!))))
-    .length;
+  return (
+    await system((tx) =>
+      tx.select().from(appointments).where(eq(appointments.patientId, c.patientId!)),
+    )
+  ).length;
 };
 
 beforeAll(async () => {
-  if (!real) throw new Error("ANTHROPIC_API_KEY is not set: add it in GitHub → Settings → Secrets.");
+  if (!real)
+    throw new Error("ANTHROPIC_API_KEY is not set: add it in GitHub → Settings → Secrets.");
   await system((tx) =>
     tx
       .update(tenantSettings)
@@ -107,7 +124,10 @@ describe("never books before a clear yes", () => {
   });
   it("English booking request only proposes", async () => {
     const phone = newPhone();
-    const t = await say(phone, "Book me a laser hair removal session next week please. I'm Mona Test, female.");
+    const t = await say(
+      phone,
+      "Book me a laser hair removal session next week please. I'm Mona Test, female.",
+    );
     expect(t.tools).not.toContain("confirm_action");
     expect(await bookingsOf(phone)).toBe(0);
   });
