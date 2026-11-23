@@ -3,7 +3,7 @@
   derma-pitch-music.mp4  the composed music only (scripts/pitch/music.m4a)
   derma-pitch-voice.mp4  an Arabic voiceover (scripts/pitch/voiceover.json, one line per scene)
                          over the music, turned down under the voice. The lines recorded with
-                         ElevenLabs (voice/line-N.mp3, Saudi voice "Mansour") are used when present,
+                         ElevenLabs (voice/line-N.mp3, Saudi voice "Afnan – Natural & Expressive") are used when present,
                          else Piper's Arabic voice reads them.
 
 Each line starts 0.4 s into its scene and is sped up a little (at most 1.18x) if it would run

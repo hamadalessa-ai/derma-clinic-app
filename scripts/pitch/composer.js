@@ -157,7 +157,7 @@
 
   // 0. Hook: the promise (logo + one line, centred like an opening card), then the three
   //    gains, each with the screen that delivers it. Timed to the voice.
-  scene(11.5, (g) => {
+  scene(10, (g) => {
     const logo = el("img", "logo", g);
     logo.src = src("logo.png");
     logo.style.top = "620px";
@@ -165,23 +165,23 @@
     const t1 = el("div", "center", g, "عيادتك كاملة<br/><span style='color:var(--emerald)'>في تطبيقٍ واحد</span>");
     t1.style.cssText += ";top:840px;font-family:'Noto Naskh Arabic',serif;font-weight:700;font-size:92px;line-height:1.3";
     const gains = [
-      { kicker: "مواعيد", title: "مواعيد <em>ما تضيع</em>", at: 4.3 },
-      { kicker: "استقبال", title: "استقبالٌ <em>أسرع</em>", at: 6.6 },
-      { kicker: "وقت", title: "وقتٌ أكثر <em>مع مرضاك</em>", at: 8.6 },
+      { kicker: "مواعيد", title: "مواعيد <em>ما تضيع</em>", at: 3.3 },
+      { kicker: "استقبال", title: "استقبالٌ <em>أسرع</em>", at: 5.3 },
+      { kicker: "وقت", title: "وقتٌ أكثر <em>مع مرضاك</em>", at: 7.1 },
     ].map((x) => ({ ...x, cap: caption(g, { kicker: "", title: x.title }) }));
     const ph = device(
       g,
       "phone",
       [
-        { img: "wa-2-reminder", from: 4.3 },
-        { img: "book-5-done", from: 6.6 },
-        { img: "dr-5-note", from: 8.6 },
+        { img: "wa-2-reminder", from: 3.3 },
+        { img: "book-5-done", from: 5.3 },
+        { img: "dr-5-note", from: 7.1 },
       ],
       { top: 600, scale: 0.92 },
     );
     return (t) => {
       const a = ease(prog(t, 0.15, 1));
-      const out = inOut(prog(t, 3.6, 4.2));
+      const out = inOut(prog(t, 2.7, 3.2));
       logo.style.opacity = a * (1 - out);
       logo.style.transform = `translateX(-50%) scale(${0.9 + 0.1 * a})`;
       const b = ease(prog(t, 0.7, 1.6));
@@ -189,29 +189,29 @@
       t1.style.transform = `translateY(${(1 - b) * 40 - out * 40}px)`;
       gains.forEach((x, i) => {
         x.cap.place();
-        const end = i < gains.length - 1 ? gains[i + 1].at - 0.3 : 10.9;
+        const end = i < gains.length - 1 ? gains[i + 1].at - 0.3 : 9.4;
         if (t < x.at - 0.2 || t > end + 0.5) x.cap.els.forEach((e) => (e.style.opacity = 0));
         else x.cap.show(t, x.at, end);
       });
-      ph.show(t, 4.1, 10.9);
+      ph.show(t, 3.1, 9.4);
     };
   });
 
   // 1. The clinic's own website (online presence)
-  scene(13, (g) => {
+  scene(11, (g) => {
     const cap = caption(g, {
       kicker: "١ · حضوركم على الإنترنت",
       title: "موقع <em>عيادات ديرما</em>",
       sub: "أقسامكم، أطباؤكم، أسعاركم… وزر الحجز في كل صفحة",
     });
-    const ph = device(g, "phone", [{ img: "site-full", from: 0, pan: [0, 0.62], panAt: 1.2, panTo: 12.2 }], {
+    const ph = device(g, "phone", [{ img: "site-full", from: 0, pan: [0, 0.62], panAt: 1.0, panTo: 10.3 }], {
       top: 560,
       scale: 0.95,
     });
     return (t) => {
       cap.place();
-      cap.show(t, 0.1, T_OUT(13));
-      ph.show(t, 0.3, T_OUT(13) - 0.1);
+      cap.show(t, 0.1, T_OUT(11));
+      ph.show(t, 0.3, T_OUT(11) - 0.1);
     };
   });
 
