@@ -271,7 +271,7 @@
         { img: "vc-0-mode", from: 0 },
         { img: "vc-2-whatsapp", from: 2.4 },
         { img: "vc-3-patient", from: 4.9 },
-        { img: "vc-5-doctor-visit", from: 7.6 },
+        { img: "vc-4-doctor-day", from: 7.6 },
       ],
       { top: 620, scale: 0.92 },
     );

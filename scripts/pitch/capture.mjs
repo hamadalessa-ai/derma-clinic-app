@@ -355,9 +355,14 @@ await scene("doctor", async () => {
   const text = page.getByTestId("scribe-text");
   if (!(await text.isVisible().catch(() => false))) return note("scribe not visible");
   await text.scrollIntoViewIfNeeded();
-  await text.fill(
-    "المريضة جاية لجلسة ليزر إزالة شعر، الجلسة الثالثة. البشرة النوع الثالث، ما فيه تهيج من الجلسة السابقة. سوينا الجلسة على الساقين بنفس الإعدادات. نصحتها بواقي شمس وتبعد عن الشمس أسبوع، والجلسة الجاية بعد ست أسابيع.",
-  );
+  // What the doctor says matches the booked service (the AI checks they agree).
+  const header = await page.getByTestId("visit-screen").innerText().catch(() => "");
+  const said = /بلازما|PRP/.test(header)
+    ? "المريض جاي لجلسة بلازما للشعر، الجلسة الثانية. فروة الرأس سليمة وما فيه التهاب. سوينا الحقن على المقدمة ومنطقة التاج. نصحته ما يغسل شعره يوم كامل، والجلسة الجاية بعد شهر."
+    : /ليزر/.test(header)
+      ? "المريضة جاية لجلسة ليزر، الجلسة الثالثة. البشرة النوع الثالث، ما فيه تهيج من الجلسة السابقة. سوينا الجلسة بنفس الإعدادات. نصحتها بواقي شمس، والجلسة الجاية بعد ست أسابيع."
+      : "المريض جاي للمتابعة. الحالة تحسنت عن الزيارة السابقة وما فيه آثار جانبية. نكمل نفس الخطة، ونصحته بواقي شمس، والمتابعة بعد شهر.";
+  await text.fill(said);
   await shot(page, "dr-3-dictation");
   await page.getByTestId("scribe-write").click();
   // Wait for the AI's draft in the note.
