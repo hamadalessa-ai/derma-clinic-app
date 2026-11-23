@@ -5,7 +5,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { closeDb } from "@/db/client";
-import { appointments, packageSessionEvents } from "@/db/schema";
+import { appointments, packageSessionEvents, visitCheckouts } from "@/db/schema";
 import { withActor } from "@/lib/auth/db";
 import { PermissionError } from "@/lib/auth/permissions";
 import { dayRange, riyadhDay } from "@/lib/booking/time";
@@ -56,6 +56,23 @@ describe("owner report", () => {
     expect(r.byBranch.reduce((s, b) => s + b.bookings, 0)).toBe(t.bookings);
     expect(t.noShowRate).toBeGreaterThanOrEqual(0);
     expect(t.noShowRate).toBeLessThanOrEqual(100);
+  });
+
+  it("visit value uses what was really paid at checkout", async () => {
+    // Demo: D-0019's past Botox visit was checked out (paid by card).
+    const id = demoId("derma:appointment:d0019-botox-past");
+    const [a] = await withActor(admin, (tx) =>
+      tx
+        .select({ startsAt: appointments.startsAt, paid: visitCheckouts.paidHalalas })
+        .from(appointments)
+        .innerJoin(visitCheckouts, eq(visitCheckouts.appointmentId, appointments.id))
+        .where(eq(appointments.id, id)),
+    );
+    expect(a?.paid).toBeGreaterThan(0);
+    const r = await withActor(admin, (tx) =>
+      ownerReport(tx, admin, riyadhDay(a!.startsAt).slice(0, 7), null),
+    );
+    expect(r.totals.visitValue).toBeGreaterThanOrEqual(a!.paid);
   });
 
   it("filters by branch; packages and new patients stay clinic-wide", async () => {

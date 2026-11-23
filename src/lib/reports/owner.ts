@@ -1,8 +1,10 @@
 import "server-only";
 /**
  * Reports for the clinic owner (clinic admin): one month, all branches or one.
- * Money here is an estimate from list prices — most patients pay at the clinic's own till, which
- * stays the official record. Package payments are the ones recorded in the app.
+ * Visit money is what was really charged: the checkout's paid amount when reception checked the
+ * visit out, else the visit's invoice lines (prices COPIED on the day), else the service's list
+ * price. The clinic's own (ZATCA) system stays the official record. Package payments are the ones
+ * recorded in the app.
  * Counts only: no patient names, so nothing here is medical.
  */
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
@@ -12,6 +14,8 @@ import {
   packagePayments,
   packageSessionEvents,
   patientPackages,
+  visitCharges,
+  visitCheckouts,
   patients,
   services,
   tenantMembers,
@@ -52,7 +56,7 @@ export interface Totals {
   /** no-shows ÷ (completed + no-shows), 0–100. */
   noShowRate: number;
   bySource: { reception: number; online: number; whatsapp: number };
-  /** Completed visits not covered by a package, at list price (halalas). */
+  /** Completed visits: what was charged (checkout, else invoice lines, else list price), halalas. */
   visitValue: number;
   /** Completed visits that used a package session. */
   packageVisits: number;
@@ -126,6 +130,32 @@ async function visits(tx: TenantTx, from: Date, to: Date, branchId: string | nul
         ),
       );
     for (const g of got) if (g.id) fromPackage.add(g.id);
+  }
+  // What was really charged: the checkout (paid), else the visit's own invoice lines.
+  const charged = new Map<string, number>();
+  for (let i = 0; i < ids.length; i += 1000) {
+    const part = ids.slice(i, i + 1000);
+    const lines = await tx
+      .select({
+        id: visitCharges.appointmentId,
+        v: sql<number>`coalesce(sum(case when ${visitCharges.coveredByPackage} or ${visitCharges.coveredByMembership} then 0 else ${visitCharges.quantity} * ${visitCharges.unitPriceHalalas} end), 0)::int`,
+      })
+      .from(visitCharges)
+      .where(inArray(visitCharges.appointmentId, part))
+      .groupBy(visitCharges.appointmentId);
+    for (const l of lines) charged.set(l.id, Number(l.v));
+    const paid = await tx
+      .select({ id: visitCheckouts.appointmentId, v: visitCheckouts.paidHalalas })
+      .from(visitCheckouts)
+      .where(inArray(visitCheckouts.appointmentId, part));
+    for (const p of paid) charged.set(p.id, p.v);
+  }
+  for (const r of rows) {
+    const c = charged.get(r.id);
+    if (c !== undefined) {
+      r.price = c;
+      fromPackage.delete(r.id); // the real amount already leaves out package-covered lines
+    }
   }
   return { rows, fromPackage };
 }
