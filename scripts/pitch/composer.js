@@ -165,23 +165,23 @@
     const t1 = el("div", "center", g, "عيادتك كاملة<br/><span style='color:var(--emerald)'>في تطبيقٍ واحد</span>");
     t1.style.cssText += ";top:840px;font-family:'Noto Naskh Arabic',serif;font-weight:700;font-size:92px;line-height:1.3";
     const gains = [
-      { kicker: "مواعيد", title: "مواعيد <em>ما تضيع</em>", at: 3.3 },
-      { kicker: "استقبال", title: "استقبالٌ <em>أسرع</em>", at: 5.3 },
-      { kicker: "وقت", title: "وقتٌ أكثر <em>مع مرضاك</em>", at: 7.1 },
+      { kicker: "مواعيد", title: "مواعيد <em>مؤكدة</em>", at: 3.1 },
+      { kicker: "استقبال", title: "استقبالٌ <em>أسرع</em>", at: 4.9 },
+      { kicker: "وقت", title: "وقتٌ أكثر <em>مع مرضاك</em>", at: 6.5 },
     ].map((x) => ({ ...x, cap: caption(g, { kicker: "", title: x.title }) }));
     const ph = device(
       g,
       "phone",
       [
-        { img: "wa-2-reminder", from: 3.3 },
-        { img: "book-5-done", from: 5.3 },
-        { img: "dr-5-note", from: 7.1 },
+        { img: "wa-2-reminder", from: 3.1 },
+        { img: "book-5-done", from: 4.9 },
+        { img: "dr-5-note", from: 6.5 },
       ],
       { top: 600, scale: 0.92 },
     );
     return (t) => {
       const a = ease(prog(t, 0.15, 1));
-      const out = inOut(prog(t, 2.7, 3.2));
+      const out = inOut(prog(t, 2.5, 3.0));
       logo.style.opacity = a * (1 - out);
       logo.style.transform = `translateX(-50%) scale(${0.9 + 0.1 * a})`;
       const b = ease(prog(t, 0.7, 1.6));
@@ -193,7 +193,7 @@
         if (t < x.at - 0.2 || t > end + 0.5) x.cap.els.forEach((e) => (e.style.opacity = 0));
         else x.cap.show(t, x.at, end);
       });
-      ph.show(t, 3.1, 9.4);
+      ph.show(t, 2.9, 9.4);
     };
   });
 
