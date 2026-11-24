@@ -67,6 +67,11 @@ if full.exists():
         cuts.append((best[0] + best[1]) / 2)
         prev = cuts[-1]
         print(f"break {k + 1}: expected {expect:.2f}s, cut at {cuts[-1]:.2f}s (pause {best[1] - best[0]:.2f}s)")
+    # Exact line ends from a word-timed transcript of this take, when given (voice-cuts.json).
+    exact = Path("scripts/pitch/voice-cuts.json")
+    if exact.exists():
+        cuts = json.loads(exact.read_text())
+        print("using exact cuts", cuts)
     bounds = [0.0] + cuts + [length(whole)]
     k = 0
     for i, text in enumerate(lines):
