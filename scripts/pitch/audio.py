@@ -38,6 +38,32 @@ run("ffmpeg", "-y", "-loglevel", "error", "-i", str(VIDEO), "-i", str(MUSIC),
     "-af", f"afade=t=out:st={total - 2.5}:d=2.5", "-t", str(total),
     "-movflags", "+faststart", str(OUT / "derma-pitch-music.mp4"))
 
+# One continuous take (voice/full.mp3, all scenes read in one go — more natural than separate
+# lines): split it into one piece per scene at its longest pauses.
+full = Path("voice/full.mp3")
+if full.exists():
+    whole = tmp / "full.wav"
+    run("ffmpeg", "-y", "-loglevel", "error", "-i", str(full), "-ar", "44100", "-ac", "1", str(whole))
+    det = subprocess.run(["ffmpeg", "-i", str(whole), "-af", "silencedetect=noise=-38dB:d=0.35",
+                          "-f", "null", "-"], capture_output=True, text=True).stderr
+    starts = [float(x.split("silence_start: ")[1].split()[0]) for x in det.splitlines() if "silence_start" in x]
+    ends = [float(x.split("silence_end: ")[1].split()[0]) for x in det.splitlines() if "silence_end" in x]
+    gaps = sorted(zip(starts, ends), key=lambda g: g[1] - g[0], reverse=True)
+    pieces = len([x for x in lines if x]) - 1
+    cuts = sorted((a + b) / 2 for a, b in gaps[:pieces])
+    print("cuts at", [round(c, 2) for c in cuts])
+    bounds = [0.0] + cuts + [length(whole)]
+    k = 0
+    for i, text in enumerate(lines):
+        if not text:
+            continue
+        seg = tmp / f"seg-{i}.wav"
+        run("ffmpeg", "-y", "-loglevel", "error", "-i", str(whole), "-ss", f"{bounds[k]:.3f}",
+            "-to", f"{bounds[k + 1]:.3f}", str(seg))
+        Path(f"voice/line-{i}.mp3").unlink(missing_ok=True)
+        run("ffmpeg", "-y", "-loglevel", "error", "-i", str(seg), str(Path(f"voice/line-{i}.mp3")))
+        k += 1
+
 # Voice lines, placed at their scenes.
 inputs, filters, start = [], [], 0.0
 for i, (dur, text) in enumerate(zip(durs, lines)):

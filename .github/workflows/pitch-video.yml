@@ -56,6 +56,8 @@ jobs:
             mkdir -p voice
             # The ElevenLabs recordings (signed links, valid a few hours), one per scene.
             n=0; while read -r url; do curl -sfL -o "voice/line-$n.mp3" "$url" || echo "line $n not downloaded"; n=$((n+1)); done < scripts/pitch/voice-el.txt
+            # One continuous take of the whole script (more natural); audio.py splits it per scene.
+            if [ -f scripts/pitch/voice-full.txt ]; then curl -sfL -o voice/full.mp3 "$(head -1 scripts/pitch/voice-full.txt)" || echo "full take not downloaded"; fi
             V=https://huggingface.co/rhasspy/piper-voices/resolve/main/ar/ar_JO/kareem/medium
             curl -sfL -o voice/ar_JO-kareem-medium.onnx $V/ar_JO-kareem-medium.onnx
             curl -sfL -o voice/ar_JO-kareem-medium.onnx.json $V/ar_JO-kareem-medium.onnx.json
