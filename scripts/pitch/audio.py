@@ -44,14 +44,19 @@ full = Path("voice/full.mp3")
 if full.exists():
     whole = tmp / "full.wav"
     run("ffmpeg", "-y", "-loglevel", "error", "-i", str(full), "-ar", "44100", "-ac", "1", str(whole))
-    det = subprocess.run(["ffmpeg", "-i", str(whole), "-af", "silencedetect=noise=-38dB:d=0.35",
-                          "-f", "null", "-"], capture_output=True, text=True).stderr
-    starts = [float(x.split("silence_start: ")[1].split()[0]) for x in det.splitlines() if "silence_start" in x]
-    ends = [float(x.split("silence_end: ")[1].split()[0]) for x in det.splitlines() if "silence_end" in x]
-    gaps = sorted(zip(starts, ends), key=lambda g: g[1] - g[0], reverse=True)
     pieces = len([x for x in lines if x]) - 1
+    # Find the pauses between lines; a take with short pauses needs a looser setting.
+    for noise, d in [(-38, 0.35), (-38, 0.25), (-35, 0.25), (-35, 0.18), (-32, 0.18), (-30, 0.14), (-28, 0.12)]:
+        det = subprocess.run(["ffmpeg", "-i", str(whole), "-af", f"silencedetect=noise={noise}dB:d={d}",
+                              "-f", "null", "-"], capture_output=True, text=True).stderr
+        starts = [float(x.split("silence_start: ")[1].split()[0]) for x in det.splitlines() if "silence_start" in x]
+        ends = [float(x.split("silence_end: ")[1].split()[0]) for x in det.splitlines() if "silence_end" in x]
+        gaps = sorted(zip(starts, ends), key=lambda g: g[1] - g[0], reverse=True)
+        print(f"pauses at {noise} dB / {d} s:", len(gaps))
+        if len(gaps) >= pieces:
+            break
     cuts = sorted((a + b) / 2 for a, b in gaps[:pieces])
-    print("cuts at", [round(c, 2) for c in cuts])
+    print("cuts at", [round(c, 2) for c in cuts], "pause lengths", [round(b - a, 2) for a, b in gaps[:pieces]])
     bounds = [0.0] + cuts + [length(whole)]
     k = 0
     for i, text in enumerate(lines):
