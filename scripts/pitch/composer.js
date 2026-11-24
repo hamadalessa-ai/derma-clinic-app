@@ -292,10 +292,10 @@
   });
 
   // 5. Front desk: search, patient flow, checkout
-  scene(12, (g) => {
+  scene(13, (g) => {
     const cap = caption(g, {
       kicker: "٥ · الاستقبال",
-      title: "استقبالٌ <em>أسرع</em>",
+      title: "منصة <em>الاستقبال</em>",
       sub: "بحث بالجوال، حضور بضغطة، ومحاسبة سريعة",
     });
     const lap = device(
@@ -304,7 +304,7 @@
       [
         { img: "day-1-desk", from: 0, zoom: [1, 1.55], focus: [0.55, 0.2], focus2: [0.55, 0.28], zoomTo: 3.8 },
         { img: "day-2-board", from: 4, zoom: [1, 1.35], focus: [0.5, 0.45], focus2: [0.6, 0.5], zoomTo: 7.8 },
-        { img: "day-3-checkout", from: 8, zoom: [1.1, 1.4], focus: [0.45, 0.35], focus2: [0.55, 0.45], zoomTo: 11.5 },
+        { img: "day-3-checkout", from: 8, zoom: [1.1, 1.4], focus: [0.45, 0.35], focus2: [0.55, 0.45], zoomTo: 12.5 },
       ],
       { top: 640, scale: 1.08 },
     );
@@ -312,10 +312,10 @@
     const cs = items.map((txt) => el("div", "chip", g, `<i></i>${txt}`));
     return (t) => {
       cap.place();
-      cap.show(t, 0.1, T_OUT(12));
-      lap.show(t, 0.3, T_OUT(12) - 0.1);
+      cap.show(t, 0.1, T_OUT(13));
+      lap.show(t, 0.3, T_OUT(13) - 0.1);
       cs.forEach((c, i) => {
-        const p = ease(prog(t, 4.4 + i * 4, 5.1 + i * 4)) * (1 - inOut(prog(t, 11.3, 11.8)));
+        const p = ease(prog(t, 4.4 + i * 4, 5.1 + i * 4)) * (1 - inOut(prog(t, 12.3, 12.8)));
         c.style.opacity = p;
         c.style.top = 1430 + i * 110 + "px";
         c.style.right = "90px";
@@ -325,15 +325,15 @@
   });
 
   // 6. Doctor: the note written from speech, then before / after photos
-  scene(13, (g) => {
+  scene(14, (g) => {
     const cap1 = caption(g, {
       kicker: "٦ · الطبيب",
-      title: "الطبيب يتكلم…<br/><em>والملاحظة تُكتب</em>",
-      sub: "مسودة ذكية يراجعها الطبيب ويعتمدها",
+      title: "تقارير الطبيب<br/><em>تُكتب بالصوت</em>",
+      sub: "يراجعها الطبيب ويعتمدها بنفسه",
     });
     const cap2 = caption(g, {
       kicker: "٦ · الطبيب",
-      title: "صور قبل وبعد<br/><em>جنبًا إلى جنب</em>",
+      title: "صور لمراجعة<br/><em>الحالة</em>",
       sub: "لكل منطقة وتاريخ، بخصوصية تامة",
     });
     const ph = device(
@@ -358,29 +358,29 @@
       cap1.place();
       cap2.place();
       cap1.show(t, 0.1, 6);
-      cap2.show(t, 6.5, T_OUT(13));
+      cap2.show(t, 6.5, T_OUT(14));
       ph.show(t, 0.3, 6);
-      lap.show(t - 6.4, 0, T_OUT(13) - 6.5);
+      lap.show(t - 6.4, 0, T_OUT(14) - 6.5);
     };
   });
 
   // 7. Owner: the monthly report
-  scene(9, (g) => {
+  scene(10, (g) => {
     const cap = caption(g, {
       kicker: "٧ · الإدارة",
-      title: "أرقام العيادة<br/><em>في شاشة واحدة</em>",
-      sub: "الحجوزات والإيرادات لكل طبيب وفرع",
+      title: "الإحصائيات والتقارير<br/><em>في شاشة واحدة</em>",
+      sub: "التقارير المالية لكل طبيب وفرع",
     });
     const lap = device(
       g,
       "laptop",
-      [{ img: "own-4-report", from: 0, zoom: [1, 1.45], focus: [0.5, 0.25], focus2: [0.45, 0.45], zoomTo: 8 }],
+      [{ img: "own-4-report", from: 0, zoom: [1, 1.45], focus: [0.5, 0.25], focus2: [0.45, 0.45], zoomTo: 9 }],
       { top: 640, scale: 1.08 },
     );
     return (t) => {
       cap.place();
-      cap.show(t, 0.1, T_OUT(9));
-      lap.show(t, 0.3, T_OUT(9) - 0.1);
+      cap.show(t, 0.1, T_OUT(10));
+      lap.show(t, 0.3, T_OUT(10) - 0.1);
     };
   });
 
