@@ -39,24 +39,34 @@ run("ffmpeg", "-y", "-loglevel", "error", "-i", str(VIDEO), "-i", str(MUSIC),
     "-movflags", "+faststart", str(OUT / "derma-pitch-music.mp4"))
 
 # One continuous take (voice/full.mp3, all scenes read in one go — more natural than separate
-# lines): split it into one piece per scene at its longest pauses.
+# lines): split it into one piece per scene at the pause nearest where each line should end.
 full = Path("voice/full.mp3")
 if full.exists():
     whole = tmp / "full.wav"
     run("ffmpeg", "-y", "-loglevel", "error", "-i", str(full), "-ar", "44100", "-ac", "1", str(whole))
-    pieces = len([x for x in lines if x]) - 1
-    # Find the pauses between lines; a take with short pauses needs a looser setting.
-    for noise, d in [(-38, 0.35), (-38, 0.25), (-35, 0.25), (-35, 0.18), (-32, 0.18), (-30, 0.14), (-28, 0.12)]:
-        det = subprocess.run(["ffmpeg", "-i", str(whole), "-af", f"silencedetect=noise={noise}dB:d={d}",
-                              "-f", "null", "-"], capture_output=True, text=True).stderr
-        starts = [float(x.split("silence_start: ")[1].split()[0]) for x in det.splitlines() if "silence_start" in x]
-        ends = [float(x.split("silence_end: ")[1].split()[0]) for x in det.splitlines() if "silence_end" in x]
-        gaps = sorted(zip(starts, ends), key=lambda g: g[1] - g[0], reverse=True)
-        print(f"pauses at {noise} dB / {d} s:", len(gaps))
-        if len(gaps) >= pieces:
-            break
-    cuts = sorted((a + b) / 2 for a, b in gaps[:pieces])
-    print("cuts at", [round(c, 2) for c in cuts], "pause lengths", [round(b - a, 2) for a, b in gaps[:pieces]])
+    texts = [x for x in lines if x]
+    pieces = len(texts) - 1
+    # All pauses in the take (commas pause too, so the longest are not always between lines).
+    det = subprocess.run(["ffmpeg", "-i", str(whole), "-af", "silencedetect=noise=-35dB:d=0.12",
+                          "-f", "null", "-"], capture_output=True, text=True).stderr
+    starts = [float(x.split("silence_start: ")[1].split()[0]) for x in det.splitlines() if "silence_start" in x]
+    ends = [float(x.split("silence_end: ")[1].split()[0]) for x in det.splitlines() if "silence_end" in x]
+    gaps = list(zip(starts, ends))
+    total_len = length(whole)
+    t0 = gaps[0][1] if gaps and gaps[0][0] < 0.05 else 0.0
+    t1 = gaps[-1][0] if gaps and gaps[-1][1] > total_len - 0.05 else total_len
+    inner = [g for g in gaps if g[0] > t0 + 0.5 and g[1] < t1 - 0.3]
+    # Where each break should fall if speech runs at an even pace (by letters per line),
+    # then the nearby pause that best fits (closer and longer is better), in order.
+    sizes = [len(x.replace(" ", "")) for x in texts]
+    cuts, prev = [], t0
+    for k in range(pieces):
+        expect = t0 + (t1 - t0) * sum(sizes[: k + 1]) / sum(sizes)
+        left = [g for g in inner if (g[0] + g[1]) / 2 > prev + 1.0]
+        best = min(left, key=lambda g: abs((g[0] + g[1]) / 2 - expect) - 4 * (g[1] - g[0]))
+        cuts.append((best[0] + best[1]) / 2)
+        prev = cuts[-1]
+        print(f"break {k + 1}: expected {expect:.2f}s, cut at {cuts[-1]:.2f}s (pause {best[1] - best[0]:.2f}s)")
     bounds = [0.0] + cuts + [length(whole)]
     k = 0
     for i, text in enumerate(lines):
