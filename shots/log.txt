@@ -1,0 +1,56 @@
+refresh before filming: تم نقل 262 موعدًا وإلغاء 0 حجز اختبار
+OK prepare (9s)
+shot site-hero
+shot site-full
+shot site-chapters
+shot site-doctors
+shot site-offers
+shot site-desktop
+shot logo
+OK website (18s)
+shot book-1-start
+shot book-2-service
+shot book-3-doctor
+shot book-4-times
+shot book-5-details
+shot book-5-code
+shot book-5-done
+OK booking (16s)
+shot vc-0-mode
+shot vc-1-done
+OK video-booking (12s)
+shot wa-desktop
+shot wa-1-confirmation
+shot wa-2-reminder
+consent link: found
+shot consent-1-open
+shot consent-2-pad
+shot consent-3-signed
+shot consent-4-done
+OK whatsapp (22s)
+shot vc-2-whatsapp
+video link: found
+shot vc-3-patient
+shot vc-4-doctor-day
+OK video (19s)
+shot dr-1-myday
+Dr. Sarah's day: completed, in_session, in_session, confirmed, booked, booked
+shot dr-3-dictation
+shot dr-5-note
+OK doctor (12s)
+shot ph-1-tab
+shot ph-2-compare
+OK photos (14s)
+shot day-1-desk
+shot day-2-board
+shot day-3-checkout
+OK clinic-day (10s)
+shot own-1-home
+shot own-2-calendar
+patient page: https://derma-clinic-app.vercel.app/patients/bda3525c-2cfc-5da5-b720-d4c64f553d48?tab=packages
+shot own-3-patient
+shot own-4-report
+shot own-4-report-full
+OK owner (28s)
+refresh after filming: تم نقل 262 موعدًا وإلغاء 2 حجز اختبار
+OK cleanup (7s)
