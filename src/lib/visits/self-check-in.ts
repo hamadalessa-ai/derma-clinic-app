@@ -164,7 +164,8 @@ export async function checkInAfterConsent(
   const now = input.now ?? new Date();
   const appt = await getAppointment(tx, input.appointmentId).catch(() => null);
   if (!appt?.arrivalRequestedAt) return null;
-  if (now.getTime() - appt.arrivalRequestedAt.getTime() > ARRIVAL_REQUEST_VALID_MINUTES * MINUTE) {
+  // The request's age on the real clock (it was stored with the real time); `now` is for the window.
+  if (Date.now() - appt.arrivalRequestedAt.getTime() > ARRIVAL_REQUEST_VALID_MINUTES * MINUTE) {
     return null;
   }
   return selfCheckIn(tx, {

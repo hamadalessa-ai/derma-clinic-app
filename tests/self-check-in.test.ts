@@ -95,7 +95,7 @@ describe("the self check-in window", () => {
 
 describe("I've arrived", () => {
   it("checks the patient in once, inside the window only", async () => {
-    const a = await book("D-0022", "09:00");
+    const a = await book("D-0022", "10:00");
     const early = await self(a, new Date(a.startsAt.getTime() - 2 * 60 * MIN));
     expect(early.status).toBe("too_early");
     expect((await row(a.id)).status).toBe("booked");
@@ -110,14 +110,14 @@ describe("I've arrived", () => {
   });
 
   it("refuses a late tap and someone else's visit", async () => {
-    const a = await book("D-0023", "09:30");
+    const a = await book("D-0023", "11:00");
     expect((await self(a, new Date(a.startsAt.getTime() + 40 * MIN))).status).toBe("too_late");
     expect((await self(a, a.startsAt, "D-0024")).status).toBe("not_found");
     expect((await row(a.id)).status).toBe("booked");
   });
 
   it("is off when the clinic switched it off", async () => {
-    const a = await book("D-0024", "10:00");
+    const a = await book("D-0024", "12:00");
     await system((tx) => tx.update(tenantSettings).set({ selfCheckInEnabled: false }));
     try {
       expect((await self(a, a.startsAt)).status).toBe("off");
@@ -127,7 +127,7 @@ describe("I've arrived", () => {
   });
 
   it("asks for the consent first; signing it checks the patient in", async () => {
-    const a = await book("D-0025", "10:30", "chemical_peeling"); // consent every visit
+    const a = await book("D-0025", "13:00", "chemical_peeling"); // consent every visit
     const now = new Date(a.startsAt.getTime() - 5 * MIN);
     const r = await self(a, now);
     expect(r.status).toBe("consent_required");
@@ -149,7 +149,7 @@ describe("I've arrived", () => {
   });
 
   it("works from the WhatsApp button in the visit-day message", async () => {
-    const a = await book("D-0026", "11:00");
+    const a = await book("D-0026", "15:00");
     const sent = await sendArrivalInvite(derma, a.id, ENV);
     expect(sent.outcome).toBe("sent");
     const invite = await lastMessage(a.id, "arrival_invite");
@@ -187,7 +187,7 @@ describe("I've arrived", () => {
 
 describe("Call in", () => {
   it("records the call and sends the room on WhatsApp; another doctor can't", async () => {
-    const a = await book("D-0027", "11:30");
+    const a = await book("D-0027", "16:00");
     await self(a, a.startsAt);
     await expect(withActor(drReem, (tx) => callIn(tx, drReem, a.id))).rejects.toThrow();
     await withActor(reception, (tx) => callIn(tx, reception, a.id));
@@ -197,7 +197,7 @@ describe("Call in", () => {
   });
 
   it("only calls patients who have arrived", async () => {
-    const a = await book("D-0028", "12:00");
+    const a = await book("D-0028", "17:00");
     await expect(withActor(reception, (tx) => callIn(tx, reception, a.id))).rejects.toThrow(
       /bad_status/,
     );
