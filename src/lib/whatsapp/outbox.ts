@@ -113,11 +113,7 @@ export async function sendArrivalInvite(
 }
 
 /** "Call in": the room is ready — the room's name and the doctor. One message per call. */
-export async function sendRoomCall(
-  tenant: Tenant,
-  appointmentId: string,
-  env: Env = process.env,
-) {
+export async function sendRoomCall(tenant: Tenant, appointmentId: string, env: Env = process.env) {
   const found = await withTenant(tenant.id, async (tx) => {
     const ctx = await loadAppointmentContext(tx, appointmentId);
     if (!ctx) return null;

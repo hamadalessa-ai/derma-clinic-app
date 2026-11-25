@@ -683,7 +683,12 @@ export async function markArrivedByPatient(
   const arrived =
     appt.status === "arrived"
       ? appt
-      : await applyStatus(tx, { userId: null, source: via, patientId: appt.patientId }, appt, "arrived");
+      : await applyStatus(
+          tx,
+          { userId: null, source: via, patientId: appt.patientId },
+          appt,
+          "arrived",
+        );
   const [updated] = await tx
     .update(appointments)
     .set({ selfCheckedInAt: appt.selfCheckedInAt ?? new Date(), arrivalRequestedAt: null })

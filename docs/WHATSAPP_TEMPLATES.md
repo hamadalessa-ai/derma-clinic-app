@@ -186,6 +186,47 @@ English:
 Hello {{1}}, your {{2}} membership ends on {{3}}. Renew it at your next visit, or reply to this message and we'll help.
 ```
 
+## `visit_day_check_in`
+
+- **Category:** UTILITY
+- **Languages:** Arabic (`ar`), English (`en`)
+- **Variables:** {{1}} = patient_first_name, {{2}} = appointment, {{3}} = time, {{4}} = doctor, {{5}} = branch, {{6}} = consent_note
+- **Quick-reply buttons:** “وصلت” / “I've arrived”
+
+Arabic:
+
+```text
+مرحبًا {{1}}، {{2}} اليوم الساعة {{3}} مع {{4}} في {{5}}.
+{{6}}
+عند وصولك للعيادة اضغط «وصلت» لتسجيل حضورك.
+```
+
+English:
+
+```text
+Hello {{1}}, {{2}} is today at {{3}} with {{4}} at {{5}}.
+{{6}}
+When you reach the clinic, tap "I've arrived" to check in.
+```
+
+## `room_ready`
+
+- **Category:** UTILITY
+- **Languages:** Arabic (`ar`), English (`en`)
+- **Variables:** {{1}} = patient_first_name, {{2}} = room, {{3}} = doctor
+
+Arabic:
+
+```text
+{{1}}، تفضّل إلى {{2}}، {{3}} بانتظارك.
+```
+
+English:
+
+```text
+{{1}}, please go to {{2}}. {{3}} is ready for you.
+```
+
 ## `verification_code`
 
 - **Category:** AUTHENTICATION

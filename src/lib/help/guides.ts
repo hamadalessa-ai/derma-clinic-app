@@ -91,7 +91,7 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       steps: [
         s(
           "يوم الزيارة تصل المريض رسالة واتساب فيها زر «وصلت» (والزر أيضًا في صفحة المريض). عند وصوله يضغطه فيُسجَّل حضوره وحده، وتنتقل بطاقته إلى «في الانتظار» مع وسم «سجّل وصوله بنفسه».",
-          "On the visit day the patient gets a WhatsApp message with an \"I've arrived\" button (also on their patient page). Tapping it at the clinic checks them in; their card moves to Waiting with a \"Self check-in\" tag.",
+          'On the visit day the patient gets a WhatsApp message with an "I\'ve arrived" button (also on their patient page). Tapping it at the clinic checks them in; their card moves to Waiting with a "Self check-in" tag.',
         ),
         s(
           "إذا احتاج موافقة تصله أولاً رابط التوقيع، وبعد التوقيع يُسجَّل حضوره تلقائيًا.",

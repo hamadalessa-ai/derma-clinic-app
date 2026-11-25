@@ -207,7 +207,7 @@ export const TEMPLATES: Record<TemplateKind, TemplateDefinition> = {
     bodyAr:
       "مرحبًا {patient_first_name}، {appointment} اليوم الساعة {time} مع {doctor} في {branch}.\n{consent_note}\nعند وصولك للعيادة اضغط «وصلت» لتسجيل حضورك.",
     bodyEn:
-      "Hello {patient_first_name}, {appointment} is today at {time} with {doctor} at {branch}.\n{consent_note}\nWhen you reach the clinic, tap \"I've arrived\" to check in.",
+      'Hello {patient_first_name}, {appointment} is today at {time} with {doctor} at {branch}.\n{consent_note}\nWhen you reach the clinic, tap "I\'ve arrived" to check in.',
     buttons: ["arrived"],
     canDisable: true,
   },

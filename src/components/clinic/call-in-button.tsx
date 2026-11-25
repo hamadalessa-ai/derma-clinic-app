@@ -24,7 +24,9 @@ export function CallInButton({
 }) {
   const t = useTranslations("flow");
   const act = useAction();
-  const mins = calledAt ? Math.max(0, Math.floor((now.getTime() - Date.parse(calledAt)) / 60_000)) : null;
+  const mins = calledAt
+    ? Math.max(0, Math.floor((now.getTime() - Date.parse(calledAt)) / 60_000))
+    : null;
   return (
     <span className="flex flex-col items-start gap-1">
       <span className="flex flex-wrap items-center gap-2">
