@@ -86,7 +86,8 @@ begin
     raise exception 'refused: % patient(s) of "${slug}" are not marked fake', real_count;
   end if;
 
-  -- Delete table by table; a table still pointed at by another waits for the next pass.
+  -- Delete table by table; a table still pointed at by another (or whose children would be
+  -- left without their clinic) waits for the next pass.
   pending := tables;
   while array_length(pending, 1) > 0 loop
     passes := passes + 1;
@@ -104,7 +105,7 @@ begin
         get diagnostics n = row_count;
         if n > 0 then report := report || t || ' ' || n || '; '; end if;
         pending := array_remove(pending, t);
-      exception when foreign_key_violation then
+      exception when foreign_key_violation or not_null_violation then
         null;
       end;
     end loop;
