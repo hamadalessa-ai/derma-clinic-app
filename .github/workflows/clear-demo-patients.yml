@@ -1,0 +1,43 @@
+# Deletes ONE demo clinic's patients (and their visits, notes, consents, payments, photos,
+# labs, WhatsApp chats) from the live DEMO database, so the clinic can be shown empty.
+# Doctors, services, settings, the website and other clinics stay. Demo clinics only; refuses
+# (changing nothing) if any of the clinic's patients is not marked fake.
+# To bring the patients back: run "Update demo database".
+name: Clear demo patients
+
+on:
+  workflow_dispatch:
+    inputs:
+      clinic:
+        description: "Clinic address (e.g. derma)"
+        required: true
+        default: derma
+      confirm:
+        description: "Type the clinic address again to confirm"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-database
+  cancel-in-progress: false
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Clear the clinic's demo patients
+        env:
+          SUPABASE_ADMIN_URL: ${{ secrets.SUPABASE_ADMIN_URL }}
+          CLINIC: ${{ inputs.clinic }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: pnpm exec tsx scripts/clear-demo-patients.ts
