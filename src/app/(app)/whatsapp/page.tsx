@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowLeft, ArrowRight, BellOff, Bot, Flag, Hand, Smartphone, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BellOff,
+  Bot,
+  Flag,
+  Hand,
+  Smartphone,
+  UserPlus,
+} from "lucide-react";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";

@@ -3,14 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  CalendarPlus,
-  DoorOpen,
-  MoreHorizontal,
-  Search,
-  UserCheck,
-  UserPlus,
-} from "lucide-react";
+import { CalendarPlus, DoorOpen, MoreHorizontal, Search, UserCheck, UserPlus } from "lucide-react";
 import {
   createPatientAction,
   deskSearchAction,

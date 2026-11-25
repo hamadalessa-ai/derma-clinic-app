@@ -39,7 +39,9 @@ export function UserMenu({
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node))
+      if (
+        e instanceof KeyboardEvent ? e.key === "Escape" : !box.current?.contains(e.target as Node)
+      )
         setOpen(false);
     };
     document.addEventListener("mousedown", close);
