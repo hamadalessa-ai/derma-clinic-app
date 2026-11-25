@@ -68,65 +68,82 @@ export function LabResults({
   const open = data.requests.filter((r) => r.state !== "done" && r.state !== "cancelled");
   const reports = compact ? data.reports.filter((r) => !r.voided).slice(0, 2) : data.reports;
 
+  // On the visit screen with nothing to show: one line (title + "Add results"); repeat-test
+  // requests are made from the patient file's Labs tab.
+  const quiet = !!compact && !reports.length && !open.length && !adding;
+
   return (
     <Card data-testid="lab-results">
-      <CardHeader>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <FlaskRound className="text-brand-strong size-4" />
           {t("title")}
         </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {(open.length > 0 || canEdit) && (
-          <Requests
-            patientId={patientId}
-            appointmentId={appointmentId ?? null}
-            requests={open}
-            canEdit={canEdit}
-            date={date}
-          />
+        {quiet && canEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAdding(true)}
+            data-testid="lab-add-open"
+          >
+            <Plus />
+            {t("add")}
+          </Button>
         )}
-
-        {canEdit &&
-          (adding ? (
-            <AddResults
+      </CardHeader>
+      {!quiet && (
+        <CardContent className="flex flex-col gap-4">
+          {(open.length > 0 || canEdit) && (
+            <Requests
               patientId={patientId}
               appointmentId={appointmentId ?? null}
-              onDone={() => setAdding(false)}
+              requests={open}
+              canEdit={canEdit}
+              date={date}
             />
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              onClick={() => setAdding(true)}
-              data-testid="lab-add-open"
-            >
-              <Plus />
-              {t("add")}
-            </Button>
-          ))}
+          )}
 
-        {reports.length ? (
-          <ul className="flex flex-col gap-3">
-            {reports.map((r) => (
-              <ReportCard
-                key={r.id}
-                r={r}
+          {canEdit &&
+            (adding ? (
+              <AddResults
                 patientId={patientId}
                 appointmentId={appointmentId ?? null}
-                canEdit={canEdit}
-                date={date}
-                locale={locale}
+                onDone={() => setAdding(false)}
               />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => setAdding(true)}
+                data-testid="lab-add-open"
+              >
+                <Plus />
+                {t("add")}
+              </Button>
             ))}
-          </ul>
-        ) : compact ? (
-          <p className="text-muted-foreground text-sm">{t("none")}</p>
-        ) : (
-          <EmptyState icon={<FlaskRound />} title={t("none")} />
-        )}
-      </CardContent>
+
+          {reports.length ? (
+            <ul className="flex flex-col gap-3">
+              {reports.map((r) => (
+                <ReportCard
+                  key={r.id}
+                  r={r}
+                  patientId={patientId}
+                  appointmentId={appointmentId ?? null}
+                  canEdit={canEdit}
+                  date={date}
+                  locale={locale}
+                />
+              ))}
+            </ul>
+          ) : compact ? (
+            <p className="text-muted-foreground text-sm">{t("none")}</p>
+          ) : (
+            <EmptyState icon={<FlaskRound />} title={t("none")} />
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 }

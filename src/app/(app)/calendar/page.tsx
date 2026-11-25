@@ -7,6 +7,7 @@ import { AutoRefresh } from "@/components/clinic/auto-refresh";
 import { ArrivalsList } from "@/components/clinic/arrivals-list";
 import { DeskBar } from "@/components/clinic/desk-bar";
 import { FlowBoard } from "@/components/clinic/flow-board";
+import { WeekDoctorPicker } from "@/components/clinic/week-doctor-picker";
 import { CalendarBoard, type BoardColumn } from "@/components/clinic/calendar-board";
 import { withActor } from "@/lib/auth/db";
 import { can } from "@/lib/auth/permissions";
@@ -38,8 +39,20 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   if (!branch) return null;
 
   const day = isDay(sp.date) ? sp.date : riyadhDay(new Date());
+  // Two views: "Today" (the patient flow board; reception opens here) and "Schedule" (day / week
+  // grid; doctors open here). The old arrivals list still opens from its link (?view=list).
   const view =
-    sp.view === "week" ? "week" : sp.view === "list" ? "list" : sp.view === "flow" ? "flow" : "day";
+    sp.view === "week"
+      ? "week"
+      : sp.view === "list"
+        ? "list"
+        : sp.view === "flow"
+          ? "flow"
+          : sp.view === "day"
+            ? "day"
+            : can(ctx.roles, "my_day:view")
+              ? "day"
+              : "flow";
   const by = sp.by === "room" ? "room" : "doctor";
   const actor = actorOf(ctx);
   const th = await getTranslations("hours");
@@ -143,16 +156,23 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     return `/calendar?${params}`;
   };
   const step = view === "week" ? 7 : 1;
-  const tab = (active: boolean) =>
-    cn(buttonVariants({ variant: active ? "default" : "outline", size: "sm" }));
+  // Segmented switches: the selected segment is a quiet white tab, never a brand-filled button
+  // (brand fill is kept for the screen's ONE main action).
+  const seg = (active: boolean) =>
+    cn(
+      "inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors",
+      active
+        ? "bg-card text-foreground shadow-card"
+        : "text-muted-foreground hover:text-foreground",
+    );
   const doctorOptions = data.doctors.map((d) => ({ id: d.id, nameAr: d.nameAr, nameEn: d.nameEn }));
   const pre = data.preselect;
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title={t("title")}
-        subtitle={`${pick(locale, branch.nameAr, branch.nameEn)} · ${view === "week" ? t("weekOf", { date: formatDualDate(new Date(`${data.days[0]}T12:00:00+03:00`), locale, "medium") }) : formatDualDate(new Date(`${day}T12:00:00+03:00`), locale, "full")} · ${t("liveHint")}`}
+        title={view === "flow" ? t("todayTitle") : t("scheduleTitle")}
+        subtitle={`${pick(locale, branch.nameAr, branch.nameEn)} · ${view === "week" ? t("weekOf", { date: formatDualDate(new Date(`${data.days[0]}T12:00:00+03:00`), locale, "medium") }) : formatDualDate(new Date(`${day}T12:00:00+03:00`), locale, "full")}`}
         actions={
           <>
             <Link
@@ -198,50 +218,68 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Link href={qs({ view: "day" })} className={tab(view === "day")}>
-          {t("day")}
-        </Link>
-        <Link href={qs({ view: "week" })} className={tab(view === "week")}>
-          {t("week")}
-        </Link>
-        <Link
-          href={qs({ view: "list" })}
-          className={tab(view === "list")}
-          data-testid="arrivals-tab"
-        >
-          {t("arrivals")}
-        </Link>
-        <Link href={qs({ view: "flow" })} className={tab(view === "flow")} data-testid="flow-tab">
-          {t("flow")}
-        </Link>
-        {can(ctx.roles, "hours:edit") && (
-          <Link href="/working-hours" className={tab(false)} data-testid="working-hours-link">
-            {th("title")}
+        <div className="bg-muted inline-flex rounded-lg p-1" role="tablist">
+          <Link
+            href={qs({ view: "flow" })}
+            role="tab"
+            aria-selected={view === "flow"}
+            className={seg(view === "flow")}
+            data-testid="flow-tab"
+          >
+            {t("todayTab")}
           </Link>
-        )}
-        <span className="bg-border mx-1 h-6 w-px" />
-        {view === "day" ? (
+          <Link
+            href={qs({ view: view === "week" ? "week" : "day" })}
+            role="tab"
+            aria-selected={view !== "flow"}
+            className={seg(view !== "flow")}
+            data-testid="schedule-tab"
+          >
+            {t("scheduleTab")}
+          </Link>
+        </div>
+        {(view === "day" || view === "week" || view === "list") && (
           <>
-            <Link href={qs({ by: "doctor" })} className={tab(by === "doctor")}>
-              {t("byDoctor")}
-            </Link>
-            <Link href={qs({ by: "room" })} className={tab(by === "room")}>
-              {t("byRoom")}
-            </Link>
+            <div className="bg-muted inline-flex rounded-lg p-1">
+              <Link href={qs({ view: "day" })} className={seg(view === "day")}>
+                {t("day")}
+              </Link>
+              <Link href={qs({ view: "week" })} className={seg(view === "week")}>
+                {t("week")}
+              </Link>
+            </div>
+            {view === "day" ? (
+              <div className="bg-muted inline-flex rounded-lg p-1">
+                <Link href={qs({ by: "doctor" })} className={seg(by === "doctor")}>
+                  {t("byDoctor")}
+                </Link>
+                <Link href={qs({ by: "room" })} className={seg(by === "room")}>
+                  {t("byRoom")}
+                </Link>
+              </div>
+            ) : view === "week" ? (
+              <WeekDoctorPicker
+                label={tw("doctor")}
+                value={qs({})}
+                options={data.doctors.map((d) => ({
+                  href: qs({ doctor: d.id }),
+                  label: pick(locale, d.nameAr, d.nameEn),
+                }))}
+              />
+            ) : null}
+            {can(ctx.roles, "hours:edit") && (
+              <Link
+                href="/working-hours"
+                className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
+                data-testid="working-hours-link"
+              >
+                {th("title")}
+              </Link>
+            )}
           </>
-        ) : view === "week" ? (
-          data.doctors.map((d) => (
-            <Link
-              key={d.id}
-              href={qs({ doctor: d.id })}
-              className={tab(d.id === data.weekDoctor?.id)}
-            >
-              {pick(locale, d.nameAr, d.nameEn)}
-            </Link>
-          ))
-        ) : null}
+        )}
         <span className="text-muted-foreground ms-auto text-xs">
-          {visible.length} · {tw("doctor")}: {data.doctors.length}
+          {t("countLine", { count: visible.length })}
         </span>
       </div>
 

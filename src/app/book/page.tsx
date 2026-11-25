@@ -9,7 +9,6 @@ import { Notice } from "@/components/ui/notice";
 import { withTenant } from "@/db/tenant";
 import { addDays } from "@/lib/booking/time";
 import { brandStyle, pick } from "@/lib/brand";
-import { demoMessagingAllowed } from "@/lib/messaging/sender";
 import { loadBookingCatalog } from "@/lib/online/catalog";
 import { bookingIdentity } from "@/lib/verify/identity";
 import { getCurrentTenant } from "@/lib/tenant/current";
@@ -54,7 +53,7 @@ export default async function BookPage({
     >
       <PublicHeader
         clinicName={pick(locale, tenant.nameAr, tenant.nameEn)}
-        demoMode={demoMessagingAllowed(tenant) ? t("demoMode") : null}
+        demoMode={null}
         toggle={<SiteLangSwitch tone="light" className="text-site-slate" />}
       />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-8 pb-12">

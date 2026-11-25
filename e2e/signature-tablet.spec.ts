@@ -225,7 +225,6 @@ test.describe("signature pad on tablets", () => {
       await browser.newContext({ locale: "ar-SA", timezoneId: "Asia/Riyadh" })
     ).newPage();
     await patientPage.goto("/book");
-    await patientPage.getByTestId("mode-clinic").click();
     await patientPage
       .getByTestId("step-branch")
       .getByRole("button", { name: /الرياض/ })

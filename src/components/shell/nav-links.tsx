@@ -47,7 +47,12 @@ export function NavLinks({
   items,
   orientation,
 }: {
-  items: { href: string; key: keyof typeof NAV_ICONS; label: string }[];
+  items: {
+    href: string;
+    key: keyof typeof NAV_ICONS;
+    label: string;
+    also?: readonly string[];
+  }[];
   orientation: "vertical" | "horizontal";
 }) {
   const pathname = usePathname();
@@ -60,7 +65,10 @@ export function NavLinks({
     >
       {items.map((item) => {
         const Icon = NAV_ICONS[item.key];
-        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const active =
+          item.href === "/"
+            ? pathname === "/"
+            : [item.href, ...(item.also ?? [])].some((h) => pathname.startsWith(h));
         return (
           <Link
             key={item.href}

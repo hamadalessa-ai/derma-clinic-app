@@ -1478,7 +1478,7 @@ function Consents({ data }: { data: SetupData }) {
               </span>
             </div>
             <Link
-              href="/settings?tab=consents"
+              href={`/settings/consents/${c.code}`}
               className="text-brand-strong text-sm font-medium underline"
             >
               {t("editTexts")}

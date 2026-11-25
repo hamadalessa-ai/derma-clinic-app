@@ -158,8 +158,13 @@ export const NAV_ITEMS = [
   { href: "/memberships", key: "memberships", permission: "memberships:sell" },
   { href: "/lab-cases", key: "labCases", permission: "lab:view", dentalOnly: true },
   { href: "/reports", key: "reports", permission: "reports:view" },
-  { href: "/setup", key: "setup", permission: "setup:manage" },
-  { href: "/settings", key: "settings", permission: "settings:manage" },
+  // Clinic settings: one menu item for every set-up page (sections on the page itself).
+  {
+    href: "/settings",
+    key: "settings",
+    permission: "settings:manage",
+    also: ["/setup", "/working-hours"],
+  },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly {
   href: string;
@@ -169,6 +174,8 @@ export const NAV_ITEMS = [
   demoOnly?: boolean;
   /** Only shown when the clinic has a dental department. */
   dentalOnly?: boolean;
+  /** Other pages that belong to this item (it shows as the current page there). */
+  also?: readonly string[];
 }[];
 
 /** Pages that matter most on a phone, in order. The first ones a role may see go in the bottom bar. */
@@ -183,7 +190,6 @@ export const MOBILE_PRIORITY = [
   "memberships",
   "labCases",
   "settings",
-  "setup",
 ] as const;
 
 /** The menu under the person's name (top of every page): rare pages, never in the side menu. */

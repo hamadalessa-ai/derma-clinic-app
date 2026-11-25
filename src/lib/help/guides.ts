@@ -169,8 +169,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       link: { href: "/my-day", permission: "my_day:view" },
       steps: [
         s(
-          "«يومي» يعرض مواعيد الأطباء الذين تعملين معهم (تحدّدهم الإدارة في الإعدادات ← الفريق).",
-          "My Day shows the appointments of the doctors you work with (the admin sets them in Settings → Team).",
+          "«يومي» يعرض مواعيد الأطباء الذين تعملين معهم (تحدّدهم الإدارة في إعدادات العيادة ← الفريق).",
+          "My Day shows the appointments of the doctors you work with (the admin sets them in Clinic settings → Team).",
         ),
         s(
           "عندما يسجّل الاستقبال حضور المريض يظهر زر «بدء الزيارة». اضغطه لفتح شاشة الزيارة.",
@@ -348,13 +348,13 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
   clinic_admin: [
     {
       id: "setup",
-      titleAr: "إعداد العيادة",
-      titleEn: "Clinic set-up",
+      titleAr: "إعدادات العيادة",
+      titleEn: "Clinic settings",
       link: { href: "/setup", permission: "setup:manage" },
       steps: [
         s(
-          "«إعداد العيادة»: الفروع، الأقسام، الخدمات (السعر، المدة، الجهاز، الموافقة، الحجز أونلاين)، الغرف والأجهزة، الباقات، نماذج الموافقة.",
-          "Clinic set-up: branches, departments, services (price, duration, device, consent, online booking), rooms and devices, packages, consent forms.",
+          "«إعدادات العيادة»: الفروع، الأقسام، الخدمات (السعر، المدة، الجهاز، الموافقة، الحجز أونلاين)، الغرف والأجهزة، الباقات، نماذج الموافقة.",
+          "Clinic settings: branches, departments, services (price, duration, device, consent, online booking), rooms and devices, packages, consent forms.",
         ),
         s(
           "«قائمة الأسعار»: المنتجات والمستهلكات والإجراءات برموزها، يضيفها الطبيب للزيارة. السعر يُنسخ إلى الزيارة فلا يتغير الماضي.",
@@ -369,8 +369,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       link: { href: "/settings?tab=team", permission: "team:manage" },
       steps: [
         s(
-          "الإعدادات ← الفريق: أضف موظفاً فيصله رابط دعوة، واختر دوره وفرعه.",
-          "Settings → Team: add a staff member (they get an invitation link) and choose their role and branch.",
+          "إعدادات العيادة ← الفريق: أضف موظفاً فيصله رابط دعوة، واختر دوره وفرعه.",
+          "Clinic settings → Team: add a staff member (they get an invitation link) and choose their role and branch.",
         ),
         s(
           "للممرضة: اختر الأطباء الذين تعمل معهم، فترى أيامهم وتجهّز زياراتهم.",
@@ -409,8 +409,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
           "Choose the automatic messages: confirmation, reminder, pre-visit, after-care, no-show, recall. Nothing is sent between 10 pm and 8 am.",
         ),
         s(
-          "من نفس الصفحة شغّل أو أوقف موظف الاستقبال الذكي. الإملاء الصوتي للأطباء من الإعدادات ← العيادة.",
-          "On the same page switch the AI receptionist on or off. The doctors' AI scribe is in Settings → Clinic.",
+          "من نفس الصفحة شغّل أو أوقف موظف الاستقبال الذكي. الإملاء الصوتي للأطباء من إعدادات العيادة ← بيانات العيادة.",
+          "On the same page switch the AI receptionist on or off. The doctors' AI scribe is in Clinic settings → Clinic details.",
         ),
       ],
     },
@@ -425,8 +425,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
           "Turn on two-step verification in My account, under your name at the top (authenticator app + backup codes).",
         ),
         s(
-          "تنزيل بيانات العيادة من الإعدادات ← العيادة (بدون ملاحظات سريرية)، وكل تنزيل مسجّل.",
-          "Download clinic data from Settings → Clinic (no clinical notes); every download is logged.",
+          "تنزيل بيانات العيادة من إعدادات العيادة ← بيانات العيادة (بدون ملاحظات سريرية)، وكل تنزيل مسجّل.",
+          "Download clinic data from Clinic settings → Clinic details (no clinical notes); every download is logged.",
         ),
       ],
     },

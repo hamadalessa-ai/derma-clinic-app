@@ -10,10 +10,18 @@ import { splitForMobile } from "@/lib/auth/permissions";
 import { cn } from "@/lib/utils";
 import { NAV_ICONS } from "./nav-links";
 
-type Item = { href: string; key: keyof typeof NAV_ICONS; label: string };
+type Item = {
+  href: string;
+  key: keyof typeof NAV_ICONS;
+  label: string;
+  also?: readonly string[];
+};
 
-function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+function isActive(pathname: string, item: Item) {
+  if (item.href === "/") return pathname === "/";
+  return [item.href, ...(item.also ?? [])].some(
+    (h) => pathname === h || pathname.startsWith(`${h}/`),
+  );
 }
 
 /**
@@ -26,7 +34,7 @@ export function MobileNav({ items }: { items: Item[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { bar, more } = splitForMobile(items);
-  const moreActive = more.some((i) => isActive(pathname, i.href));
+  const moreActive = more.some((i) => isActive(pathname, i));
 
   const tab = (active: boolean) =>
     cn(
@@ -44,7 +52,7 @@ export function MobileNav({ items }: { items: Item[] }) {
         <div className="flex h-16 items-stretch">
           {bar.map((item) => {
             const Icon = NAV_ICONS[item.key];
-            const active = isActive(pathname, item.href);
+            const active = isActive(pathname, item);
             return (
               <Link
                 key={item.href}
@@ -97,7 +105,7 @@ export function MobileNav({ items }: { items: Item[] }) {
           <ul className="flex flex-col gap-1">
             {more.map((item) => {
               const Icon = NAV_ICONS[item.key];
-              const active = isActive(pathname, item.href);
+              const active = isActive(pathname, item);
               return (
                 <li key={item.href}>
                   <Link

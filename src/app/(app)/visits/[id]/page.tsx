@@ -403,24 +403,23 @@ export default async function VisitPage({ params }: { params: Promise<{ id: stri
               </CardContent>
             </Card>
           )}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("earlier")}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {earlier.length === 0 && (
-                <p className="text-muted-foreground text-sm">{t("noEarlier")}</p>
-              )}
-              {earlier.map((n) => (
-                <details key={n.id} className="bg-muted rounded-lg px-3 py-2 text-sm">
-                  <summary className="cursor-pointer font-medium">
-                    {formatGregorian(n.createdAt, locale, "medium")} · {n.authorName}
-                  </summary>
-                  <p className="mt-2 leading-6 whitespace-pre-line">{n.body}</p>
-                </details>
-              ))}
-            </CardContent>
-          </Card>
+          {earlier.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t("earlier")}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                {earlier.map((n) => (
+                  <details key={n.id} className="bg-muted rounded-lg px-3 py-2 text-sm">
+                    <summary className="cursor-pointer font-medium">
+                      {formatGregorian(n.createdAt, locale, "medium")} · {n.authorName}
+                    </summary>
+                    <p className="mt-2 leading-6 whitespace-pre-line">{n.body}</p>
+                  </details>
+                ))}
+              </CardContent>
+            </Card>
+          )}
           {/* Before / after photos for this visit (doctors and nurses take them here). */}
           {can(ctx.roles, "photos:view") && (
             <PhotoSection

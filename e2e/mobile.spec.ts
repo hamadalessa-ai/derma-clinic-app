@@ -182,7 +182,7 @@ test.describe("phone navigation and layout", () => {
     await phone.getByRole("button", { name: "تغيير اللغة" }).click();
     await expect(phone.locator("html")).toHaveAttribute("dir", "ltr");
     await phone.getByTestId("mobile-nav").getByRole("button", { name: "More" }).click();
-    await phone.getByTestId("mobile-more").getByRole("link", { name: "Settings" }).click();
+    await phone.getByTestId("mobile-more").getByRole("link", { name: "Clinic settings" }).click();
     await expect(phone).toHaveURL(/\/settings$/);
     expect(await layoutProblems(phone)).toEqual([]);
   });

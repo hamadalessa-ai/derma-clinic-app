@@ -363,3 +363,5 @@ try {
   console.error("walkthrough failed:", e);
 }
 console.log("Screenshots saved in screenshots/");
+// A failed walkthrough can leave its browser open: end here so the job never waits for its time limit.
+process.exit(0);

@@ -85,11 +85,9 @@ export function ClinicalPhotos({
           </Button>
         )}
       </CardHeader>
-      <CardContent className="flex flex-col gap-5">
+      <CardContent className={cn("flex flex-col gap-5", compact && data.total === 0 && "hidden")}>
         {data.total === 0 ? (
-          compact ? (
-            <p className="text-muted-foreground text-sm">{t("none")}</p>
-          ) : (
+          compact ? null : (
             <EmptyState icon={<ImagePlus />} title={t("none")} />
           )
         ) : (

@@ -56,17 +56,15 @@ import type { Locale } from "@/i18n/config";
 /** The AI scribe may take a while to draft a long note. */
 export const maxDuration = 60;
 
-const TABS = [
-  "overview",
-  "visits",
-  "packages",
-  "consents",
-  "photos",
-  "labs",
-  "dental",
-  "notes",
-] as const;
+const TABS = ["overview", "visits", "packages", "clinical", "consents"] as const;
 type Tab = (typeof TABS)[number];
+/** Old tab links still work: notes are under Visits & notes; photos, labs, dental under Clinical. */
+const TAB_ALIAS: Record<string, Tab> = {
+  notes: "visits",
+  photos: "clinical",
+  labs: "clinical",
+  dental: "clinical",
+};
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 export default async function PatientProfilePage({
@@ -92,16 +90,17 @@ export default async function PatientProfilePage({
   const dental = await withActor(actorOf(ctx), (tx) => dentalEnabled(tx));
   const canLabs = can(ctx.roles, "labs:view");
   const canPhotos = can(ctx.roles, "photos:view");
-  const tabs = TABS.filter(
-    (x) =>
-      (x !== "notes" || canNotes) &&
-      (x !== "dental" || dental) &&
-      (x !== "labs" || canLabs) &&
-      (x !== "photos" || canPhotos),
-  );
-  const tab: Tab = (tabs as readonly string[]).includes(sp.tab ?? "")
-    ? (sp.tab as Tab)
-    : "overview";
+  const tabs = TABS.filter((x) => x !== "clinical" || dental || canLabs || canPhotos);
+  const asked = TAB_ALIAS[sp.tab ?? ""] ?? sp.tab ?? "";
+  const tab: Tab = (tabs as readonly string[]).includes(asked) ? (asked as Tab) : "overview";
+  const tabLabel = (x: Tab) =>
+    x === "visits" && canNotes
+      ? t("tabVisitsNotes")
+      : x === "packages"
+        ? t("tabPackages")
+        : x === "clinical"
+          ? t("tabClinical")
+          : t(x);
   const actor = { ...actorOf(ctx) };
   // Opened from a "patient concern" notification (or My Day): show that concern first.
   const concernId = sp.concern && UUID_RE.test(sp.concern) ? sp.concern : null;
@@ -262,7 +261,10 @@ export default async function PatientProfilePage({
         />
       ))}
 
-      <LinkTabs active={tab} tabs={tabs.map((x) => ({ key: x, label: t(x), href: href(x) }))} />
+      <LinkTabs
+        active={tab}
+        tabs={tabs.map((x) => ({ key: x, label: tabLabel(x), href: href(x) }))}
+      />
 
       {tab === "overview" && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -477,12 +479,15 @@ export default async function PatientProfilePage({
         />
       )}
 
-      {tab === "labs" && canLabs && <LabSection actor={actor} patientId={id} />}
-      {tab === "photos" && canPhotos && <PhotoSection actor={actor} patientId={id} />}
+      {tab === "clinical" && (
+        <div className="flex flex-col gap-6">
+          {canPhotos && <PhotoSection actor={actor} patientId={id} />}
+          {canLabs && <LabSection actor={actor} patientId={id} />}
+          {dental && <DentalSection actor={actor} patientId={id} />}
+        </div>
+      )}
 
-      {tab === "dental" && dental && <DentalSection actor={actor} patientId={id} />}
-
-      {tab === "notes" && canNotes && (
+      {tab === "visits" && canNotes && (
         <>
           <NotesPanel
             patientId={id}
