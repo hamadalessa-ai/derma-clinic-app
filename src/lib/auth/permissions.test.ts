@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   can,
   NAV_ITEMS,
+  USER_MENU_ITEMS,
   PERMISSIONS,
   ROLES,
   splitForMobile,
@@ -397,7 +398,16 @@ describe("role permissions", () => {
   });
 
   it("every sidebar page is guarded by a known permission", () => {
-    for (const item of NAV_ITEMS) expect(PERMISSIONS[item.permission]).toBeDefined();
+    for (const item of [...NAV_ITEMS, ...USER_MENU_ITEMS])
+      expect(PERMISSIONS[item.permission]).toBeDefined();
+  });
+
+  it("keeps the side menu short: at most 4 pages for doctors and nurses, 5 for reception", () => {
+    const count = (roles: Role[]) =>
+      NAV_ITEMS.filter((i) => can(roles, i.permission) && !("dentalOnly" in i)).length;
+    expect(count(["practitioner"])).toBeLessThanOrEqual(4);
+    expect(count(["assistant"])).toBeLessThanOrEqual(4);
+    expect(count(["receptionist"])).toBeLessThanOrEqual(5);
   });
 });
 
@@ -405,11 +415,11 @@ describe("phone navigation", () => {
   const itemsFor = (roles: Role[]) => NAV_ITEMS.filter((i) => can(roles, i.permission));
 
   it.each([
-    [["practitioner"], ["myDay", "calendar", "patients", "clinicalNotes"]],
-    [["receptionist"], ["calendar", "patients", "whatsapp", "services"]],
-    [["clinic_admin"], ["calendar", "patients", "whatsapp", "settings"]],
-    [["platform_owner"], ["platform", "account"]],
-    [["assistant"], ["myDay", "calendar", "patients", "clinicalNotes"]],
+    [["practitioner"], ["myDay", "calendar", "patients", "clinicalNotes", "labCases"]],
+    [["receptionist"], ["calendar", "patients", "whatsapp", "memberships", "labCases"]],
+    [["clinic_admin"], ["calendar", "patients", "whatsapp", "reports"]],
+    [["platform_owner"], ["platform"]],
+    [["assistant"], ["myDay", "calendar", "patients", "clinicalNotes", "labCases"]],
   ] as [Role[], string[]][])("%s: the bottom bar shows the most-used pages", (roles, expected) => {
     expect(splitForMobile(itemsFor(roles)).bar.map((i) => i.key)).toEqual(expected);
   });

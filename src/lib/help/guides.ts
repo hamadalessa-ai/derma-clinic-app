@@ -146,8 +146,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       link: { href: "/whatsapp", permission: "whatsapp:inbox" },
       steps: [
         s(
-          "افتح «الرسائل». المحادثات التي تحتاج رداً تظهر أولاً.",
-          "Open Inbox. Chats that need a reply come first.",
+          "افتح «واتساب». المحادثات التي تحتاج رداً تظهر أولاً.",
+          "Open WhatsApp. Chats that need a reply come first.",
         ),
         s(
           "موظف الاستقبال الذكي يجيب عن المواعيد والأسعار. أي سؤال طبي يُحوَّل إليكم مباشرة.",
@@ -230,8 +230,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
           "Open My Day on your phone and add it to the home screen from the browser menu.",
         ),
         s(
-          "فعّل الإشعارات من «حسابي»: يصلك إشعار عند حضور المريض أو عندما تقول الممرضة إنه جاهز.",
-          "Turn on notifications in My account: you are told when a patient arrives or the nurse says they are ready.",
+          "فعّل الإشعارات من «حسابي» (اضغط اسمك أعلى الصفحة): يصلك إشعار عند حضور المريض أو عندما تقول الممرضة إنه جاهز.",
+          "Turn on notifications in My account (tap your name at the top): you are told when a patient arrives or the nurse says they are ready.",
         ),
       ],
     },
@@ -421,8 +421,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       link: { href: "/account", permission: "account:manage" },
       steps: [
         s(
-          "فعّل التحقق بخطوتين من «حسابي» (تطبيق المصادقة + رموز احتياطية).",
-          "Turn on two-step verification in My account (authenticator app + backup codes).",
+          "فعّل التحقق بخطوتين من «حسابي» تحت اسمك أعلى الصفحة (تطبيق المصادقة + رموز احتياطية).",
+          "Turn on two-step verification in My account, under your name at the top (authenticator app + backup codes).",
         ),
         s(
           "تنزيل بيانات العيادة من الإعدادات ← العيادة (بدون ملاحظات سريرية)، وكل تنزيل مسجّل.",

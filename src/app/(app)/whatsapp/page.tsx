@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { ArrowLeft, ArrowRight, BellOff, Bot, Flag, Hand, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellOff, Bot, Flag, Hand, Smartphone, UserPlus } from "lucide-react";
 import { AutoRefresh } from "@/components/clinic/auto-refresh";
 import { Card, CardContent } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
@@ -58,6 +58,7 @@ export default async function WhatsAppInboxPage({
   const activeId = sp.c && UUID.test(sp.c) ? sp.c : null;
   const actor = actorOf(ctx);
   const ti = await getTranslations("inbox");
+  const tnav = await getTranslations("nav");
   const counts = await withActor(actor, (tx) => inboxCounts(tx));
   const { items, thread, names, events, concerns, aiEnabled } = await withActor(
     actor,
@@ -122,7 +123,21 @@ export default async function WhatsAppInboxPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title={ti("title")} />
+      <PageHeader
+        title={ti("title")}
+        actions={
+          mode === "demo" && can(ctx.roles, "whatsapp:simulator") ? (
+            <Link
+              href="/whatsapp/simulator"
+              className="text-brand-strong inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+              data-testid="open-simulator"
+            >
+              <Smartphone className="size-4" />
+              {tnav("openSimulator")}
+            </Link>
+          ) : undefined
+        }
+      />
       <InboxTabs active="messages" counts={counts} />
       {mode === "demo" && <Notice tone="info">{t("demoLabel")}</Notice>}
       {mode === "off" && <Notice tone="warning">{t("modes.off")}</Notice>}

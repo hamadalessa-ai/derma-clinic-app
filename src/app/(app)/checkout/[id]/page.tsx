@@ -133,9 +133,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
               <ul className="flex flex-col divide-y rounded-lg border">
                 {data.lines.map((l, i) => (
                   <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-                    <span className="text-muted-foreground font-mono text-xs" dir="ltr">
-                      {l.code}
-                    </span>
+                    
                     <span className="min-w-0 flex-1">{pick(locale, l.nameAr, l.nameEn)}</span>
                     {l.coveredByPackage ? (
                       <span className="bg-gold text-gold-foreground rounded-md px-2 text-xs leading-6">

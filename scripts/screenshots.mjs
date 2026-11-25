@@ -98,6 +98,13 @@ try {
     await page.getByTestId("desk-hit").first().waitFor({ timeout: 15000 });
     await page.waitForTimeout(500);
     await page.screenshot({ path: "screenshots/desk-en-search.png" });
+    // Walk-in sits behind "…" on a patient with no visit today.
+    const hits = page.getByTestId("desk-hit");
+    for (let i = 0; i < (await hits.count()); i++) {
+      await hits.nth(i).getByTestId("desk-more").click();
+      if (await hits.nth(i).getByTestId("desk-walk-in").count()) break;
+      await hits.nth(i).getByTestId("desk-more").click();
+    }
     const walk = page.getByTestId("desk-walk-in").first();
     if (await walk.count()) {
       await walk.click();

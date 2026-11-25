@@ -144,26 +144,22 @@ export function assertCan(roles: readonly Role[] | null | undefined, permission:
 }
 
 /** Sidebar pages and the permission each one needs. */
+/**
+ * The side menu: daily pages only (simplification, Nov 2026). Rare pages live elsewhere: My account
+ * and Help in the name menu at the top (USER_MENU_ITEMS), Services inside Clinic set-up and every
+ * booking screen, the WhatsApp simulator as a link on the WhatsApp page (demo clinics).
+ */
 export const NAV_ITEMS = [
   { href: "/my-day", key: "myDay", permission: "my_day:view" },
   { href: "/calendar", key: "calendar", permission: "calendar:view" },
   { href: "/patients", key: "patients", permission: "patients:read" },
   { href: "/clinical-notes", key: "clinicalNotes", permission: "clinical_notes:read" },
-  { href: "/services", key: "services", permission: "services:read" },
+  { href: "/whatsapp", key: "whatsapp", permission: "whatsapp:inbox" },
+  { href: "/memberships", key: "memberships", permission: "memberships:sell" },
+  { href: "/lab-cases", key: "labCases", permission: "lab:view", dentalOnly: true },
   { href: "/reports", key: "reports", permission: "reports:view" },
   { href: "/setup", key: "setup", permission: "setup:manage" },
   { href: "/settings", key: "settings", permission: "settings:manage" },
-  { href: "/whatsapp", key: "whatsapp", permission: "whatsapp:inbox" },
-  {
-    href: "/whatsapp/simulator",
-    key: "simulator",
-    permission: "whatsapp:simulator",
-    demoOnly: true,
-  },
-  { href: "/account", key: "account", permission: "account:manage" },
-  { href: "/lab-cases", key: "labCases", permission: "lab:view", dentalOnly: true },
-  { href: "/memberships", key: "memberships", permission: "memberships:sell" },
-  { href: "/help", key: "help", permission: "help:view" },
   { href: "/platform", key: "platform", permission: "platform:read" },
 ] as const satisfies readonly {
   href: string;
@@ -183,15 +179,18 @@ export const MOBILE_PRIORITY = [
   "whatsapp",
   "clinicalNotes",
   "platform",
-  "settings",
-  "services",
-  "whatsapp",
-  "simulator",
-  "account",
-  "labCases",
+  "reports",
   "memberships",
-  "help",
+  "labCases",
+  "settings",
+  "setup",
 ] as const;
+
+/** The menu under the person's name (top of every page): rare pages, never in the side menu. */
+export const USER_MENU_ITEMS = [
+  { href: "/account", key: "account", permission: "account:manage" },
+  { href: "/help", key: "help", permission: "help:view" },
+] as const satisfies readonly { href: string; key: string; permission: Permission }[];
 
 /**
  * Splits the SAME allowed navigation items as the desktop sidebar into the phone's bottom bar
