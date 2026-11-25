@@ -31,8 +31,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
       link: { href: "/calendar?view=flow", permission: "calendar:view" },
       steps: [
         s(
-          "افتح التقويم ثم «سير المرضى». ترى كل مريض اليوم: متوقع، في الانتظار، مع الممرضة، مع الطبيب، المحاسبة، انتهت.",
-          "Open Calendar → Patient flow. Every patient today is in a column: Expected, Waiting, With nurse, With doctor, Checkout, Done.",
+          "افتح «اليوم» (أول صفحة). ترى كل مريض اليوم: متوقع، في الانتظار، مع الممرضة، مع الطبيب، المحاسبة، انتهت.",
+          "Open Today (the first page). Every patient today is in a column: Expected, Waiting, With nurse, With doctor, Checkout, Done.",
         ),
         s(
           "البطاقة المحاطة بلون برتقالي تعني انتظاراً أكثر من 15 دقيقة أو تأخراً أكثر من 10 دقائق.",
@@ -80,6 +80,26 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
         s(
           "حضور بدون موعد: «حضور بدون موعد» ← اختر الخدمة ← اضغط أقرب وقت متاح. يُحجز ويُسجّل الحضور معاً.",
           "Walk-in: Walk-in → choose the service → tap the first free time. It is booked and checked in together.",
+        ),
+      ],
+    },
+    {
+      id: "selfcheckin",
+      titleAr: "تسجيل الوصول الذاتي واستدعاء المريض",
+      titleEn: "Self check-in and calling patients in",
+      link: { href: "/calendar?view=flow", permission: "calendar:view" },
+      steps: [
+        s(
+          "يوم الزيارة تصل المريض رسالة واتساب فيها زر «وصلت» (والزر أيضًا في صفحة المريض). عند وصوله يضغطه فيُسجَّل حضوره وحده، وتنتقل بطاقته إلى «في الانتظار» مع وسم «سجّل وصوله بنفسه».",
+          'On the visit day the patient gets a WhatsApp message with an "I\'ve arrived" button (also on their patient page). Tapping it at the clinic checks them in; their card moves to Waiting with a "Self check-in" tag.',
+        ),
+        s(
+          "إذا احتاج موافقة تصله أولاً رابط التوقيع، وبعد التوقيع يُسجَّل حضوره تلقائيًا.",
+          "If a consent is needed they get its link first; signing it checks them in.",
+        ),
+        s(
+          "عندما تجهز الغرفة اضغط «استدعاء» على بطاقته: تصله رسالة باسم الغرفة والطبيب. من لا يستخدم واتساب نناديه باسمه.",
+          "When the room is ready, press Call in on their card: they get the room and the doctor on WhatsApp. Call out the name for anyone without WhatsApp.",
         ),
       ],
     },
@@ -173,8 +193,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
           "My Day shows the appointments of the doctors you work with (the admin sets them in Clinic settings → Team).",
         ),
         s(
-          "عندما يسجّل الاستقبال حضور المريض يظهر زر «بدء الزيارة». اضغطه لفتح شاشة الزيارة.",
-          "When reception checks the patient in, a Start visit button appears. Press it to open the visit screen.",
+          "عندما يصل المريض (يسجّله الاستقبال أو يسجّل وصوله بنفسه) يظهر زرا «استدعاء» و«بدء الزيارة». «استدعاء» يرسل له اسم الغرفة على واتساب، ثم «بدء الزيارة» يفتح شاشة الزيارة.",
+          "When the patient has arrived (checked in by reception or by themselves), Call in and Start visit appear. Call in sends them the room on WhatsApp; Start visit opens the visit screen.",
         ),
       ],
     },

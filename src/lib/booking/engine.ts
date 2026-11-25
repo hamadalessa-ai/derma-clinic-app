@@ -123,6 +123,9 @@ const DEFAULT_SETTINGS: Settings = {
   onlineRequiresApproval: false,
   showPricesOnline: true,
   showServiceInMessages: true,
+  selfCheckInEnabled: false,
+  selfCheckInBeforeMinutes: 45,
+  selfCheckInAfterMinutes: 30,
   aiReceptionistEnabled: false,
   aiDailyLimit: 200,
   aiScribeEnabled: false,
@@ -662,6 +665,56 @@ export async function markArrivedByVideo(tx: TenantTx, appointmentId: string) {
     appt,
     "arrived",
   );
+}
+
+/**
+ * Self check-in: the patient said "I've arrived" (WhatsApp button or the patient page). The same
+ * arrival as at the desk; callers check the time window and consent and deduct a package session
+ * first (lib/visits/self-check-in.ts). Clinic visits only (video visits check in by joining).
+ */
+export async function markArrivedByPatient(
+  tx: TenantTx,
+  appointmentId: string,
+  via: "whatsapp" | "online",
+) {
+  const appt = await getAppointment(tx, appointmentId, true);
+  const service = await getService(tx, appt.serviceId);
+  if (service.isVirtual) throw new BookingError("not_allowed");
+  const arrived =
+    appt.status === "arrived"
+      ? appt
+      : await applyStatus(
+          tx,
+          { userId: null, source: via, patientId: appt.patientId },
+          appt,
+          "arrived",
+        );
+  const [updated] = await tx
+    .update(appointments)
+    .set({ selfCheckedInAt: appt.selfCheckedInAt ?? new Date(), arrivalRequestedAt: null })
+    .where(eq(appointments.id, arrived.id))
+    .returning();
+  return updated;
+}
+
+/** "I've arrived" while a consent is still missing: signing it next checks the patient in. */
+export async function markArrivalRequested(tx: TenantTx, appointmentId: string) {
+  await tx
+    .update(appointments)
+    .set({ arrivalRequestedAt: new Date() })
+    .where(eq(appointments.id, appointmentId));
+}
+
+/** "Call in": staff call a waiting (arrived) patient into the room; the latest call is kept. */
+export async function markCalledIn(tx: TenantTx, appointmentId: string) {
+  const appt = await getAppointment(tx, appointmentId, true);
+  if (appt.status !== "arrived") throw new BookingError("bad_status");
+  const [updated] = await tx
+    .update(appointments)
+    .set({ calledAt: new Date() })
+    .where(eq(appointments.id, appt.id))
+    .returning();
+  return updated;
 }
 
 // ─── Blocked time ───────────────────────────────────────────────────────────

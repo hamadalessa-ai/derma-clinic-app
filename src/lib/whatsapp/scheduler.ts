@@ -1,6 +1,7 @@
 /**
- * Scheduled WhatsApp messages: reminders, post-care check-ins, no-show follow-ups, recalls and
- * membership renewals (3 days before a period ends).
+ * Scheduled WhatsApp messages: reminders, visit-day "I've arrived" messages (self check-in, 1–4
+ * hours before a clinic visit), post-care check-ins, no-show follow-ups, recalls and membership
+ * renewals (3 days before a period ends).
  * Called every hour by GitHub Actions (/api/cron/messages), once a day by Vercel Cron as a safety
  * net, and in demo mode by the admin's "Run scheduled messages now" button.
  *
@@ -16,11 +17,18 @@
  *    can be ignored — so a live demo works at any time of day.
  */
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
-import { appointments, messageDispatches, patientMemberships, services } from "@/db/schema";
+import {
+  appointments,
+  messageDispatches,
+  patientMemberships,
+  services,
+  tenantSettings,
+} from "@/db/schema";
 import { withTenant } from "@/db/tenant";
 import { addDays, riyadhDay } from "@/lib/booking/time";
 import {
   SCHEDULED_KEYS,
+  sendArrivalInvite,
   sendMembershipRenewal,
   sendNoShowFollowUp,
   sendPostCare,
@@ -81,6 +89,25 @@ export async function dueWork(tenantId: string, due: Date) {
         ),
       )
       .orderBy(asc(appointments.startsAt));
+
+    // Visit day, self check-in on: clinic visits starting in 1–4 hours get "tap I've arrived".
+    const [settings] = await tx
+      .select({ on: tenantSettings.selfCheckInEnabled })
+      .from(tenantSettings);
+    const arrivals = settings?.on
+      ? await tx
+          .select({ id: appointments.id, startsAt: appointments.startsAt })
+          .from(appointments)
+          .innerJoin(services, eq(services.id, appointments.serviceId))
+          .where(
+            and(
+              inArray(appointments.status, ["booked", "confirmed"]),
+              eq(services.isVirtual, false),
+              gte(appointments.startsAt, new Date(due.getTime() + 1 * HOUR)),
+              lte(appointments.startsAt, new Date(due.getTime() + 4 * HOUR)),
+            ),
+          )
+      : [];
 
     // Post-care: 24 hours after the visit ended (or was completed), for up to 3 days.
     const finished = sql`least(${appointments.endsAt}, ${appointments.updatedAt})`;
@@ -152,7 +179,7 @@ export async function dueWork(tenantId: string, due: Date) {
           )`,
         ),
       );
-    return { reminders, postCare, noShows, recalls, memberships };
+    return { reminders, arrivals, postCare, noShows, recalls, memberships };
   });
 }
 
@@ -198,6 +225,11 @@ export async function runScheduledMessages(
       kind: "reminder",
       key: SCHEDULED_KEYS.reminder(a.id, a.startsAt),
       send: () => sendReminder(tenant, a.id, env),
+    })),
+    ...work.arrivals.map((a) => ({
+      kind: "arrival_invite",
+      key: SCHEDULED_KEYS.arrival_invite(a.id, a.startsAt),
+      send: () => sendArrivalInvite(tenant, a.id, env),
     })),
     ...work.postCare.map((a) => ({
       kind: "post_care",

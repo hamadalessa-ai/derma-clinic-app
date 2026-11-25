@@ -15,6 +15,9 @@ export interface SettingsInput {
   onlineRequiresApproval?: boolean;
   showPricesOnline?: boolean;
   showServiceInMessages?: boolean;
+  selfCheckInEnabled?: boolean;
+  selfCheckInBeforeMinutes?: number;
+  selfCheckInAfterMinutes?: number;
   aiReceptionistEnabled?: boolean;
   aiDailyLimit?: number;
   aiScribeEnabled?: boolean;

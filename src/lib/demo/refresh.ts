@@ -50,7 +50,10 @@ export async function refreshDemoWeek(tx: TenantTx, actor: Actor, today = riyadh
            arrived_at = ${newStart(today, "appointments")} + (arrived_at - starts_at),
            in_room_at = ${newStart(today, "appointments")} + (in_room_at - starts_at),
            doctor_at = ${newStart(today, "appointments")} + (doctor_at - starts_at),
-           completed_at = ${newStart(today, "appointments")} + (completed_at - starts_at)
+           completed_at = ${newStart(today, "appointments")} + (completed_at - starts_at),
+           self_checked_in_at = ${newStart(today, "appointments")} + (self_checked_in_at - starts_at),
+           arrival_requested_at = ${newStart(today, "appointments")} + (arrival_requested_at - starts_at),
+           called_at = ${newStart(today, "appointments")} + (called_at - starts_at)
      where demo_day_index is not null
     returning id`);
   await tx.execute(sql`

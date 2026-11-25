@@ -36,6 +36,9 @@ import { anthropicClient, type ClaudeClient } from "@/lib/ai/claude";
 import { aiCanAnswer, runReceptionist } from "@/lib/ai/receptionist";
 import { getFileStore } from "@/lib/files/store";
 import { sendPushEvents, type PushEvent } from "@/lib/push/notify";
+import { formatTime } from "@/lib/format";
+import { consentSignUrl } from "@/lib/video/link";
+import { selfCheckIn } from "@/lib/visits/self-check-in";
 import { parseButtonPayload, type ParsedButton } from "./buttons";
 import { START_WORDS, STOP_WORDS, type ReplyKind } from "./catalog";
 import { appBaseUrl, clinicLiveConfig } from "./config";
@@ -619,6 +622,56 @@ async function handleButton(
           { type: "patient_rescheduled", appointmentId: apptId },
         ],
       };
+    }
+    case "arrived": {
+      // Self check-in from the visit-day message (window, consent and package steps inside).
+      const r = await run(() =>
+        selfCheckIn(tx, {
+          tenantId: tenant.id,
+          appointmentId: apptId,
+          patientIds: [target.patientId],
+          via: "whatsapp",
+          now,
+        }),
+      );
+      if (!r.ok) return { replies: [{ kind: "arrival_desk", appointmentId: apptId }], push: [] };
+      const res = r.value;
+      if (res.status === "checked_in") {
+        return {
+          replies: [{ kind: "checked_in_ack", appointmentId: apptId }],
+          push: [{ type: "checked_in", appointmentId: apptId }],
+        };
+      }
+      if (res.status === "already_checked_in") {
+        return { replies: [{ kind: "checked_in_ack", appointmentId: apptId }], push: [] };
+      }
+      if (res.status === "consent_required") {
+        return {
+          replies: [
+            {
+              kind: "arrival_consent",
+              appointmentId: apptId,
+              vars: { sign_link: consentSignUrl(base, tenant.id, apptId) },
+            },
+          ],
+          push: [],
+        };
+      }
+      if (res.status === "too_early") {
+        const [p] = await tx.select().from(patients).where(eq(patients.id, patientId));
+        const lang = p?.preferredLanguage === "en" ? "en" : "ar";
+        return {
+          replies: [
+            {
+              kind: "arrival_too_early",
+              appointmentId: apptId,
+              vars: { minutes: String(res.beforeMinutes), time: formatTime(res.startsAt, lang) },
+            },
+          ],
+          push: [],
+        };
+      }
+      return { replies: [{ kind: "arrival_desk", appointmentId: apptId }], push: [] };
     }
     case "all_good":
       return { replies: [{ kind: "all_good_ack", appointmentId: apptId }], push: [] };

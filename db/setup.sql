@@ -1287,6 +1287,13 @@ ALTER TABLE "clinical_photos" ADD CONSTRAINT "clinical_photos_patient_fk" FOREIG
 ALTER TABLE "clinical_photos" ADD CONSTRAINT "clinical_photos_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "clinical_photos" ADD CONSTRAINT "clinical_photos_file_fk" FOREIGN KEY ("tenant_id","file_id") REFERENCES "public"."files"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 CREATE INDEX "clinical_photos_patient_idx" ON "clinical_photos" USING btree ("tenant_id","patient_id","area","taken_on");
+-- 0024_charming_maverick.sql
+ALTER TABLE "appointments" ADD COLUMN "self_checked_in_at" timestamp with time zone;
+ALTER TABLE "appointments" ADD COLUMN "arrival_requested_at" timestamp with time zone;
+ALTER TABLE "appointments" ADD COLUMN "called_at" timestamp with time zone;
+ALTER TABLE "tenant_settings" ADD COLUMN "self_check_in_enabled" boolean DEFAULT true NOT NULL;
+ALTER TABLE "tenant_settings" ADD COLUMN "self_check_in_before_minutes" smallint DEFAULT 45 NOT NULL;
+ALTER TABLE "tenant_settings" ADD COLUMN "self_check_in_after_minutes" smallint DEFAULT 30 NOT NULL;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1986,6 +1993,12 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'lab_ready', true, 'مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.', 'Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.', 'lab_work_ready', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'membership_renewal', true, 'مرحبًا {patient_first_name}، تنتهي عضويتك ({plan_name}) يوم {end_date}. جدّدها في زيارتك القادمة أو ردّ على هذه الرسالة وسنساعدك.', 'Hello {patient_first_name}, your {plan_name} membership ends on {end_date}. Renew it at your next visit, or reply to this message and we''ll help.', 'membership_renewal', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'arrival_invite', true, 'مرحبًا {patient_first_name}، {appointment} اليوم الساعة {time} مع {doctor} في {branch}.
+{consent_note}
+عند وصولك للعيادة اضغط «وصلت» لتسجيل حضورك.', 'Hello {patient_first_name}, {appointment} is today at {time} with {doctor} at {branch}.
+{consent_note}
+When you reach the clinic, tap "I''ve arrived" to check in.', 'visit_day_check_in', 'utility'),
+  ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'room_call', true, '{patient_first_name}، تفضّل إلى {room}، {doctor} بانتظارك.', '{patient_first_name}, please go to {room}. {doctor} is ready for you.', 'room_ready', 'utility'),
   ('98ffe61e-4e6e-5cfa-b5ec-e058c0721602', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values
@@ -2180,6 +2193,12 @@ Will you come?', 'appointment_reminder', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'visit_instructions', true, 'مرحبًا {patient_first_name}، شكرًا لزيارتك. تعليمات ما بعد الزيارة ومواعيدك القادمة هنا: {care_link}', 'Hello {patient_first_name}, thank you for your visit. Your after-visit instructions and next appointments are here: {care_link}', 'visit_instructions', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'lab_ready', true, 'مرحبًا {patient_first_name}، وصل {work} الخاص بك من المعمل. احجز موعد التركيب من هنا: {booking_link} أو ردّ على هذه الرسالة.', 'Hello {patient_first_name}, your {work} is back from the lab. Book your fitting here: {booking_link} or reply to this message.', 'lab_work_ready', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'membership_renewal', true, 'مرحبًا {patient_first_name}، تنتهي عضويتك ({plan_name}) يوم {end_date}. جدّدها في زيارتك القادمة أو ردّ على هذه الرسالة وسنساعدك.', 'Hello {patient_first_name}, your {plan_name} membership ends on {end_date}. Renew it at your next visit, or reply to this message and we''ll help.', 'membership_renewal', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'arrival_invite', true, 'مرحبًا {patient_first_name}، {appointment} اليوم الساعة {time} مع {doctor} في {branch}.
+{consent_note}
+عند وصولك للعيادة اضغط «وصلت» لتسجيل حضورك.', 'Hello {patient_first_name}, {appointment} is today at {time} with {doctor} at {branch}.
+{consent_note}
+When you reach the clinic, tap "I''ve arrived" to check in.', 'visit_day_check_in', 'utility'),
+  ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'room_call', true, '{patient_first_name}، تفضّل إلى {room}، {doctor} بانتظارك.', '{patient_first_name}, please go to {room}. {doctor} is ready for you.', 'room_ready', 'utility'),
   ('55d937e8-cf0c-583b-871e-f90fbc8af348', 'verification_code', true, 'رمز التحقق: {code} (صالح 10 دقائق). لا تشاركه مع أحد.', 'Your verification code: {code} (valid 10 minutes). Don''t share it with anyone.', 'verification_code', 'utility');
 
 insert into public.branch_holidays (tenant_id, branch_id, day, name_ar, name_en) values

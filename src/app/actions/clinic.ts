@@ -26,6 +26,7 @@ import { atRiyadh, riyadhTime } from "@/lib/booking/time";
 import { saveConsentRule, saveTemplateVersion, signConsent } from "@/lib/consents/consents";
 import { CONSENT_RULES, type SiteContent } from "@/db/schema";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
+import { callIn } from "@/lib/visits/call-in";
 import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { anthropicClient } from "@/lib/ai/claude";
 import { scribeDraft } from "@/lib/ai/scribe";
@@ -77,6 +78,7 @@ import {
 } from "@/lib/whatsapp/staff";
 import {
   sendBookingConfirmation,
+  sendRoomCall,
   sendLabReady,
   sendVisitInstructions,
 } from "@/lib/whatsapp/outbox";
@@ -938,6 +940,21 @@ export async function readyForDoctorAction(appointmentId: string) {
   });
 }
 
+/**
+ * "Call in": the waiting patient is called into the room; they get the room on WhatsApp.
+ * Reception and admins for anyone; a doctor her own patients; a nurse her doctors' patients.
+ */
+export async function callInAction(appointmentId: string) {
+  return staffAction("calendar:view", async (ctx, actor) => {
+    const id = parse(uuid, appointmentId);
+    await withActor(actor, (tx) => callIn(tx, actor, id));
+    refreshScreens();
+    visitChanged(id);
+    whatsappLater(() => sendRoomCall(ctx.tenant, id));
+    return null;
+  });
+}
+
 export async function addVisitChargeAction(input: {
   appointmentId: string;
   serviceId?: string | null;
@@ -1144,6 +1161,9 @@ const settingsInput = z.object({
   onlineRequiresApproval: z.boolean().optional(),
   showPricesOnline: z.boolean().optional(),
   showServiceInMessages: z.boolean().optional(),
+  selfCheckInEnabled: z.boolean().optional(),
+  selfCheckInBeforeMinutes: z.number().int().min(5).max(180).optional(),
+  selfCheckInAfterMinutes: z.number().int().min(0).max(120).optional(),
   aiReceptionistEnabled: z.boolean().optional(),
   aiDailyLimit: z.number().int().min(10).max(2000).optional(),
   aiScribeEnabled: z.boolean().optional(),

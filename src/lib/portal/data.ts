@@ -21,6 +21,7 @@ import { withTenant } from "@/db/tenant";
 import { getSettings } from "@/lib/booking/engine";
 import { riyadhDay } from "@/lib/booking/time";
 import { MOVABLE_STATUSES } from "@/lib/booking/status";
+import { canOfferSelfCheckIn } from "@/lib/visits/self-check-in";
 import { consentStatusFor } from "@/lib/consents/consents";
 import { reasonView, type ConsentReasonView } from "@/lib/consents/rules";
 import { videoToken } from "@/lib/video/link";
@@ -51,6 +52,7 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
         startsAt: appointments.startsAt,
         status: appointments.status,
         source: appointments.source,
+        selfCheckedInAt: appointments.selfCheckedInAt,
         serviceAr: services.nameAr,
         serviceEn: services.nameEn,
         onlineBookable: services.onlineBookable,
@@ -169,6 +171,17 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
     : [];
 
   const windowMs = data.settings.cancellationWindowHours * 3600_000;
+  const selfSettings = {
+    enabled: data.settings.selfCheckInEnabled,
+    beforeMinutes: data.settings.selfCheckInBeforeMinutes,
+    afterMinutes: data.settings.selfCheckInAfterMinutes,
+  };
+  // A visit that started a few minutes ago stays "today's visit" while it can still be checked in
+  // (or is under way), not "past".
+  const stillCurrent = (a: (typeof data.appts)[number]) =>
+    a.startsAt > now ||
+    (a.startsAt.getTime() > now.getTime() - selfSettings.afterMinutes * 60_000 &&
+      ["booked", "confirmed", "arrived", "in_session"].includes(a.status));
   const view = (a: (typeof data.appts)[number]) => ({
     id: a.id,
     patientId: a.patientId,
@@ -188,6 +201,10 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
       (MOVABLE_STATUSES as readonly string[]).includes(a.status) &&
       a.startsAt.getTime() - now.getTime() >= windowMs,
     canReschedule: data.settings.onlineBookingEnabled && a.onlineBookable,
+    /** Today, inside the self check-in window: show "I've arrived". */
+    canArrive: canOfferSelfCheckIn(a, a.isVirtual, selfSettings, now),
+    /** Checked in (at the desk or by themselves) and waiting / under way. */
+    checkedIn: a.status === "arrived" || a.status === "in_session",
     /** Video consultation: the same join page as the WhatsApp link. */
     videoPath:
       a.isVirtual && ["booked", "confirmed", "arrived", "in_session"].includes(a.status)
@@ -198,10 +215,10 @@ export async function loadPortal(tenantId: string, patientId: string, now = new 
     me: data.family.find((p) => p.id === patientId) ?? null,
     family: data.family,
     upcoming: data.appts
-      .filter((a) => a.startsAt > now && a.status !== "cancelled" && a.status !== "no_show")
+      .filter((a) => stillCurrent(a) && a.status !== "cancelled" && a.status !== "no_show")
       .map(view),
     past: data.appts
-      .filter((a) => a.startsAt <= now || a.status === "cancelled" || a.status === "no_show")
+      .filter((a) => !stillCurrent(a) || a.status === "cancelled" || a.status === "no_show")
       .reverse()
       .slice(0, 20)
       .map(view),

@@ -677,7 +677,11 @@
     "tabSubscription": "Subscription",
     "subscriptionStatus": "Account status",
     "subscriptionHint": "Monthly price before 15% VAT. Payment details come with each statement; for questions contact the platform.",
-    "supportTitle": "Platform support access"
+    "supportTitle": "Platform support access",
+    "selfCheckIn": "Patients check themselves in",
+    "selfCheckInHint": "On the visit day patients get a WhatsApp message with an \"I've arrived\" button (also on their patient page). Staff then tap \"Call in\" and the patient gets the room on WhatsApp.",
+    "selfCheckInBefore": "From (minutes before the visit)",
+    "selfCheckInAfter": "Until (minutes after its start)"
   },
   "book": {
     "title": "Book your appointment",
@@ -798,7 +802,12 @@
     "dentalEstimate": "Estimated total",
     "sar": "SAR",
     "membership": "My membership",
-    "memberDiscount": "{percent}% off"
+    "memberDiscount": "{percent}% off",
+    "arrived": "I've arrived",
+    "arrivedHint": "Tap when you're at the clinic: you're checked in and we'll message you when your room is ready.",
+    "checkedIn": "You're checked in ✓ We'll message you when your room is ready.",
+    "arriveTooEarly": "You can check in from {minutes} minutes before your visit.",
+    "arriveAtDesk": "Please check in at reception."
   },
   "account": {
     "title": "My account & notifications",
@@ -1289,7 +1298,8 @@
     "doneHint": "The clinic sees it straight away: no need to sign again when you arrive.",
     "toVideo": "Go to the video consultation",
     "nothing": "Nothing to sign for this visit: you're all set.",
-    "closed": "This visit has already taken place or was cancelled, so this link has closed."
+    "closed": "This visit has already taken place or was cancelled, so this link has closed.",
+    "doneCheckedIn": "You're also checked in ✓ Please take a seat; we'll message you when your room is ready."
   },
   "inbox": {
     "title": "Inbox",
@@ -1935,7 +1945,12 @@
     "none": "No one",
     "empty": "No patients on this day.",
     "consent": "Consent to sign",
-    "checkout": "Checkout"
+    "checkout": "Checkout",
+    "callIn": "Call in",
+    "callAgain": "Call again",
+    "calledNow": "Called just now",
+    "calledAgo": "Called {minutes} min ago",
+    "selfCheckIn": "Self check-in"
   },
   "checkout": {
     "title": "Checkout",
