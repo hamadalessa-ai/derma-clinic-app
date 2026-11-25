@@ -40,6 +40,10 @@ export interface ApptView {
     doctorAt: string | null;
     completedAt: string | null;
     checkedOutAt: string | null;
+    /** The patient checked themselves in (WhatsApp / patient page). */
+    selfCheckedInAt: string | null;
+    /** Staff called the patient into the room ("Call in"; the latest call). */
+    calledAt: string | null;
   };
   /** Where the booking came from: reception, online (/book) or WhatsApp. */
   source: "reception" | "online" | "whatsapp";
@@ -254,6 +258,8 @@ export async function loadAppointments(
         doctorAt: a.doctorAt?.toISOString() ?? null,
         completedAt: a.completedAt?.toISOString() ?? null,
         checkedOutAt: checkedOut.get(a.id)?.toISOString() ?? null,
+        selfCheckedInAt: a.selfCheckedInAt?.toISOString() ?? null,
+        calledAt: a.calledAt?.toISOString() ?? null,
       },
       source: a.source,
       needsCompletion: p.needsCompletion,

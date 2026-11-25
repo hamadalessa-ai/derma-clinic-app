@@ -5,7 +5,7 @@
  *
  * Placeholders: {patient_first_name} {appointment} {service} {date} {time} {doctor} {branch}
  * {map_link} {my_link} {booking_link} {minutes} {instructions} {consent_note} {question} {code}
- * {care_link} {work} {plan_name} {end_date}
+ * {care_link} {work} {plan_name} {end_date} {room} {sign_link}
  * {appointment} is "موعد بوتوكس" / "your Botox appointment" — or just "موعدك" / "your appointment"
  * when the clinic switches "show service name in WhatsApp messages" off.
  */
@@ -20,6 +20,8 @@ export const TEMPLATE_KINDS = [
   "visit_instructions",
   "lab_ready",
   "membership_renewal",
+  "arrival_invite",
+  "room_call",
   "verification_code",
 ] as const;
 export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
@@ -42,6 +44,10 @@ export const REPLY_KINDS = [
   "start_ack",
   "not_found",
   "photo_request",
+  "checked_in_ack",
+  "arrival_consent",
+  "arrival_too_early",
+  "arrival_desk",
   "staff_reply",
   "ai_reply",
 ] as const;
@@ -64,7 +70,7 @@ export interface TemplateDefinition {
 }
 
 export type ButtonAction =
-  "confirm" | "reschedule" | "cancel" | "all_good" | "concern" | "slot" | "my_page";
+  "confirm" | "reschedule" | "cancel" | "all_good" | "concern" | "arrived" | "slot" | "my_page";
 
 export const BUTTON_TITLES: Record<
   Exclude<ButtonAction, "slot" | "my_page">,
@@ -75,6 +81,7 @@ export const BUTTON_TITLES: Record<
   cancel: { ar: "إلغاء", en: "Cancel" },
   all_good: { ar: "كل شيء جيد", en: "All good" },
   concern: { ar: "لدي استفسار/قلق", en: "I have a concern" },
+  arrived: { ar: "وصلت", en: "I've arrived" },
 };
 
 export const TEMPLATES: Record<TemplateKind, TemplateDefinition> = {
@@ -193,6 +200,26 @@ export const TEMPLATES: Record<TemplateKind, TemplateDefinition> = {
     buttons: [],
     canDisable: true,
   },
+  arrival_invite: {
+    kind: "arrival_invite",
+    metaName: "visit_day_check_in",
+    variables: ["patient_first_name", "appointment", "time", "doctor", "branch", "consent_note"],
+    bodyAr:
+      "مرحبًا {patient_first_name}، {appointment} اليوم الساعة {time} مع {doctor} في {branch}.\n{consent_note}\nعند وصولك للعيادة اضغط «وصلت» لتسجيل حضورك.",
+    bodyEn:
+      "Hello {patient_first_name}, {appointment} is today at {time} with {doctor} at {branch}.\n{consent_note}\nWhen you reach the clinic, tap \"I've arrived\" to check in.",
+    buttons: ["arrived"],
+    canDisable: true,
+  },
+  room_call: {
+    kind: "room_call",
+    metaName: "room_ready",
+    variables: ["patient_first_name", "room", "doctor"],
+    bodyAr: "{patient_first_name}، تفضّل إلى {room}، {doctor} بانتظارك.",
+    bodyEn: "{patient_first_name}, please go to {room}. {doctor} is ready for you.",
+    buttons: [],
+    canDisable: true,
+  },
   verification_code: {
     kind: "verification_code",
     metaName: "verification_code",
@@ -209,6 +236,22 @@ export const REPLIES: Record<
   Exclude<ReplyKind, "staff_reply" | "ai_reply">,
   { ar: string; en: string }
 > = {
+  checked_in_ack: {
+    ar: "تم تسجيل وصولك ✓ تفضّل بالجلوس، وسنرسل لك رسالة عندما تجهز الغرفة.",
+    en: "You're checked in ✓ Please take a seat; we'll message you when your room is ready.",
+  },
+  arrival_consent: {
+    ar: "قبل تسجيل وصولك، فضلًا وقّع نموذج الموافقة هنا، وسيُسجَّل حضورك تلقائيًا بعد التوقيع: {sign_link}",
+    en: "Before you're checked in, please sign your consent form here; you'll be checked in as soon as you sign: {sign_link}",
+  },
+  arrival_too_early: {
+    ar: "يمكنك تسجيل الوصول قبل موعدك بـ{minutes} دقيقة. موعدك الساعة {time}.",
+    en: "You can check in from {minutes} minutes before your visit. Your visit is at {time}.",
+  },
+  arrival_desk: {
+    ar: "لا يمكن تسجيل الوصول لهذا الموعد عبر واتساب الآن. فضلًا توجّه إلى الاستقبال.",
+    en: "This visit can't be checked in on WhatsApp right now. Please go to reception.",
+  },
   confirm_ack: {
     ar: "شكرًا، تم تأكيد حضورك ✓ نراك في الموعد.",
     en: "Thank you, your attendance is confirmed ✓ See you then.",

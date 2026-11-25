@@ -3,7 +3,7 @@
  * through sendMessage(). Each one has a dedupe key, so calling it twice never sends twice.
  */
 import { eq } from "drizzle-orm";
-import { labCases, patientMemberships, patients } from "@/db/schema";
+import { labCases, patientMemberships, patients, rooms } from "@/db/schema";
 import { atRiyadh } from "@/lib/booking/time";
 import { formatGregorian } from "@/lib/format";
 import { withTenant } from "@/db/tenant";
@@ -35,6 +35,8 @@ export const SCHEDULED_KEYS = {
   no_show: (appointmentId: string) => `no_show:${appointmentId}`,
   recall: (appointmentId: string) => `recall:${appointmentId}`,
   membership_renewal: (membershipId: string) => `membership_renewal:${membershipId}`,
+  arrival_invite: (appointmentId: string, startsAt: Date) =>
+    `arrival_invite:${appointmentId}:${startsAt.toISOString()}`,
 };
 
 export async function sendBookingConfirmation(
@@ -78,6 +80,69 @@ export async function sendReminder(tenant: Tenant, appointmentId: string, env: E
       ],
       // A moved appointment gets a fresh reminder for its new time.
       dedupeKey: SCHEDULED_KEYS.reminder(appointmentId, ctx.appointment.startsAt),
+    },
+    env,
+  );
+}
+
+/**
+ * The visit day: "When you reach the clinic, tap 'I've arrived'" (self check-in), with the consent
+ * link when one is still needed. Clinic visits only; the scheduler sends it a few hours before.
+ */
+export async function sendArrivalInvite(
+  tenant: Tenant,
+  appointmentId: string,
+  env: Env = process.env,
+) {
+  const ctx = await context(tenant, appointmentId);
+  if (!ctx) return skipped("not_found");
+  if (ctx.service.isVirtual) return skipped("video");
+  if (!["booked", "confirmed"].includes(ctx.appointment.status)) return skipped("not_booked");
+  return sendMessage(
+    tenant,
+    {
+      kind: "arrival_invite",
+      patientId: ctx.patient.id,
+      appointmentId,
+      vars: appointmentVars(ctx, langOf(ctx.patient), appBaseUrl(tenant, env)),
+      buttons: [{ action: "arrived", appointmentId }],
+      dedupeKey: SCHEDULED_KEYS.arrival_invite(appointmentId, ctx.appointment.startsAt),
+    },
+    env,
+  );
+}
+
+/** "Call in": the room is ready — the room's name and the doctor. One message per call. */
+export async function sendRoomCall(
+  tenant: Tenant,
+  appointmentId: string,
+  env: Env = process.env,
+) {
+  const found = await withTenant(tenant.id, async (tx) => {
+    const ctx = await loadAppointmentContext(tx, appointmentId);
+    if (!ctx) return null;
+    const [room] = await tx
+      .select({ nameAr: rooms.nameAr, nameEn: rooms.nameEn })
+      .from(rooms)
+      .where(eq(rooms.id, ctx.appointment.roomId));
+    return { ctx, room };
+  });
+  if (!found) return skipped("not_found");
+  const { ctx, room } = found;
+  if (!ctx.appointment.calledAt) return skipped("not_called");
+  const lang = langOf(ctx.patient);
+  const vars = appointmentVars(ctx, lang, appBaseUrl(tenant, env));
+  return sendMessage(
+    tenant,
+    {
+      kind: "room_call",
+      patientId: ctx.patient.id,
+      appointmentId,
+      vars: {
+        ...vars,
+        room: room ? (lang === "en" ? room.nameEn || room.nameAr : room.nameAr) : "",
+      },
+      dedupeKey: `room_call:${appointmentId}:${ctx.appointment.calledAt.toISOString()}`,
     },
     env,
   );

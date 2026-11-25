@@ -37,6 +37,8 @@ export function ConsentLinkForm({
   const [name, setName] = useState(signer);
   const [agree, setAgree] = useState(false);
   const [done, setDone] = useState(false);
+  // They had said "I've arrived": signing also checked them in.
+  const [checkedIn, setCheckedIn] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +50,9 @@ export function ConsentLinkForm({
       >
         <CheckCircle2 className="text-success-foreground size-10" />
         <p className="text-[17px] font-semibold">{t("done")}</p>
-        <p className="text-muted-foreground text-sm">{t("doneHint")}</p>
+        <p className="text-muted-foreground text-sm">
+          {checkedIn ? t("doneCheckedIn") : t("doneHint")}
+        </p>
         {videoPath && (
           <Link href={videoPath} className={buttonVariants({ size: "lg" })}>
             <Video />
@@ -107,6 +111,7 @@ export function ConsentLinkForm({
           });
           setPending(false);
           if (!r.ok) return setError(te.has(r.error) ? te(r.error) : te("unexpected"));
+          setCheckedIn(r.data.checkedIn);
           setDone(true);
         }}
       >
