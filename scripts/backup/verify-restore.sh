@@ -9,11 +9,13 @@ dump=$1 before=$2 after=$3
 : "${RESTORE_URL:?RESTORE_URL (empty scratch database) is required}"
 
 psql "$RESTORE_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
+set client_min_messages = warning;
 drop schema if exists public cascade;
 drop schema if exists ops cascade;
 create schema public;
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
+create extension if not exists btree_gist with schema extensions;
 do $$ begin
   if not exists (select from pg_roles where rolname = 'clinic_app') then
     create role clinic_app nologin;
