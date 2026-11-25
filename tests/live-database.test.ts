@@ -171,10 +171,14 @@ describe("the live database", () => {
       const [{ tables }] =
         await db`select count(*)::int as tables from pg_tables where schemaname = 'public'`;
       expect(tables).toBeGreaterThanOrEqual(40);
+      await db`alter table public.users no force row level security`;
       const [u] = await db`select email, is_platform_owner from public.users`;
+      await db`alter table public.users force row level security`;
       expect(u).toEqual({ email: "owner@example.com", is_platform_owner: true });
+      await db`alter table public.accounts no force row level security`;
       const [{ ok }] = await db`
         select password = extensions.crypt(${OWNER_PASSWORD}, password) as ok from public.accounts`;
+      await db`alter table public.accounts force row level security`;
       expect(ok).toBe(true);
       const applied = await db`select name from ops.schema_upgrades order by name`;
       expect(applied.map((r) => r.name)).toEqual(migrationFiles());
