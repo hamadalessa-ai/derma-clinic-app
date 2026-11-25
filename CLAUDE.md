@@ -204,7 +204,16 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   `db/reset.sql` + `db/setup.sql` as ONE transaction (`src/db/demo-update.ts`) whenever a merge to main
   changes either file (secrets: `SUPABASE_ADMIN_URL`, `APP_DB_PASSWORD`, `DEMO_STAFF_PASSWORD`). Both files
   must keep exactly one `begin;` and one `commit;` line. The SQL Editor paste still works as a fallback.
-  Once real clinics exist, this reset must stop: use numbered `db/upgrades/NNNN_*.sql` files instead.
+  Real clinics use a SEPARATE live database that is never reset (`docs/GO_LIVE.md`): built once by
+  `buildLiveSetupSql()` (no demo data; `ops.schema_upgrades` records the applied migrations) and then
+  only upgraded by `src/db/live-upgrade.ts` (new migrations + booking.sql + rls.sql re-applied, one
+  transaction; enum additions first) via the "Release to live" workflow, which rehearses on last night's
+  backup, then pushes `main` to the `live` branch (the live Vercel project). So every migration must keep
+  data AND work with the previous code for a minute: add, don't rename/remove in the same release; a
+  newer migration with DROP TABLE/COLUMN needs a `-- data-safe: <why>` line (test). `reset.sql` refuses a
+  live database; the upgrade refuses the demo. Backups: "Backup live database" (nightly, pg_dump as
+  `backup_reader`, test-restored, gpg-encrypted artifact, 30 days) + monthly "Restore test".
+  `/api/health` for uptime monitors; Platform → System status (`src/lib/platform/system-status.ts`).
   `reset.sql` enforces this: it refuses (rolls back, changes nothing) when any patient is not fake or
   belongs to a non-demo clinic (`REAL_DATA_GUARD` in `src/db/reset-sql.ts`).
   Founder guide: `docs/DEPLOY.md` (Part G).

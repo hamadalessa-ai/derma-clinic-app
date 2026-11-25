@@ -1,0 +1,45 @@
+# ONE-TIME: builds the LIVE database (real clinics) on an EMPTY Supabase project: all tables and
+# security, no demo data, one platform-owner login. Refuses if the database already has tables.
+# Founder guide: docs/GO_LIVE.md, step 4.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   LIVE_ADMIN_URL        live project → Connect → "Session pooler" string (user postgres.<ref>)
+#   LIVE_APP_DB_PASSWORD  a new 24+ character password (letters, numbers, - _) for clinic_app
+#   LIVE_OWNER_EMAIL      your sign-in email
+#   LIVE_OWNER_PASSWORD   your first password (14+ characters; change it after signing in)
+name: Set up live database
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "SET UP LIVE" to confirm (only on an empty database)'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-database
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    if: inputs.confirm == 'SET UP LIVE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the live database
+        env:
+          LIVE_ADMIN_URL: ${{ secrets.LIVE_ADMIN_URL }}
+          LIVE_APP_DB_PASSWORD: ${{ secrets.LIVE_APP_DB_PASSWORD }}
+          LIVE_OWNER_EMAIL: ${{ secrets.LIVE_OWNER_EMAIL }}
+          LIVE_OWNER_PASSWORD: ${{ secrets.LIVE_OWNER_PASSWORD }}
+        run: pnpm exec tsx scripts/live-db.ts setup

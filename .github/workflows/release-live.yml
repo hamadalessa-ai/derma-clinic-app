@@ -1,0 +1,85 @@
+# Releases what is on main to the LIVE system (real clinics), WITHOUT losing data:
+#  1. Rehearsal: last night's encrypted backup is restored into a scratch database here on
+#     GitHub and the database update is run on it first. If that fails, nothing live is touched.
+#  2. The live database update: new migrations + the security layer, in ONE transaction
+#     (all or nothing). Never a reset.
+#  3. The code: main is pushed to the "live" branch, which the live Vercel project deploys.
+# The database goes first, so each change must work with the code that runs until step 3 is
+# deployed (a minute or two): add columns/tables, don't rename or remove them in the same release.
+# Founder guide: docs/GO_LIVE.md. Secrets: LIVE_ADMIN_URL, BACKUP_PASSPHRASE, optional
+# OPS_ALERT_WEBHOOK_URL.
+name: Release to live
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "RELEASE" to confirm'
+        required: true
+      rehearse:
+        description: "Rehearse on last night's backup first (turn off only before the first backup exists)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: live-database
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: inputs.confirm == 'RELEASE' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      scratch:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: scratch
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RESTORE_URL: postgresql://postgres:scratch@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install PostgreSQL 17 tools
+        if: inputs.rehearse
+        run: scripts/backup/install-pg-client.sh
+      - name: "Rehearsal: restore last night's backup"
+        if: inputs.rehearse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: scripts/backup/fetch-latest.sh
+      - name: "Rehearsal: run the update on the copy"
+        if: inputs.rehearse
+        env:
+          LIVE_ADMIN_URL: ${{ env.RESTORE_URL }}
+        run: pnpm exec tsx scripts/live-db.ts upgrade
+      - name: What will change on the live database
+        env:
+          LIVE_ADMIN_URL: ${{ secrets.LIVE_ADMIN_URL }}
+        run: pnpm exec tsx scripts/live-db.ts plan
+      - name: Update the live database
+        env:
+          LIVE_ADMIN_URL: ${{ secrets.LIVE_ADMIN_URL }}
+        run: pnpm exec tsx scripts/live-db.ts upgrade
+      - name: Release the code (main → live branch → live Vercel project)
+        run: git push origin HEAD:refs/heads/live
+      - name: Alert on failure
+        if: failure()
+        env:
+          URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
+        run: scripts/backup/alert.sh "Release to live FAILED (see the run: the database change is all-or-nothing)"

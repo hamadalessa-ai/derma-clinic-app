@@ -116,7 +116,8 @@
     "summaryClinics": "Clinics",
     "summaryOutstanding": "Outstanding",
     "summaryOverdue": "Clinics overdue",
-    "sar": "SAR"
+    "sar": "SAR",
+    "systemStatus": "System status"
   },
   "errors": {
     "forbiddenTitle": "Not allowed",
@@ -2329,6 +2330,23 @@
       "website": "Website",
       "subscription": "Subscription",
       "demo": "Demo"
+    }
+  },
+  "systemStatus": {
+    "title": "System status",
+    "intro": "Is this system ready for real clinics? Settings and update/backup records only — no clinic or patient data.",
+    "check": {
+      "dbLive": "This is the LIVE database (real clinics). Updates keep all data; it is never reset.",
+      "dbDemo": "This is the DEMO database: it is rebuilt from scratch on every update. Never enter real patients here.",
+      "upgrades": "Database changes applied: {count} (last {at} UTC).",
+      "backupNever": "No backup has been recorded yet. Check the \"Backup live database\" workflow on GitHub.",
+      "backup": "Last backup {hours} hours ago ({mb} MB). Backups run every night and are kept 30 days.",
+      "demoClinics": "Demo clinics in the live database: {count}. Remove or switch them before launch.",
+      "messageDemoMode": "Demo messaging (codes shown on screen) must be off in the live system: MESSAGE_DEMO_MODE.",
+      "settingsOk": "All required settings are present.",
+      "settingsMissing": "Missing settings in Vercel: {names}.",
+      "featureOn": "{name}: set up.",
+      "featureOff": "{name}: not set up yet (optional)."
     }
   }
 }

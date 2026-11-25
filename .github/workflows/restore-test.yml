@@ -1,0 +1,49 @@
+# Monthly fire drill: downloads the newest encrypted backup, decrypts it with BACKUP_PASSPHRASE,
+# restores it into a scratch database and checks every table and the clinic security.
+# Proves a disaster recovery would work (the copy, the passphrase and the restore steps).
+name: Restore test
+
+on:
+  schedule:
+    - cron: "23 4 1 * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      scratch:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: scratch
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the live system set up?
+        id: ready
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_PASSPHRASE" ]; then echo "No backups yet."; echo "go=no" >> "$GITHUB_OUTPUT"; else echo "go=yes" >> "$GITHUB_OUTPUT"; fi
+      - name: Install PostgreSQL 17 tools
+        if: steps.ready.outputs.go == 'yes'
+        run: scripts/backup/install-pg-client.sh
+      - name: Download, decrypt and restore the newest backup
+        if: steps.ready.outputs.go == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          RESTORE_URL: postgresql://postgres:scratch@localhost:5432/postgres
+        run: scripts/backup/fetch-latest.sh
+      - name: Alert on failure
+        if: failure()
+        env:
+          URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
+        run: scripts/backup/alert.sh "Monthly restore test FAILED: the backups may not be usable"
