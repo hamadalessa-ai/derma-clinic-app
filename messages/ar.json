@@ -276,7 +276,10 @@
     "photos_not_found": "غير موجود أو تغيّر.",
     "photos_empty": "اكتب السبب.",
     "photos_bad_file": "اختر صورة (JPEG أو PNG أو HEIC، حتى 10 ميجابايت).",
-    "photos_bad_area": "اختر المنطقة والزاوية."
+    "photos_bad_area": "اختر المنطقة والزاوية.",
+    "not_signed": "يمكن تصحيح الملاحظة الموقّعة فقط.",
+    "correction_closed": "مضى على توقيع هذه الملاحظة أكثر من 7 أيام: أضف ملحقًا بدلًا من ذلك.",
+    "unchanged": "لم يتغيّر شيء."
   },
   "deviceTypes": {
     "hair_removal_laser": "ليزر إزالة الشعر",
@@ -565,7 +568,17 @@
     "enteredBy": "أدخلها {name}",
     "saving": "جارٍ الحفظ…",
     "saved": "محفوظ",
-    "unsaved": "لم يُحفظ بعد"
+    "unsaved": "لم يُحفظ بعد",
+    "corrected": "مُصحّحة",
+    "correct": "تصحيح الملاحظة",
+    "correctHint": "يبقى نصك السابق محفوظًا ويظهر تحت «النسخ السابقة». التصحيح متاح خلال 7 أيام من التوقيع؛ بعدها أضف ملحقًا.",
+    "cancelCorrect": "إلغاء",
+    "saveCorrection": "حفظ التصحيح",
+    "correctedOk": "تم تصحيح الملاحظة مع حفظ النص السابق.",
+    "earlierVersions": "النسخ السابقة ({count})",
+    "original": "النص الأصلي",
+    "versionN": "النسخة {n}",
+    "replacedOn": "استُبدلت {date}"
   },
   "requests": {
     "title": "طلبات تغيير المواعيد",

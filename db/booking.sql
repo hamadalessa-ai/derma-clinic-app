@@ -127,14 +127,36 @@ create trigger patient_packages_guard_balance
   before update on public.patient_packages
   for each row execute function public.guard_package_balance();
 
--- ─── Clinical notes: signed notes are final ─────────────────────────────────
+-- ─── Clinical notes: signed notes are final, except the author's correction ──
+-- A signed note changes ONLY as a correction: the author, within 7 days of signing, changes the
+-- text (and corrected_at) and nothing else. The text it replaces is kept here, in
+-- clinical_note_versions, by this guard itself — so no correction can skip the history.
+-- After 7 days (or anyone else): addenda only.
 create or replace function public.guard_clinical_note() returns trigger
   language plpgsql
   set search_path = ''
 as $$
 begin
   if old.status = 'signed' then
-    raise exception 'signed notes cannot be changed; add an addendum instead';
+    if new.body is distinct from old.body
+       and new.corrected_at is distinct from old.corrected_at
+       and new.corrected_at is not null
+       and new.status = old.status
+       and new.signed_at is not distinct from old.signed_at
+       and new.ai_drafted_at is not distinct from old.ai_drafted_at
+       and new.entered_by_user_id is not distinct from old.entered_by_user_id
+       and new.entered_by_name is not distinct from old.entered_by_name
+       and old.author_user_id = public.app_current_user()
+       and old.signed_at > now() - interval '7 days' then
+      insert into public.clinical_note_versions (tenant_id, note_id, version, body, edited_by_user_id)
+      values (
+        old.tenant_id, old.id,
+        coalesce((select max(v.version) from public.clinical_note_versions v
+                   where v.tenant_id = old.tenant_id and v.note_id = old.id), 0) + 1,
+        old.body, public.app_current_user());
+    else
+      raise exception 'signed notes cannot be changed; add an addendum instead';
+    end if;
   end if;
   if new.author_user_id is distinct from old.author_user_id
      or new.patient_id is distinct from old.patient_id

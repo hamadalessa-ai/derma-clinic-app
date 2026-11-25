@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, FileDown, Plus, Printer, Sparkles, Trash2 } from "lucide-react";
+import { Check, FileDown, PenLine, Plus, Printer, Sparkles, Trash2 } from "lucide-react";
 import {
   addAddendumAction,
+  correctNoteAction,
   addMedicalFlagAction,
   openDraftAction,
   overrideSessionsAction,
@@ -522,6 +523,12 @@ export interface NoteView {
   enteredByName?: string | null;
   appointmentId: string | null;
   addenda: { id: string; body: string; authorName: string; createdAt: string }[];
+  /** The author corrected the signed note (the earlier texts are in `versions`). */
+  correctedAt?: string | null;
+  /** The author may still correct it (within 7 days of signing). */
+  canCorrect?: boolean;
+  /** Earlier texts, oldest first (version 1 = the original). */
+  versions?: { id: string; version: number; body: string; createdAt: string }[];
 }
 
 export function NotesPanel({
@@ -615,6 +622,7 @@ function NoteCard({
   const [reviewed, setReviewed] = useState(false);
   const aiUsed = !!note.aiDrafted || aiHere;
   const [addendum, setAddendum] = useState("");
+  const [correcting, setCorrecting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const { run, pending, error } = useAction();
   const editable = note.status === "draft" && (mine || preparing) && canWrite;
@@ -630,6 +638,11 @@ function NoteCard({
             <Badge variant="outline" data-testid="ai-draft-badge">
               <Sparkles className="size-3" />
               {ts("aiDraft")}
+            </Badge>
+          )}
+          {note.correctedAt && (
+            <Badge variant="outline" data-testid="note-corrected">
+              {t("corrected")}
             </Badge>
           )}
           <Badge variant={note.status === "signed" ? "default" : "outline"}>
@@ -723,8 +736,80 @@ function NoteCard({
               )}
             </div>
           </>
+        ) : correcting ? (
+          <div className="flex flex-col gap-2" data-testid="note-correct-form">
+            <Textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              className="min-h-40"
+              aria-label={t("correct")}
+            />
+            <p className="text-muted-foreground text-xs">{t("correctHint")}</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setBody(note.body);
+                  setCorrecting(false);
+                }}
+              >
+                {t("cancelCorrect")}
+              </Button>
+              <Button
+                loading={pending}
+                disabled={!body.trim() || body.trim() === note.body.trim()}
+                data-testid="note-correct-save"
+                onClick={() =>
+                  run(
+                    () => correctNoteAction({ patientId, noteId: note.id, body }),
+                    () => {
+                      setCorrecting(false);
+                      setMsg(t("correctedOk"));
+                    },
+                  )
+                }
+              >
+                {t("saveCorrection")}
+              </Button>
+            </div>
+          </div>
         ) : (
           <p className="text-sm leading-7 whitespace-pre-line">{note.body}</p>
+        )}
+        {note.canCorrect && !correcting && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="self-start"
+            onClick={() => {
+              setBody(note.body);
+              setCorrecting(true);
+            }}
+            data-testid="note-correct"
+          >
+            <PenLine />
+            {t("correct")}
+          </Button>
+        )}
+        {!!note.versions?.length && (
+          <details className="text-sm" data-testid="note-versions">
+            <summary className="text-muted-foreground cursor-pointer text-xs font-medium">
+              {t("earlierVersions", { count: note.versions.length })}
+            </summary>
+            <div className="mt-2 flex flex-col gap-2">
+              {note.versions.map((v) => (
+                <div key={v.id} className="bg-muted rounded-md px-3 py-2">
+                  <div className="text-muted-foreground text-xs">
+                    {v.version === 1 ? t("original") : t("versionN", { n: v.version })} ·{" "}
+                    {t("replacedOn", {
+                      date: formatDualDate(new Date(v.createdAt), locale, "medium"),
+                    })}
+                  </div>
+                  <p className="whitespace-pre-line">{v.body}</p>
+                </div>
+              ))}
+            </div>
+          </details>
         )}
         {note.enteredByName && (
           <p className="text-muted-foreground text-xs" data-testid="entered-by">

@@ -176,6 +176,13 @@
       "when": 1795619677404,
       "tag": "0024_charming_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795620522847,
+      "tag": "0025_narrow_darkstar",
+      "breakpoints": true
     }
   ]
 }

@@ -127,7 +127,9 @@ database enforces it (`app_assists()` in `db/rls.sql`).
   While open, the visit gets medication / treatment orders (`visit_orders`, clinic instructions, not a Wasfaty
   prescription) and invoice codes (`visit_charges`: a service or a price-list item from `billing_items`, Setup →
   Price list; code, name and price are COPIED at that moment). Once completed / cancelled / no-show, orders and
-  codes are locked by the database (`app_visit_open()`); the note by the signed-note trigger. Corrections = addenda.
+  codes are locked by the database (`app_visit_open()`); the note by the signed-note trigger. Corrections: the AUTHOR's
+  "Correct note" within 7 days of signing (`correctNote`; the trigger itself keeps each earlier text in
+  `clinical_note_versions`, append-only), after that addenda.
   The daily invoicing file lists one row per invoice line, plus a `visit_payment` row per checkout (amount, method,
   `clinic_invoice_no` on both). Never put medication text in audit metadata.
   Video calls show on the same screen (`/visits/<id>/video` redirects there).

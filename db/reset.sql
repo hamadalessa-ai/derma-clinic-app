@@ -41,6 +41,7 @@ drop table if exists
   public.branches,
   public.care_team,
   public.clinical_note_addenda,
+  public.clinical_note_versions,
   public.clinical_notes,
   public.clinical_photos,
   public.concern_events,

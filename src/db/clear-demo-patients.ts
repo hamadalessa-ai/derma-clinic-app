@@ -27,6 +27,7 @@ export const PATIENT_DATA_TABLES = [
   "visit_checkouts",
   "clinical_notes",
   "clinical_note_addenda",
+  "clinical_note_versions",
   "verification_codes",
   "rate_limit_hits",
   "patient_sessions",

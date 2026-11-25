@@ -1565,6 +1565,11 @@ export const clinicalNotes = pgTable(
      */
     enteredByUserId: text("entered_by_user_id"),
     enteredByName: text("entered_by_name"),
+    /**
+     * The author corrected the signed note (within 7 days): the text is the corrected one; each
+     * earlier text is kept in clinical_note_versions (written by the database guard itself).
+     */
+    correctedAt: timestamp("corrected_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -1584,6 +1589,34 @@ export const clinicalNotes = pgTable(
       name: "clinical_notes_appointment_fk",
       columns: [t.tenantId, t.appointmentId],
       foreignColumns: [appointments.tenantId, appointments.id],
+    }),
+  ],
+);
+
+/**
+ * Earlier texts of a corrected note (append-only, never edited or deleted). Written ONLY by the
+ * database guard on clinical_notes when the author corrects a signed note: `body` is the text as
+ * it stood before that correction; version 1 = the original.
+ */
+export const clinicalNoteVersions = pgTable(
+  "clinical_note_versions",
+  {
+    id: id(),
+    tenantId: tenantId().references(() => tenants.id, { onDelete: "cascade" }),
+    noteId: uuid("note_id").notNull(),
+    version: smallint("version").notNull(),
+    body: text("body").notNull(),
+    /** Who made the correction that replaced this text (the note's author). */
+    editedByUserId: text("edited_by_user_id").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    unique("clinical_note_versions_tenant_id_id_key").on(t.tenantId, t.id),
+    unique("clinical_note_versions_note_version_key").on(t.tenantId, t.noteId, t.version),
+    foreignKey({
+      name: "clinical_note_versions_note_fk",
+      columns: [t.tenantId, t.noteId],
+      foreignColumns: [clinicalNotes.tenantId, clinicalNotes.id],
     }),
   ],
 );
