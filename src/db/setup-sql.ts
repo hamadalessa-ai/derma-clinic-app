@@ -575,7 +575,7 @@ ${withSecurity ? `-- ─── Booking rules (db/booking.sql) ──────
 
 -- ─── The platform owner (signs in with the email + password above) ──────────
 insert into public.users (id, name, name_en, email, email_verified, is_platform_owner)
-  select 'usr_platform_owner', 'مالك المنصة', 'Platform owner', owner_email, true, true
+  select 'usr_platform_owner', 'مالك المنصة', 'Platform owner', lower(trim(owner_email)), true, true
     from pg_temp.setup_params;
 insert into public.accounts (id, account_id, provider_id, user_id, password)
   values ('acc_usr_platform_owner', 'usr_platform_owner', 'credential', 'usr_platform_owner', ${PASSWORD_HASH});

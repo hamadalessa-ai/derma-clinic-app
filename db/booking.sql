@@ -11,16 +11,23 @@ create extension if not exists btree_gist with schema extensions;
 -- The database checks this itself, so two simultaneous bookings can't both succeed.
 -- DEFERRABLE INITIALLY IMMEDIATE: still checked at the end of every statement (so races are
 -- refused), but "Refresh demo week" can move a whole week in one go without false clashes.
-alter table public.reservations
-  add constraint reservations_no_overlap
-  exclude using gist (
-    tenant_id with =,
-    resource_kind with =,
-    resource_id with =,
-    during with &&
-  ) deferrable initially immediate;
+-- (Guarded so the live upgrade can re-run this file; src/db/live-upgrade.ts.)
+do $$
+begin
+  if not exists (select from pg_constraint where conname = 'reservations_no_overlap'
+                   and conrelid = 'public.reservations'::regclass) then
+    alter table public.reservations
+      add constraint reservations_no_overlap
+      exclude using gist (
+        tenant_id with =,
+        resource_kind with =,
+        resource_id with =,
+        during with &&
+      ) deferrable initially immediate;
+  end if;
+end $$;
 
-create index reservations_lookup_idx on public.reservations
+create index if not exists reservations_lookup_idx on public.reservations
   using gist (tenant_id, resource_kind, resource_id, during);
 
 -- Appointments reserve their doctor, room and device from start until end + buffer.

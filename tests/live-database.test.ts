@@ -195,15 +195,18 @@ describe("the live database", () => {
   }, 180_000);
 
   it("can't be set up twice, and db/reset.sql refuses it", async () => {
-    await withDb(fresh.adminUrl, async (db) => {
-      await expect(
+    // Separate connections: a failed transaction leaves its connection unusable.
+    await withDb(fresh.adminUrl, (db) =>
+      expect(
         db.unsafe(liveSetupSql().replace(APP_PASSWORD_PLACEHOLDER, LOCAL_APP_PASSWORD)).simple(),
-      ).rejects.toThrow(/not empty/);
-      const reset = readFileSync(path.resolve(__dirname, "../db/reset.sql"), "utf8");
-      await expect(
+      ).rejects.toThrow(/not empty/),
+    );
+    const reset = readFileSync(path.resolve(__dirname, "../db/reset.sql"), "utf8");
+    await withDb(fresh.adminUrl, (db) =>
+      expect(
         db.unsafe(`begin;\n${transactionBody(reset, "reset")}\nrollback;`).simple(),
-      ).rejects.toThrow(/LIVE database/);
-    });
+      ).rejects.toThrow(/LIVE database/),
+    );
     expect(await count(fresh.adminUrl, "users")).toBe(1);
   }, 60_000);
 
