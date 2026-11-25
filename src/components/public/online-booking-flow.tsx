@@ -409,9 +409,7 @@ export function OnlineBookingFlow({
                           <Video className="text-brand-strong size-4" />
                           {name(s)}
                         </span>
-                        <span className="text-muted-foreground text-xs">
-                          {t("modeVideoHint")}
-                        </span>
+                        <span className="text-muted-foreground text-xs">{t("modeVideoHint")}</span>
                       </Choice>
                     ))}
                 </div>

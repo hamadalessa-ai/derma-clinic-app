@@ -56,13 +56,7 @@ import type { Locale } from "@/i18n/config";
 /** The AI scribe may take a while to draft a long note. */
 export const maxDuration = 60;
 
-const TABS = [
-  "overview",
-  "visits",
-  "packages",
-  "clinical",
-  "consents",
-] as const;
+const TABS = ["overview", "visits", "packages", "clinical", "consents"] as const;
 type Tab = (typeof TABS)[number];
 /** Old tab links still work: notes are under Visits & notes; photos, labs, dental under Clinical. */
 const TAB_ALIAS: Record<string, Tab> = {

@@ -30,23 +30,23 @@ export default async function SetupPage({
 
   return (
     <ClinicSettingsShell active={tab} isDemo={ctx.tenant.isDemo}>
-    <div className="flex flex-col gap-4" data-testid="clinic-setup">
-      <ClinicSetup
-        tab={tab}
-        data={{
-          branches: data.branches,
-          departments: data.departments,
-          services: data.services,
-          rooms: data.rooms,
-          devices: data.devices,
-          packages: data.packages,
-          memberships: data.memberships,
-          billingItems: data.billingItems,
-          consents: data.consents,
-          doctors: data.doctors,
-        }}
-      />
-    </div>
+      <div className="flex flex-col gap-4" data-testid="clinic-setup">
+        <ClinicSetup
+          tab={tab}
+          data={{
+            branches: data.branches,
+            departments: data.departments,
+            services: data.services,
+            rooms: data.rooms,
+            devices: data.devices,
+            packages: data.packages,
+            memberships: data.memberships,
+            billingItems: data.billingItems,
+            consents: data.consents,
+            doctors: data.doctors,
+          }}
+        />
+      </div>
     </ClinicSettingsShell>
   );
 }

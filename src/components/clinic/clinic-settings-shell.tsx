@@ -49,8 +49,7 @@ export const CLINIC_SETTINGS_GROUPS = [
   },
 ] as const;
 
-export type ClinicSettingsSection =
-  (typeof CLINIC_SETTINGS_GROUPS)[number]["items"][number]["key"];
+export type ClinicSettingsSection = (typeof CLINIC_SETTINGS_GROUPS)[number]["items"][number]["key"];
 
 /**
  * The frame of every "Clinic settings" page (clinic admin): one title, the grouped sections on
