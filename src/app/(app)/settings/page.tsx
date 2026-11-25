@@ -96,10 +96,7 @@ export default async function SettingsPage({
       ? await withActor(actorOf(ctx), (tx) => statementsIn(tx))
       : null;
   return (
-    <ClinicSettingsShell
-      active={tab === "clinic" ? "details" : tab}
-      isDemo={ctx.tenant.isDemo}
-    >
+    <ClinicSettingsShell active={tab === "clinic" ? "details" : tab} isDemo={ctx.tenant.isDemo}>
       <div className="flex max-w-3xl flex-col gap-4">
         {tab === "clinic" && (
           <>
