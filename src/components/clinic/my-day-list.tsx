@@ -63,6 +63,8 @@ export function MyDayList({
   const name = (o: { nameAr: string; nameEn: string | null }) =>
     locale === "en" && o.nameEn ? o.nameEn : o.nameAr;
   const [openId, setOpenId] = useState<string | null>(null);
+  // The time the list was shown (refreshed with the page), to find the next visit.
+  const [loadedAt] = useState(() => Date.now());
   const open = appointments.find((a) => a.id === openId) ?? null;
   const { run, pending, error } = useAction();
   const block = useAction();
@@ -89,11 +91,10 @@ export function MyDayList({
   const finished = (a: ApptView) => a.status === "completed" || a.status === "no_show";
   const current = appointments.filter((a) => !finished(a));
   const done = appointments.filter(finished);
-  const now = Date.now();
   const focus =
     current.find((a) => a.status === "in_session") ??
     current.find((a) => a.status === "arrived") ??
-    current.find((a) => new Date(a.endsAt).getTime() > now) ??
+    current.find((a) => new Date(a.endsAt).getTime() > loadedAt) ??
     null;
 
   const card = (a: ApptView) => {
