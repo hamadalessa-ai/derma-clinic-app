@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { BellRing, Check, Pill, Plus, Receipt, Repeat, Sparkles, X } from "lucide-react";
@@ -22,7 +22,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AiReviewTick } from "./ai-review-tick";
 import { AiScribe } from "./ai-scribe";
-import { FormError, FormSuccess } from "./form-message";
+import { FormError } from "./form-message";
 import { useAction } from "./use-action";
 
 export interface ChargeView {
@@ -108,13 +108,33 @@ export function VisitWorkspace({
   const ts = useTranslations("scribe");
   const router = useRouter();
   const [body, setBody] = useState(note.body);
-  const [msg, setMsg] = useState<string | null>(null);
   /** The AI scribe wrote into this note (before, or just now): posting needs the review tick. */
   const [aiHere, setAiHere] = useState(false);
   const [reviewed, setReviewed] = useState(false);
   const aiUsed = note.aiDrafted || aiHere;
-  const save = useAction();
   const post = useAction();
+  const ready = useAction();
+  const te = useTranslations("errors");
+  // The note saves itself a moment after typing stops (no "Save draft" button).
+  const [savedBody, setSavedBody] = useState(note.body);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    if (body === savedBody) return;
+    const id = setTimeout(async () => {
+      setSaving(true);
+      const r = await saveDraftAction({ patientId, noteId: note.id, body }).catch(() => null);
+      setSaving(false);
+      if (r?.ok) {
+        setSavedBody(body);
+        setSaveError(null);
+      } else setSaveError(te("unexpected"));
+    }, 1200);
+    return () => clearTimeout(id);
+  }, [body, savedBody, patientId, note.id, te]);
+  const saveState = saving ? tn("saving") : body === savedBody ? tn("saved") : tn("unsaved");
+  // The nurse's main action is telling the doctor; after that (and for the doctor) it is posting.
+  const readyFirst = !!handover && !handover.called;
 
   return (
     <div className="flex flex-col gap-5" data-testid="visit-workspace">
@@ -135,6 +155,7 @@ export function VisitWorkspace({
               noteId={note.id}
               onDrafted={(b) => {
                 setBody(b);
+                setSavedBody(b);
                 setAiHere(true);
                 setReviewed(false);
               }}
@@ -148,30 +169,15 @@ export function VisitWorkspace({
             aria-label={t("note")}
             data-testid="visit-note"
           />
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-muted-foreground text-xs">
-              {note.enteredByName ? tn("enteredBy", { name: note.enteredByName }) : ""}
+          <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span>{note.enteredByName ? tn("enteredBy", { name: note.enteredByName }) : ""}</span>
+            <span data-testid="note-save-state" aria-live="polite">
+              {saveState}
             </span>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={save.pending}
-              onClick={() =>
-                save.run(
-                  () => saveDraftAction({ patientId, noteId: note.id, body }),
-                  () => setMsg(tn("savedOk")),
-                )
-              }
-            >
-              {tn("saveDraft")}
-            </Button>
           </div>
-          <FormError message={save.error} />
-          <FormSuccess message={msg} />
+          <FormError message={saveError} />
         </CardContent>
       </Card>
-
-      {handover && <ReadyForDoctor appointmentId={appointmentId} called={handover.called} />}
 
       <VisitExtras
         appointmentId={appointmentId}
@@ -181,14 +187,34 @@ export function VisitWorkspace({
         locked={false}
       />
 
-      <Card className="border-brand">
-        <CardContent className="flex flex-col gap-3 pt-4 md:pt-5">
-          <p className="text-muted-foreground text-sm">
-            {preparingFor ? t("postHintFor", { name: preparingFor }) : t("postHint")}
+      {/* The screen's one main action, always in reach at the bottom. */}
+      <div
+        className="bg-card/95 shadow-card sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 flex flex-col gap-2 rounded-xl border p-3 backdrop-blur md:bottom-4"
+        data-testid="visit-bar"
+      >
+        {aiUsed && <AiReviewTick checked={reviewed} onChange={setReviewed} />}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-muted-foreground min-w-0 flex-1 text-[13px]">
+            {handover?.called ? (
+              <span data-testid="ready-for-doctor">{t("doctorCalled")}</span>
+            ) : preparingFor ? (
+              t("postHintFor", { name: preparingFor })
+            ) : (
+              t("postHint")
+            )}
           </p>
-          {aiUsed && <AiReviewTick checked={reviewed} onChange={setReviewed} />}
+          {readyFirst && (
+            <Button
+              loading={ready.pending}
+              data-testid="ready-for-doctor-button"
+              onClick={() => ready.run(() => readyForDoctorAction(appointmentId))}
+            >
+              {!ready.pending && <BellRing />}
+              {t("readyForDoctor")}
+            </Button>
+          )}
           <Button
-            className="self-start"
+            variant={readyFirst ? "outline" : "default"}
             disabled={!body.trim() || (aiUsed && !reviewed)}
             loading={post.pending}
             data-testid="post-visit"
@@ -204,37 +230,10 @@ export function VisitWorkspace({
             {!post.pending && <Check />}
             {t("post")}
           </Button>
-          <FormError message={post.error} />
-        </CardContent>
-      </Card>
+        </div>
+        <FormError message={post.error ?? ready.error} />
+      </div>
     </div>
-  );
-}
-
-/** Nurse / assistant: tell the doctor the patient is prepared (push + reception board). */
-function ReadyForDoctor({ appointmentId, called }: { appointmentId: string; called: boolean }) {
-  const t = useTranslations("visit");
-  const act = useAction();
-  return (
-    <Card data-testid="ready-for-doctor">
-      <CardContent className="flex flex-wrap items-center gap-3 pt-4 md:pt-5">
-        <p className="text-muted-foreground min-w-0 flex-1 text-sm">
-          {called ? t("doctorCalled") : t("readyHint")}
-        </p>
-        {!called && (
-          <Button
-            variant="outline"
-            loading={act.pending}
-            data-testid="ready-for-doctor-button"
-            onClick={() => act.run(() => readyForDoctorAction(appointmentId))}
-          >
-            {!act.pending && <BellRing />}
-            {t("readyForDoctor")}
-          </Button>
-        )}
-        <FormError message={act.error} />
-      </CardContent>
-    </Card>
   );
 }
 
@@ -304,7 +303,7 @@ function OrdersCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {orders.length === 0 && <p className="text-muted-foreground text-sm">{t("noOrders")}</p>}
+        {orders.length > 0 && (
         <ul className="flex flex-col gap-2">
           {orders.map((o) => (
             <li key={o.id} className="bg-muted flex items-start gap-2 rounded-lg px-3 py-2 text-sm">
@@ -344,6 +343,10 @@ function OrdersCard({
             </li>
           ))}
         </ul>
+        )}
+        {locked && orders.length === 0 && (
+          <p className="text-muted-foreground text-sm">{t("noOrders")}</p>
+        )}
         {!locked &&
           (adding ? (
             <form
@@ -493,7 +496,7 @@ function OrdersCard({
               {t("addOrder")}
             </Button>
           ))}
-        {!locked && <p className="text-muted-foreground text-xs">{t("ordersHint")}</p>}
+        {!locked && adding && <p className="text-muted-foreground text-xs">{t("ordersHint")}</p>}
         <FormError message={act.error} />
       </CardContent>
     </Card>

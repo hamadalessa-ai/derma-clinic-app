@@ -68,14 +68,30 @@ export function LabResults({
   const open = data.requests.filter((r) => r.state !== "done" && r.state !== "cancelled");
   const reports = compact ? data.reports.filter((r) => !r.voided).slice(0, 2) : data.reports;
 
+  // On the visit screen with nothing to show: one line (title + "Add results"); repeat-test
+  // requests are made from the patient file's Labs tab.
+  const quiet = !!compact && !reports.length && !open.length && !adding;
+
   return (
     <Card data-testid="lab-results">
-      <CardHeader>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <FlaskRound className="text-brand-strong size-4" />
           {t("title")}
         </CardTitle>
+        {quiet && canEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAdding(true)}
+            data-testid="lab-add-open"
+          >
+            <Plus />
+            {t("add")}
+          </Button>
+        )}
       </CardHeader>
+      {!quiet && (
       <CardContent className="flex flex-col gap-4">
         {(open.length > 0 || canEdit) && (
           <Requests
@@ -127,6 +143,7 @@ export function LabResults({
           <EmptyState icon={<FlaskRound />} title={t("none")} />
         )}
       </CardContent>
+      )}
     </Card>
   );
 }

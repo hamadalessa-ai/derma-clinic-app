@@ -16,9 +16,12 @@ import { useAction } from "./use-action";
 export function PaymentForm({
   appointmentId,
   dueHalalas,
+  offerSend = false,
 }: {
   appointmentId: string;
   dueHalalas: number;
+  /** The care instructions haven't been sent yet: "Complete checkout" also sends them (ticked). */
+  offerSend?: boolean;
 }) {
   const t = useTranslations("checkout");
   const router = useRouter();
@@ -29,6 +32,7 @@ export function PaymentForm({
   );
   const [invoice, setInvoice] = useState("");
   const [note, setNote] = useState("");
+  const [send, setSend] = useState(offerSend);
   const amount = Number(paid.replace(",", "."));
   const valid = Number.isFinite(amount) && amount >= 0 && (amount === 0 || method !== "");
 
@@ -40,14 +44,19 @@ export function PaymentForm({
         e.preventDefault();
         if (!valid) return;
         act.run(
-          () =>
-            checkOutAction({
+          async () => {
+            const r = await checkOutAction({
               appointmentId,
               paidSar: amount,
               method: amount > 0 && method ? method : null,
               invoiceNumber: invoice || null,
               note: note || null,
-            }),
+            });
+            // The checkout is recorded either way; a send that can't go out shows on the
+            // instructions card, which still has its own "Send on WhatsApp".
+            if (r.ok && send) await sendVisitInstructionsAction(appointmentId).catch(() => null);
+            return r;
+          },
           () => router.refresh(),
         );
       }}
@@ -101,6 +110,19 @@ export function PaymentForm({
         </div>
       </div>
       <p className="text-muted-foreground text-[13px]">{t("invoiceHint")}</p>
+      {offerSend && (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="accent-brand size-4"
+            checked={send}
+            onChange={(e) => setSend(e.target.checked)}
+            data-testid="checkout-send-instructions"
+          />
+          <MessageCircle className="text-muted-foreground size-4" />
+          {t("alsoSend")}
+        </label>
+      )}
       <Button
         type="submit"
         className="self-start"
@@ -152,6 +174,46 @@ export function BookPlanSession({
       >
         {!act.pending && <CalendarPlus />}
         {t("book")}
+      </Button>
+      <FormError message={act.error} />
+    </div>
+  );
+}
+
+/** Book every suggested plan session at its suggested time, one after the other. */
+export function BookAllPlanSessions({
+  sessions,
+}: {
+  sessions: {
+    branchId: string;
+    patientId: string;
+    serviceId: string;
+    practitionerId: string;
+    day: string;
+    time: string;
+  }[];
+}) {
+  const t = useTranslations("checkout");
+  const act = useAction();
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <Button
+        size="sm"
+        variant="outline"
+        loading={act.pending}
+        data-testid="book-all-plan"
+        onClick={() =>
+          act.run(async () => {
+            for (const s of sessions) {
+              const r = await bookAction(s);
+              if (!r.ok) return r;
+            }
+            return { ok: true as const, data: null };
+          })
+        }
+      >
+        {!act.pending && <CalendarPlus />}
+        {t("bookAll", { count: sessions.length })}
       </Button>
       <FormError message={act.error} />
     </div>

@@ -393,7 +393,12 @@
     "checkedInName": "{name} checked in",
     "otherTime": "Book a specific time instead",
     "showFreeTimes": "Show the next free times",
-    "flow": "Patient flow"
+    "flow": "Patient flow",
+    "todayTab": "Today",
+    "scheduleTab": "Schedule",
+    "todayTitle": "Today",
+    "scheduleTitle": "Schedule",
+    "countLine": "{count} appointments"
   },
   "consent": {
     "sign": "Sign consent",
@@ -554,7 +559,10 @@
     "signCompleteConfirm": "Sign this note and complete the visit? A signed note can't be edited (you can add an addendum).",
     "signedCompleted": "Note signed and visit completed.",
     "doctorSigns": "Prepared for {name}.",
-    "enteredBy": "Entered by {name}"
+    "enteredBy": "Entered by {name}",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "unsaved": "Not saved yet"
   },
   "requests": {
     "title": "Reschedule requests",
@@ -1232,11 +1240,11 @@
     "left": "{remaining} of {total} left",
     "earlier": "Earlier notes",
     "noEarlier": "No earlier signed notes.",
-    "assisting": "You're preparing this visit for {name}. You can bring the patient in, write the note, add orders and invoice codes, and post the visit in the doctor's name.",
+    "assisting": "You're preparing this visit for {name}.",
     "noteFor": "Visit note — {name}",
     "post": "Post visit",
-    "postHint": "Posting saves the note, the orders and the invoice codes, and completes the visit. Corrections are added underneath afterwards.",
-    "postHintFor": "You are posting in {name}'s name. Posting saves the note, the orders and the invoice codes, and completes the visit.",
+    "postHint": "Saves the note, orders and charges, and completes the visit.",
+    "postHintFor": "Posting in {name}'s name.",
     "postConfirm": "Post this visit? The note can't be changed afterwards, only added to.",
     "orders": "Medication & treatment",
     "noOrders": "No medication or treatment added.",
@@ -1963,7 +1971,9 @@
     "sentNow": "Sent on WhatsApp.",
     "sendFailed": "WhatsApp couldn't deliver it. Print the instructions instead.",
     "notSent": "Not sent ({reason}).",
-    "memberDiscount": "{plan}: {percent}% member discount"
+    "memberDiscount": "{plan}: {percent}% member discount",
+    "alsoSend": "Also send the care instructions on WhatsApp",
+    "bookAll": "Book all {count}"
   },
   "care": {
     "title": "Your instructions, {name}",

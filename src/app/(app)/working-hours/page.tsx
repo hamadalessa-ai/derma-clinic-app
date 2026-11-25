@@ -73,7 +73,7 @@ export default async function WorkingHoursPage({
             {data.conflicts.slice(0, 20).map((c) => (
               <li key={c.id}>
                 <Link
-                  href={`/calendar?date=${riyadhDay(new Date(c.startsAt))}`}
+                  href={`/calendar?date=${riyadhDay(new Date(c.startsAt))}&view=day`}
                   className="underline"
                 >
                   {formatGregorian(new Date(c.startsAt), locale, "medium")} ·{" "}

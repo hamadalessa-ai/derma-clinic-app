@@ -4,7 +4,12 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { ArrowRight, ClipboardList, Printer, Receipt } from "lucide-react";
 import { AlertBadge } from "@/components/clinic/badges";
-import { BookPlanSession, PaymentForm, SendInstructions } from "@/components/clinic/checkout-panel";
+import {
+  BookAllPlanSessions,
+  BookPlanSession,
+  PaymentForm,
+  SendInstructions,
+} from "@/components/clinic/checkout-panel";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
@@ -98,6 +103,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
     o ? pick(locale, o.nameAr, o.nameEn) : "";
   const meds = data.orders.filter((o) => o.kind === "medication");
   const plans = data.orders.filter((o) => o.kind === "treatment");
+  const bookable = data.suggestions.filter((s) => s.slot && !s.bookedAppointmentId);
   const back = `/calendar?view=flow&date=${riyadhDay(a.startsAt)}`;
 
   return (
@@ -182,6 +188,18 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
+              {bookable.length > 1 && (
+                <BookAllPlanSessions
+                  sessions={bookable.map((s) => ({
+                    branchId: a.branchId,
+                    patientId: a.patientId,
+                    serviceId: s.serviceId,
+                    practitionerId: s.slot!.practitionerId,
+                    day: s.slot!.day,
+                    time: s.slot!.time,
+                  }))}
+                />
+              )}
               {data.suggestions.length ? (
                 <ul className="flex flex-col divide-y rounded-lg border">
                   {data.suggestions.map((s) => (
@@ -284,7 +302,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ id: s
                   </dd>
                 </dl>
               ) : posted ? (
-                <PaymentForm appointmentId={a.id} dueHalalas={data.due} />
+                <PaymentForm appointmentId={a.id} dueHalalas={data.due} offerSend={!data.sentAt} />
               ) : (
                 <p className="text-muted-foreground text-sm">{t("notPosted")}</p>
               )}
