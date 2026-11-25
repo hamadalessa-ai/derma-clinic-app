@@ -1,11 +1,12 @@
 /**
- * Clinical notes: Draft → Signed. Signed notes are final (database trigger); corrections
- * are addenda. Only the practitioner role can read or write (database RLS + checks here).
+ * Clinical notes: Draft → Signed. A signed note can be CORRECTED by its author within 7 days
+ * (the earlier text is kept as a version by the database guard); after that, corrections are
+ * addenda. Only the practitioner role can read or write (database RLS + checks here).
  * This is the base the AI scribe will fill in Phase 2 (it will create drafts only).
  */
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { TenantTx } from "@/db/tenant";
-import { clinicalNoteAddenda, clinicalNotes } from "@/db/schema";
+import { clinicalNoteAddenda, clinicalNotes, clinicalNoteVersions } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/db";
 import { assertCan } from "@/lib/auth/permissions";
@@ -15,7 +16,17 @@ export type ClinicalNote = typeof clinicalNotes.$inferSelect;
 export type Addendum = typeof clinicalNoteAddenda.$inferSelect;
 
 export class NoteError extends Error {
-  constructor(public code: "not_found" | "empty" | "signed" | "not_author" | "ai_not_reviewed") {
+  constructor(
+    public code:
+      | "not_found"
+      | "empty"
+      | "signed"
+      | "not_author"
+      | "ai_not_reviewed"
+      | "not_signed"
+      | "correction_closed"
+      | "unchanged",
+  ) {
     super(code);
     this.name = "NoteError";
   }
@@ -217,6 +228,47 @@ export async function addAddendum(tx: TenantTx, actor: Actor, noteId: string, bo
   return a;
 }
 
+/** How long after signing the author may still correct a note (the database checks it too). */
+export const CORRECTION_DAYS = 7;
+
+/** May this note still be corrected (by its author)? */
+export function correctionOpen(note: Pick<ClinicalNote, "status" | "signedAt">, now = new Date()) {
+  return (
+    note.status === "signed" &&
+    !!note.signedAt &&
+    now.getTime() - note.signedAt.getTime() < CORRECTION_DAYS * 86_400_000
+  );
+}
+
+/**
+ * "Correct note": the author replaces the text of their signed note, within 7 days of signing.
+ * The earlier text is kept (clinical_note_versions, written by the database guard); the note shows
+ * "Corrected". After 7 days — or anyone but the author — only addenda. Never the text in the audit.
+ */
+export async function correctNote(tx: TenantTx, actor: Actor, noteId: string, body: string) {
+  assertCan(actor.roles, "notes:write");
+  const text = body.trim().slice(0, MAX);
+  if (!text) throw new NoteError("empty");
+  const [note] = await tx.select().from(clinicalNotes).where(eq(clinicalNotes.id, noteId));
+  if (!note) throw new NoteError("not_found");
+  if (note.authorUserId !== actor.userId) throw new NoteError("not_author");
+  if (note.status !== "signed") throw new NoteError("not_signed");
+  if (!correctionOpen(note)) throw new NoteError("correction_closed");
+  if (text === note.body.trim()) throw new NoteError("unchanged");
+  const [updated] = await tx
+    .update(clinicalNotes)
+    .set({ body: text, correctedAt: new Date() })
+    .where(eq(clinicalNotes.id, noteId))
+    .returning();
+  await audit(tx, {
+    actorUserId: actor.userId,
+    action: "note.correct",
+    entityType: "clinical_note",
+    entityId: noteId,
+  });
+  return updated;
+}
+
 /** Notes for a patient, newest first, with their addenda. */
 export async function notesForPatient(tx: TenantTx, actor: Actor, patientId: string) {
   assertCan(actor.roles, "clinical_notes:read");
@@ -237,5 +289,24 @@ export async function notesForPatient(tx: TenantTx, actor: Actor, patientId: str
         )
         .orderBy(asc(clinicalNoteAddenda.createdAt))
     : [];
-  return notes.map((n) => ({ ...n, addenda: addenda.filter((a) => a.noteId === n.id) }));
+  const versions = notes.some((n) => n.correctedAt)
+    ? await tx
+        .select()
+        .from(clinicalNoteVersions)
+        .where(
+          inArray(
+            clinicalNoteVersions.noteId,
+            notes.filter((n) => n.correctedAt).map((n) => n.id),
+          ),
+        )
+        .orderBy(asc(clinicalNoteVersions.version))
+    : [];
+  return notes.map((n) => ({
+    ...n,
+    addenda: addenda.filter((a) => a.noteId === n.id),
+    /** Earlier texts, oldest first (version 1 = the original). */
+    versions: versions.filter((v) => v.noteId === n.id),
+    /** The author may still correct it (7 days after signing). */
+    canCorrect: n.authorUserId === actor.userId && correctionOpen(n),
+  }));
 }

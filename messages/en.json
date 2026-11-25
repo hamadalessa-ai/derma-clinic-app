@@ -276,7 +276,10 @@
     "photos_not_found": "Not found, or already changed.",
     "photos_empty": "Write the reason.",
     "photos_bad_file": "Choose a photo (JPEG, PNG or HEIC, up to 10 MB).",
-    "photos_bad_area": "Choose the area and the angle."
+    "photos_bad_area": "Choose the area and the angle.",
+    "not_signed": "Only a signed note can be corrected.",
+    "correction_closed": "This note was signed more than 7 days ago: add an addendum instead.",
+    "unchanged": "Nothing was changed."
   },
   "deviceTypes": {
     "hair_removal_laser": "Hair removal laser",
@@ -565,7 +568,17 @@
     "enteredBy": "Entered by {name}",
     "saving": "Saving…",
     "saved": "Saved",
-    "unsaved": "Not saved yet"
+    "unsaved": "Not saved yet",
+    "corrected": "Corrected",
+    "correct": "Correct note",
+    "correctHint": "Your earlier text is kept and stays visible under \"Earlier versions\". Corrections are possible for 7 days after signing; after that, add an addendum.",
+    "cancelCorrect": "Cancel",
+    "saveCorrection": "Save correction",
+    "correctedOk": "Note corrected. The earlier text is kept.",
+    "earlierVersions": "Earlier versions ({count})",
+    "original": "Original",
+    "versionN": "Version {n}",
+    "replacedOn": "replaced {date}"
   },
   "requests": {
     "title": "Reschedule requests",

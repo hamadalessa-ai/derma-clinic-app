@@ -26,7 +26,7 @@ import { atRiyadh, riyadhTime } from "@/lib/booking/time";
 import { saveConsentRule, saveTemplateVersion, signConsent } from "@/lib/consents/consents";
 import { CONSENT_RULES, type SiteContent } from "@/db/schema";
 import { refreshDemoWeek } from "@/lib/demo/refresh";
-import { addAddendum, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
+import { addAddendum, correctNote, openDraft, saveDraft, signNote } from "@/lib/notes/notes";
 import { anthropicClient } from "@/lib/ai/claude";
 import { scribeDraft } from "@/lib/ai/scribe";
 import { videoProvider } from "@/lib/video/provider";
@@ -1103,6 +1103,19 @@ export async function joinVideoAction(input: { appointmentId: string }) {
     const v = parse(z.object({ appointmentId: uuid }), input);
     if (!planAllows(ctx.tenant, "video")) throw new VideoVisitError("not_in_plan");
     return doctorJoin(actor, v.appointmentId, { provider: videoProvider() });
+  });
+}
+
+/** "Correct note": the author's signed note, within 7 days; the earlier text is kept. */
+export async function correctNoteAction(input: { patientId: string; noteId: string; body: string }) {
+  return staffAction("notes:write", async (_ctx, actor) => {
+    const v = parse(
+      z.object({ patientId: uuid, noteId: uuid, body: z.string().max(20000) }),
+      input,
+    );
+    await withActor(actor, (tx) => correctNote(tx, actor, v.noteId, v.body));
+    revalidatePath(`/patients/${v.patientId}`);
+    return null;
   });
 }
 

@@ -513,6 +513,14 @@ export default async function PatientProfilePage({
                 authorName: a.authorName,
                 createdAt: a.createdAt.toISOString(),
               })),
+              correctedAt: n.correctedAt?.toISOString() ?? null,
+              canCorrect: n.canCorrect,
+              versions: n.versions.map((v) => ({
+                id: v.id,
+                version: v.version,
+                body: v.body,
+                createdAt: v.createdAt.toISOString(),
+              })),
             }))}
           />
         </>

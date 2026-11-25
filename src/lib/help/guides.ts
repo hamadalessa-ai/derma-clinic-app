@@ -249,8 +249,8 @@ export const HELP_GUIDES: Record<HelpRole, HelpGuide[]> = {
           "Add medication, the treatment plan (sessions and weeks between them) and invoice codes.",
         ),
         s(
-          "«ترحيل الزيارة» يحفظ كل شيء وينهي الزيارة في خطوة واحدة. التصحيح لاحقاً = إضافة أسفل الملاحظة.",
-          "Post visit saves everything and completes the visit in one step. Later corrections are added underneath the note.",
+          "«ترحيل الزيارة» يحفظ كل شيء وينهي الزيارة في خطوة واحدة. خلال 7 أيام يمكنك «تصحيح الملاحظة» (يبقى النص السابق محفوظاً ويظهر تحت «النسخ السابقة»)؛ بعدها أضف ملحقاً أسفل الملاحظة.",
+          "Post visit saves everything and completes the visit in one step. For 7 days you can use Correct note (the earlier text is kept under Earlier versions); after that, add an addendum underneath.",
         ),
       ],
     },
