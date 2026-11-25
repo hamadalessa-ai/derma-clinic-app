@@ -82,4 +82,4 @@ jobs:
         if: failure()
         env:
           URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
-        run: scripts/backup/alert.sh "Release to live FAILED (see the run: the database change is all-or-nothing)"
+        run: 'scripts/backup/alert.sh "Release to live FAILED (see the run: the database change is all-or-nothing)"'

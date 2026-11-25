@@ -64,4 +64,4 @@ jobs:
         if: failure()
         env:
           URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
-        run: scripts/backup/alert.sh "Live database backup FAILED"
+        run: 'scripts/backup/alert.sh "Live database backup FAILED"'

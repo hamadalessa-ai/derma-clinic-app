@@ -46,4 +46,4 @@ jobs:
         if: failure()
         env:
           URL: ${{ secrets.OPS_ALERT_WEBHOOK_URL }}
-        run: scripts/backup/alert.sh "Monthly restore test FAILED: the backups may not be usable"
+        run: 'scripts/backup/alert.sh "Monthly restore test FAILED: the backups may not be usable"'
