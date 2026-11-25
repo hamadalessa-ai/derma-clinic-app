@@ -129,9 +129,7 @@ describe("upgrade planning", () => {
     const files = ["0000_a.sql", "0001_b.sql", "0002_c.sql"];
     expect(pendingMigrations(["0000_a.sql"], files)).toEqual(["0001_b.sql", "0002_c.sql"]);
     expect(pendingMigrations(files, files)).toEqual([]);
-    expect(() => pendingMigrations(["0000_a.sql", "0009_new.sql"], files)).toThrow(
-      /doesn't know/,
-    );
+    expect(() => pendingMigrations(["0000_a.sql", "0009_new.sql"], files)).toThrow(/doesn't know/);
   });
 
   it("moves enum additions to their own first step, safe to repeat", () => {
@@ -158,7 +156,9 @@ describe("upgrade planning", () => {
     expect(() => checkLiveSecrets(ok)).not.toThrow();
     expect(() => checkLiveSecrets({ ...ok, appPassword: "short" })).toThrow(/LIVE_APP_DB_PASSWORD/);
     expect(() => checkLiveSecrets({ ...ok, ownerEmail: "nope" })).toThrow(/LIVE_OWNER_EMAIL/);
-    expect(() => checkLiveSecrets({ ...ok, ownerPassword: "short" })).toThrow(/LIVE_OWNER_PASSWORD/);
+    expect(() => checkLiveSecrets({ ...ok, ownerPassword: "short" })).toThrow(
+      /LIVE_OWNER_PASSWORD/,
+    );
   });
 });
 

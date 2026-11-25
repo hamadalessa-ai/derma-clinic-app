@@ -2,13 +2,13 @@
 
 The app runs as **two separate systems** from the same code:
 
-| | Demo (today) | Live (real clinics) |
-| --- | --- | --- |
-| Database | Supabase project "demo" | a NEW Supabase project, Pro plan |
-| Website | Vercel project "derma-clinic-app" (branch `main`) | a NEW Vercel project (branch `live`) |
-| Data | fake, rebuilt from scratch on every update | real, **never reset**, only upgraded |
-| Updates | automatic after every merge | when you press **Release to live** |
-| Backups | none needed | Supabase daily + our own nightly encrypted copy (30 days) + monthly restore test |
+|          | Demo (today)                                      | Live (real clinics)                                                              |
+| -------- | ------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Database | Supabase project "demo"                           | a NEW Supabase project, Pro plan                                                 |
+| Website  | Vercel project "derma-clinic-app" (branch `main`) | a NEW Vercel project (branch `live`)                                             |
+| Data     | fake, rebuilt from scratch on every update        | real, **never reset**, only upgraded                                             |
+| Updates  | automatic after every merge                       | when you press **Release to live**                                               |
+| Backups  | none needed                                       | Supabase daily + our own nightly encrypted copy (30 days) + monthly restore test |
 
 Nothing here needs a terminal. You click buttons in GitHub, Supabase and Vercel, and paste values
 into their **settings** pages, never into a chat.
@@ -39,13 +39,13 @@ upgrade to GitHub Team.
 
 GitHub → **Settings → Secrets and variables → Actions → New repository secret**:
 
-| Name | Value |
-| --- | --- |
-| `LIVE_ADMIN_URL` | live project → **Connect** → "Session pooler" string (user `postgres.<ref>`, port 5432), with the database password from step 2 filled in |
-| `LIVE_APP_DB_PASSWORD` | a NEW random password, 24+ characters, only letters, numbers, `-` and `_` |
-| `LIVE_OWNER_EMAIL` | the email you will sign in with |
-| `LIVE_OWNER_PASSWORD` | your first password, 14+ characters (you change it after signing in) |
-| `BACKUP_PASSPHRASE` | a NEW long passphrase (5–6 random words). **Write it down on paper too:** without it the backups can't be opened, by anyone, ever |
+| Name                   | Value                                                                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `LIVE_ADMIN_URL`       | live project → **Connect** → "Session pooler" string (user `postgres.<ref>`, port 5432), with the database password from step 2 filled in |
+| `LIVE_APP_DB_PASSWORD` | a NEW random password, 24+ characters, only letters, numbers, `-` and `_`                                                                 |
+| `LIVE_OWNER_EMAIL`     | the email you will sign in with                                                                                                           |
+| `LIVE_OWNER_PASSWORD`  | your first password, 14+ characters (you change it after signing in)                                                                      |
+| `BACKUP_PASSPHRASE`    | a NEW long passphrase (5–6 random words). **Write it down on paper too:** without it the backups can't be opened, by anyone, ever         |
 
 ## Step 4 — Build the live database (once)
 
@@ -83,16 +83,16 @@ every month. If either fails, GitHub emails you.
 3. **Settings → Environment Variables** (Production). Make NEW values for every secret; never
    reuse the demo's:
 
-| Name | Value |
-| --- | --- |
-| `DATABASE_URL` | live project → Connect → **Transaction pooler** (port 6543), user `clinic_app.<ref>`, password = `LIVE_APP_DB_PASSWORD` |
-| `BETTER_AUTH_SECRET` | new random 32+ characters |
-| `DATA_ENCRYPTION_KEY` | new random 32+ characters (encrypts each clinic's WhatsApp token; never change it later) |
-| `VERIFICATION_SECRET` | new random 32+ characters |
-| `CRON_SECRET` | new random 32+ characters |
-| `APP_ROOT_DOMAIN` | your domain, e.g. `yourbrand.sa` |
-| `APP_PUBLIC_URL` | `https://yourbrand.sa` |
-| WhatsApp, `ANTHROPIC_API_KEY`, `DAILY_API_KEY`, `VAPID_*`, `OPS_ALERT_WEBHOOK_URL` | as in DEPLOY.md, when you turn those features on |
+| Name                                                                               | Value                                                                                                                   |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                     | live project → Connect → **Transaction pooler** (port 6543), user `clinic_app.<ref>`, password = `LIVE_APP_DB_PASSWORD` |
+| `BETTER_AUTH_SECRET`                                                               | new random 32+ characters                                                                                               |
+| `DATA_ENCRYPTION_KEY`                                                              | new random 32+ characters (encrypts each clinic's WhatsApp token; never change it later)                                |
+| `VERIFICATION_SECRET`                                                              | new random 32+ characters                                                                                               |
+| `CRON_SECRET`                                                                      | new random 32+ characters                                                                                               |
+| `APP_ROOT_DOMAIN`                                                                  | your domain, e.g. `yourbrand.sa`                                                                                        |
+| `APP_PUBLIC_URL`                                                                   | `https://yourbrand.sa`                                                                                                  |
+| WhatsApp, `ANTHROPIC_API_KEY`, `DAILY_API_KEY`, `VAPID_*`, `OPS_ALERT_WEBHOOK_URL` | as in DEPLOY.md, when you turn those features on                                                                        |
 
 Do **not** set `MESSAGE_DEMO_MODE` on the live project.
 
@@ -133,12 +133,12 @@ The page answers "ok" when the website and the database both work, and shows no 
 
 ## If something goes wrong
 
-| Problem | What to do |
-| --- | --- |
-| Website down (UptimeRobot alert) | Vercel → live project → Deployments → the previous green one → **Instant Rollback** |
-| A bad release | Same rollback for the website. Database changes only ever *add*, so the old website still works with it |
-| Data lost or damaged | Supabase → live project → **Database → Backups** → restore a day (Pro keeps 7 days). Older than that: our nightly copies (30 days) — ask for help, the steps are below |
-| Backup or restore test failed | Open the failed run in GitHub Actions; usually a changed password in `LIVE_BACKUP_URL` |
+| Problem                          | What to do                                                                                                                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Website down (UptimeRobot alert) | Vercel → live project → Deployments → the previous green one → **Instant Rollback**                                                                                    |
+| A bad release                    | Same rollback for the website. Database changes only ever _add_, so the old website still works with it                                                                |
+| Data lost or damaged             | Supabase → live project → **Database → Backups** → restore a day (Pro keeps 7 days). Older than that: our nightly copies (30 days) — ask for help, the steps are below |
+| Backup or restore test failed    | Open the failed run in GitHub Actions; usually a changed password in `LIVE_BACKUP_URL`                                                                                 |
 
 ### Restoring one of our own nightly copies (technical, for whoever helps you)
 

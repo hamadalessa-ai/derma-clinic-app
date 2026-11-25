@@ -66,7 +66,9 @@ export function statusChecks(
       state: "ok",
       values: {
         count: ops.upgrades,
-        at: ops.lastUpgradeAt ? ops.lastUpgradeAt.toISOString().slice(0, 16).replace("T", " ") : "—",
+        at: ops.lastUpgradeAt
+          ? ops.lastUpgradeAt.toISOString().slice(0, 16).replace("T", " ")
+          : "—",
       },
     });
     if (!ops.lastBackupAt) checks.push({ key: "backupNever", state: "bad" });
@@ -109,7 +111,11 @@ export function statusChecks(
     ["Alerts", has(env.OPS_ALERT_WEBHOOK_URL)],
   ];
   for (const [name, ok] of optional) {
-    checks.push({ key: ok ? "featureOn" : "featureOff", state: ok ? "ok" : "warn", values: { name } });
+    checks.push({
+      key: ok ? "featureOn" : "featureOff",
+      state: ok ? "ok" : "warn",
+      values: { name },
+    });
   }
   return checks;
 }

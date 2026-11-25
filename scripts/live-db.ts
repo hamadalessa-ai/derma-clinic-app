@@ -10,7 +10,12 @@
  *   LIVE_OWNER_EMAIL       the platform owner's sign-in email (setup)
  *   LIVE_OWNER_PASSWORD    the platform owner's first password (setup; change it after)
  */
-import { buildLiveUpgradeSql, liveState, runLiveSetup, runLiveUpgrade } from "../src/db/live-upgrade";
+import {
+  buildLiveUpgradeSql,
+  liveState,
+  runLiveSetup,
+  runLiveUpgrade,
+} from "../src/db/live-upgrade";
 
 const cmd = process.argv[2];
 const adminUrl = process.env.LIVE_ADMIN_URL ?? process.env.REHEARSAL_URL ?? "";
@@ -30,18 +35,24 @@ async function main() {
       ownerEmail: process.env.LIVE_OWNER_EMAIL ?? "",
       ownerPassword: process.env.LIVE_OWNER_PASSWORD ?? "",
     });
-    console.log(`Live database set up (${tables} tables, no demo data). Next: docs/GO_LIVE.md step 5.`);
+    console.log(
+      `Live database set up (${tables} tables, no demo data). Next: docs/GO_LIVE.md step 5.`,
+    );
   } else if (cmd === "plan") {
     const state = await liveState(adminUrl);
     if (!state.live) fail("Not a live database (no ops.schema_upgrades).");
     const { pending } = buildLiveUpgradeSql(state.applied);
     console.log(
-      pending.length ? `Will apply: ${pending.join(", ")}` : "No new database changes; the security layer is re-applied.",
+      pending.length
+        ? `Will apply: ${pending.join(", ")}`
+        : "No new database changes; the security layer is re-applied.",
     );
   } else if (cmd === "upgrade") {
     const { applied } = await runLiveUpgrade({ adminUrl });
     console.log(
-      applied.length ? `Applied: ${applied.join(", ")}` : "No new database changes; security layer re-applied.",
+      applied.length
+        ? `Applied: ${applied.join(", ")}`
+        : "No new database changes; security layer re-applied.",
     );
   } else {
     fail("Usage: live-db.ts setup | plan | upgrade");

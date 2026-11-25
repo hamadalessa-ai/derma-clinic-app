@@ -142,7 +142,7 @@ export async function runLiveUpgrade(opts: { adminUrl: string }) {
   const state = await liveState(opts.adminUrl);
   if (!state.live) {
     throw new LiveDbError(
-      "REFUSED: this is not the live database (no ops.schema_upgrades). Run \"Set up live database\" once first.",
+      'REFUSED: this is not the live database (no ops.schema_upgrades). Run "Set up live database" once first.',
     );
   }
   const plan = buildLiveUpgradeSql(state.applied);
@@ -156,7 +156,11 @@ export async function runLiveUpgrade(opts: { adminUrl: string }) {
   return { applied: plan.pending };
 }
 
-export function checkLiveSecrets(s: { appPassword: string; ownerEmail: string; ownerPassword: string }) {
+export function checkLiveSecrets(s: {
+  appPassword: string;
+  ownerEmail: string;
+  ownerPassword: string;
+}) {
   if (s.appPassword.length < 24 || !/^[A-Za-z0-9_-]+$/.test(s.appPassword)) {
     throw new LiveDbError(
       "LIVE_APP_DB_PASSWORD: at least 24 characters, only letters, numbers, - and _.",
@@ -171,7 +175,11 @@ export function checkLiveSecrets(s: { appPassword: string; ownerEmail: string; o
 }
 
 /** The live setup SQL with the three values filled in (quotes doubled; `$` is never special). */
-export function filledLiveSetupSql(s: { appPassword: string; ownerEmail: string; ownerPassword: string }) {
+export function filledLiveSetupSql(s: {
+  appPassword: string;
+  ownerEmail: string;
+  ownerPassword: string;
+}) {
   checkLiveSecrets(s);
   const q = (v: string) => v.replace(/'/g, "''");
   const sql = buildLiveSetupSql()
