@@ -11,6 +11,9 @@ declare
   has_demo boolean;
   real_count int := 0;
 begin
+  if to_regclass('ops.schema_upgrades') is not null then
+    raise exception 'REFUSED: this is the LIVE database (it has ops.schema_upgrades). db/reset.sql is for the demo only. Use the "Release to live" workflow instead.';
+  end if;
   if to_regclass('public.patients') is null or to_regclass('public.tenants') is null then
     return;
   end if;
@@ -28,7 +31,7 @@ begin
     || case when has_demo then ' or not t.is_demo' else '' end
     into real_count;
   if real_count > 0 then
-    raise exception 'REFUSED: this database holds % real patient record(s). db/reset.sql is for the demo only and would delete them. Use a numbered db/upgrades file instead.', real_count;
+    raise exception 'REFUSED: this database holds % real patient record(s). db/reset.sql is for the demo only and would delete them. The live system is updated by the "Release to live" workflow instead.', real_count;
   end if;
 end
 $guard$;

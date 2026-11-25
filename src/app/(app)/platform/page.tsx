@@ -41,6 +41,13 @@ export default async function PlatformPage() {
       >
         {t("pushKeys")}
       </Link>
+      <Link
+        href="/platform/system"
+        className="text-brand-strong self-start text-sm font-medium underline"
+        data-testid="system-status-link"
+      >
+        {t("systemStatus")}
+      </Link>
       <div className="grid gap-3 sm:grid-cols-3" data-testid="platform-summary">
         {[
           [t("summaryClinics"), String(clinics.length)],

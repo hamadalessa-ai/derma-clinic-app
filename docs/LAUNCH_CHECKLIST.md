@@ -94,7 +94,7 @@ checks on real phones before a demo or a pilot.
 ### Database
 
 - [ ] Demo: merges that change `db/setup.sql` reset the demo database automatically (Part G).
-- [ ] **Before the first real clinic:** switch OFF the automatic reset; from then on only numbered `db/upgrades/NNNN_*.sql` files that keep data, applied in one transaction, tested on a copy first.
+- [ ] **Before the first real clinic:** set up the separate live system with `docs/GO_LIVE.md` (empty live database, upgrades that keep data via "Release to live", nightly encrypted backups + monthly restore test, uptime alert, Platform → System status all green).
 - [ ] Daily backups switched on (Supabase PITR or the Saudi host's equivalent); a restore tested once.
 - [ ] The app connects as `clinic_app` only (never the admin user); RLS forced on every clinic table (tests check this).
 

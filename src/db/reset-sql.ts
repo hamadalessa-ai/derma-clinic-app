@@ -46,7 +46,7 @@ export const RETIRED_TABLES = [
 /**
  * Safety catch: reset is for the DEMO only. It refuses (and the whole transaction rolls back,
  * changing nothing) when the database holds real patients: any patient not marked fake, or any
- * patient of a clinic that is not a demo clinic. Real clinics get numbered db/upgrades files instead.
+ * patient of a clinic that is not a demo clinic. Real clinics use the live database (src/db/live-upgrade.ts) instead.
  * FORCE RLS hides rows even from the table owner, so the check lifts FORCE for itself first —
  * inside this transaction, so a refusal undoes that too. Works on databases from older phases
  * (columns checked before use) and on an empty database.
@@ -57,6 +57,9 @@ declare
   has_demo boolean;
   real_count int := 0;
 begin
+  if to_regclass('ops.schema_upgrades') is not null then
+    raise exception 'REFUSED: this is the LIVE database (it has ops.schema_upgrades). db/reset.sql is for the demo only. Use the "Release to live" workflow instead.';
+  end if;
   if to_regclass('public.patients') is null or to_regclass('public.tenants') is null then
     return;
   end if;
@@ -74,7 +77,7 @@ begin
     || case when has_demo then ' or not t.is_demo' else '' end
     into real_count;
   if real_count > 0 then
-    raise exception 'REFUSED: this database holds % real patient record(s). db/reset.sql is for the demo only and would delete them. Use a numbered db/upgrades file instead.', real_count;
+    raise exception 'REFUSED: this database holds % real patient record(s). db/reset.sql is for the demo only and would delete them. The live system is updated by the "Release to live" workflow instead.', real_count;
   end if;
 end
 $guard$;`;

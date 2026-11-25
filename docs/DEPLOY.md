@@ -85,8 +85,8 @@ The app runs in Vercel's Mumbai region (set in `vercel.json`), next to your Mumb
 
 Every time new work is merged into the `main` branch on GitHub, Vercel updates the site automatically.
 While we only have fake demo data, a phase that changes the database is installed by **resetting the demo
-data** (Part C below). Once real clinics use the system, we'll switch to numbered `db/upgrades/…sql` files
-that keep existing data.
+data** (Part C below). Real clinics run on a separate live system that is never reset and keeps all
+data: see `docs/GO_LIVE.md`.
 
 ### Changing a secret
 
