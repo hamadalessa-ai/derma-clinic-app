@@ -6,8 +6,9 @@ import { BranchSwitcher } from "@/components/shell/branch-switcher";
 import { DemoBanner } from "@/components/shell/demo-banner";
 import { MobileNav } from "@/components/shell/mobile-nav";
 import { NavLinks } from "@/components/shell/nav-links";
+import { UserMenu } from "@/components/shell/user-menu";
 import { Button } from "@/components/ui/button";
-import { can, NAV_ITEMS } from "@/lib/auth/permissions";
+import { can, NAV_ITEMS, USER_MENU_ITEMS } from "@/lib/auth/permissions";
 import { dentalEnabled } from "@/lib/dental/chart";
 import { requireStaff } from "@/lib/auth/session";
 import { brandStyle, pick } from "@/lib/brand";
@@ -41,6 +42,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       (!("demoOnly" in i) || demo) &&
       (!("dentalOnly" in i) || dental),
   ).map((i) => ({
+    href: i.href,
+    key: i.key,
+    // Reception's calendar is their "Today"; doctors and nurses have My Day, so theirs stays "Calendar".
+    label: i.key === "calendar" && !can(ctx.roles, "my_day:view") ? t("today") : t(i.key),
+  }));
+  const userItems = USER_MENU_ITEMS.filter((i) => can(ctx.roles, i.permission)).map((i) => ({
     href: i.href,
     key: i.key,
     label: t(i.key),
@@ -96,28 +103,32 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </div>
       )}
       <header className="bg-card/95 sticky top-0 z-10 border-b backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 md:px-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-brand text-brand-foreground flex size-9 items-center justify-center rounded-full font-bold">
+        <div className="flex items-center justify-between gap-3 px-4 py-2 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="bg-brand text-brand-foreground flex size-9 shrink-0 items-center justify-center rounded-full font-bold">
               {clinicName.charAt(0)}
             </div>
-            <div className="leading-tight">
-              <div className="text-brand-strong font-semibold">{clinicName}</div>
-              <div className="text-muted-foreground text-xs">
-                {pick(locale, ctx.user.name, ctx.user.nameEn)} ·{" "}
-                {ctx.roles.map((r) => tRoles(r)).join(" + ")}
-              </div>
-            </div>
+            <div className="text-brand-strong truncate font-semibold">{clinicName}</div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <BranchSwitcher branches={branches} activeId={ctx.activeBranch?.id ?? null} />
-            <LanguageToggle />
-            <form action={signOut}>
-              <Button variant="ghost" size="sm" type="submit" aria-label={t("logout")}>
-                <LogOut className="rtl:rotate-180" />
-                <span className="hidden sm:inline">{t("logout")}</span>
-              </Button>
-            </form>
+            <UserMenu
+              name={pick(locale, ctx.user.name, ctx.user.nameEn)}
+              role={ctx.roles.map((r) => tRoles(r)).join(" + ")}
+              label={t("userMenu")}
+              items={userItems}
+              footer={
+                <>
+                  <LanguageToggle variant="ghost" />
+                  <form action={signOut}>
+                    <Button variant="ghost" size="sm" type="submit">
+                      <LogOut className="rtl:rotate-180" />
+                      {t("logout")}
+                    </Button>
+                  </form>
+                </>
+              }
+            />
           </div>
         </div>
       </header>

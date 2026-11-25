@@ -134,11 +134,7 @@ export default async function MyDayPage({
               })
             : t("noCareTeam")}
         </Notice>
-      ) : (
-        <Notice tone="info">
-          {data.settings.doctorsManageOwnSchedule ? t("ownSchedule") : t("requestMode")}
-        </Notice>
-      )}
+      ) : null}
       {!assisting && data.settings.doctorsEditOwnHours && (
         <Link
           href="/working-hours"

@@ -27,7 +27,7 @@
     "dashboard": "Dashboard",
     "patients": "Patients",
     "services": "Services",
-    "clinicalNotes": "My notes",
+    "clinicalNotes": "Notes to sign",
     "platform": "Platform",
     "logout": "Sign out",
     "branch": "Branch",
@@ -40,20 +40,23 @@
     "more": "More",
     "mainMenu": "Main menu",
     "account": "My account",
-    "whatsapp": "Inbox",
+    "whatsapp": "WhatsApp",
     "simulator": "WhatsApp simulator",
     "setup": "Clinic set-up",
     "reports": "Reports",
     "help": "Help",
     "labCases": "Lab cases",
-    "memberships": "Memberships"
+    "memberships": "Memberships",
+    "today": "Today",
+    "userMenu": "Account menu",
+    "openSimulator": "Patient's phone (demo)"
   },
   "roles": {
     "platform_owner": "Platform owner",
     "clinic_admin": "Clinic admin",
-    "practitioner": "Practitioner",
+    "practitioner": "Doctor",
     "receptionist": "Receptionist",
-    "assistant": "Nurse / assistant"
+    "assistant": "Nurse"
   },
   "dashboard": {
     "welcome": "Welcome, {name}",
@@ -446,7 +449,10 @@
     "continueVisit": "Continue visit",
     "openVisit": "Open visit",
     "careTeam": "Your doctors today: {names}. Bring each patient in, prepare the note and post the visit.",
-    "noCareTeam": "You aren't linked to any doctor yet. Ask the clinic admin (Settings → Team)."
+    "noCareTeam": "You aren't linked to any doctor yet. Ask the clinic admin (Settings → Team).",
+    "now": "Now",
+    "next": "Next",
+    "doneToday": "Done today ({count})"
   },
   "patientsX": {
     "searchPlaceholder": "Search name (Arabic or English), mobile, file or ID number",
@@ -1792,7 +1798,9 @@
     "membershipVisits": "Included visits per period",
     "membershipDiscountLabel": "Discount on other items (%)",
     "membershipTermsCopied": "Changes apply to new sales and renewals. Members keep the terms they bought.",
-    "activeMembership": "On sale"
+    "activeMembership": "On sale",
+    "doctorCount": "{count} doctors",
+    "searchServices": "Search services"
   },
   "patientImport": {
     "title": "Import patients",
@@ -1991,7 +1999,8 @@
     "walkInTitle": "Walk-in · {name}",
     "nextFree": "Next free times today — tap one to book and check in",
     "noFree": "No free time left today for this service.",
-    "walkInHint": "Booked with that doctor and checked in at once (consent and package handled as usual)."
+    "walkInHint": "Booked with that doctor and checked in at once (consent and package handled as usual).",
+    "moreActions": "More actions"
   },
   "help": {
     "title": "Help centre",

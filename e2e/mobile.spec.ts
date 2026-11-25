@@ -178,6 +178,7 @@ test.describe("phone navigation and layout", () => {
 
   test("the More menu works in English too (left-to-right)", async ({ browser }) => {
     const phone = await session(browser, "admin@derma.demo", PHONE);
+    await phone.getByTestId("user-menu").getByRole("button").first().click();
     await phone.getByRole("button", { name: "تغيير اللغة" }).click();
     await expect(phone.locator("html")).toHaveAttribute("dir", "ltr");
     await phone.getByTestId("mobile-nav").getByRole("button", { name: "More" }).click();

@@ -12,11 +12,14 @@ export function StartVisitButton({
   appointmentId,
   label,
   size = "default",
+  variant = "default",
   navigate = false,
 }: {
   appointmentId: string;
   label: string;
   size?: "default" | "sm" | "lg";
+  /** "outline" when another card on the screen holds the main action. */
+  variant?: "default" | "outline";
   /** From My Day: go to the visit screen afterwards. */
   navigate?: boolean;
 }) {
@@ -26,6 +29,7 @@ export function StartVisitButton({
     <>
       <Button
         size={size}
+        variant={variant}
         loading={pending}
         data-testid="start-visit"
         onClick={() =>

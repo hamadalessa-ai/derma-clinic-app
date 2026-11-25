@@ -145,15 +145,18 @@ test("a Jeddah doctor has no branch switcher and sees Jeddah only", async ({ pag
 
 test("English toggle switches to left-to-right", async ({ page }) => {
   await loginOk(page, "admin@derma.demo");
+  await page.getByTestId("user-menu").getByRole("button").first().click();
   await page.getByRole("button", { name: "تغيير اللغة" }).click();
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   await expect(page.getByText("Derma Clinics").first()).toBeVisible();
+  await page.getByTestId("user-menu").getByRole("button").first().click();
   await page.getByRole("button", { name: "Change language" }).click();
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 });
 
 test("signing out ends the session", async ({ page }) => {
   await loginOk(page, "admin@derma.demo");
+  await page.getByTestId("user-menu").getByRole("button").first().click();
   await page.getByRole("button", { name: "تسجيل الخروج" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/patients");

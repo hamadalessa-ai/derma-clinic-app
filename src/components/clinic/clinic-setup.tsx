@@ -548,6 +548,7 @@ function Services({ data }: { data: SetupData }) {
     const d = data.doctors.find((x) => x.id === id);
     return d ? L(d.name, d.nameEn) : "";
   };
+  const [q, setQ] = useState("");
 
   return (
     <div className="flex flex-col gap-4">
@@ -558,8 +559,23 @@ function Services({ data }: { data: SetupData }) {
         onAdd={() => setV(blank)}
       />
       <FormSuccess message={msg} />
+      {data.services.length > 8 && (
+        <Input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("searchServices")}
+          className="max-w-sm"
+          data-testid="service-search"
+        />
+      )}
       {data.departments.map((d) => {
-        const list = data.services.filter((s) => s.departmentId === d.id);
+        const needle = q.trim().toLowerCase();
+        const list = data.services.filter(
+          (s) =>
+            s.departmentId === d.id &&
+            (!needle || `${s.nameAr} ${s.nameEn}`.toLowerCase().includes(needle)),
+        );
         if (!list.length) return null;
         return (
           <section key={d.id} className="flex flex-col gap-2">
@@ -575,7 +591,13 @@ function Services({ data }: { data: SetupData }) {
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {t("serviceLine", { minutes: s.durationMinutes, price: sar(s.priceHalalas) })} ·{" "}
-                    {s.doctorIds.length ? s.doctorIds.map(doctorName).join("، ") : t("allDoctors")}
+                    <span title={s.doctorIds.map(doctorName).join("، ")}>
+                      {s.doctorIds.length === 0
+                        ? t("allDoctors")
+                        : s.doctorIds.length === 1
+                          ? doctorName(s.doctorIds[0]!)
+                          : t("doctorCount", { count: s.doctorIds.length })}
+                    </span>
                   </span>
                 </Row>
               ))}

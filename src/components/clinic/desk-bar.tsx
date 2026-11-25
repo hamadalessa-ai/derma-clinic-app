@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { CalendarPlus, DoorOpen, Search, UserCheck, UserPlus } from "lucide-react";
+import { CalendarPlus, DoorOpen, MoreHorizontal, Search, UserCheck, UserPlus } from "lucide-react";
 import {
   createPatientAction,
   deskSearchAction,
@@ -62,6 +62,7 @@ export function DeskBar({
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<DeskHit[] | null>(null);
   const [walkIn, setWalkIn] = useState<Who | null>(null);
+  const [moreId, setMoreId] = useState<string | null>(null);
   const { checkIn, busyId, error, consentDialog, askConsent } = useCheckIn();
   const create = useAction();
   const [newName, setNewName] = useState("");
@@ -149,7 +150,8 @@ export function DeskBar({
                     />
                   </span>
                 )}
-                <span className="flex flex-wrap items-center gap-1.5">
+                {/* One button that fits the moment; the rest behind "…". */}
+                <span className="flex items-center gap-1.5">
                   {canCheckIn ? (
                     <Button
                       size="sm"
@@ -164,7 +166,29 @@ export function DeskBar({
                       {t("checkIn")}
                     </Button>
                   ) : (
-                    !open && (
+                    <Link
+                      href={`/calendar?date=${day}&view=day&patient=${h.id}`}
+                      className={buttonVariants({ size: "sm", variant: "outline" })}
+                      data-testid="desk-book"
+                    >
+                      <CalendarPlus />
+                      {t("book")}
+                    </Link>
+                  )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={t("moreActions")}
+                    aria-expanded={moreId === h.id}
+                    onClick={() => setMoreId(moreId === h.id ? null : h.id)}
+                    data-testid="desk-more"
+                  >
+                    <MoreHorizontal />
+                  </Button>
+                </span>
+                {moreId === h.id && (
+                  <span className="flex w-full flex-wrap items-center justify-end gap-1.5">
+                    {!open && !canCheckIn && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -174,18 +198,20 @@ export function DeskBar({
                         <DoorOpen />
                         {t("walkIn")}
                       </Button>
-                    )
-                  )}
-                  <Link
-                    href={`/calendar?date=${day}&view=day&patient=${h.id}`}
-                    className={buttonVariants({ size: "sm", variant: "outline" })}
-                    data-testid="desk-book"
-                  >
-                    <CalendarPlus />
-                    {t("book")}
-                  </Link>
-                  <ContactButtons patientId={h.id} phone={h.phone} whatsapp={canWhatsApp} />
-                </span>
+                    )}
+                    {canCheckIn && (
+                      <Link
+                        href={`/calendar?date=${day}&view=day&patient=${h.id}`}
+                        className={buttonVariants({ size: "sm", variant: "outline" })}
+                        data-testid="desk-book"
+                      >
+                        <CalendarPlus />
+                        {t("book")}
+                      </Link>
+                    )}
+                    <ContactButtons patientId={h.id} phone={h.phone} whatsapp={canWhatsApp} />
+                  </span>
+                )}
               </li>
             );
           })}

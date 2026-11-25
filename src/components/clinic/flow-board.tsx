@@ -173,7 +173,8 @@ export function FlowBoard({
                             {t("consent")}
                           </span>
                         )}
-                        {isToday && (stage !== "expected" || late) && (
+                        {/* Time shows once it says something: late, or 5+ minutes in a step. */}
+                        {isToday && (stage === "expected" ? late : since >= 5) && (
                           <span
                             className={cn(
                               "ms-auto inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs tabular-nums",

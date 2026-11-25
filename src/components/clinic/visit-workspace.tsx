@@ -538,9 +538,6 @@ function ChargesCard({
               className="flex items-center gap-2 px-3 py-2 text-sm"
               data-testid="charge-line"
             >
-              <span className="text-muted-foreground font-mono text-xs" dir="ltr">
-                {c.code}
-              </span>
               <span className="min-w-0 flex-1">{L(c.nameAr, c.nameEn)}</span>
               <span className="text-muted-foreground text-xs" dir="ltr">
                 {c.quantity} × {sar(c.unitPriceHalalas)}
@@ -611,14 +608,14 @@ function ChargesCard({
                 <optgroup label={t("fromPriceList")}>
                   {catalog.items.map((i) => (
                     <option key={i.id} value={`i:${i.id}`}>
-                      {i.code} · {L(i.nameAr, i.nameEn)} · {sar(i.priceHalalas)}
+                      {L(i.nameAr, i.nameEn)} · {sar(i.priceHalalas)}
                     </option>
                   ))}
                 </optgroup>
                 <optgroup label={t("fromServices")}>
                   {catalog.services.map((s) => (
                     <option key={s.id} value={`s:${s.id}`}>
-                      {s.code} · {L(s.nameAr, s.nameEn)} · {sar(s.priceHalalas)}
+                      {L(s.nameAr, s.nameEn)} · {sar(s.priceHalalas)}
                     </option>
                   ))}
                 </optgroup>
