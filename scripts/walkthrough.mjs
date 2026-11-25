@@ -143,12 +143,18 @@ await desk.getByTestId("checkout-method").selectOption("card");
 await desk.getByTestId("checkout-invoice").fill("INV-2026-1187");
 await desk.getByTestId("checkout-submit").click();
 await desk.getByTestId("checkout-done").waitFor({ timeout: 15000 });
+// "Complete checkout" sent the WhatsApp instructions too (ticked by default); "Book all" books the plan.
+const bookAll = desk.getByTestId("book-all-plan");
 const book = desk.getByTestId("book-plan-session").first();
-if (await book.count()) {
+if (await bookAll.count()) {
+  await bookAll.click();
+  await desk.getByTestId("book-all-plan").waitFor({ state: "detached", timeout: 30000 }).catch(() => {});
+} else if (await book.count()) {
   await book.click();
   await desk.getByText("Booked ✓").first().waitFor({ timeout: 15000 });
 }
-await desk.getByTestId("send-instructions").click();
+const send = desk.getByTestId("send-instructions");
+if (await send.count()) await send.click();
 await desk.waitForTimeout(2500);
 await shot(desk, "checkout-paid-booked-sent", true);
 await board(desk);
