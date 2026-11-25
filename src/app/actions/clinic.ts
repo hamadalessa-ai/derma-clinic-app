@@ -1107,7 +1107,11 @@ export async function joinVideoAction(input: { appointmentId: string }) {
 }
 
 /** "Correct note": the author's signed note, within 7 days; the earlier text is kept. */
-export async function correctNoteAction(input: { patientId: string; noteId: string; body: string }) {
+export async function correctNoteAction(input: {
+  patientId: string;
+  noteId: string;
+  body: string;
+}) {
   return staffAction("notes:write", async (_ctx, actor) => {
     const v = parse(
       z.object({ patientId: uuid, noteId: uuid, body: z.string().max(20000) }),

@@ -1287,6 +1287,21 @@ ALTER TABLE "clinical_photos" ADD CONSTRAINT "clinical_photos_patient_fk" FOREIG
 ALTER TABLE "clinical_photos" ADD CONSTRAINT "clinical_photos_appointment_fk" FOREIGN KEY ("tenant_id","appointment_id") REFERENCES "public"."appointments"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 ALTER TABLE "clinical_photos" ADD CONSTRAINT "clinical_photos_file_fk" FOREIGN KEY ("tenant_id","file_id") REFERENCES "public"."files"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 CREATE INDEX "clinical_photos_patient_idx" ON "clinical_photos" USING btree ("tenant_id","patient_id","area","taken_on");
+-- 0024_dear_salo.sql
+CREATE TABLE "clinical_note_versions" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_id" uuid NOT NULL,
+	"note_id" uuid NOT NULL,
+	"version" smallint NOT NULL,
+	"body" text NOT NULL,
+	"edited_by_user_id" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "clinical_note_versions_tenant_id_id_key" UNIQUE("tenant_id","id"),
+	CONSTRAINT "clinical_note_versions_note_version_key" UNIQUE("tenant_id","note_id","version")
+);
+ALTER TABLE "clinical_notes" ADD COLUMN "corrected_at" timestamp with time zone;
+ALTER TABLE "clinical_note_versions" ADD CONSTRAINT "clinical_note_versions_tenant_id_tenants_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "clinical_note_versions" ADD CONSTRAINT "clinical_note_versions_note_fk" FOREIGN KEY ("tenant_id","note_id") REFERENCES "public"."clinical_notes"("tenant_id","id") ON DELETE no action ON UPDATE no action;
 
 -- ─── STEP 2b: BOOKING RULES (db/booking.sql) ────────────────────────────────
 -- ════════════════════════════════════════════════════════════════════════════
@@ -1418,14 +1433,36 @@ create trigger patient_packages_guard_balance
   before update on public.patient_packages
   for each row execute function public.guard_package_balance();
 
--- ─── Clinical notes: signed notes are final ─────────────────────────────────
+-- ─── Clinical notes: signed notes are final, except the author's correction ──
+-- A signed note changes ONLY as a correction: the author, within 7 days of signing, changes the
+-- text (and corrected_at) and nothing else. The text it replaces is kept here, in
+-- clinical_note_versions, by this guard itself — so no correction can skip the history.
+-- After 7 days (or anyone else): addenda only.
 create or replace function public.guard_clinical_note() returns trigger
   language plpgsql
   set search_path = ''
 as $$
 begin
   if old.status = 'signed' then
-    raise exception 'signed notes cannot be changed; add an addendum instead';
+    if new.body is distinct from old.body
+       and new.corrected_at is distinct from old.corrected_at
+       and new.corrected_at is not null
+       and new.status = old.status
+       and new.signed_at is not distinct from old.signed_at
+       and new.ai_drafted_at is not distinct from old.ai_drafted_at
+       and new.entered_by_user_id is not distinct from old.entered_by_user_id
+       and new.entered_by_name is not distinct from old.entered_by_name
+       and old.author_user_id = public.app_current_user()
+       and old.signed_at > now() - interval '7 days' then
+      insert into public.clinical_note_versions (tenant_id, note_id, version, body, edited_by_user_id)
+      values (
+        old.tenant_id, old.id,
+        coalesce((select max(v.version) from public.clinical_note_versions v
+                   where v.tenant_id = old.tenant_id and v.note_id = old.id), 0) + 1,
+        old.body, public.app_current_user());
+    else
+      raise exception 'signed notes cannot be changed; add an addendum instead';
+    end if;
   end if;
   if new.author_user_id is distinct from old.author_user_id
      or new.patient_id is distinct from old.patient_id
@@ -3171,8 +3208,11 @@ grant select, insert on public.consent_templates to clinic_app;
 grant update (is_current) on public.consent_templates to clinic_app;
 -- Notes: drafts can be edited (trigger blocks signed ones); never deleted. Addenda: append-only.
 grant select, insert on public.clinical_notes, public.clinical_note_addenda to clinic_app;
-grant update (body, status, signed_at, updated_at, ai_drafted_at, entered_by_user_id, entered_by_name)
+grant update (body, status, signed_at, updated_at, ai_drafted_at, entered_by_user_id, entered_by_name,
+  corrected_at)
   on public.clinical_notes to clinic_app;
+-- Earlier texts of corrected notes: written by the notes guard, never changed or deleted.
+grant select, insert on public.clinical_note_versions to clinic_app;
 -- Phase 2a: codes, rate limits, patient sessions, message log, push.
 grant select, insert, update on public.verification_codes, public.patient_sessions to clinic_app;
 grant select, insert, delete on public.rate_limit_hits to clinic_app;
@@ -3242,7 +3282,7 @@ begin
     'tenant_settings', 'branch_holidays', 'patient_medical_flags', 'appointments',
     'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
     'patient_packages', 'package_payments', 'package_session_events', 'files',
-    'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
+    'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda', 'clinical_note_versions',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',
@@ -3301,6 +3341,13 @@ create policy clinical_notes_practitioners_only on public.clinical_notes as rest
   for all to clinic_app
   using (public.app_has_role('practitioner') or public.app_assists(author_user_id))
   with check (public.app_has_role('practitioner') or public.app_assists(author_user_id));
+create policy clinical_note_versions_clinical_only on public.clinical_note_versions as restrictive
+  for all to clinic_app
+  using (public.app_has_role('practitioner') or exists (
+    select 1 from public.clinical_notes n
+     where n.tenant_id = clinical_note_versions.tenant_id and n.id = clinical_note_versions.note_id
+       and public.app_assists(n.author_user_id)))
+  with check (public.app_has_role('practitioner'));
 create policy clinical_note_addenda_practitioners_only on public.clinical_note_addenda as restrictive
   for all to clinic_app
   using (public.app_has_role('practitioner'))
@@ -3452,7 +3499,7 @@ declare
 begin
   foreach t in array array[
     'patients', 'patient_medical_flags', 'appointments', 'patient_packages', 'package_payments',
-    'package_session_events', 'files', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
+    'package_session_events', 'files', 'patient_consents', 'clinical_notes', 'clinical_note_addenda', 'clinical_note_versions',
     'conversations', 'messages', 'concern_events', 'reschedule_requests'
   ] loop
     execute format(
@@ -3502,7 +3549,7 @@ begin
     'tenant_settings', 'branch_holidays', 'patient_medical_flags', 'appointments',
     'time_blocks', 'reservations', 'reschedule_requests', 'package_templates',
     'patient_packages', 'package_payments', 'package_session_events', 'files',
-    'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda',
+    'consent_templates', 'patient_consents', 'clinical_notes', 'clinical_note_addenda', 'clinical_note_versions',
     'verification_codes', 'rate_limit_hits', 'patient_sessions',
     'conversations', 'messages', 'message_templates', 'message_dispatches', 'webhook_events',
     'push_log', 'consent_rules', 'concern_events',

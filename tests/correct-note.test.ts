@@ -39,8 +39,12 @@ describe("correcting a signed note", () => {
   it("is open for 7 days after signing", () => {
     const now = new Date("2036-06-10T10:00:00Z");
     const day = 86_400_000;
-    expect(correctionOpen({ status: "signed", signedAt: new Date(now.getTime() - 6 * day) }, now)).toBe(true);
-    expect(correctionOpen({ status: "signed", signedAt: new Date(now.getTime() - 8 * day) }, now)).toBe(false);
+    expect(
+      correctionOpen({ status: "signed", signedAt: new Date(now.getTime() - 6 * day) }, now),
+    ).toBe(true);
+    expect(
+      correctionOpen({ status: "signed", signedAt: new Date(now.getTime() - 8 * day) }, now),
+    ).toBe(false);
     expect(correctionOpen({ status: "draft", signedAt: null }, now)).toBe(false);
   });
 
@@ -66,12 +70,12 @@ describe("correcting a signed note", () => {
 
   it("only the author may correct; an unchanged text is refused", async () => {
     const note = await signedNote("Peel session 2.");
-    expect(await code(withActor(drFaisal, (tx) => correctNote(tx, drFaisal, note.id, "x")))).not.toBe(
-      "ok",
-    );
-    expect(await code(withActor(drSara, (tx) => correctNote(tx, drSara, note.id, "Peel session 2.")))).toBe(
-      "unchanged",
-    );
+    expect(
+      await code(withActor(drFaisal, (tx) => correctNote(tx, drFaisal, note.id, "x"))),
+    ).not.toBe("ok");
+    expect(
+      await code(withActor(drSara, (tx) => correctNote(tx, drSara, note.id, "Peel session 2."))),
+    ).toBe("unchanged");
   });
 
   it("after 7 days the app and the database both refuse (addenda only)", async () => {
@@ -90,9 +94,9 @@ describe("correcting a signed note", () => {
         })
         .returning(),
     );
-    expect(await code(withActor(drSara, (tx) => correctNote(tx, drSara, note.id, "Changed.")))).toBe(
-      "correction_closed",
-    );
+    expect(
+      await code(withActor(drSara, (tx) => correctNote(tx, drSara, note.id, "Changed."))),
+    ).toBe("correction_closed");
     // Straight to the database, skipping the app's check: the guard refuses too.
     expect(
       await code(
