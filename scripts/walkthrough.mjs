@@ -148,7 +148,10 @@ const bookAll = desk.getByTestId("book-all-plan");
 const book = desk.getByTestId("book-plan-session").first();
 if (await bookAll.count()) {
   await bookAll.click();
-  await desk.getByTestId("book-all-plan").waitFor({ state: "detached", timeout: 30000 }).catch(() => {});
+  await desk
+    .getByTestId("book-all-plan")
+    .waitFor({ state: "detached", timeout: 30000 })
+    .catch(() => {});
 } else if (await book.count()) {
   await book.click();
   await desk.getByText("Booked ✓").first().waitFor({ timeout: 15000 });
