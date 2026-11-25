@@ -36,7 +36,6 @@ import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/auth/permissions";
 import { getSettings } from "@/lib/booking/engine";
-import { consentRulesByCode, currentTemplates } from "@/lib/consents/consents";
 import { pick } from "@/lib/brand";
 import type { Locale } from "@/i18n/config";
 
@@ -50,11 +49,8 @@ export default async function SettingsPage({
   const locale = (await getLocale()) as Locale;
   const t = await getTranslations("settings");
   const tp = await getTranslations("platformClinic");
-  const tr = await getTranslations("consentRules");
-  const { settings, templates, rules, doctors } = await withActor(actorOf(ctx), async (tx) => ({
+  const { settings, doctors } = await withActor(actorOf(ctx), async (tx) => ({
     settings: await getSettings(tx),
-    templates: await currentTemplates(tx),
-    rules: await consentRulesByCode(tx),
     doctors: (
       await tx
         .select({
@@ -101,7 +97,7 @@ export default async function SettingsPage({
       : null;
   return (
     <ClinicSettingsShell
-      active={tab === "clinic" ? "details" : tab === "consents" ? "consents" : tab}
+      active={tab === "clinic" ? "details" : tab}
       isDemo={ctx.tenant.isDemo}
     >
       <div className="flex max-w-3xl flex-col gap-4">
@@ -315,43 +311,6 @@ export default async function SettingsPage({
                 {t("servicesOnlineLink")}
               </Link>
             </Notice>
-          </>
-        )}
-        {tab === "consents" && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("consentTemplates")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="flex flex-col divide-y">
-                  {templates.map((tpl) => (
-                    <li key={tpl.id} className="flex items-center justify-between gap-2 py-2">
-                      <span>
-                        {pick(locale, tpl.titleAr, tpl.titleEn)}{" "}
-                        <span className="text-muted-foreground text-xs">· v{tpl.version}</span>
-                        <span
-                          className="text-muted-foreground block text-xs"
-                          data-testid="consent-rule-summary"
-                          data-code={tpl.code}
-                        >
-                          {(() => {
-                            const r = rules.get(tpl.code) ?? { rule: "every_visit", months: null };
-                            return tr(`summary.${r.rule}`, { months: r.months ?? 0 });
-                          })()}
-                        </span>
-                      </span>
-                      <Link
-                        href={`/settings/consents/${tpl.code}`}
-                        className="text-brand-strong text-sm underline"
-                      >
-                        {t("editTemplate")}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
           </>
         )}
         {tab === "demo" && (
