@@ -26,6 +26,7 @@ import { AppointmentDialog } from "./appointment-dialog";
 import type { PickOption } from "./booking-dialog";
 import { FormError, FormSuccess } from "./form-message";
 import { riyadhParts } from "./time";
+import { CallInButton } from "./call-in-button";
 import { StartVisitButton } from "./start-visit";
 import { useAction } from "./use-action";
 
@@ -163,6 +164,14 @@ export function MyDayList({
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             {/* The patient is here: one tap starts the visit and opens its screen. */}
+            {/* Waiting: call them into the room (WhatsApp tells them which), then start. */}
+            {a.status === "arrived" && !a.isVirtual && (
+              <CallInButton
+                appointmentId={a.id}
+                calledAt={a.flow.calledAt}
+                now={new Date(loadedAt)}
+              />
+            )}
             {a.status === "arrived" && !a.isVirtual && (
               <StartVisitButton
                 appointmentId={a.id}

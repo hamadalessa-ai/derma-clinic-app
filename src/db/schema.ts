@@ -820,6 +820,12 @@ export const tenantSettings = pgTable("tenant_settings", {
   showPricesOnline: boolean("show_prices_online").notNull().default(true),
   /** WhatsApp: name the service in confirmations, reminders and recalls (off → "your appointment"). */
   showServiceInMessages: boolean("show_service_in_messages").notNull().default(true),
+  // ── Self check-in (WhatsApp "I've arrived" / patient page) ──
+  selfCheckInEnabled: boolean("self_check_in_enabled").notNull().default(true),
+  /** Patients may check themselves in from this many minutes before the visit… */
+  selfCheckInBeforeMinutes: smallint("self_check_in_before_minutes").notNull().default(45),
+  /** …until this many minutes after its start. */
+  selfCheckInAfterMinutes: smallint("self_check_in_after_minutes").notNull().default(30),
   // ── AI receptionist (WhatsApp) ──
   /** ON: free-text WhatsApp messages are answered by the AI receptionist (needs ANTHROPIC_API_KEY). */
   aiReceptionistEnabled: boolean("ai_receptionist_enabled").notNull().default(false),
@@ -908,6 +914,12 @@ export const appointments = pgTable(
     /** The doctor is with the patient (started the visit, or the nurse said "ready for doctor"). */
     doctorAt: timestamp("doctor_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    /** The patient checked themselves in (WhatsApp "I've arrived" or the patient page). */
+    selfCheckedInAt: timestamp("self_checked_in_at", { withTimezone: true }),
+    /** The patient said "I've arrived" but a consent was still missing: signing it checks them in. */
+    arrivalRequestedAt: timestamp("arrival_requested_at", { withTimezone: true }),
+    /** Staff called the patient into the room ("Call in"; the latest call). */
+    calledAt: timestamp("called_at", { withTimezone: true }),
     createdBy: text("created_by"),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

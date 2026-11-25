@@ -13,18 +13,20 @@ import { z } from "zod";
 import { withTenant, type TenantTx } from "@/db/tenant";
 import { getLocale } from "next-intl/server";
 import { audit } from "@/lib/audit";
-import { patients } from "@/db/schema";
+import { appointments, patients } from "@/db/schema";
 import {
   bookOnline,
   cancelByPatient,
   findOnlineSlots,
   moveByPatient,
+  patientFamilyIds,
   rescheduleOptions,
 } from "@/lib/booking/engine";
 import { doctorNames } from "@/lib/booking/doctor-names";
 import { signConsentByLink, signConsentByPatient } from "@/lib/consents/consents";
 import { isDay } from "@/lib/booking/time";
 import { parse, publicAction, PublicError, PAUSED_OK } from "@/lib/actions";
+import type { Tenant } from "@/lib/tenant/current";
 import { findOrCreateOnlinePatient } from "@/lib/patients/queries";
 import { normalizeSaudiMobile, westernDigits } from "@/lib/phone";
 import {
@@ -37,6 +39,14 @@ import {
 import { notifyLater } from "@/lib/push/notify";
 import { whatsappLater } from "@/lib/whatsapp/later";
 import { sendBookingConfirmation } from "@/lib/whatsapp/outbox";
+import { sendMessage } from "@/lib/whatsapp/send";
+import { appBaseUrl } from "@/lib/whatsapp/config";
+import { consentSignUrl } from "@/lib/video/link";
+import {
+  checkInAfterConsent,
+  selfCheckIn,
+  type SelfCheckInResult,
+} from "@/lib/visits/self-check-in";
 import { clientIp } from "@/lib/request-info";
 import { checkCode, sendCode } from "@/lib/verify/codes";
 import { BOOKING_PASS_COOKIE, BOOKING_PASS_MINUTES, phonePass } from "@/lib/verify/pass";
@@ -386,8 +396,8 @@ export async function portalSignConsentAction(input: z.input<typeof portalSign>)
     const sessionPatientId = await requirePatient(tenant.id);
     const png = Buffer.from(v.signatureDataUrl.match(PNG_DATA_URL)![1], "base64");
     const userAgent = (await headers()).get("user-agent");
-    const c = await withTenant(tenant.id, (tx) =>
-      signConsentByPatient(tx, {
+    const { c, arrival } = await withTenant(tenant.id, async (tx) => {
+      const c = await signConsentByPatient(tx, {
         tenantId: tenant.id,
         sessionPatientId,
         patientId: v.patientId,
@@ -396,10 +406,16 @@ export async function portalSignConsentAction(input: z.input<typeof portalSign>)
         signerName: v.signerName,
         signaturePng: png,
         userAgent,
-      }),
-    );
+      });
+      // They had said "I've arrived": signing checks them in.
+      const arrival = v.appointmentId
+        ? await checkInAfterConsent(tx, { tenantId: tenant.id, appointmentId: v.appointmentId })
+        : null;
+      return { c, arrival };
+    });
+    afterArrival(tenant, arrival);
     revalidatePath("/my");
-    return { id: c.id };
+    return { id: c.id, checkedIn: arrival?.status === "checked_in" };
   });
 }
 
@@ -491,15 +507,72 @@ export async function signConsentByLinkAction(input: {
     if (!appointmentId) throw new PublicError("not_found");
     const png = Buffer.from(v.signatureDataUrl.match(PNG_DATA_URL)![1], "base64");
     const userAgent = (await headers()).get("user-agent");
-    const c = await withTenant(tenant.id, (tx) =>
-      signConsentByLink(tx, {
+    const { c, arrival } = await withTenant(tenant.id, async (tx) => {
+      const c = await signConsentByLink(tx, {
         tenantId: tenant.id,
         appointmentId,
         signerName: v.signerName,
         signaturePng: png,
         userAgent,
+      });
+      // They had tapped "I've arrived" on WhatsApp: signing checks them in.
+      const arrival = await checkInAfterConsent(tx, { tenantId: tenant.id, appointmentId });
+      return { c, arrival };
+    });
+    afterArrival(tenant, arrival);
+    return { id: c.id, checkedIn: arrival?.status === "checked_in" };
+  });
+}
+
+/** After a self check-in: tell the doctor (push) and the patient (WhatsApp, if they use it). */
+function afterArrival(tenant: Tenant, arrival: SelfCheckInResult | null) {
+  if (arrival?.status !== "checked_in") return;
+  notifyLater(tenant.id, [{ type: "checked_in", appointmentId: arrival.appointmentId }]);
+  whatsappLater(async () => {
+    const [a] = await withTenant(tenant.id, (tx) =>
+      tx
+        .select({ patientId: appointments.patientId })
+        .from(appointments)
+        .where(eq(appointments.id, arrival.appointmentId)),
+    );
+    if (!a) return;
+    await sendMessage(tenant, {
+      kind: "checked_in_ack",
+      patientId: a.patientId,
+      appointmentId: arrival.appointmentId,
+      vars: {},
+      dedupeKey: `checked_in_ack:${arrival.appointmentId}`,
+    });
+  });
+}
+
+/**
+ * The patient page's "I've arrived" (self check-in) for their own or a family member's visit
+ * today. A missing consent comes back as its signing link; signing it checks them in.
+ */
+export async function portalArrivedAction(input: { appointmentId: string }) {
+  return publicAction(async (tenant) => {
+    const v = parse(z.object({ appointmentId: uuid }), input);
+    const patientId = await requirePatient(tenant.id);
+    const result = await withTenant(tenant.id, async (tx) =>
+      selfCheckIn(tx, {
+        tenantId: tenant.id,
+        appointmentId: v.appointmentId,
+        patientIds: await patientFamilyIds(tx, patientId),
+        via: "online",
       }),
     );
-    return { id: c.id };
+    afterArrival(tenant, result);
+    revalidatePath("/my");
+    if (result.status === "consent_required") {
+      return {
+        status: result.status,
+        signUrl: consentSignUrl(appBaseUrl(tenant), tenant.id, v.appointmentId),
+      };
+    }
+    if (result.status === "too_early") {
+      return { status: result.status, minutes: result.beforeMinutes };
+    }
+    return { status: result.status };
   });
 }

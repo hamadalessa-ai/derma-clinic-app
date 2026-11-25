@@ -20,6 +20,7 @@ import type { ApptView } from "@/lib/views/schedule";
 import { cn } from "@/lib/utils";
 import { AppointmentDialog, type AppointmentPermissions } from "./appointment-dialog";
 import { AlertBadge, BalanceBadge } from "./badges";
+import { CallInButton } from "./call-in-button";
 import type { PickOption } from "./booking-dialog";
 import { FormError } from "./form-message";
 import { riyadhParts } from "./time";
@@ -168,6 +169,14 @@ export function FlowBoard({
                             label={tc("balance")}
                           />
                         )}
+                        {a.flow.selfCheckedInAt && stage === "waiting" && (
+                          <span
+                            className="bg-brand-soft text-brand-strong rounded-md px-2 text-xs leading-6"
+                            data-testid="self-check-in-tag"
+                          >
+                            {t("selfCheckIn")}
+                          </span>
+                        )}
                         {a.consent && !a.consent.signed && stage === "expected" && (
                           <span className="bg-warning text-warning-foreground rounded-md px-2 text-xs leading-6">
                             {t("consent")}
@@ -202,6 +211,9 @@ export function FlowBoard({
                           <Receipt />
                           {t("checkout")}
                         </Link>
+                      )}
+                      {stage === "waiting" && (canManage || a.practitionerId === memberId) && (
+                        <CallInButton appointmentId={a.id} calledAt={a.flow.calledAt} now={now} />
                       )}
                       {stage === "expected" && canManage && (
                         <Button

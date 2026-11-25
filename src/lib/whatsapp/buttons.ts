@@ -46,6 +46,7 @@ const ACTIONS: readonly string[] = [
   "cancel",
   "all_good",
   "concern",
+  "arrived",
   "slot",
   "my_page",
 ];

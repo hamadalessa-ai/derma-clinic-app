@@ -4,8 +4,18 @@ import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { CalendarPlus, Crown, FileSignature, Layers, LogOut, Video } from "lucide-react";
 import {
+  CalendarPlus,
+  CheckCircle2,
+  Crown,
+  FileSignature,
+  Layers,
+  LogOut,
+  MapPin,
+  Video,
+} from "lucide-react";
+import {
+  portalArrivedAction,
   portalCancelAction,
   portalMoveAction,
   portalSignConsentAction,
@@ -363,6 +373,44 @@ function AppointmentCard({
           {t("joinVideo")}
         </Link>
       )}
+      {!muted && a.checkedIn && (
+        <p
+          className="text-success-foreground flex items-center gap-1.5 font-medium"
+          data-testid="portal-checked-in"
+        >
+          <CheckCircle2 className="size-4" />
+          {t("checkedIn")}
+        </p>
+      )}
+      {!muted && a.canArrive && (
+        <div className="flex flex-col items-start gap-1">
+          <Button
+            size="sm"
+            loading={pending}
+            data-testid="portal-arrived"
+            onClick={() =>
+              run(
+                () => portalArrivedAction({ appointmentId: a.id }),
+                (r) => {
+                  if (r.status === "consent_required" && "signUrl" in r && r.signUrl) {
+                    window.location.href = r.signUrl;
+                  } else if (r.status === "too_early" && "minutes" in r) {
+                    setMsg(t("arriveTooEarly", { minutes: r.minutes ?? 45 }));
+                  } else if (r.status === "checked_in" || r.status === "already_checked_in") {
+                    setMsg(t("checkedIn"));
+                  } else {
+                    setMsg(t("arriveAtDesk"));
+                  }
+                },
+              )
+            }
+          >
+            {!pending && <MapPin />}
+            {t("arrived")}
+          </Button>
+          <span className="text-muted-foreground text-xs">{t("arrivedHint")}</span>
+        </div>
+      )}
       <FormSuccess message={msg} />
       <FormError message={error} />
       {!muted && a.canChange && mode === "none" && (
@@ -620,9 +668,9 @@ function ConsentToSign({
                     signerName: signer,
                     signatureDataUrl: png,
                   }),
-                () => {
+                (r) => {
                   setOpen(false);
-                  setMsg(t("signedOk"));
+                  setMsg(r.checkedIn ? t("checkedIn") : t("signedOk"));
                 },
               );
             }}

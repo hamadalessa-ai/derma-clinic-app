@@ -299,6 +299,9 @@ export default async function SettingsPage({
                     cancellationWindowHours: settings.cancellationWindowHours,
                     onlineRequiresApproval: settings.onlineRequiresApproval,
                     showPricesOnline: settings.showPricesOnline,
+                    selfCheckInEnabled: settings.selfCheckInEnabled,
+                    selfCheckInBeforeMinutes: settings.selfCheckInBeforeMinutes,
+                    selfCheckInAfterMinutes: settings.selfCheckInAfterMinutes,
                   }}
                 />
               </CardContent>

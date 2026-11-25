@@ -1,5 +1,5 @@
 {
-  "id": "cc04f268-b5f5-412d-8a07-c09462e30891",
+  "id": "5aa24c0f-4343-40a6-9631-f18bd4c7700f",
   "prevId": "f976e678-6d80-49fd-81f3-f50af1c36993",
   "version": "7",
   "dialect": "postgresql",
@@ -252,6 +252,24 @@
         },
         "completed_at": {
           "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "self_checked_in_at": {
+          "name": "self_checked_in_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "arrival_requested_at": {
+          "name": "arrival_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "called_at": {
+          "name": "called_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -1198,110 +1216,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.clinical_note_versions": {
-      "name": "clinical_note_versions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "note_id": {
-          "name": "note_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "body": {
-          "name": "body",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "edited_by_user_id": {
-          "name": "edited_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "clinical_note_versions_tenant_id_tenants_id_fk": {
-          "name": "clinical_note_versions_tenant_id_tenants_id_fk",
-          "tableFrom": "clinical_note_versions",
-          "tableTo": "tenants",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "clinical_note_versions_note_fk": {
-          "name": "clinical_note_versions_note_fk",
-          "tableFrom": "clinical_note_versions",
-          "tableTo": "clinical_notes",
-          "columnsFrom": [
-            "tenant_id",
-            "note_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "clinical_note_versions_tenant_id_id_key": {
-          "name": "clinical_note_versions_tenant_id_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "id"
-          ]
-        },
-        "clinical_note_versions_note_version_key": {
-          "name": "clinical_note_versions_note_version_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "note_id",
-            "version"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.clinical_notes": {
       "name": "clinical_notes",
       "schema": "",
@@ -1379,12 +1293,6 @@
         "entered_by_name": {
           "name": "entered_by_name",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "corrected_at": {
-          "name": "corrected_at",
-          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -8449,6 +8357,27 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "self_check_in_enabled": {
+          "name": "self_check_in_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "self_check_in_before_minutes": {
+          "name": "self_check_in_before_minutes",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 45
+        },
+        "self_check_in_after_minutes": {
+          "name": "self_check_in_after_minutes",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 30
         },
         "ai_receptionist_enabled": {
           "name": "ai_receptionist_enabled",

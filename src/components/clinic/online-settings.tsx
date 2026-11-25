@@ -22,6 +22,9 @@ export interface OnlineSettingsValues {
   cancellationWindowHours: number;
   onlineRequiresApproval: boolean;
   showPricesOnline: boolean;
+  selfCheckInEnabled: boolean;
+  selfCheckInBeforeMinutes: number;
+  selfCheckInAfterMinutes: number;
 }
 
 function Toggle({
@@ -135,6 +138,41 @@ export function OnlineSettingsForm({ initial }: { initial: OnlineSettingsValues 
         onChange={(x) => setV({ ...v, showPricesOnline: x })}
         testId="show-prices"
       />
+      <div className="flex flex-col gap-3 border-t pt-4">
+        <Toggle
+          label={t("selfCheckIn")}
+          hint={t("selfCheckInHint")}
+          checked={v.selfCheckInEnabled}
+          onChange={(x) => setV({ ...v, selfCheckInEnabled: x })}
+          testId="self-check-in-enabled"
+        />
+        {v.selfCheckInEnabled && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="selfBefore">{t("selfCheckInBefore")}</Label>
+              <Input
+                id="selfBefore"
+                type="number"
+                min={5}
+                max={180}
+                value={v.selfCheckInBeforeMinutes}
+                onChange={(e) => setV({ ...v, selfCheckInBeforeMinutes: Number(e.target.value) })}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="selfAfter">{t("selfCheckInAfter")}</Label>
+              <Input
+                id="selfAfter"
+                type="number"
+                min={0}
+                max={120}
+                value={v.selfCheckInAfterMinutes}
+                onChange={(e) => setV({ ...v, selfCheckInAfterMinutes: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
       <FormError message={error} />
       <FormSuccess message={msg} />
       <Button type="submit" className="self-start" disabled={pending} data-testid="save-online">
