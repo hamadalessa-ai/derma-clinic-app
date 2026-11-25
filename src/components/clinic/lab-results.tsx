@@ -92,57 +92,57 @@ export function LabResults({
         )}
       </CardHeader>
       {!quiet && (
-      <CardContent className="flex flex-col gap-4">
-        {(open.length > 0 || canEdit) && (
-          <Requests
-            patientId={patientId}
-            appointmentId={appointmentId ?? null}
-            requests={open}
-            canEdit={canEdit}
-            date={date}
-          />
-        )}
-
-        {canEdit &&
-          (adding ? (
-            <AddResults
+        <CardContent className="flex flex-col gap-4">
+          {(open.length > 0 || canEdit) && (
+            <Requests
               patientId={patientId}
               appointmentId={appointmentId ?? null}
-              onDone={() => setAdding(false)}
+              requests={open}
+              canEdit={canEdit}
+              date={date}
             />
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              onClick={() => setAdding(true)}
-              data-testid="lab-add-open"
-            >
-              <Plus />
-              {t("add")}
-            </Button>
-          ))}
+          )}
 
-        {reports.length ? (
-          <ul className="flex flex-col gap-3">
-            {reports.map((r) => (
-              <ReportCard
-                key={r.id}
-                r={r}
+          {canEdit &&
+            (adding ? (
+              <AddResults
                 patientId={patientId}
                 appointmentId={appointmentId ?? null}
-                canEdit={canEdit}
-                date={date}
-                locale={locale}
+                onDone={() => setAdding(false)}
               />
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => setAdding(true)}
+                data-testid="lab-add-open"
+              >
+                <Plus />
+                {t("add")}
+              </Button>
             ))}
-          </ul>
-        ) : compact ? (
-          <p className="text-muted-foreground text-sm">{t("none")}</p>
-        ) : (
-          <EmptyState icon={<FlaskRound />} title={t("none")} />
-        )}
-      </CardContent>
+
+          {reports.length ? (
+            <ul className="flex flex-col gap-3">
+              {reports.map((r) => (
+                <ReportCard
+                  key={r.id}
+                  r={r}
+                  patientId={patientId}
+                  appointmentId={appointmentId ?? null}
+                  canEdit={canEdit}
+                  date={date}
+                  locale={locale}
+                />
+              ))}
+            </ul>
+          ) : compact ? (
+            <p className="text-muted-foreground text-sm">{t("none")}</p>
+          ) : (
+            <EmptyState icon={<FlaskRound />} title={t("none")} />
+          )}
+        </CardContent>
       )}
     </Card>
   );

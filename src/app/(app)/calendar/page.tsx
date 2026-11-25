@@ -161,7 +161,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const seg = (active: boolean) =>
     cn(
       "inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors",
-      active ? "bg-card text-foreground shadow-card" : "text-muted-foreground hover:text-foreground",
+      active
+        ? "bg-card text-foreground shadow-card"
+        : "text-muted-foreground hover:text-foreground",
     );
   const doctorOptions = data.doctors.map((d) => ({ id: d.id, nameAr: d.nameAr, nameEn: d.nameEn }));
   const pre = data.preselect;

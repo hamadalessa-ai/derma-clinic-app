@@ -304,45 +304,48 @@ function OrdersCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {orders.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {orders.map((o) => (
-            <li key={o.id} className="bg-muted flex items-start gap-2 rounded-lg px-3 py-2 text-sm">
-              {o.kind === "medication" ? (
-                <Pill className="mt-0.5 size-4 shrink-0" aria-hidden />
-              ) : (
-                <Repeat className="mt-0.5 size-4 shrink-0" aria-hidden />
-              )}
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="font-medium">{o.name}</span>
-                <span className="text-muted-foreground text-xs">
-                  {o.kind === "medication"
-                    ? [o.dose, o.frequency, o.duration].filter(Boolean).join(" · ")
-                    : t("planLine", {
-                        sessions: o.sessions ?? "—",
-                        weeks: o.intervalWeeks ?? "—",
-                        service: o.serviceId
-                          ? L(svc(o.serviceId)?.nameAr, svc(o.serviceId)?.nameEn)
-                          : "",
-                      }).replace(/ · $/, "")}
-                </span>
-                {o.instructions && <span className="text-xs">{o.instructions}</span>}
-              </div>
-              {!locked && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label={t("remove")}
-                  disabled={act.pending}
-                  onClick={() =>
-                    act.run(() => removeVisitOrderAction({ appointmentId, orderId: o.id }))
-                  }
-                >
-                  <X />
-                </Button>
-              )}
-            </li>
-          ))}
-        </ul>
+          <ul className="flex flex-col gap-2">
+            {orders.map((o) => (
+              <li
+                key={o.id}
+                className="bg-muted flex items-start gap-2 rounded-lg px-3 py-2 text-sm"
+              >
+                {o.kind === "medication" ? (
+                  <Pill className="mt-0.5 size-4 shrink-0" aria-hidden />
+                ) : (
+                  <Repeat className="mt-0.5 size-4 shrink-0" aria-hidden />
+                )}
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="font-medium">{o.name}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {o.kind === "medication"
+                      ? [o.dose, o.frequency, o.duration].filter(Boolean).join(" · ")
+                      : t("planLine", {
+                          sessions: o.sessions ?? "—",
+                          weeks: o.intervalWeeks ?? "—",
+                          service: o.serviceId
+                            ? L(svc(o.serviceId)?.nameAr, svc(o.serviceId)?.nameEn)
+                            : "",
+                        }).replace(/ · $/, "")}
+                  </span>
+                  {o.instructions && <span className="text-xs">{o.instructions}</span>}
+                </div>
+                {!locked && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={t("remove")}
+                    disabled={act.pending}
+                    onClick={() =>
+                      act.run(() => removeVisitOrderAction({ appointmentId, orderId: o.id }))
+                    }
+                  >
+                    <X />
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
         {locked && orders.length === 0 && (
           <p className="text-muted-foreground text-sm">{t("noOrders")}</p>
