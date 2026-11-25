@@ -3,9 +3,11 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { ClinicSettingsShell } from "@/components/clinic/clinic-settings-shell";
 import { HoursExceptions, WeeklyHoursEditor } from "@/components/clinic/working-hours";
 import { withActor } from "@/lib/auth/db";
 import { actorOf, requirePermission } from "@/lib/auth/session";
+import { can } from "@/lib/auth/permissions";
 import { riyadhDay } from "@/lib/booking/time";
 import { editableDoctors, loadWorkingHours } from "@/lib/booking/working-hours";
 import { pick } from "@/lib/brand";
@@ -43,10 +45,16 @@ export default async function WorkingHoursPage({
     doctors[0];
   const data = await withActor(actor, (tx) => loadWorkingHours(tx, actor, selected.id));
   const today = riyadhDay(new Date());
+  // For the clinic admin this is a section of Clinic settings; others open it from the schedule.
+  const admin = can(ctx.roles, "setup:manage");
 
-  return (
+  const page = (
     <div className="flex max-w-3xl flex-col gap-4">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      {admin ? (
+        <p className="text-muted-foreground text-[13px]">{t("subtitle")}</p>
+      ) : (
+        <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      )}
       {doctors.length > 1 && (
         <div className="flex flex-wrap gap-2" data-testid="hours-doctors">
           {doctors.map((d) => (
@@ -119,5 +127,12 @@ export default async function WorkingHoursPage({
         </CardContent>
       </Card>
     </div>
+  );
+  return admin ? (
+    <ClinicSettingsShell active="hours" isDemo={ctx.tenant.isDemo}>
+      {page}
+    </ClinicSettingsShell>
+  ) : (
+    page
   );
 }

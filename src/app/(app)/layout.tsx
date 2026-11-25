@@ -44,6 +44,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   ).map((i) => ({
     href: i.href,
     key: i.key,
+    also: "also" in i ? i.also : undefined,
     // Reception's calendar is their "Today"; doctors and nurses have My Day, so theirs stays "Calendar".
     label: i.key === "calendar" && !can(ctx.roles, "my_day:view") ? t("today") : t(i.key),
   }));

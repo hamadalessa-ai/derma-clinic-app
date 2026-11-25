@@ -9,9 +9,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { EXPORT_KINDS } from "@/lib/export/clinic-export";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
 import { Notice } from "@/components/ui/notice";
-import { SettingsTabs, type SettingsTab } from "@/components/clinic/settings-tabs";
+import { redirect } from "next/navigation";
+import { ClinicSettingsShell } from "@/components/clinic/clinic-settings-shell";
+
+type SettingsTab = "clinic" | "team" | "subscription" | "booking" | "website" | "consents" | "demo";
 import {
   RefreshDemoButton,
   HoursSettingForm,
@@ -82,6 +84,8 @@ export default async function SettingsPage({
   const tab: SettingsTab = (allowed as string[]).includes(sp.tab ?? "")
     ? (sp.tab as SettingsTab)
     : "clinic";
+  // Consent forms have ONE place: Clinic settings → Consent forms (each opens its own edit page).
+  if (tab === "consents") redirect("/setup?tab=consents");
   const team = tab === "team" ? await withActor(actorOf(ctx), (tx) => listTeam(tx)) : null;
   // Support access is the clinic's own decision: not shown to the platform during a support session.
   const support =
@@ -96,9 +100,8 @@ export default async function SettingsPage({
       ? await withActor(actorOf(ctx), (tx) => statementsIn(tx))
       : null;
   return (
+    <ClinicSettingsShell active={tab === "clinic" ? "details" : tab === "consents" ? "consents" : tab} isDemo={ctx.tenant.isDemo}>
     <div className="flex max-w-3xl flex-col gap-4">
-      <PageHeader title={t("title")} />
-      <SettingsTabs active={tab} isDemo={ctx.tenant.isDemo} />
       {tab === "clinic" && (
         <>
           <Card>
@@ -359,5 +362,6 @@ export default async function SettingsPage({
         </>
       )}
     </div>
+    </ClinicSettingsShell>
   );
 }

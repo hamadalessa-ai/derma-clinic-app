@@ -36,13 +36,13 @@
     "calendar": "Calendar",
     "myDay": "My Day",
     "requests": "Requests",
-    "settings": "Settings",
+    "settings": "Clinic settings",
     "more": "More",
     "mainMenu": "Main menu",
     "account": "My account",
     "whatsapp": "WhatsApp",
     "simulator": "WhatsApp simulator",
-    "setup": "Clinic set-up",
+    "setup": "Clinic settings",
     "reports": "Reports",
     "help": "Help",
     "labCases": "Lab cases",
@@ -100,7 +100,7 @@
     "online": "Online booking",
     "onlineHint": "tick a service to let patients book it online",
     "yes": "Yes",
-    "editInSetup": "Add or change services, prices and doctors in Clinic set-up"
+    "editInSetup": "Add or change services, prices and doctors in Clinic settings"
   },
   "clinicalNotes": {
     "title": "Clinical notes",
@@ -223,7 +223,7 @@
     "setup_bad_doctor": "Only doctors of this clinic can be chosen.",
     "setup_bad_consent": "That consent form doesn't exist.",
     "setup_empty_text": "Please fill in all names in Arabic and English.",
-    "not_for_service": "This doctor doesn't do this service (see Clinic set-up → Services).",
+    "not_for_service": "This doctor doesn't do this service (see Clinic settings → Services).",
     "two_factor_required": "Set up two-step verification in My account first.",
     "wrong_password": "That password is not correct.",
     "code_invalid": "That code didn't work. Try the newest code from the app.",
@@ -454,7 +454,7 @@
     "continueVisit": "Continue visit",
     "openVisit": "Open visit",
     "careTeam": "Your doctors today: {names}. Bring each patient in, prepare the note and post the visit.",
-    "noCareTeam": "You aren't linked to any doctor yet. Ask the clinic admin (Settings → Team).",
+    "noCareTeam": "You aren't linked to any doctor yet. Ask the clinic admin (Clinic settings → Team).",
     "now": "Now",
     "next": "Next",
     "doneToday": "Done today ({count})"
@@ -497,7 +497,10 @@
     "import": "Import",
     "dental": "Dental",
     "labs": "Labs",
-    "photos": "Photos"
+    "photos": "Photos",
+    "tabVisitsNotes": "Visits & notes",
+    "tabPackages": "Packages & memberships",
+    "tabClinical": "Clinical"
   },
   "packages": {
     "title": "Packages",
@@ -719,7 +722,7 @@
     "bookAnother": "Book another appointment",
     "disabled": "Online booking isn't available right now. Please contact the clinic.",
     "priceFrom": "{price}",
-    "privacy": "Your details are used for booking only. This is a demo — don't enter real data.",
+    "privacy": "Your details are used for booking only.",
     "myLink": "Already booked? Patient page",
     "stepMode": "How would you like to see the doctor?",
     "modeClinic": "Visit the clinic",
@@ -1477,7 +1480,7 @@
     "existingUser": "This email already has an account, so the admin signs in with their existing password.",
     "nextSteps": "Next, the clinic admin adds services, working hours and the team from Settings. You will not see their patients.",
     "specialty": "Ready start",
-    "specialtyHint": "Departments, common services with sample prices, consent forms with sample wording, packages and rooms. The clinic admin edits everything in Clinic set-up.",
+    "specialtyHint": "Departments, common services with sample prices, consent forms with sample wording, packages and rooms. The clinic admin edits everything in Clinic settings.",
     "specialties": {
       "dermatology": "Dermatology & laser clinic",
       "dental": "Dental clinic",
@@ -1620,7 +1623,7 @@
     "supportOpenClinic": "Open the clinic",
     "supportNeedsDomain": "This clinic opens on its own address, which needs the platform's own domain.",
     "supportRecorded": "Every page you open is recorded in the clinic's log, and the clinic can end access at any time. Clinical notes and data downloads stay closed.",
-    "supportNone": "No support access. You can't see this clinic's patients. If the clinic needs help, its admin can allow access for a few hours in Settings → Team.",
+    "supportNone": "No support access. You can't see this clinic's patients. If the clinic needs help, its admin can allow access for a few hours in Clinic settings → Team.",
     "wa": {
       "liveBadge": "WhatsApp live",
       "statusLive": "Live: reminders, codes and replies go from this clinic's own number.",
@@ -1669,10 +1672,10 @@
     "didChange": "Made a change",
     "bannerView": "Support session (view only): ends {time}. Every page you open is recorded in the clinic's log.",
     "bannerChanges": "Support session (changes allowed): ends {time}. Every page and change is recorded in the clinic's log.",
-    "bannerClinic": "Platform support can access your clinic until {time}. End it any time in Settings → Team."
+    "bannerClinic": "Platform support can access your clinic until {time}. End it any time in Clinic settings → Team."
   },
   "setup": {
-    "title": "Clinic set-up",
+    "title": "Clinic settings",
     "subtitle": "Your branches, departments, services, rooms, packages and consent forms. Changes apply right away; nothing in use is ever deleted, only switched off.",
     "tab": {
       "branches": "Branches",
@@ -2018,7 +2021,7 @@
     "forRole": "Guides for",
     "open": "Open",
     "more": "Need more help? Ask your clinic admin.",
-    "moreAdmin": "Need more help? Contact platform support: give them time-limited access from Settings → Team."
+    "moreAdmin": "Need more help? Contact platform support: give them time-limited access from Clinic settings → Team."
   },
   "dental": {
     "chart": "Dental chart",
@@ -2270,6 +2273,34 @@
       "left": "Left side",
       "right": "Right side",
       "close_up": "Close-up"
+    }
+  },
+  "clinicSettings": {
+    "title": "Clinic settings",
+    "group": {
+      "clinic": "Clinic",
+      "services": "Services & prices",
+      "team": "Team & hours",
+      "patients": "Patients & messages",
+      "website": "Website & subscription"
+    },
+    "item": {
+      "details": "Clinic details",
+      "branches": "Branches",
+      "departments": "Departments",
+      "rooms": "Rooms & devices",
+      "services": "Services",
+      "prices": "Price list",
+      "packages": "Packages",
+      "memberships": "Memberships",
+      "team": "Team",
+      "hours": "Working hours",
+      "booking": "Online booking",
+      "consents": "Consent forms",
+      "messages": "WhatsApp & AI",
+      "website": "Website",
+      "subscription": "Subscription",
+      "demo": "Demo"
     }
   }
 }

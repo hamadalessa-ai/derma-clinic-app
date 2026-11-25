@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Building2, CalendarCheck, CheckCircle2, Clock, Video } from "lucide-react";
+import { CalendarCheck, CheckCircle2, Clock, Video } from "lucide-react";
 import {
   confirmBookingAction,
   onlineSlotsAction,
@@ -72,7 +72,7 @@ export function OnlineBookingFlow({
           ? "video"
           : "clinic"
         : offersVideo
-          ? (initial?.mode ?? null)
+          ? (initial?.mode ?? "clinic")
           : "clinic",
   );
   const [branchId, setBranchId] = useState<string | null>(
@@ -319,46 +319,6 @@ export function OnlineBookingFlow({
   const pickService = mode === "video" ? true : !!branch;
   return (
     <div className="flex flex-col gap-3" data-testid="online-booking">
-      {offersVideo && (
-        <Step
-          n={++n}
-          title={t("stepMode")}
-          done={!!mode}
-          summary={mode && (mode === "video" ? t("modeVideo") : t("modeClinic"))}
-          changeLabel={t("change")}
-          onChange={() => {
-            setMode(null);
-            reset("mode");
-          }}
-          testId="step-mode"
-        >
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Choice onClick={() => setMode("clinic")} data-testid="mode-clinic">
-              <span className="flex items-center gap-2 font-medium">
-                <Building2 className="text-brand-strong size-5" />
-                {t("modeClinic")}
-              </span>
-              <span className="text-muted-foreground text-xs">{t("modeClinicHint")}</span>
-            </Choice>
-            <Choice
-              onClick={() => {
-                setMode("video");
-                // Only one video service: choose it straight away.
-                const video = allServices.filter((s) => s.isVirtual);
-                if (video.length === 1) chooseService(video[0].id, catalog.videoBranches);
-              }}
-              data-testid="mode-video"
-            >
-              <span className="flex items-center gap-2 font-medium">
-                <Video className="text-brand-strong size-5" />
-                {t("modeVideo")}
-              </span>
-              <span className="text-muted-foreground text-xs">{t("modeVideoHint")}</span>
-            </Choice>
-          </div>
-        </Step>
-      )}
-
       {mode === "clinic" && catalog.branches.length > 1 && (
         <Step
           n={++n}
@@ -398,6 +358,8 @@ export function OnlineBookingFlow({
           onChange={() => {
             setServiceId(null);
             reset("service");
+            // Opens with the clinic's treatments again (video consultations listed at the end).
+            if (offersVideo) setMode("clinic");
           }}
           testId="step-service"
         >
@@ -427,6 +389,34 @@ export function OnlineBookingFlow({
                 </div>
               </div>
             ))}
+            {mode === "clinic" && offersVideo && (
+              <div className="flex flex-col gap-2" data-testid="video-services">
+                <h3 className="text-muted-foreground text-xs font-semibold">{t("modeVideo")}</h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {allServices
+                    .filter((s) => s.isVirtual)
+                    .map((s) => (
+                      <Choice
+                        key={s.id}
+                        onClick={() => {
+                          setMode("video");
+                          chooseService(s.id, catalog.videoBranches);
+                        }}
+                        data-testid="mode-video"
+                        data-service={s.id}
+                      >
+                        <span className="flex items-center gap-2 font-medium">
+                          <Video className="text-brand-strong size-4" />
+                          {name(s)}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {t("modeVideoHint")}
+                        </span>
+                      </Choice>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </Step>
       )}

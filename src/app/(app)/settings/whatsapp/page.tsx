@@ -2,8 +2,7 @@ import Link from "next/link";
 import { asc } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
-import { SettingsTabs } from "@/components/clinic/settings-tabs";
+import { ClinicSettingsShell } from "@/components/clinic/clinic-settings-shell";
 import {
   AiReceptionistSettings,
   ServiceTextsEditor,
@@ -20,7 +19,6 @@ import { TEMPLATE_KINDS, TEMPLATES } from "@/lib/whatsapp/catalog";
 /** Clinic admin: WhatsApp message types (on/off, wording) and per-service texts. */
 export default async function WhatsAppSettingsPage() {
   const ctx = await requirePermission("whatsapp:manage");
-  const ts = await getTranslations("settings");
   const t = await getTranslations("whatsapp");
   const data = await withActor(actorOf(ctx), async (tx) => ({
     settings: await getSettings(tx),
@@ -29,9 +27,8 @@ export default async function WhatsAppSettingsPage() {
     aiUsedToday: await aiRepliesToday(tx),
   }));
   return (
+    <ClinicSettingsShell active="messages" isDemo={ctx.tenant.isDemo}>
     <div className="flex max-w-4xl flex-col gap-4">
-      <PageHeader title={ts("title")} />
-      <SettingsTabs active="messages" isDemo={ctx.tenant.isDemo} />
       <Link
         href="/settings/whatsapp/status"
         className="text-brand-strong self-start text-sm underline"
@@ -107,5 +104,6 @@ export default async function WhatsAppSettingsPage() {
         </CardContent>
       </Card>
     </div>
+    </ClinicSettingsShell>
   );
 }
